@@ -51,7 +51,7 @@ flowchart LR
 - GET /api/conversations/{id}/artifacts：仅开放独立工作区内正常文件，拒绝路径越界、符号链接和原生登录材料。
 - Agent 与调用凭据的创建、修改、检查、禁用和吊销只允许网页操作者。
 
-request_id 在调用来源内去重。相同键和内容返回原结果；内容不同拒绝。会话 ID 不是凭据，user_id 也不是认证。外部凭据控制可用 Agent；网页登录使用本机配置的口令和 HttpOnly 会话 Cookie。
+request_id 在调用来源内去重。相同键和内容返回原结果；内容不同拒绝。会话 ID 不是凭据，user_id 也不是认证。外部凭据控制可用 Agent；网页登录使用用户名、角色及 HttpOnly 持久会话 Cookie，调用方账号绑定来源和 user_id；临时链接只授权一个会话。详见 [用户与访问](access.md)。
 
 ## 原生配置
 

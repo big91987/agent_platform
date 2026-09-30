@@ -1,0 +1,36 @@
+name: Agent Platform requirements
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Existing product Issue number
+        type: string
+        required: true
+      message:
+        description: Optional message to continue the associated conversation
+        type: string
+        default: ''
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: agent-platform-${{ github.repository }}-${{ inputs.issue }}
+  cancel-in-progress: false
+jobs:
+  requirements:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 15
+    steps:
+      - name: Call local Agent and publish clarification link
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ inputs.issue }}
+          PLATFORM_MESSAGE: ${{ inputs.message }}
+          AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_ROOT"
+          python3 "$AGENT_PLATFORM_ROOT/examples/github/requirements.py" \
+            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json"

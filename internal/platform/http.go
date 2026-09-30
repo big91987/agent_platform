@@ -2,7 +2,6 @@ package platform
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,14 +24,16 @@ type Server struct {
 	codex          *Codex
 	password, base string
 	mu             sync.Mutex
-	sessions       map[string]time.Time
 	loginFailures  int
 	loginWindow    time.Time
 	mux            *http.ServeMux
 }
 
 func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Server {
-	h := &Server{store: s, scheduler: sched, codex: x, password: password, base: strings.TrimRight(base, "/"), sessions: map[string]time.Time{}, mux: http.NewServeMux()}
+	if err := s.initAuth(password); err != nil {
+		panic(err)
+	}
+	h := &Server{store: s, scheduler: sched, codex: x, password: password, base: strings.TrimRight(base, "/"), mux: http.NewServeMux()}
 	h.mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		if e := s.DB.PingContext(r.Context()); e != nil {
 			http.Error(w, "database unavailable", 503)
@@ -42,25 +43,29 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	})
 	h.mux.HandleFunc("POST /api/login", h.login)
 	h.mux.HandleFunc("GET /api/me", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
-		respond(w, 200, map[string]any{"admin": c.Admin, "source": c.Source})
+		respond(w, 200, map[string]any{"admin": c.Admin, "role": map[bool]string{true: "admin", false: "caller"}[c.Admin], "source": c.Source, "username": c.Username, "user_id": c.UserID, "conversation_id": c.ConversationID})
 	}))
-	h.mux.HandleFunc("POST /api/logout", h.protect(true, func(w http.ResponseWriter, r *http.Request, c Caller) {
+	h.mux.HandleFunc("POST /api/logout", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		cookie, _ := r.Cookie("platform_session")
 		if cookie != nil {
 			h.mu.Lock()
-			delete(h.sessions, cookie.Value)
+			h.store.DB.Exec(`DELETE FROM browser_sessions WHERE hash=?`, hashText(cookie.Value))
 			h.mu.Unlock()
 		}
 		http.SetCookie(w, &http.Cookie{Name: "platform_session", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		respond(w, 200, map[string]bool{"ok": true})
 	}))
-	h.mux.HandleFunc("GET /api/agents", h.protect(true, h.agents))
+	h.mux.HandleFunc("GET /api/agents", h.protect(false, h.agents))
 	h.mux.HandleFunc("POST /api/agents", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("PUT /api/agents/{id}", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("POST /api/agents/{id}/check", h.protect(true, h.checkAgent))
 	h.mux.HandleFunc("GET /api/credentials", h.protect(true, h.credentials))
 	h.mux.HandleFunc("POST /api/credentials", h.protect(true, h.credentials))
 	h.mux.HandleFunc("DELETE /api/credentials/{id}", h.protect(true, h.revoke))
+	h.mux.HandleFunc("GET /api/users", h.protect(true, h.users))
+	h.mux.HandleFunc("POST /api/users", h.protect(true, h.users))
+	h.mux.HandleFunc("POST /api/access", h.exchangeAccess)
+	h.mux.HandleFunc("POST /api/conversations/{id}/web-access", h.protect(false, h.webAccess))
 	h.mux.HandleFunc("POST /api/invoke", h.protect(false, h.invoke))
 	h.mux.HandleFunc("POST /api/webhooks/{agent}", h.protect(false, h.invoke))
 	h.mux.HandleFunc("POST /api/conversations/{id}/messages", h.protect(false, h.invoke))
@@ -131,17 +136,7 @@ func (h *Server) caller(r *http.Request) (Caller, error) {
 	if e != nil {
 		return Caller{}, ErrForbidden
 	}
-	h.mu.Lock()
-	expiry, ok := h.sessions[cookie.Value]
-	if ok && time.Now().After(expiry) {
-		delete(h.sessions, cookie.Value)
-		ok = false
-	}
-	h.mu.Unlock()
-	if !ok {
-		return Caller{}, ErrForbidden
-	}
-	return Caller{Source: "console", Admin: true}, nil
+	return h.store.BrowserCaller(cookie.Value)
 }
 func (h *Server) protect(admin bool, next func(http.ResponseWriter, *http.Request, Caller)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +149,7 @@ func (h *Server) protect(admin bool, next func(http.ResponseWriter, *http.Reques
 			fail(w, ErrForbidden)
 			return
 		}
-		if c.Admin && r.Method != "GET" && r.Method != "HEAD" && !h.sameOrigin(r) {
+		if r.Header.Get("Authorization") == "" && r.Method != "GET" && r.Method != "HEAD" && !h.sameOrigin(r) {
 			fail(w, ErrForbidden)
 			return
 		}
@@ -178,36 +173,45 @@ func (h *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
 		return
 	}
-	if subtle.ConstantTimeCompare([]byte(hashText(in.Password)), []byte(hashText(h.password))) != 1 {
+	if in.Username == "" {
+		in.Username = "admin"
+	}
+	token, err := h.store.Login(in.Username, in.Password)
+	if err != nil {
 		h.mu.Lock()
 		h.loginFailures++
 		h.mu.Unlock()
-		respond(w, 401, map[string]string{"error": "incorrect password"})
+		respond(w, 401, map[string]string{"error": "账号或密码错误，或账户／调用方已停用"})
 		return
 	}
-	token := newID() + newID()
 	h.mu.Lock()
-	for k, v := range h.sessions {
-		if time.Now().After(v) {
-			delete(h.sessions, k)
-		}
-	}
-	h.sessions[token] = time.Now().Add(24 * time.Hour)
 	h.loginFailures = 0
 	h.mu.Unlock()
-	http.SetCookie(w, &http.Cookie{Name: "platform_session", Value: token, Path: "/", HttpOnly: true, Secure: strings.HasPrefix(h.base, "https://"), SameSite: http.SameSiteStrictMode, MaxAge: 86400})
+	h.cookie(w, token)
 	respond(w, 200, map[string]bool{"ok": true})
 }
+
 func (h *Server) agents(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, e := h.store.Agents()
 	if e != nil {
 		fail(w, e)
+		return
+	}
+	if !c.Admin {
+		summaries := []map[string]any{}
+		for _, a := range v {
+			if allowed(c, a.ID) {
+				summaries = append(summaries, map[string]any{"id": a.ID, "name": a.Name, "executor": a.Executor, "enabled": a.Enabled})
+			}
+		}
+		respond(w, 200, summaries)
 		return
 	}
 	respond(w, 200, v)
@@ -327,7 +331,7 @@ func (h *Server) invoke(w http.ResponseWriter, r *http.Request, c Caller) {
 	respond(w, 202, v)
 }
 func (h *Server) conversations(w http.ResponseWriter, r *http.Request, c Caller) {
-	if !c.Admin && r.URL.Query().Get("user_id") == "" {
+	if !c.Admin && c.UserID == "" && r.URL.Query().Get("user_id") == "" {
 		fail(w, errors.New("user_id is required"))
 		return
 	}
@@ -520,10 +524,10 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 }
 func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")
-	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "integrations" {
+	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "integrations" || name == "users" || name == "api-docs" {
 		name = "index.html"
 	}
-	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" {
+	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" && name != "markdown.js" && name != "favicon.svg" {
 		http.NotFound(w, r)
 		return
 	}

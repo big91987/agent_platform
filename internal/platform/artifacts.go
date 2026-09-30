@@ -16,6 +16,9 @@ type Artifact struct {
 }
 
 func hiddenArtifact(path string) bool {
+	if filepath.ToSlash(filepath.Clean(path)) == "AGENTS.md" {
+		return true
+	}
 	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
 		if strings.HasPrefix(part, ".") || part == "node_modules" {
 			return true

@@ -28,9 +28,12 @@ type Agent struct {
 	Enabled      bool               `json:"enabled"`
 }
 type Caller struct {
-	Source string
-	Admin  bool
-	Agents []string
+	Username       string
+	UserID         string
+	ConversationID string
+	Source         string
+	Admin          bool
+	Agents         []string
 }
 type Input struct {
 	AgentID        string `json:"agent_id"`

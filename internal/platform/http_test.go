@@ -81,7 +81,7 @@ func TestArtifactsRejectTraversalAndSymlinks(t *testing.T) {
 	outside := filepath.Join(root, "private.txt")
 	os.WriteFile(outside, []byte("private"), 0600)
 	os.Symlink(outside, filepath.Join(workspace, "leak.txt"))
-	for _, path := range []string{"../private.txt", "leak.txt", "/etc/passwd", ".env"} {
+	for _, path := range []string{"../private.txt", "leak.txt", "/etc/passwd", ".env", "AGENTS.md"} {
 		if _, e := openArtifact(root, "abc", path); e == nil {
 			t.Fatalf("unsafe artifact opened: %s", path)
 		}

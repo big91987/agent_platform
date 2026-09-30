@@ -150,6 +150,15 @@ func (s *Store) Conversation(id string) (Conversation, error) {
 	return scanConv(s.DB.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, id))
 }
 func (s *Store) Authorize(c Caller, id, user string) (Conversation, error) {
+	if c.UserID != "" && !c.Admin {
+		if user != "" && user != c.UserID {
+			return Conversation{}, ErrForbidden
+		}
+		user = c.UserID
+	}
+	if c.ConversationID != "" && c.ConversationID != id {
+		return Conversation{}, ErrForbidden
+	}
 	v, e := s.Conversation(id)
 	if e != nil {
 		return v, e
@@ -160,11 +169,21 @@ func (s *Store) Authorize(c Caller, id, user string) (Conversation, error) {
 	return v, nil
 }
 func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
+	if c.UserID != "" && !c.Admin {
+		if user != "" && user != c.UserID {
+			return nil, ErrForbidden
+		}
+		user = c.UserID
+	}
 	q := `SELECT ` + convColumns + ` FROM conversations`
 	args := []any{}
 	if !c.Admin {
 		q += ` WHERE source=? AND user_id=?`
 		args = append(args, c.Source, user)
+	}
+	if c.ConversationID != "" {
+		q += ` AND id=?`
+		args = append(args, c.ConversationID)
 	}
 	q += ` ORDER BY updated DESC LIMIT 200`
 	rows, e := s.DB.Query(q, args...)
@@ -187,6 +206,15 @@ func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
 func hashText(text string) string { b := sha256.Sum256([]byte(text)); return hex.EncodeToString(b[:]) }
 func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	var out Receipt
+	if !c.Admin && c.UserID != "" {
+		if in.UserID != "" && in.UserID != c.UserID {
+			return out, ErrForbidden
+		}
+		in.UserID = c.UserID
+	}
+	if c.ConversationID != "" && in.ConversationID != c.ConversationID {
+		return out, ErrForbidden
+	}
 	if c.Source == "" || strings.TrimSpace(in.UserID) == "" || strings.TrimSpace(in.Message) == "" {
 		return out, errors.New("user_id and message are required")
 	}

@@ -9,16 +9,16 @@
 ```sh
 ./scripts/start.sh
 # 打开 http://127.0.0.1:8788
-# 登录口令在 .data/operator-password；不要提交或对外共享这个文件。
+# 管理员用户名 admin；当前密码在 .data/operator-password。固定 admin/admin 变更待独立确认。
 ```
 
-1. 在 **Agent 配置** 中选择本机 Codex，配置指令、模型与允许使用的 Skill，执行“检查”，然后试运行。
+1. 在 **智能体** 中选择本机 Codex，配置指令、模型与允许使用的 Skill，执行“检查”，然后试运行。
 2. 在 **会话** 中发起请求。进展、最终回复和工具日志来自真实原生执行器；图片直接显示，文本可查看，所有产物均可下载。
-3. 在 **外部接入** 创建调用凭据并选择可调用的 Agent。调用系统保存返回的会话标识；操作者可打开返回页面接续。
+3. 在 **调用方接入** 创建调用凭据并选择可调用的 Agent。调用系统保存返回的会话标识；操作者可打开返回页面接续。
 
 ```sh
 ./scripts/stop.sh
-./scripts/start.sh  # 保留会话、原生记录和文件；重启后网页登录需要重新登录。
+./scripts/start.sh  # 保留会话、原生记录和文件；重启保留登录有效期，过期后重新登录。
 ```
 
 自定义监听地址、数据位置或并发上限时直接运行：
@@ -47,6 +47,7 @@ curl http://127.0.0.1:8788/api/invoke \
 
 | 接口 | 用途 |
 |---|---|
+| `POST /api/conversations/{id}/web-access` | 签发指定会话临时网页入口；body: user_id、expires_in（默认 3600） |
 | `POST /api/webhooks/{agent_id}` | 通用 JSON Webhook；同一消息格式与 Bearer 授权 |
 | `GET /api/conversations?user_id=…` | 当前调用来源与用户的会话 |
 | `GET /api/conversations/{id}?user_id=…` | 当前状态、消息与文件 |
@@ -57,7 +58,13 @@ curl http://127.0.0.1:8788/api/invoke \
 | `POST /api/conversations/{id}/close?user_id=…` | 关闭，保留历史与文件 |
 | `GET /api/conversations/{id}/file?user_id=…&path=report.md` | 查看或下载真实文件；download=1 强制下载 |
 
-外部凭据不允许修改 Agent 配置或读取其他来源／用户会话。网页操作者可处理所有本机会话。GitHub、钉钉和企微专用签名／事件转换／机器人回复尚未实现，应由渠道接入程序转换成此通用接口。
+外部凭据不允许修改 Agent 配置或读取其他来源／用户会话。管理员可处理所有本机会话；调用方账号绑定来源和 user_id，临时网页入口仅授权一个会话。GitHub requirements Runner 示例见 [接入说明](examples/github/README.md)，已验证真实 Issue 链接到平台澄清；钉钉和企微等其他渠道可转换成同一接口。
+
+## 用户与角色
+
+管理导航包含智能体、会话、调用方接入、用户与角色、API 文档。Agent 卡片的“会话”入口只显示该 Agent 的已有 Session；会话回复恢复原生上下文。API 文档有字段表和实际请求调试。
+
+管理员创建调用方账号并绑定来源与 user_id；临时访问用户打开 Runner 签发的链接即可对话，不能进入配置管理或其他会话。详见 [访问设计](docs/02-architecture/access.md) 与 [真实验证](docs/03-delivery/access-verification.md)。
 
 ## 原生配置和恢复
 
