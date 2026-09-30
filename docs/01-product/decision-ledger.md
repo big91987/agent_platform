@@ -1,7 +1,7 @@
 # Agent Platform 需求澄清记录
 
-> Status: Active  
-> Target artifacts: `prd.md`（Draft，已形成待审实验草案）, `review.md`  
+> Status: Complete（实验版需求已收口）  
+> Target artifacts: `prd.md`（实验实施基线）, `review.md`  
 > Updated: 2026-10-01  
 > 方法：`strict-resumable-grilling`。用户要求先澄清，再确认 PRD 和原型。未经批准的先行 PRD 草案不是需求事实源。
 
@@ -25,19 +25,19 @@
 
 | Field | Value |
 |---|---|
-| active_batch | none（R-001 选项已映射；具体规格缺口仍开放） |
+| active_batch | none（R-001 已收口） |
 | active_question_ids | none |
 | unanswered_ids | none |
 | next_id | D-005 |
-| accepted_count | 1（D-001；既有用户决定另列于上下文） |
-| provisional_count | 2 |
+| accepted_count | 3（D-001 至 D-003；D-004 已撤回） |
+| provisional_count | 0 |
 | conflict_count | 0 |
 | frozen_count | 0 |
 | unscanned_coverage_count | 0 |
 | single_question_reason | none（原批次无未答选项） |
-| resume_note | D-001 已 Accepted：平台与执行器同机本地运行，无远程执行需求。D-002 A、D-003 A 已选择，配置核验和停止后队列细节保留为 Provisional。会话创建、查询和平台页面接续旅程已明确；已形成 prd.md 与 review.md 待审实验草案；首个执行器、渠道接入、访问边界和停止／配置／清理默认值尚待审阅，不宣称覆盖项已闭合。 |
+| resume_note | 当前无阻塞澄清。用户授权按合理架构连续实现，采用 PRD 的 Codex 首接、同机执行、独立调用凭据、消息排队、停止后明确继续、配置快照和手工清理默认值。Workflow、蜂群、共享记忆、远程执行后置。历史讨论保留如下；当前合同以 PRD 和架构为准。 |
 
-## Coverage map
+## 历史 Coverage map（当前实验覆盖以 PRD AC 与验收记录为准）
 
 | Dimension | Status | 证据／待澄清范围 |
 |---|---|---|
@@ -55,7 +55,7 @@
 | Migration and rollout | Open | 新项目，不迁移旧产品；原生配置采用 D-002、验证与首版上线边界后续确认 |
 | Acceptance and evidence | Open | 配置、真实调用、续接、失败和恢复将对应验收场景；尚未定稿 |
 
-## 当前角色矩阵（未定稿）
+## 历史角色矩阵（需求收口前的讨论快照，不再作为当前合同）
 
 | 维度 | 配置者／管理员 | 会话参与者 | 外部调用系统 |
 |---|---|---|---|
@@ -117,12 +117,12 @@
 | recommendation | A；避免平台替原生执行器重新发明配置体系，同时提供常用操作。 |
 | user_answer | 其他默认就行 → 本次呈现 D-002 推荐 A |
 | conclusion | 选择页面配置常用项，Skill、Hook 等高级项保留原生配置入口；具体实验版配置项和错误提示将在 PRD 中明确。 |
-| status | Provisional |
+| status | Accepted |
 | prerequisites | 已确认原生执行器代理与定制方向 |
 | descendants | 配置核验、配置更新与原生配置采用的后续问题 |
 | supersedes | none |
 | coverage_dimensions | Object provenance and bootstrap, Migration and rollout, Roles and authority |
-| maturity_checks | Meaning/Boundary/Consistency/Impact 已明确；配置格式、核验和失效处理尚待实验规格收口，故为 Provisional。 |
+| maturity_checks | Meaning/Boundary/Consistency/Impact 已明确；配置格式、原生核验和错误提示已在获授权实验范围中确定，见架构与验收记录。 |
 | probes | none |
 | source | 用户关于可配置 Hook、Skill 和执行器参数的明确要求 |
 | artifact_mapping | PRD：Agent 配置与调试旅程 |
@@ -139,12 +139,12 @@
 | recommendation | A；普通补充不误停工作，主动停止可明确控制。 |
 | user_answer | 其他默认就行 → 本次呈现 D-003 推荐 A |
 | conclusion | 运行中追加消息保存排队，当前一轮结束后处理；提供单独停止操作。停止与后续排队消息的处置尚未在问题选项中明确。 |
-| status | Provisional |
+| status | Accepted |
 | prerequisites | 已确认持续会话与 Session／Runtime 分离 |
 | descendants | 停止后消息处置、并发顺序和事件展示的后续问题 |
 | supersedes | none |
 | coverage_dimensions | Main workflows, Domain objects and lifecycle, Exceptions and failure |
-| maturity_checks | Meaning/Boundary/Consistency/Impact 已明确；停止后排队消息和执行恢复语义尚未明确，故为 Provisional。 |
+| maturity_checks | Meaning/Boundary/Consistency/Impact 已明确；停止保留队列、明确继续、不自动重放未知输入已在获授权实验范围中确定，并经实际执行验证。 |
 | probes | none |
 | source | 用户要求澄清；先行草案的排队规则尚未批准 |
 | artifact_mapping | PRD：运行中追加消息、停止和恢复旅程 |
@@ -382,3 +382,12 @@
 - 待审建议：首轮接 Codex；API 与一种通用 Webhook 格式；内部简单登录和独立调用凭据；停止保留队列且明确继续、会话配置稳定、手工清理。
 - D-002、D-003 的已选择方向保留；细节在草案中以建议默认列出，仍未批准。
 - 未实施产品代码或原型，未将需求标记为 Ready for Architecture。
+
+
+## 2026-10-01：实验需求收口与实施授权
+
+- 用户授权进入架构设计与连续实施，除特殊阻塞不再停顿；后续确认当前没有其他需要澄清的问题。
+- 本版采用 PRD 的实验默认值：Codex 首接、通用 API/Webhook、本机执行、内部简单登录与独立调用凭据、运行中消息排队、停止后明确继续、会话配置快照和手工清理。
+- D-002/D-003 的规格缺口已收口，不再维持 Provisional；D-004 的错误团队角色框架维持撤回。
+- 原生恢复、Skill/Hook、停止、重启和跨来源隔离必须用真实证据验证；当前验证结果见 `../03-delivery/verification.md`。
+- Workflow、蜂群、共享记忆、渠道专用适配、其他原生执行器不属于本次完成承诺。
