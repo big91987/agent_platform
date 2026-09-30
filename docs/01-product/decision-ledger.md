@@ -1,7 +1,9 @@
 # Agent Platform 需求澄清记录
 
-> Status: Complete（实验版需求已收口）  
-> Target artifacts: `prd.md`（实验实施基线）, `review.md`  
+> Status: Complete（实验版需求已收口）
+
+> Target artifacts: `prd.md`（实验实施基线）, `review.md`
+
 > Updated: 2026-10-01  
 > 方法：`strict-resumable-grilling`。用户要求先澄清，再确认 PRD 和原型。未经批准的先行 PRD 草案不是需求事实源。
 

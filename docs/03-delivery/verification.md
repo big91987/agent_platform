@@ -13,6 +13,8 @@
 - 真正执行中 SIGKILL 平台：重启核验并清理遗留进程，原运行输入标记 failed，排队消息不自动重放；明确继续后原生上下文恢复，延迟文件未生成。
 - 独立原生测试实际使用选定 Skill 的 reference 标记、执行配置的原生 Stop Hook，并在下一轮 resume 记住原代号。未将 Skill 正文放入配置或每轮输入。
 
+桌面 1280px 与窄屏 390px 均无横向溢出；图片 naturalWidth/naturalHeight 为实际 360×180，文本预览可读，当前页面无控制台错误。
+
 原始本地证据保存在忽略目录：`.data/native-validation.log`、`.data/integration-evidence.json`、`.data/three-turn-evidence.json`、`.data/stop-evidence.json`、`.data/restart-evidence.json`、`.data/configuration-evidence.json` 与正式 SQLite／会话目录。它们包含本机运行信息，不提交到共享源代码。
 
 ## PRD 验收覆盖
@@ -23,7 +25,7 @@
 | AC-02 | 真正 Webhook/API 首次创建返回公开会话 ID 与页面链接；页面显示同一输入和实际回复。 |
 | AC-03 | Webhook → 网页 → API 三轮，项目代号、语言和交付文件连续；原生 thread 恒定。 |
 | AC-04 | 四段真实会话及实际 403；Store/HTTP 授权回归通过。 |
-| AC-05 | 有界调度回归证明并发限制与跨会话执行；真实四段会话按两个执行位置处理，运行中追加输入排队。 |
+| AC-05 | 有界调度回归证明并发限制与跨会话执行；真实运行事件计算出的最高并发为 2，四段会话按两个执行位置处理，运行中追加输入排队。 |
 | AC-06 | 网页可见原生 progress 与独立 reply，原始事件和工具过程折叠累加，历史不覆盖。 |
 | AC-07 | 实际 PNG 与 Markdown 生成、鉴权下载和缺失文件 404；网页直接显示图片，文本提供预览。 |
 | AC-08 | 真实原生睡眠被停止，排队保留，明确继续后恢复；TERM-ignoring 子进程回归通过。 |
