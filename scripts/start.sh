@@ -21,7 +21,7 @@ PY
 for attempt in $(seq 1 40); do
   if curl --fail --silent http://127.0.0.1:8788/api/health >/dev/null; then
     echo 'Agent Platform: http://127.0.0.1:8788'
-    echo 'Login password: .data/operator-password (local file, not committed)'
+    echo 'First-start login: admin/admin; existing account passwords are preserved'
     exit 0
   fi
   sleep 0.25

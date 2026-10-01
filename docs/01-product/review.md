@@ -40,4 +40,4 @@
 
 ## 调用方访问补充
 
-用户新增的管理与调用方访问需求已补入 PRD 和 access.md：基础 admin/caller 角色、绑定来源和 user_id 的账号、限定会话的临时入口及 GitHub Runner 真实澄清接续。默认管理员固定口令仍待独立确认；验证与限制见 `../03-delivery/access-verification.md`。这不包含统一身份登录或组织权限。
+用户新增的管理与调用方访问需求已补入 PRD 和 access.md：基础 admin/caller 角色、绑定来源和 user_id 的账号、限定会话的临时入口及 GitHub Runner 真实澄清接续。本地实验默认 admin/admin；验证与限制见 `../03-delivery/access-verification.md`。这不包含统一身份登录或组织权限。

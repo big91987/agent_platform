@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
@@ -11,8 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -36,25 +32,11 @@ func main() {
 	}
 	defer s.Close()
 	password := os.Getenv("AGENT_PLATFORM_PASSWORD")
-	passwordPath := filepath.Join(s.Dir, "operator-password")
 	if password == "" {
-		if b, e := os.ReadFile(passwordPath); e == nil {
-			password = strings.TrimSpace(string(b))
-		} else if os.IsNotExist(e) {
-			b := make([]byte, 18)
-			if _, e = rand.Read(b); e != nil {
-				log.Fatal(e)
-			}
-			password = hex.EncodeToString(b)
-			if e = os.WriteFile(passwordPath, []byte(password+"\n"), 0600); e != nil {
-				log.Fatal(e)
-			}
-		} else {
-			log.Fatal(e)
-		}
+		password = "admin"
 	}
-	if len(password) < 12 {
-		log.Fatal("operator password must contain at least 12 characters")
+	if password != "admin" && len(password) < 12 {
+		log.Fatal("custom administrator password must contain at least 12 characters")
 	}
 	agents, e := s.Agents()
 	if e != nil {
@@ -81,7 +63,7 @@ func main() {
 	defer cancel()
 	server := &http.Server{Handler: platform.NewServer(s, scheduler, x, password, *base), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, BaseContext: func(net.Listener) context.Context { return ctx }}
 	log.Printf("Agent Platform: %s", *base)
-	log.Printf("Operator password file: %s", passwordPath)
+	log.Printf("Administrator account: admin; existing account passwords are preserved")
 	log.Printf("Data: %s; local execution capacity: %d", s.Dir, *concurrency)
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()

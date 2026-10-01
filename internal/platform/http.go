@@ -19,21 +19,21 @@ import (
 )
 
 type Server struct {
-	store          *Store
-	scheduler      *Scheduler
-	codex          *Codex
-	password, base string
-	mu             sync.Mutex
-	loginFailures  int
-	loginWindow    time.Time
-	mux            *http.ServeMux
+	store         *Store
+	scheduler     *Scheduler
+	codex         *Codex
+	base          string
+	mu            sync.Mutex
+	loginFailures int
+	loginWindow   time.Time
+	mux           *http.ServeMux
 }
 
 func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Server {
 	if err := s.initAuth(password); err != nil {
 		panic(err)
 	}
-	h := &Server{store: s, scheduler: sched, codex: x, password: password, base: strings.TrimRight(base, "/"), mux: http.NewServeMux()}
+	h := &Server{store: s, scheduler: sched, codex: x, base: strings.TrimRight(base, "/"), mux: http.NewServeMux()}
 	h.mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		if e := s.DB.PingContext(r.Context()); e != nil {
 			http.Error(w, "database unavailable", 503)

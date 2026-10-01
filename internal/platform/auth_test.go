@@ -118,4 +118,15 @@ func TestAccountDisableAndAdminConfiguration(t *testing.T) {
 	if w = cookieRequest(t, h, admin, "POST", "/api/users", User{Username: "admin", Role: "caller", Enabled: false}); w.Code != 400 {
 		t.Fatal("built-in admin lockout")
 	}
+	if _, err := s.SaveUser(User{Username: "admin", Role: "admin", Enabled: true, Password: "admin"}); err != nil {
+		t.Fatal(err)
+	}
+	if w = cookieRequest(t, h, admin, "GET", "/api/users", nil); w.Code != 401 {
+		t.Fatal("password change did not revoke old login")
+	}
+	h = NewServer(s, nil, nil, "ignored-password", "http://localhost")
+	if w = cookieRequest(t, h, nil, "POST", "/api/login", map[string]string{"username": "admin", "password": "admin"}); w.Code != 200 {
+		t.Fatal("admin password not preserved", w.Code)
+	}
+
 }

@@ -9,7 +9,7 @@
 ```sh
 ./scripts/start.sh
 # 打开 http://127.0.0.1:8788
-# 管理员用户名 admin；当前密码在 .data/operator-password。固定 admin/admin 变更待独立确认。
+# 首次启动管理员账号 / 密码：admin / admin；账号密码存于数据库，重启不会重置。
 ```
 
 1. 在 **智能体** 中选择本机 Codex，配置指令、模型与允许使用的 Skill，执行“检查”，然后试运行。
@@ -27,6 +27,8 @@
 go build -o bin/agent-platform ./cmd/agent-platform
 ./bin/agent-platform -listen 127.0.0.1:8788 -data .data -concurrency 2
 ```
+
+首次初始化可用 `AGENT_PLATFORM_PASSWORD` 设置自定义管理员密码（至少 12 字符）；已有账号通过用户管理修改，启动配置不覆盖它。
 
 可选参数：`-base-url`、`-codex`、`-auth-home`。默认只监听本机。外部系统此版同样位于本机；无需开放公网端口。
 
