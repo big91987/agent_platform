@@ -6,4 +6,8 @@ bin/
 .DS_Store
 output/playwright/
 .playwright-cli/
-examples/github/__pycache__/
+__pycache__/
+*.egg-info/
+build/
+dist/
+.ruff_cache/

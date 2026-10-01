@@ -366,7 +366,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	return out, tx.Commit()
 }
 func (s *Store) Messages(id string) ([]Message, error) {
-	rows, e := s.DB.Query(`SELECT id,conversation_id,role,content,kind,status,created FROM messages WHERE conversation_id=? ORDER BY id`, id)
+	rows, e := s.DB.Query(`SELECT id,parent_id,conversation_id,role,content,kind,status,created FROM messages WHERE conversation_id=? ORDER BY id`, id)
 	if e != nil {
 		return nil, e
 	}
@@ -374,7 +374,7 @@ func (s *Store) Messages(id string) ([]Message, error) {
 	out := []Message{}
 	for rows.Next() {
 		var m Message
-		if e = rows.Scan(&m.ID, &m.ConversationID, &m.Role, &m.Content, &m.Kind, &m.Status, &m.Created); e != nil {
+		if e = rows.Scan(&m.ID, &m.ParentID, &m.ConversationID, &m.Role, &m.Content, &m.Kind, &m.Status, &m.Created); e != nil {
 			return nil, e
 		}
 		out = append(out, m)

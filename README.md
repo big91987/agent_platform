@@ -34,6 +34,8 @@ go build -o bin/agent-platform ./cmd/agent-platform
 
 ## API / Webhook
 
+Python 接入可使用无运行时依赖的 [SDK](sdk/python/README.md)。Runner 首次执行 `scripts/setup-runner.sh`，之后复用安装环境；[GitHub 示例](examples/github/README.md) 已使用 SDK，[GitLab 示例](examples/gitlab/README.md) 演示共享项目目录、任务分支、前序产物与结果回收。
+
 首次输入不传 `conversation_id`。Token 绑定平台用户；`user_id` 可省略，普通用户传入时必须与 Token 对应的 ID 相同。会话标识和页面链接不是访问凭据。
 
 ```sh
@@ -87,10 +89,12 @@ SQLite、原生会话、日志与平台工作区保存在 `.data/`；外部工�
 
 ## 验证和边界
 
+开发检查执行 `scripts/verify.sh`，包含 Python SDK 行为测试、Ruff 格式／lint、前端检查及 Go race/vet/build。开发机需要 Python 3.10+、Ruff、Node、Go 和 C 编译器；SDK 使用方不需要这些开发检查工具。
+
 ```sh
 ./scripts/verify.sh
 # 可选真实调用，会消耗当前 Codex 账户用量：
 AGENT_PLATFORM_LIVE=1 go test ./internal/platform -run TestLiveNativeSkillHookAndResume -v -timeout 5m
 ```
 
-验证证据见 `docs/03-delivery/verification.md`。首版只实现 Codex；Claude Code / DSH 适配、Workflow、多 Agent、共享记忆、组织权限后置。本机执行不是托管不可信代码的多租户安全沙箱。目录隔离解决会话混用，不能宣称隔离任意恶意本机代码。
+验证证据见 `docs/03-delivery/verification.md`；[SDK 与 Runner 的实际验证](docs/03-delivery/sdk-runner-verification.md) 包含正式 GitHub 运行及本机共享目录接续。首版只实现 Codex；Claude Code / DSH 适配、Workflow、多 Agent、共享记忆、组织权限后置。本机执行不是托管不可信代码的多租户安全沙箱。目录隔离解决会话混用，不能宣称隔离任意恶意本机代码。

@@ -1,0 +1,26 @@
+# Merge into the project's pipeline. Runner and Runtime see the same shared path.
+stages: [agent]
+
+agent:
+  stage: agent
+  tags: [agent-platform]
+  rules:
+    - if: '$CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE == "web"'
+      when: manual
+    - when: never
+  timeout: 15m
+  script:
+    - |
+      set -eu
+      : "${AGENT_PLATFORM_ROOT:?Set the platform installation directory}"
+      : "${AGENT_PLATFORM_WORKSPACE_ROOT:?Set the persistent shared mount}"
+      : "${PLATFORM_MESSAGE:?Describe the work when starting this pipeline}"
+      export PLATFORM_WORKSPACE_PATH="$AGENT_PLATFORM_WORKSPACE_ROOT/$CI_PROJECT_ID/$CI_PIPELINE_ID"
+      if [ -z "${PLATFORM_CONVERSATION_ID:-}" ]; then
+        bash "$AGENT_PLATFORM_ROOT/examples/gitlab/prepare.sh"
+      fi
+      "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
+        "$AGENT_PLATFORM_ROOT/examples/gitlab/invoke.py"
+  artifacts:
+    when: always
+    paths: [agent-platform-result.json]

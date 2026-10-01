@@ -1,0 +1,83 @@
+# Python SDK
+
+薄封装现有 HTTP API，Python 3.10+，无运行时第三方依赖。SDK 不创建账号、不授予权限、不管理原生 Session，也不复制工作目录。
+
+## 安装
+
+在自己的虚拟环境中安装：
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install <platform-repository>/sdk/python
+```
+
+平台自带的 Runner 示例使用 `scripts/setup-runner.sh` 创建 `.data/runner-venv` 并安装 SDK。SDK 升级后重新运行此脚本，业务 Pipeline 不必每次安装。
+
+## 创建与接续
+
+```python
+import os
+from agent_platform_client import Client
+
+client = Client(os.environ["AGENT_PLATFORM_URL"], os.environ["AGENT_PLATFORM_TOKEN"])
+identity = client.me()  # 平台验证 Token；返回用户身份。
+
+receipt = client.invoke(
+    "请读取现有代码，澄清读书笔记需求。",
+    agent_id="<agent-id>",
+    workspace_path="/workspaces/<project>/<task>",
+    request_id="<source-event-key>",
+)
+conversation_id = receipt["conversation_id"]
+print(receipt["conversation_url"])
+result = client.wait(conversation_id, message_id=receipt["message_id"], timeout=600)
+
+followup = client.invoke(
+    "每本书先保留一篇笔记。",
+    conversation_id=conversation_id,
+    request_id="<next-source-event-key>",
+)
+```
+
+`workspace_path` 是平台机器看到的目录，不是调用方任意的本地目录。创建后固定，接续省略它。Token 绑定用户；平台仍检查 Agent 授权和会话归属。不要把 Token 放进 URL、命令行参数、产物或日志。
+
+`request_id` 在 SDK 中必填，应使用外部系统稳定的输入事件标识。同一输入的 HTTP 重试必须使用同一个值；新输入使用新值。SDK 不生成新的标识去掩盖响应丢失，不自动重放 POST。输入被接受后，用户可以在网页或 API 中继续同一会话。
+
+`wait` 返回当前 API 快照，不转换 Agent 的业务状态。`idle` 仅表示当前没有执行；Agent 仍可能在等待澄清。指定 `message_id` 后，该输入结束即可返回，不必等待随后排队的其他输入。
+
+## 进展与产物
+
+```python
+from contextlib import closing
+from pathlib import Path
+
+last_event_id = 0  # 调用方保存观察游标。
+with closing(client.stream(conversation_id, after=last_event_id)) as stream:
+    for event in stream:
+        last_event_id = event["id"]
+        print(event)  # 包括平台事件外壳与 raw 原生事件，不只取 message。
+        if event["message_id"] == followup["message_id"] and event["type"] in (
+            "platform.execution.completed",
+            "platform.execution.failed",
+            "platform.execution.stopped",
+        ):
+            break
+
+events = client.events(conversation_id, after=last_event_id)
+files = client.artifacts(conversation_id)
+Path("prd.md").write_bytes(client.read_file(conversation_id, "docs/prd.md"))
+```
+
+事件流忽略心跳，保留完整事件。断线后以最后收到的事件 ID 重连；不会提交消息或重启 Agent。退出读取时关闭迭代器；HTTP timeout 控制网络等待，不限制后台任务寿命。已结束的会话要查历史，可用 `events` 或 `conversation`，不必永久等待 SSE。
+
+Agent 回复的 `parent_id` 指向它对应的用户输入 ID；Runner 可据此选择本轮回复，避免误用其他轮次。文件访问依然由平台校验归属、路径及符号链接边界。
+
+## 查询、停止与失败
+
+- `me()`、`agents()`：身份与授权 Agent。
+- `conversations()`、`conversation(id)`：已有会话及状态、消息、文件。
+- `stop(id)`：终止当前执行，保留队列和历史。
+- `continue_queue(id)`：明确释放已暂停队列；不重放已失败或已停止的输入。
+- `close(id)`：关闭会话，保留记录。
+
+`APIError.status_code` 保留 HTTP 拒绝原因，例如 401、403、409。网络问题抛出 `ConnectionError`；等待到期抛出 `TimeoutError`，只结束观察，不停止 Agent、不删 Session。失败／停止的会话直接返回快照，调用方决定后续操作。SDK 拒绝跟随 HTTP 重定向，避免把用户 Token 转发给另一地址。

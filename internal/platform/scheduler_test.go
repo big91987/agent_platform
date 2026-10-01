@@ -60,7 +60,7 @@ func TestSchedulerStopPreservesQueuedInputUntilExplicitContinue(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("executor not started")
 	}
-	s.Submit(c, Input{ConversationID: r.ConversationID, UserID: "operator", Message: "second"})
+	second, _ := s.Submit(c, Input{ConversationID: r.ConversationID, UserID: "operator", Message: "second"})
 	if e := sched.Stop(r.ConversationID, false); e != nil {
 		t.Fatal(e)
 	}
@@ -83,6 +83,12 @@ func TestSchedulerStopPreservesQueuedInputUntilExplicitContinue(t *testing.T) {
 	msgs, _ := s.Messages(r.ConversationID)
 	if len(msgs) != 3 || msgs[2].Content != "actual reply" || msgs[2].Kind != "reply" {
 		t.Fatalf("native reply missing: %+v", msgs)
+	}
+	var reply map[string]any
+	encoded, _ := json.Marshal(msgs[2])
+	json.Unmarshal(encoded, &reply)
+	if reply["parent_id"] != float64(second.MessageID) {
+		t.Fatalf("reply cannot be associated with its submitted input: %s", encoded)
 	}
 }
 func TestSchedulerLimitsConcurrencyAndRunsIndependentConversations(t *testing.T) {

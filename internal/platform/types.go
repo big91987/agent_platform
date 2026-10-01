@@ -60,6 +60,7 @@ type Conversation struct {
 }
 type Message struct {
 	ID             int64  `json:"id"`
+	ParentID       int64  `json:"parent_id,omitempty"`
 	ConversationID string `json:"conversation_id"`
 	Role           string `json:"role"`
 	Content        string `json:"content"`
