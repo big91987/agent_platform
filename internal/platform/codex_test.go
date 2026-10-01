@@ -105,3 +105,71 @@ func TestNativeStreamProtectsCredentialsAndReportsMalformedOutput(t *testing.T) 
 		})
 	}
 }
+
+func TestExternalWorkspaceUsesCWDWithoutRewritingProject(t *testing.T) {
+	root := t.TempDir()
+	workspace, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectRules := []byte("# Project rules\nKeep the existing contract.\n")
+	if err = os.WriteFile(filepath.Join(workspace, "AGENTS.md"), projectRules, 0600); err != nil {
+		t.Fatal(err)
+	}
+	auth := filepath.Join(root, "auth")
+	os.MkdirAll(auth, 0700)
+	os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600)
+	os.WriteFile(filepath.Join(auth, "config.toml"), []byte(`model="test-model"`), 0600)
+	x := Codex{Root: root, AuthHome: auth, Binary: filepath.Join(root, "executor")}
+	script := `#!/bin/sh
+if [ "$1" = app-server ]; then
+ while IFS= read -r line; do
+  case "$line" in
+   *'"id":1'*) printf '%s\n' '{"id":1,"result":{}}' ;;
+   *'"id":2'*) printf '%s\n' '{"id":2,"result":{"data":[{"skills":[],"errors":[]}]}}' ;;
+  esac
+ done
+else
+ printf '%s' "$PWD" > "$CODEX_HOME/cwd.txt"
+ cat > "$CODEX_HOME/input.txt"
+ printf '%s\n' '{"type":"thread.started","thread_id":"workspace-proof"}' '{"type":"turn.completed"}'
+fi
+`
+	os.WriteFile(x.Binary, []byte(script), 0700)
+	c := Conversation{ID: "external", WorkspacePath: workspace, Snapshot: Agent{Executor: "codex", Instructions: "Use project documents before asking questions.", NativeConfig: "developer_instructions='Existing native guidance'", SeedDir: "/missing-template"}}
+	if err = x.Execute(context.Background(), c, Message{Content: "Inspect this project"}, func([]byte) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	_, home := x.paths(c.ID)
+	cwd, _ := os.ReadFile(filepath.Join(home, "cwd.txt"))
+	if string(cwd) != workspace {
+		t.Fatalf("wrong native CWD: %s", cwd)
+	}
+	config, _ := os.ReadFile(filepath.Join(home, "config.toml"))
+	for _, text := range []string{"Existing native guidance", c.Snapshot.Instructions, "test-model"} {
+		if !strings.Contains(string(config), text) {
+			t.Fatalf("native configuration lost guidance/model: %s", config)
+		}
+	}
+	rules, _ := os.ReadFile(filepath.Join(workspace, "AGENTS.md"))
+	if string(rules) != string(projectRules) {
+		t.Fatal("project instructions were overwritten")
+	}
+	os.MkdirAll(filepath.Join(home, "sessions"), 0700)
+	os.WriteFile(filepath.Join(home, "sessions", "workspace-proof.jsonl"), []byte("mock native record"), 0600)
+	c.ThreadID = "workspace-proof"
+	if err = x.Execute(context.Background(), c, Message{Content: "Continue"}, func([]byte) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	cwd, _ = os.ReadFile(filepath.Join(home, "cwd.txt"))
+	if string(cwd) != workspace {
+		t.Fatal("resume changed workspace")
+	}
+	if err = os.Rename(workspace, workspace+"-moved"); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(workspace + "-moved")
+	if err = x.Execute(context.Background(), c, Message{Content: "Continue"}, func([]byte) error { return nil }); err == nil {
+		t.Fatal("missing external workspace silently became empty")
+	}
+}

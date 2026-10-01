@@ -19,3 +19,5 @@ Final: Ruling: non-image files initially provide downloads and small text previe
 Final: Ruling: strong malicious-code isolation, remote execution and multi-Agent workflows remain explicit non-goals — current acceptance concerns trusted local Codex only — cost: this experiment cannot be offered as a multi-tenant cloud service.
 
 2026-10-01 access simplification: user-approved account-owned API tokens, Agent user grants and fixed conversation links replace source credentials and temporary bearer links. Existing accounts and all ten conversations retained; real account login and GitHub Runner path verified. See access.md and access-verification.md.
+
+2026-10-01: 用户批准本机工作目录输入，云端沙箱与仓库初始化后置。首次调用可传 workspace_path，原生 Session 和该目录分别留存；外部项目 AGENTS.md 不改写，阶段文件可直接读取和下载。GitHub 业务接入脚本要求准备好的目录，接续固定原目录。验证结果见 local-workspace-verification.md。

@@ -60,6 +60,17 @@ func OpenStore(dir string) (*Store, error) {
 		s.Close()
 		return nil, e
 	}
+	var workspaceColumn int
+	if e = db.QueryRow(`SELECT count(*) FROM pragma_table_info('conversations') WHERE name='workspace_path'`).Scan(&workspaceColumn); e != nil {
+		s.Close()
+		return nil, e
+	}
+	if workspaceColumn == 0 {
+		if _, e = db.Exec(`ALTER TABLE conversations ADD COLUMN workspace_path TEXT NOT NULL DEFAULT ''`); e != nil {
+			s.Close()
+			return nil, e
+		}
+	}
 	if e = s.initUsers(); e != nil {
 		s.Close()
 		return nil, e
@@ -142,12 +153,12 @@ func (s *Store) Agents() ([]Agent, error) {
 
 type scanner interface{ Scan(...any) error }
 
-const convColumns = "id,agent_id,source,user_id,title,status,error,thread_id,snapshot,created,updated"
+const convColumns = "id,agent_id,source,user_id,title,status,error,thread_id,workspace_path,snapshot,created,updated"
 
 func scanConv(row scanner) (Conversation, error) {
 	var c Conversation
 	var snapshot string
-	e := row.Scan(&c.ID, &c.AgentID, &c.Source, &c.UserID, &c.Title, &c.Status, &c.Error, &c.ThreadID, &snapshot, &c.Created, &c.Updated)
+	e := row.Scan(&c.ID, &c.AgentID, &c.Source, &c.UserID, &c.Title, &c.Status, &c.Error, &c.ThreadID, &c.WorkspacePath, &snapshot, &c.Created, &c.Updated)
 	if errors.Is(e, sql.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -271,6 +282,15 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		if in.AgentID != "" && in.AgentID != conv.AgentID {
 			return out, ErrConflict
 		}
+		if in.WorkspacePath != "" {
+			workspace, err := normalizeWorkspace(in.WorkspacePath)
+			if err != nil {
+				return out, err
+			}
+			if workspace != conv.WorkspacePath {
+				return out, fmt.Errorf("workspace is fixed for this conversation: %w", ErrConflict)
+			}
+		}
 		if conv.Status == "closed" {
 			return out, ErrConflict
 		}
@@ -293,13 +313,28 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		if !a.Enabled {
 			return out, errors.New("Agent is disabled")
 		}
+		workspace := ""
+		if in.WorkspacePath != "" {
+			workspace, e = normalizeWorkspace(in.WorkspacePath)
+			if e != nil {
+				return out, e
+			}
+			// Native records and credentials are not project workspaces.
+			dataDir, err := normalizeWorkspace(s.Dir)
+			if err != nil {
+				return out, err
+			}
+			if containsPath(dataDir, workspace) || containsPath(workspace, dataDir) {
+				return out, errors.New("workspace must be outside the platform data directory")
+			}
+		}
 		title := []rune(strings.TrimSpace(in.Message))
 		if len(title) > 60 {
 			title = title[:60]
 		}
 		stamp := now()
-		conv = Conversation{ID: newID(), AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", Snapshot: a, Created: stamp, Updated: stamp}
-		_, e = tx.Exec(`INSERT INTO conversations(id,agent_id,source,user_id,title,status,snapshot,created,updated)VALUES(?,?,?,?,?,?,?,?,?)`, conv.ID, a.ID, c.Source, in.UserID, conv.Title, conv.Status, cfg, stamp, stamp)
+		conv = Conversation{ID: newID(), AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
+		_, e = tx.Exec(`INSERT INTO conversations(id,agent_id,source,user_id,title,status,workspace_path,snapshot,created,updated)VALUES(?,?,?,?,?,?,?,?,?,?)`, conv.ID, a.ID, c.Source, in.UserID, conv.Title, conv.Status, workspace, cfg, stamp, stamp)
 		if e != nil {
 			return out, e
 		}
@@ -346,7 +381,7 @@ func (s *Store) Messages(id string) ([]Message, error) {
 	}
 	return out, rows.Err()
 }
-func (s *Store) Claim() (Conversation, Message, error) {
+func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	var conv Conversation
 	var m Message
 	tx, e := s.DB.Begin()
@@ -354,7 +389,15 @@ func (s *Store) Claim() (Conversation, Message, error) {
 		return conv, m, e
 	}
 	defer tx.Rollback()
-	e = tx.QueryRow(`SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') ORDER BY m.id LIMIT 1`).Scan(&m.ID, &m.ConversationID, &m.Content, &m.Created)
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.status IN('running','stopping')))`
+	args := []any{}
+	for _, path := range busyWorkspaces {
+		if path != "" {
+			query += ` AND c.workspace_path!=?`
+			args = append(args, path)
+		}
+	}
+	e = tx.QueryRow(query+` ORDER BY m.id LIMIT 1`, args...).Scan(&m.ID, &m.ConversationID, &m.Content, &m.Created)
 	if errors.Is(e, sql.ErrNoRows) {
 		return conv, m, ErrNotFound
 	}

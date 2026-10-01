@@ -33,8 +33,7 @@ func imageArtifact(path string) bool {
 	}
 	return false
 }
-func listArtifacts(root, id string) ([]Artifact, error) {
-	workspace := filepath.Join(root, "conversations", id, "workspace")
+func listArtifacts(workspace string) ([]Artifact, error) {
 	out := []Artifact{}
 	e := filepath.WalkDir(workspace, func(path string, d fs.DirEntry, e error) error {
 		if e != nil {
@@ -73,7 +72,7 @@ func listArtifacts(root, id string) ([]Artifact, error) {
 	}
 	return out, e
 }
-func openArtifact(root, id, path string) (*os.File, error) {
+func openArtifact(workspace, path string) (*os.File, error) {
 	if path == "" || filepath.IsAbs(path) || strings.ContainsRune(path, 0) || hiddenArtifact(path) {
 		return nil, errors.New("invalid artifact path")
 	}
@@ -81,7 +80,6 @@ func openArtifact(root, id, path string) (*os.File, error) {
 	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 		return nil, ErrForbidden
 	}
-	workspace := filepath.Join(root, "conversations", id, "workspace")
 	current := workspace
 	for _, part := range strings.Split(clean, string(filepath.Separator)) {
 		current = filepath.Join(current, part)

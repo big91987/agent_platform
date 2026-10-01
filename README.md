@@ -40,8 +40,10 @@ go build -o bin/agent-platform ./cmd/agent-platform
 curl http://127.0.0.1:8788/api/invoke \
   -H "Authorization: Bearer $AGENT_PLATFORM_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"agent_id":"<agent-id>","message":"请记住项目代号青禾","request_id":"event-001"}'
+  -d '{"agent_id":"<agent-id>","message":"请记住项目代号青禾","request_id":"event-001","workspace_path":"<prepared-project-workspace>"}'
 ```
+
+`workspace_path` 可选：首次传本机已有项目目录的绝对路径，平台直接在该目录启动 Agent，保留项目 `AGENTS.md` 和前序产物，不复制、不克隆。省略时沿用平台空白／模板工作区。调用方为并发任务准备独立目录；同一目录的会话执行串行。路径在创建时解析为真实绝对目录并固定，接续可以省略；换目录返回 409。目录消失时明确失败，不自动重建空目录。
 
 返回 `conversation_id`、`message_id`、`status`、`conversation_url` 和 `duplicate`。返回成功表示输入已保存，执行可能尚在排队。
 
@@ -71,7 +73,7 @@ curl http://127.0.0.1:8788/api/invoke \
 
 ## 原生配置和恢复
 
-- 每段会话固定创建时的 Agent 配置，并持有独立工作目录与 CODEX_HOME。后续轮次使用保存的原生 thread ID 调用 `codex exec resume`。
+- 每段会话固定创建时的 Agent 配置、工作目录路径，并持有独立 CODEX_HOME。可直接使用调用方准备的外部工作目录。外部目录不应用模板，Agent 指令使用原生 developer_instructions，仓库 AGENTS.md 保持原样。后续轮次使用保存的原生 thread ID 调用 `codex exec resume`。
 - Skill 由原生发现与渐进读取，平台只控制范围；不会把全文拼入提示词。路径填写 Skill 文件夹或 SKILL.md。未选择的发现项禁用。
 - 原生 TOML 可配置 MCP 和 Hook；Hook 必须由操作者显式信任。平台管理的沙箱、原生存储和 Skill 范围不能从高级配置绕过。
 - 环境支持继承、字符串覆盖和 null 清除。平台凭据及原生存储变量不透传；已知原生登录／敏感环境凭据在导出的事件中脱敏。不要通过指令要求 Agent 输出凭据，也不要把敏感文件作为模板输入。
@@ -79,9 +81,9 @@ curl http://127.0.0.1:8788/api/invoke \
 - 执行中追加消息按序排队，不会自动打断。停止／失败后队列保留，但需明确继续；失败或已停止的原输入不会自动重放。
 - 停止先终止整个进程组，必要时三秒后强制结束。进程身份持久记录，平台重启前核验并清理遗留组；身份无法确认则拒绝启动，避免杀错进程或重叠执行。
 - 平台重启不会把未知执行伪装成成功；原生记录缺失时明确失败，不创建新的原生会话冒充恢复。
-- 关闭后的会话可在页面明确删除历史与文件；删除不可恢复。默认不自动清理。
+- 关闭后的会话可在页面明确删除历史与文件；删除不可恢复；仅删除平台拥有的记录与文件，不删除外部项目工作目录。默认不自动清理。
 
-SQLite、原生会话、日志与文件均保存在 `.data/`。备份／迁移时先停止平台，再整体复制此目录。运行等待用户时不占执行位置。当前是一个进程、一个数据库，没有外部队列和远程 Worker。
+SQLite、原生会话、日志与平台工作区保存在 `.data/`；外部工作目录仍在传入的位置。备份／迁移时先停止平台，再复制 `.data/` 和关联的外部工作目录。运行等待用户时不占执行位置。当前是一个进程、一个数据库，没有外部队列和远程 Worker。
 
 ## 验证和边界
 

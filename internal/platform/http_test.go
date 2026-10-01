@@ -28,7 +28,9 @@ func TestAPIRequiresUserTokenAndDoesNotLeakAnotherUsersConversation(t *testing.T
 	_, t1 := testUser(t, s, &a, "alice")
 	_, t2 := testUser(t, s, &a, "bob")
 	server := NewServer(s, nil, nil, "password", "http://localhost")
-	input := Input{AgentID: a.ID, UserID: "alice", Message: "private", RequestID: "one"}
+	workspace := t.TempDir()
+	os.WriteFile(filepath.Join(workspace, "handoff.md"), []byte("previous stage output"), 0600)
+	input := Input{AgentID: a.ID, UserID: "alice", Message: "private", RequestID: "one", WorkspacePath: workspace}
 	if w := requestJSON(t, server, "POST", "/api/invoke", "", input); w.Code != 401 {
 		t.Fatalf("unauthorized status %d", w.Code)
 	}
@@ -44,6 +46,10 @@ func TestAPIRequiresUserTokenAndDoesNotLeakAnotherUsersConversation(t *testing.T
 	w = requestJSON(t, server, "GET", "/api/conversations/"+r.ConversationID+"?user_id=alice", t2, nil)
 	if w.Code != 403 {
 		t.Fatalf("cross-source read: %d %s", w.Code, w.Body.String())
+	}
+	w = requestJSON(t, server, "GET", "/api/conversations/"+r.ConversationID+"/file?path=handoff.md", t1, nil)
+	if w.Code != 200 || w.Body.String() != "previous stage output" {
+		t.Fatalf("workspace handoff unavailable: %d %s", w.Code, w.Body.String())
 	}
 	w = requestJSON(t, server, "POST", "/api/webhooks/"+a.ID, t1, input)
 	if w.Code != 202 {
@@ -82,11 +88,11 @@ func TestArtifactsRejectTraversalAndSymlinks(t *testing.T) {
 	os.WriteFile(outside, []byte("private"), 0600)
 	os.Symlink(outside, filepath.Join(workspace, "leak.txt"))
 	for _, path := range []string{"../private.txt", "leak.txt", "/etc/passwd", ".env", "AGENTS.md"} {
-		if _, e := openArtifact(root, "abc", path); e == nil {
+		if _, e := openArtifact(workspace, path); e == nil {
 			t.Fatalf("unsafe artifact opened: %s", path)
 		}
 	}
-	file, e := openArtifact(root, "abc", "result.txt")
+	file, e := openArtifact(workspace, "result.txt")
 	if e != nil {
 		t.Fatal(e)
 	}

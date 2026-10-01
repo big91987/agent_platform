@@ -8,7 +8,7 @@
 
 ## 运行组成
 
-一个 Go 进程提供 HTTP API、静态界面、事件流和后台调度。SQLite 是 Agent 配置、用户 Token、会话、消息、执行事件与去重记录的事实源。会话目录保存独立工作区、配置快照、原生 Codex 记录和文件产物。
+一个 Go 进程提供 HTTP API、静态界面、事件流和后台调度。SQLite 是 Agent 配置、用户 Token、会话、消息、执行事件与去重记录的事实源。会话目录保存配置快照、原生 Codex 记录和默认工作区；创建请求可指定同机外部工作目录，文件现场保留在该路径。
 
 ```mermaid
 flowchart LR
@@ -44,11 +44,11 @@ flowchart LR
 
 ## 对外契约
 
-- POST /api/invoke，POST /api/webhooks/{agent_id}：message、可选 user_id、可选 conversation_id、可选 request_id。返回 conversation_id、message_id、status、conversation_url。
+- POST /api/invoke，POST /api/webhooks/{agent_id}：message、可选 user_id、可选 conversation_id、可选 request_id、可选 workspace_path（创建时固定的本机目录）。返回 conversation_id、message_id、status、conversation_url。
 - GET /api/conversations 与 GET /api/conversations/{id}：用户 Token 仅访问该用户自己的会话；已登录操作者可以查看平台记录。
 - POST /api/conversations/{id}/messages、/stop、/continue、/close：同样校验归属。
 - GET /api/conversations/{id}/events：SSE 按持久事件 ID 续读，断线不丢历史；也可查询会话快照。
-- GET /api/conversations/{id}/artifacts：仅开放独立工作区内正常文件，拒绝路径越界、符号链接和原生登录材料。
+- GET /api/conversations/{id}/artifacts：仅开放该会话实际工作区内正常文件，拒绝路径越界、符号链接和原生登录材料。
 - Agent 与用户 Token 的创建、修改、检查、禁用和吊销只允许网页操作者。
 
 request_id 在平台用户范围内去重。相同键和内容返回原结果，内容不同拒绝。API Token 绑定用户，user_id 不能改变普通用户身份。Agent 配置授权用户；网页通过账号密码登录，固定会话链接不含访问凭证。详见 [用户与访问](access.md)。
@@ -57,7 +57,7 @@ request_id 在平台用户范围内去重。相同键和内容返回原结果，
 
 Agent 配置包括模型、指令、工作目录模板、Skill 路径、原生 TOML、环境继承和覆盖／清除。配置检查执行原生 strict-config 与 Skill 目录核验；本机登录只建立引用，不复制到产物。
 
-每个会话从目录模板创建独立工作区；不在共享目录并发写入。模板中的原生项目配置需要显式核验。高级配置不能覆盖平台负责的 CODEX_HOME、持久化位置和运行策略。环境仅继承与设置，null 表示清除。
+未指定 workspace_path 时，每个会话从目录模板创建独立工作区。指定时直接使用已有本机目录，不复制模板、不改写项目 AGENTS.md，Agent 指令通过原生 developer_instructions 加载。原生记录始终保存在平台管理的 CODEX_HOME。接续不允许换目录，目录缺失或解析到不同路径时拒绝执行。数据库保存规范化的路径；调度对相同路径的运行会话串行，包括取消过程。调用方为不同任务准备独立 Git 工作目录，阶段接力可以共用同一任务目录。删除会话只删除平台记录，不删除外部目录。模板中的原生项目配置需要显式核验。高级配置不能覆盖平台负责的 CODEX_HOME、持久化位置和运行策略。环境仅继承与设置，null 表示清除。
 
 Skill 目录由原生发现提供元信息，禁用未在配置范围内的 Skill，并再次核验生效范围，不把全文拼入提示词。Hook 来自已登录操作者配置，启用原生 Hook 前需明确信任；配置未信任则拒绝运行。
 
@@ -71,3 +71,7 @@ Skill 目录由原生发现提供元信息，禁用未在配置范围内的 Skil
 ## 验证
 
 真实 Codex 三轮接续、平台重启后的显式 resume、原生 Hook 和 Skill 生效、真实文件生成与页面展示是完成证据。独立单元／集成测试覆盖授权、事务去重、队列、停止和文件边界；不以替身执行器证明原生能力。
+
+## 本机工作目录接入
+
+工作目录由同机调用方准备并在首次请求中传入。目录权限依赖本机受信调用方和操作系统；此路径参数不是隔离沙箱。平台拒绝相对路径、缺失目录以及覆盖平台数据目录的路径。不同阶段需要的文件在工作区按项目约定保存。云端目录准备、仓库检出、对象存储和沙箱生命周期不在本轮实现范围。

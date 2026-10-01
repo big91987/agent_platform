@@ -325,7 +325,7 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	artifacts, e := listArtifacts(h.store.Dir, v.ID)
+	artifacts, e := listArtifacts(v.workspace(h.store.Dir))
 	if e != nil {
 		fail(w, e)
 		return
@@ -454,7 +454,7 @@ func (h *Server) artifacts(w http.ResponseWriter, r *http.Request, c Caller) {
 	if !ok {
 		return
 	}
-	files, e := listArtifacts(h.store.Dir, v.ID)
+	files, e := listArtifacts(v.workspace(h.store.Dir))
 	if e != nil {
 		fail(w, e)
 		return
@@ -467,7 +467,7 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 		return
 	}
 	path := r.URL.Query().Get("path")
-	f, e := openArtifact(h.store.Dir, v.ID, path)
+	f, e := openArtifact(v.workspace(h.store.Dir), path)
 	if e != nil {
 		fail(w, e)
 		return

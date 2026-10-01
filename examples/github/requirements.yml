@@ -10,6 +10,10 @@ on:
         description: Optional message to continue the associated conversation
         type: string
         default: ''
+      workspace_path:
+        description: Optional prepared project directory on the platform machine (new conversations only)
+        type: string
+        default: ''
 permissions:
   contents: read
   issues: write
@@ -28,6 +32,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ inputs.issue }}
           PLATFORM_MESSAGE: ${{ inputs.message }}
+          PLATFORM_WORKSPACE_PATH: ${{ inputs.workspace_path }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"

@@ -215,6 +215,16 @@ func copySeed(src, dst string) error {
 func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, error) {
 	workspace, home := x.paths(c.ID)
 	finalRoot := filepath.Dir(workspace)
+	if c.WorkspacePath != "" {
+		resolved, err := normalizeWorkspace(c.WorkspacePath)
+		if err != nil {
+			return "", "", err
+		}
+		if resolved != c.WorkspacePath {
+			return "", "", errors.New("workspace path changed; refusing to resume in another directory")
+		}
+		workspace = resolved
+	}
 	marker := filepath.Join(home, "prepared")
 	if _, e := os.Stat(marker); e == nil {
 		return workspace, home, nil
@@ -234,22 +244,39 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 	}
 	defer os.RemoveAll(staging)
 	workspace, home = filepath.Join(staging, "workspace"), filepath.Join(staging, "native")
+	if c.WorkspacePath != "" {
+		workspace = c.WorkspacePath
+	}
 	marker = filepath.Join(home, "prepared")
 	a := c.Snapshot
 	cfg, e := nativeConfig(a)
 	if e != nil {
 		return "", "", e
 	}
+	if c.WorkspacePath != "" && a.Instructions != "" {
+		// Keep repository instructions intact; Agent configuration stays in the native home.
+		var options map[string]any
+		if e = toml.Unmarshal(cfg, &options); e != nil {
+			return "", "", e
+		}
+		previous, _ := options["developer_instructions"].(string)
+		options["developer_instructions"] = strings.TrimSpace(previous + "\n\n" + a.Instructions)
+		if cfg, e = toml.Marshal(options); e != nil {
+			return "", "", e
+		}
+	}
 	if e = os.MkdirAll(home, 0700); e != nil {
 		return "", "", e
 	}
-	if e = os.MkdirAll(workspace, 0700); e != nil {
-		return "", "", e
+	if c.WorkspacePath == "" {
+		if e = os.MkdirAll(workspace, 0700); e != nil {
+			return "", "", e
+		}
+		if e = copySeed(a.SeedDir, workspace); e != nil {
+			return "", "", e
+		}
 	}
-	if e = copySeed(a.SeedDir, workspace); e != nil {
-		return "", "", e
-	}
-	if a.Instructions != "" {
+	if c.WorkspacePath == "" && a.Instructions != "" {
 		p := filepath.Join(workspace, "AGENTS.md")
 		existing, _ := os.ReadFile(p)
 		body := string(existing) + "\n\n# Agent configuration\n\n" + a.Instructions + "\n"
@@ -272,7 +299,12 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 		if raw, e := os.ReadFile(filepath.Join(x.authHome(), "config.toml")); e == nil && toml.Unmarshal(raw, &machine) == nil {
 			if model, ok := machine["model"].(string); ok {
 				a.Model = model
-				cfg, e = nativeConfig(a)
+				var options map[string]any
+				e = toml.Unmarshal(cfg, &options)
+				if e == nil {
+					options["model"] = model
+					cfg, e = toml.Marshal(options)
+				}
 				if e != nil {
 					return "", "", e
 				}
@@ -363,7 +395,8 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 	if e = os.Rename(staging, finalRoot); e != nil {
 		return "", "", e
 	}
-	workspace, home = x.paths(c.ID)
+	_, home = x.paths(c.ID)
+	workspace = c.workspace(x.Root)
 	return workspace, home, nil
 }
 func quote(s string) string { b, _ := json.Marshal(s); return string(b) }

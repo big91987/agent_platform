@@ -135,3 +135,78 @@ func TestDisabledAgentBlocksNewConversationButExistingSnapshotPersists(t *testin
 		t.Fatal("existing configuration changed")
 	}
 }
+
+func TestExternalWorkspacePersistsAndSerializesExecution(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "data")
+	s, err := OpenStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { s.Close() }()
+	a := testAgent(t, s)
+	caller := Caller{Admin: true, Source: "console"}
+	workspace, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := Input{AgentID: a.ID, UserID: "owner", Message: "first", WorkspacePath: workspace, RequestID: "workspace-first"}
+	first, err := s.Submit(caller, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := s.Submit(caller, input)
+	if err != nil || !replay.Duplicate || replay.ConversationID != first.ConversationID {
+		t.Fatalf("workspace replay: %+v %v", replay, err)
+	}
+	second, err := s.Submit(caller, Input{AgentID: a.ID, UserID: "owner", Message: "another stage", WorkspacePath: workspace})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, m, err := s.Claim()
+	if err != nil || c.ID != first.ConversationID || c.WorkspacePath != workspace {
+		t.Fatalf("workspace not claimed: %+v %v", c, err)
+	}
+	if _, _, err = s.Claim(); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("same workspace ran concurrently: %v", err)
+	}
+	if err = s.Halt(c.ID, "closed", ""); err != nil {
+		t.Fatal(err)
+	}
+	// The process may still be stopping after the conversation was closed.
+	if _, _, err = s.Claim(workspace); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("closing process lost its workspace exclusion: %v", err)
+	}
+	if err = s.Complete(c.ID, m.ID, "completed", ""); err != nil {
+		t.Fatal(err)
+	}
+	c, m, err = s.Claim()
+	if err != nil || c.ID != second.ConversationID {
+		t.Fatalf("workspace was never released: %+v %v", c, err)
+	}
+	if err = s.SetThread(c.ID, "preserved-thread"); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Complete(c.ID, m.ID, "completed", ""); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	s, err = OpenStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = s.Conversation(second.ConversationID)
+	if err != nil || c.WorkspacePath != workspace || c.ThreadID != "preserved-thread" {
+		t.Fatalf("restart lost workspace or session: %+v %v", c, err)
+	}
+	if _, err = s.Submit(caller, Input{ConversationID: c.ID, UserID: "owner", Message: "continue"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Submit(caller, Input{ConversationID: c.ID, UserID: "owner", Message: "change directory", WorkspacePath: t.TempDir()}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("workspace switched: %v", err)
+	}
+	for _, path := range []string{"relative", filepath.Join(workspace, "missing"), s.Dir, filepath.Dir(s.Dir)} {
+		if _, err = s.Submit(caller, Input{AgentID: a.ID, UserID: "owner", Message: "invalid workspace", WorkspacePath: path}); err == nil {
+			t.Fatalf("invalid workspace accepted: %s", path)
+		}
+	}
+}

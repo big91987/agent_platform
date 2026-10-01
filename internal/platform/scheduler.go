@@ -53,7 +53,16 @@ func (s *Scheduler) dispatch() {
 		return
 	}
 	for len(s.active) < s.limit {
-		c, m, e := s.store.Claim()
+		busy := []string{}
+		for id := range s.active {
+			active, err := s.store.Conversation(id)
+			if err != nil {
+				log.Printf("scheduler workspace: %v", err)
+				return
+			}
+			busy = append(busy, active.WorkspacePath)
+		}
+		c, m, e := s.store.Claim(busy...)
 		if errors.Is(e, ErrNotFound) {
 			return
 		}

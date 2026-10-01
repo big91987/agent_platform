@@ -64,6 +64,11 @@ def main():
                                  + (os.environ.get("GITHUB_RUN_ID", "local") if conversation else "initial")}
         if conversation:
             payload["conversation_id"] = conversation
+        else:
+            workspace = os.environ.get("PLATFORM_WORKSPACE_PATH", "").strip() or config.get("workspace_path", "")
+            if not workspace:
+                raise ValueError("Set workspace_path in the Runner configuration or workflow input to the prepared local project directory")
+            payload["workspace_path"] = workspace
         receipt = api("/api/invoke", payload)
         conversation = receipt["conversation_id"]
         print(f"Input saved. Conversation: {conversation}", flush=True)

@@ -41,20 +41,22 @@ type Input struct {
 	ConversationID string `json:"conversation_id"`
 	Message        string `json:"message"`
 	RequestID      string `json:"request_id"`
+	WorkspacePath  string `json:"workspace_path,omitempty"`
 }
 type Conversation struct {
-	ID        string `json:"id"`
-	AgentID   string `json:"agent_id"`
-	AgentName string `json:"agent_name"`
-	UserID    string `json:"user_id"`
-	Source    string `json:"source"`
-	Title     string `json:"title"`
-	Status    string `json:"status"`
-	Error     string `json:"error,omitempty"`
-	ThreadID  string `json:"-"`
-	Snapshot  Agent  `json:"-"`
-	Created   string `json:"created_at"`
-	Updated   string `json:"updated_at"`
+	ID            string `json:"id"`
+	AgentID       string `json:"agent_id"`
+	AgentName     string `json:"agent_name"`
+	UserID        string `json:"user_id"`
+	Source        string `json:"source"`
+	Title         string `json:"title"`
+	Status        string `json:"status"`
+	Error         string `json:"error,omitempty"`
+	ThreadID      string `json:"-"`
+	WorkspacePath string `json:"workspace_path"`
+	Snapshot      Agent  `json:"-"`
+	Created       string `json:"created_at"`
+	Updated       string `json:"updated_at"`
 }
 type Message struct {
 	ID             int64  `json:"id"`
