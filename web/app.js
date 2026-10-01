@@ -9,16 +9,49 @@ function toast(text) { $('#toast').textContent = text; $('#toast').className = '
 async function api(path, method='GET', body) {
   const response = await fetch(path,{method,headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:body === undefined ? undefined : JSON.stringify(body)});
   const data = await response.json();
-  if (!response.ok) { if (response.status === 401 && path !== '/api/login') { clearLive(); login(); } const error=new Error(data.error || `请求失败：${response.status}`);error.status=response.status;throw error; }
+  if (!response.ok) { if (response.status === 401 && path !== '/api/login' && path !== '/api/access') { clearLive(); login(); } const error=new Error(data.error || `请求失败：${response.status}`);error.status=response.status;throw error; }
   return data;
 }
 function clearLive(){state.stream?.close();state.stream=null;clearInterval(state.timer);state.timer=null;state.id=null;}
-function login(){clearLive();$('#app').innerHTML=`<div class="login-page"><div class="login-intro"><div class="brand"><span class="brand-icon">A</span> Agent Platform</div><h1>让 Agent 接进你的工作流</h1><p>配置原生能力，连接外部系统，<br>在同一段会话里持续协作。</p><div class="login-features"><span>可配置的 Agent</span><span>持久会话与实时进展</span><span>API · Webhook · 网页接续</span></div></div><form class="login-card" id="login-form"><h2>登录工作台</h2><p class="muted">管理员配置与接入；调用方查看自己的会话。</p><div class="field"><label for="username">用户名</label><input id="username" autocomplete="username" required value="admin"></div><div class="field"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入登录密码"></div><button class="primary" type="submit">登录</button><p class="muted small">如果你从业务系统的临时链接进入，将直接打开授权会话，无需管理员账号。</p></form></div>`;$('#login-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api('/api/login','POST',{username:$('#username').value,password:$('#password').value});await route()}catch(err){toast(err.message);if($('#login-form'))$('#login-form button').disabled=false}};}
+function login(note=''){clearLive();$('#app').innerHTML=`<div class="login-page"><div class="login-intro"><div class="brand"><span class="brand-icon">A</span> Agent Platform</div><h1>让 Agent 接进你的工作流</h1><p>配置原生能力，连接外部系统，<br>在同一段会话里持续协作。</p><div class="login-features"><span>可配置的 Agent</span><span>持久会话与实时进展</span><span>API · Webhook · 网页接续</span></div></div><form class="login-card" id="login-form"><h2>登录工作台</h2><p class="muted">管理员配置与接入；调用方查看自己的会话。</p>${note?`<div class="callout" role="status">${esc(note)}</div>`:''}<div class="field"><label for="username">用户名</label><input id="username" autocomplete="username" required value="admin"></div><div class="field"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入登录密码"></div><button class="primary" type="submit">登录</button><p class="muted small">如果你从业务系统的临时链接进入，将直接打开授权会话，无需管理员账号。</p></form></div>`;$('#login-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api('/api/login','POST',{username:$('#username').value,password:$('#password').value});await route()}catch(err){toast(err.message);if($('#login-form'))$('#login-form button').disabled=false}};}
 function shell(active,title){const admin=state.me.admin;const navigation=admin?[['conversations','◫','会话','/conversations/'],['agents','◇','智能体','/agents'],['integrations','↗','调用方接入','/integrations'],['users','◎','用户与角色','/users'],['api-docs','⌘','API 文档','/api-docs']]:[['conversations','◫',state.me.conversation_id?'当前会话':'我的会话',state.me.conversation_id?'/conversations/'+state.me.conversation_id:'/conversations/']];$('#app').innerHTML=`<div class="layout ${admin?'':'caller-layout'}"><aside class="sidebar"><div class="brand"><span class="brand-icon">A</span> Agent Platform</div><div class="edition">${admin?'管理工作台':'会话工作台'}</div><nav class="nav">${navigation.map(([key,icon,label,url])=>`<a href="${url}" data-nav class="${active===key?'active':''}"><span class="nav-label">${icon}</span>${label}</a>`).join('')}</nav><div class="nav-caption">${admin?'配置 · 接入 · 持续协作':'专属会话 · 持续交流'}</div><div class="local-card"><strong><span class="dot"></span>本机平台已连接</strong>${admin?'原生 Agent 后台运行':'你的输入和 Agent 历史持续保存'}</div></aside><main class="main"><header class="topbar"><div>${esc(title)} <small> / ${admin?'管理工作台':'调用方工作台'}</small></div><div class="topbar-right"><span class="role-chip">${admin?'管理员':state.me.conversation_id?'临时会话访问':'调用方用户'}</span><span class="avatar">${esc((state.me.username||state.me.user_id||'访')[0])}</span><span>${esc(state.me.username||state.me.user_id)}</span><button id="logout" class="quiet small">退出</button></div></header><section class="content" id="content"></section></main></div><dialog id="dialog"></dialog>`;$('#logout').onclick=async()=>{try{await api('/api/logout','POST',{});history.replaceState({},'','/');login()}catch(e){toast(e.message)}};}
 function go(path){history.pushState({},'',path);route().catch(showRouteError);}
 window.addEventListener('popstate',()=>route().catch(showRouteError));
 document.addEventListener('click',e=>{const a=e.target.closest('a[data-nav]');if(a){e.preventDefault();go(a.getAttribute('href'))}});
-async function route(){clearLive();const fragment=new URLSearchParams(location.hash.slice(1));if(fragment.has('access')){const token=fragment.get('access');history.replaceState({},'',location.pathname);try{const access=await api('/api/access','POST',{token});history.replaceState({},'','/conversations/'+access.conversation_id)}catch(e){login();toast(e.message);return}}state.me=await api('/api/me');state.agents=await api('/api/agents');const path=location.pathname;if(!state.me.admin&&['/agents','/users','/integrations','/api-docs'].includes(path)){go('/conversations/');return}if(path==='/agents'){shell('agents','智能体');await agentsView()}else if(path==='/integrations'){shell('integrations','调用方接入');await integrationsView()}else if(path==='/users'){shell('users','用户与角色');await usersView()}else if(path==='/api-docs'){shell('api-docs','API 文档');apiDocsView()}else{shell('conversations','会话');const match=path.match(/^\/conversations\/([a-f0-9]{32})$/);if(match){await conversationView(match[1])}else if(state.me.conversation_id){go('/conversations/'+state.me.conversation_id)}else{await conversationsView()}}}
+async function route(){
+ clearLive();
+ let accessError;
+ const fragment=new URLSearchParams(location.hash.slice(1));
+ if(fragment.has('access')){
+  const token=fragment.get('access');
+  history.replaceState({},'',location.pathname);
+  try{
+   const access=await api('/api/access','POST',{token});
+   history.replaceState({},'','/conversations/'+access.conversation_id);
+  }catch(e){
+   if(e.status!==401)throw e;
+   accessError=e;
+  }
+ }
+ try{state.me=await api('/api/me')}catch(e){
+  if(accessError&&e.status===401){login(accessError.message+' 可使用有权限的账号登录后继续这段会话。');return}
+  throw e;
+ }
+ state.agents=await api('/api/agents');
+ const path=location.pathname;
+ if(!state.me.admin&&['/agents','/users','/integrations','/api-docs'].includes(path)){go('/conversations/');return}
+ if(path==='/agents'){shell('agents','智能体');await agentsView()}
+ else if(path==='/integrations'){shell('integrations','调用方接入');await integrationsView()}
+ else if(path==='/users'){shell('users','用户与角色');await usersView()}
+ else if(path==='/api-docs'){shell('api-docs','API 文档');apiDocsView()}
+ else{
+  shell('conversations','会话');
+  const match=path.match(/^\/conversations\/([a-f0-9]{32})$/);
+  if(match){await conversationView(match[1]);if(accessError)toast('临时链接不可用，已使用当前账号打开会话。')}
+  else if(state.me.conversation_id){go('/conversations/'+state.me.conversation_id)}
+  else{await conversationsView()}
+ }
+}
 function heading(title,description,action=''){return `<div class="page-heading"><div><div class="eyebrow">AGENT WORKSPACE</div><h1>${esc(title)}</h1><p class="muted">${esc(description)}</p></div>${action}</div>`;}
 async function conversationsView(){state.conversations=await api('/api/conversations');const running=state.conversations.filter(c=>c.status==='running').length, queued=state.conversations.filter(c=>c.status==='queued').length;$('#content').innerHTML=heading(state.me.admin?'会话管理':'我的会话','每段会话属于一个 Agent；打开后接续这段会话的原生 Session。','<button id="new-chat" class="primary">＋ 开始会话</button>')+`<div class="stats"><div class="stat"><span class="stat-label">已保存会话</span><strong>${state.conversations.length}</strong></div><div class="stat"><span class="stat-label">正在执行</span><strong>${running}</strong></div><div class="stat"><span class="stat-label">等待执行</span><strong>${queued}</strong></div></div><div class="toolbar"><input id="search" placeholder="搜索会话内容、用户或来源"><select id="agent-filter"><option value="">全部 Agent</option>${state.agents.map(a=>`<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select><select id="status-filter"><option value="">全部状态</option>${Object.entries(labels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button id="refresh">刷新</button></div><div class="table-card"><div class="table-head"><div>会话</div><div>Agent / 来源</div><div>当前情况</div><div>最近更新</div></div><div id="conversation-rows"></div></div>`;$('#new-chat').onclick=()=>newConversation();$('#refresh').onclick=()=>conversationsView().catch(e=>toast(e.message));$('#search').oninput=rows;$('#agent-filter').onchange=rows;$('#status-filter').onchange=rows;const requested=new URLSearchParams(location.search).get('agent');if(requested)$('#agent-filter').value=requested;rows();}
 function rows(){const q=$('#search').value.toLowerCase(),a=$('#agent-filter').value,s=$('#status-filter').value;const list=state.conversations.filter(c=>(!a||c.agent_id===a)&&(!s||c.status===s)&&[c.title,c.user_id,c.source].join(' ').toLowerCase().includes(q));$('#conversation-rows').innerHTML=list.length?list.map(c=>`<div class="conversation-row" tabindex="0" role="link" data-id="${c.id}"><div><div class="row-title">${esc(c.title)}</div><div class="row-sub">${esc(c.user_id)} · ${esc(c.id.slice(0,8))}</div></div><div>${esc(c.agent_name)}<div class="row-sub">${c.source==='console'?'平台网页':esc(c.source.slice(0,8))}</div></div><div>${badge(c.status)}</div><div class="muted small">${time(c.updated_at)}</div></div>`).join(''):`<div class="empty"><strong>这里还没有匹配的会话</strong>选择一个 Agent，发送第一条消息。</div>`;document.querySelectorAll('.conversation-row').forEach(row=>{row.onclick=()=>go('/conversations/'+row.dataset.id);row.onkeydown=e=>{if(e.key==='Enter')row.click()}});}

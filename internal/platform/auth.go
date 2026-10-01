@@ -174,12 +174,18 @@ func (s *Store) WebAccess(c Caller, id, user string, seconds int) (string, int64
 	_, e = s.DB.Exec(`INSERT INTO web_access VALUES(?,?,?,?,?)`, hashText(token), v.Source, v.UserID, id, expires)
 	return token, expires, e
 }
+
+var errAccessExpired = errors.New("temporary conversation link expired")
+
 func (s *Store) ExchangeAccess(token string) (string, string, error) {
 	var source, user, id string
 	var expires int64
 	e := s.DB.QueryRow(`SELECT source,user_id,conversation_id,expires FROM web_access WHERE hash=?`, hashText(token)).Scan(&source, &user, &id, &expires)
-	if e != nil || time.Now().Unix() >= expires {
+	if e != nil {
 		return "", "", ErrForbidden
+	}
+	if time.Now().Unix() >= expires {
+		return "", "", errAccessExpired
 	}
 	c, e := s.credentialCaller(source)
 	if e != nil {
@@ -258,7 +264,11 @@ func (h *Server) exchangeAccess(w http.ResponseWriter, r *http.Request) {
 	}
 	token, id, e := h.store.ExchangeAccess(in.Token)
 	if e != nil {
-		respond(w, 401, map[string]string{"error": "链接无效、已过期或调用方已停用，请联系发起系统重新获取链接。"})
+		message := "链接无效或调用方已停用，请联系发起系统重新获取链接。"
+		if errors.Is(e, errAccessExpired) {
+			message = "此会话链接已过期，请在发起系统刷新临时链接。"
+		}
+		respond(w, 401, map[string]string{"error": message})
 		return
 	}
 	h.cookie(w, token)

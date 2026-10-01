@@ -21,10 +21,14 @@
 - 用户提出真实产品功能 Issue。
 - Owner 从 Actions 手动运行 Agent Platform requirements，输入 Issue 号。
 - Runner 取得 Issue 的标题、正文和发起人，转换为 API 输入，使用 `github:<login>` 作为 user_id。初次请求用稳定的业务键去重。
-- Agent 自己决定是否澄清；Runner 等待当前轮完成，把原始最终回复和 1 小时会话入口贴到 Issue。
+- Agent 自己决定是否澄清；Runner 等待当前轮完成，把原始最终回复、1 小时临时入口、固定账号入口和刷新 Workflow 入口贴到 Issue。
 - 发起者打开入口，无需管理员账号，在同一个 Agent 会话回复。平台负责 resume；Runner 不持有原生 Session ID，也不维持等待人的长 Job。
 - 再次运行 Workflow，message 留空只读取最新结果并刷新入口，不新增输入或执行；有 message 时向关联会话提交新输入。
 
 平台 API 文档页面详细列出 agent_id、user_id、conversation_id、message、request_id、查询游标和临时入口期限。执行失败原样报告，不自动重放未知副作用。当前脚本保存关联的事实是 Issue 评论中的隐藏标记，平台仍是消息与原生会话的事实源。
 
 临时链接是访问凭证，持有者能接续指定会话；公开 Issue 并不能证明点击者是发起者。当前本机实验验证入口与隔离，部署到多人环境须选择合适的链接投递可见性或外部登录方式。
+
+## 固定账号入口
+
+需要持续访问时，管理员在用户页面创建 caller 账号，绑定该 Runner 凭据的来源和 Issue 作者对应的 `github:<login>`。账号只查看这一来源和用户的会话，不是管理员，也不替代 Runner 的 API 凭据。使用固定会话链接登录后，可直接查看历史、产物及继续交流；临时链接过期不会使已授权的账号退出。临时入口仍限时，未登录用户不能以过期链接获得访问权。

@@ -14,6 +14,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 def github(path, body=None):
@@ -84,9 +86,16 @@ def main():
     content = replies[-1]["content"] if replies else "Agent 正在处理，请进入会话查看实时进展。"
     if status == "failed":
         content = "执行失败：" + result["conversation"].get("error", "请进入平台查看日志")
+    fixed_url = base + "/conversations/" + conversation
+    refresh_url = f"https://github.com/{repo}/actions/workflows/agent-platform.yml"
+    expiry = datetime.fromisoformat(link["expires_at"].replace("Z", "+00:00"))
+    expiry = expiry.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M（北京时间）")
     body = (f"<!-- agent-platform:{config['agent_id']}:{conversation} -->\n"
-            + content + f"\n\n[进入同一会话，查看进展或补充澄清]({link['url']})"
-            + f"\n\n链接有效至 {link['expires_at']}；再次运行本 Workflow（消息留空）可刷新链接，不会重新创建会话。")
+            + content + f"\n\n[临时入口：无需账号，接着澄清]({link['url']})"
+            + f" · [账号登录后打开同一会话]({fixed_url})"
+            + f"\n\n临时入口有效至 {expiry}。账号入口不随临时链接过期，仍需账号具备会话权限。"
+            + f"\n\n[刷新临时入口]({refresh_url})：点击 Run workflow，Issue 填 `{number}`，"
+            + "message 留空。只刷新授权和读取结果，不会重建会话或重新执行 Agent。")
     comment = github(f"repos/{repo}/issues/{number}/comments", {"body": body})
     print("Issue response: " + comment["html_url"], flush=True)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

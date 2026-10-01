@@ -34,3 +34,11 @@ Go 测试覆盖用户角色、账号停用、作用域、跨用户／来源／�
 私有原生事件、真实请求及界面截图保存在忽略目录：`.data/access-evidence.json`、`output/playwright/`，不提交账号、口令、API key 或临时授权 token。
 
 当前不声称支持远程 Runner、GitHub SSO、多人公网部署或强恶意代码隔离。管理员已通过正式账号管理 API 改为 admin/admin，接口登录返回 200，真实网页进入管理员工作台；正式平台重启后登录仍返回 200。临时全新数据目录首次启动也实测 admin/admin 返回 200。账号登录持久保存在数据库，重启不重置密码。
+
+## 过期入口回归与 GitHub 账号
+
+原 Issue 临时授权按 1 小时失效，调用方仍启用，会话和 PRD 均保留。已修复过期链接强制显示登录页的路由错误：有效账号继续按原权限访问，无有效账号显示持久的过期和登录说明；没有续期或绕过临时授权。Node 回归覆盖有效登录和匿名入口，Go race 检查通过。
+
+正式 Runner 刷新作业 https://github.com/big91987/reading_list/actions/runs/36797481532 成功，回复 https://github.com/big91987/reading_list/issues/63#issuecomment-5922385515 包含临时、固定及刷新入口，消息总数保持 6，未再次执行 Agent。
+
+按用户要求通过正式用户管理接口创建 github 调用方账号，绑定现有 GitHub Runner 来源及 github:big91987；实际登录和查询原 Issue 会话成功。口令仅交给用户，不写入本仓库。
