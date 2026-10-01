@@ -43,7 +43,7 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	})
 	h.mux.HandleFunc("POST /api/login", h.login)
 	h.mux.HandleFunc("GET /api/me", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
-		respond(w, 200, map[string]any{"admin": c.Admin, "role": map[bool]string{true: "admin", false: "caller"}[c.Admin], "source": c.Source, "username": c.Username, "user_id": c.UserID, "conversation_id": c.ConversationID})
+		respond(w, 200, map[string]any{"admin": c.Admin, "role": map[bool]string{true: "admin", false: "caller"}[c.Admin], "username": c.Username, "user_id": c.UserID})
 	}))
 	h.mux.HandleFunc("POST /api/logout", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		cookie, _ := r.Cookie("platform_session")
@@ -59,13 +59,10 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("POST /api/agents", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("PUT /api/agents/{id}", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("POST /api/agents/{id}/check", h.protect(true, h.checkAgent))
-	h.mux.HandleFunc("GET /api/credentials", h.protect(true, h.credentials))
-	h.mux.HandleFunc("POST /api/credentials", h.protect(true, h.credentials))
-	h.mux.HandleFunc("DELETE /api/credentials/{id}", h.protect(true, h.revoke))
 	h.mux.HandleFunc("GET /api/users", h.protect(true, h.users))
 	h.mux.HandleFunc("POST /api/users", h.protect(true, h.users))
-	h.mux.HandleFunc("POST /api/access", h.exchangeAccess)
-	h.mux.HandleFunc("POST /api/conversations/{id}/web-access", h.protect(false, h.webAccess))
+	h.mux.HandleFunc("POST /api/users/{id}/token", h.protect(true, h.userToken))
+	h.mux.HandleFunc("DELETE /api/users/{id}/token", h.protect(true, h.userToken))
 	h.mux.HandleFunc("POST /api/invoke", h.protect(false, h.invoke))
 	h.mux.HandleFunc("POST /api/webhooks/{agent}", h.protect(false, h.invoke))
 	h.mux.HandleFunc("POST /api/conversations/{id}/messages", h.protect(false, h.invoke))
@@ -188,7 +185,7 @@ func (h *Server) login(w http.ResponseWriter, r *http.Request) {
 		h.mu.Lock()
 		h.loginFailures++
 		h.mu.Unlock()
-		respond(w, 401, map[string]string{"error": "账号或密码错误，或账户／调用方已停用"})
+		respond(w, 401, map[string]string{"error": "账号或密码错误，或账号已停用"})
 		return
 	}
 	h.mu.Lock()
@@ -267,38 +264,6 @@ func (h *Server) checkAgent(w http.ResponseWriter, r *http.Request, c Caller) {
 	}
 	respond(w, 200, v)
 }
-func (h *Server) credentials(w http.ResponseWriter, r *http.Request, c Caller) {
-	if r.Method == "GET" {
-		v, e := h.store.Credentials()
-		if e != nil {
-			fail(w, e)
-			return
-		}
-		respond(w, 200, v)
-		return
-	}
-	var in struct {
-		Name   string   `json:"name"`
-		Agents []string `json:"agents"`
-	}
-	if e := decode(w, r, &in); e != nil {
-		fail(w, e)
-		return
-	}
-	v, token, e := h.store.CreateCredential(in.Name, in.Agents)
-	if e != nil {
-		fail(w, e)
-		return
-	}
-	respond(w, 201, map[string]any{"credential": v, "token": token})
-}
-func (h *Server) revoke(w http.ResponseWriter, r *http.Request, c Caller) {
-	if e := h.store.RevokeCredential(r.PathValue("id")); e != nil {
-		fail(w, e)
-		return
-	}
-	respond(w, 200, map[string]bool{"ok": true})
-}
 func (h *Server) invoke(w http.ResponseWriter, r *http.Request, c Caller) {
 	var in Input
 	if e := decode(w, r, &in); e != nil {
@@ -306,7 +271,7 @@ func (h *Server) invoke(w http.ResponseWriter, r *http.Request, c Caller) {
 		return
 	}
 	if c.Admin && in.UserID == "" {
-		in.UserID = "operator"
+		in.UserID = c.UserID
 	}
 	if id := r.PathValue("id"); id != "" {
 		if in.ConversationID != "" && in.ConversationID != id {
@@ -331,7 +296,7 @@ func (h *Server) invoke(w http.ResponseWriter, r *http.Request, c Caller) {
 	respond(w, 202, v)
 }
 func (h *Server) conversations(w http.ResponseWriter, r *http.Request, c Caller) {
-	if !c.Admin && c.UserID == "" && r.URL.Query().Get("user_id") == "" {
+	if !c.Admin && c.UserID == "" {
 		fail(w, errors.New("user_id is required"))
 		return
 	}

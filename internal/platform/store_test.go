@@ -27,7 +27,7 @@ func testAgent(t *testing.T, s *Store) Agent {
 func TestInputDeduplicatesAndRejectsChangedPayload(t *testing.T) {
 	s := testStore(t)
 	a := testAgent(t, s)
-	c := Caller{Source: "system-a", Agents: []string{a.ID}}
+	c := Caller{Source: "system-a", UserID: "alice", Agents: []string{a.ID}}
 	in := Input{AgentID: a.ID, UserID: "alice", Message: "hello", RequestID: "event-1"}
 	r, e := s.Submit(c, in)
 	if e != nil {
@@ -46,10 +46,10 @@ func TestInputDeduplicatesAndRejectsChangedPayload(t *testing.T) {
 		t.Fatalf("replayed input: %d", len(msgs))
 	}
 }
-func TestConversationCannotCrossSourceOrUser(t *testing.T) {
+func TestConversationCannotCrossUser(t *testing.T) {
 	s := testStore(t)
 	a := testAgent(t, s)
-	c := Caller{Source: "a", Agents: []string{a.ID}}
+	c := Caller{Source: "a", UserID: "alice", Agents: []string{a.ID}}
 	r, e := s.Submit(c, Input{AgentID: a.ID, UserID: "alice", Message: "private"})
 	if e != nil {
 		t.Fatal(e)
@@ -57,7 +57,7 @@ func TestConversationCannotCrossSourceOrUser(t *testing.T) {
 	for _, attempt := range []struct {
 		caller Caller
 		user   string
-	}{{Caller{Source: "b", Agents: []string{a.ID}}, "alice"}, {c, "bob"}} {
+	}{{Caller{Source: "b", UserID: "bob", Agents: []string{a.ID}}, "alice"}, {c, "bob"}} {
 		if _, e := s.Authorize(attempt.caller, r.ConversationID, attempt.user); !errors.Is(e, ErrForbidden) {
 			t.Fatalf("leaked conversation: %v", e)
 		}

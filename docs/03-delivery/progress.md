@@ -17,3 +17,5 @@ Final: Ruling: preserve the local experimental branch; this new repository has n
 Final: minor (deferred): Agent message Markdown is displayed as escaped original text; rich rendering is a later usability improvement.
 Final: Ruling: non-image files initially provide downloads and small text previews, rather than a universal viewer — removes unsafe execution and unnecessary format dependencies — cost: office/binary previews need a later supported viewer.
 Final: Ruling: strong malicious-code isolation, remote execution and multi-Agent workflows remain explicit non-goals — current acceptance concerns trusted local Codex only — cost: this experiment cannot be offered as a multi-tenant cloud service.
+
+2026-10-01 access simplification: user-approved account-owned API tokens, Agent user grants and fixed conversation links replace source credentials and temporary bearer links. Existing accounts and all ten conversations retained; real account login and GitHub Runner path verified. See access.md and access-verification.md.

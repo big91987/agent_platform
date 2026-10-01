@@ -3,18 +3,18 @@ const assert = require('node:assert/strict');
 const {readFileSync} = require('node:fs');
 const vm = require('node:vm');
 
-test('expired Issue links preserve an authorized account or offer login without granting access', async () => {
+test('fixed Issue links retain the destination through login and open the original conversation', async () => {
   for (const authenticated of [true, false]) {
+    let authenticatedAfterLogin = authenticated;
     const id = 'a'.repeat(32);
-    const location = {pathname: '/conversations/' + id, hash: '#access=expired', search: ''};
+    const location = {pathname: '/conversations/' + id, hash: '', search: ''};
     const context = vm.createContext({
       URLSearchParams, location, clearInterval, clearTimeout, setTimeout,
       window: {addEventListener() {}},
       document: {addEventListener() {}, querySelector() {}},
       history: {replaceState(_state, _title, path) {location.pathname = path; location.hash = ''; }},
       fetch: async path => {
-        if (path === '/api/access') return {ok: false, status: 401, json: async () => ({error: '链接已过期'})};
-        if (path === '/api/me') return {ok: authenticated, status: authenticated ? 200 : 401, json: async () => authenticated ? {admin: true} : {error: '请登录'}};
+        if (path === '/api/me') return {ok: authenticatedAfterLogin, status: authenticatedAfterLogin ? 200 : 401, json: async () => authenticatedAfterLogin ? {admin: true} : {error: '请登录'}};
         if (path === '/api/agents') return {ok: true, json: async () => []};
         throw new Error('Unexpected API: ' + path);
       },
@@ -35,7 +35,11 @@ test('expired Issue links preserve an authorized account or offer login without 
       assert.equal(vm.runInContext('loginNote', context), null);
     } else {
       assert.equal(vm.runInContext('opened', context), null, 'expired grant must not authorize anonymous access');
-      assert.match(vm.runInContext('loginNote', context), /过期/);
+      assert.equal(vm.runInContext('loginNote', context), '');
+      assert.equal(location.pathname, '/conversations/' + id);
+      authenticatedAfterLogin = true;
+      await vm.runInContext('route()', context);
+      assert.equal(vm.runInContext('opened', context), id);
     }
   }
 });

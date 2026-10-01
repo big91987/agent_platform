@@ -14,7 +14,7 @@
 
 1. 在 **智能体** 中选择本机 Codex，配置指令、模型与允许使用的 Skill，执行“检查”，然后试运行。
 2. 在 **会话** 中发起请求。进展、最终回复和工具日志来自真实原生执行器；图片直接显示，文本可查看，所有产物均可下载。
-3. 在 **调用方接入** 创建调用凭据并选择可调用的 Agent。调用系统保存返回的会话标识；操作者可打开返回页面接续。
+3. 在 **用户与角色** 创建账号并生成用户 Token，在 **智能体** 配置中勾选授权用户。调用系统保存返回的会话链接；用户登录后打开原会话接续。
 
 ```sh
 ./scripts/stop.sh
@@ -34,39 +34,40 @@ go build -o bin/agent-platform ./cmd/agent-platform
 
 ## API / Webhook
 
-首次输入不传 `conversation_id`。`user_id` 是调用系统内的用户标识；不同调用凭据形成不同来源。会话标识和页面链接不是访问凭据。
+首次输入不传 `conversation_id`。Token 绑定平台用户；`user_id` 可省略，普通用户传入时必须与 Token 对应的 ID 相同。会话标识和页面链接不是访问凭据。
 
 ```sh
 curl http://127.0.0.1:8788/api/invoke \
   -H "Authorization: Bearer $AGENT_PLATFORM_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"agent_id":"<agent-id>","user_id":"user-001","message":"请记住项目代号青禾","request_id":"event-001"}'
+  -d '{"agent_id":"<agent-id>","message":"请记住项目代号青禾","request_id":"event-001"}'
 ```
 
 返回 `conversation_id`、`message_id`、`status`、`conversation_url` 和 `duplicate`。返回成功表示输入已保存，执行可能尚在排队。
 
-接续：向同一入口发送 `conversation_id`、同一 `user_id`、新 `message` 和新的 `request_id`。也可使用 `POST /api/conversations/{id}/messages`。相同来源的同一请求标识与相同输入返回原接收结果；标识相同但内容变化返回 409。调用方在响应丢失时应重试原请求，不能生成另一个标识；网页亦保留未确认请求的标识。
+接续：向同一入口发送 `conversation_id`、新 `message` 和新的 `request_id`。也可使用 `POST /api/conversations/{id}/messages`。同一用户的同一请求标识与相同输入返回原接收结果；标识相同但内容变化返回 409。调用方在响应丢失时应重试原请求，不能生成另一个标识；网页亦保留未确认请求的标识。
 
 | 接口 | 用途 |
 |---|---|
-| `POST /api/conversations/{id}/web-access` | 签发指定会话临时网页入口；body: user_id、expires_in（默认 3600） |
-| `POST /api/webhooks/{agent_id}` | 通用 JSON Webhook；同一消息格式与 Bearer 授权 |
-| `GET /api/conversations?user_id=…` | 当前调用来源与用户的会话 |
-| `GET /api/conversations/{id}?user_id=…` | 当前状态、消息与文件 |
-| `GET /api/conversations/{id}/events?user_id=…` | 持久事件 SSE；支持 Last-Event-ID / after 恢复游标 |
-| `GET /api/conversations/{id}/events?user_id=…&format=json` | 分批查询原始事件 |
-| `POST /api/conversations/{id}/stop?user_id=…` | 停止当前轮并保留队列 |
-| `POST /api/conversations/{id}/continue?user_id=…` | 明确继续已保留队列 |
-| `POST /api/conversations/{id}/close?user_id=…` | 关闭，保留历史与文件 |
-| `GET /api/conversations/{id}/file?user_id=…&path=report.md` | 查看或下载真实文件；download=1 强制下载 |
+| `POST /api/webhooks/{agent_id}` | 与 invoke 相同的消息格式和用户 Token |
+| `GET /api/me` | Token / 登录账号的 User ID |
+| `GET /api/conversations` | 当前用户有权限访问的会话 |
+| `GET /api/conversations/{id}` | 状态、消息、实际文件 |
+| `GET /api/conversations/{id}/events` | 持久事件 SSE，支持游标；format=json 查询数组 |
+| `POST /api/conversations/{id}/stop` | 停止当前轮，保留队列 |
+| `POST /api/conversations/{id}/continue` | 明确继续保留的队列 |
+| `POST /api/conversations/{id}/close` | 关闭，保留记录 |
+| `GET /api/conversations/{id}/file?path=report.md` | 查看文件；download=1 下载 |
+| `POST /api/users/{user_id}/token` | 管理员生成 / 重置该用户 Token |
+| `DELETE /api/users/{user_id}/token` | 管理员撤销 Token |
 
-外部凭据不允许修改 Agent 配置或读取其他来源／用户会话。管理员可处理所有本机会话；调用方账号绑定来源和 user_id，临时网页入口仅授权一个会话。GitHub requirements Runner 示例见 [接入说明](examples/github/README.md)，已验证真实 Issue 链接到平台澄清；钉钉和企微等其他渠道可转换成同一接口。
+## 用户与网页入口
 
-## 用户与角色
+每个用户有固定 User ID 和一个可选 API Token。Token 不自动轮换，重置或撤销由管理员在用户页面操作。Agent 配置授权用户，普通用户只能查看和接续自己的会话。管理员可以管理全部记录。
 
-管理导航包含智能体、会话、调用方接入、用户与角色、API 文档。Agent 卡片的“会话”入口只显示该 Agent 的已有 Session；会话回复恢复原生上下文。API 文档有字段表和实际请求调试。
+固定 conversation_url 没有临时 Token 或到期时间。未登录时输入用户名密码，成功后自动回到原会话；已登录直接检查权限。链接无需刷新，不泄露 API Token。撤销 API Token 不影响正常网页登录，停用用户则阻止两种访问。
 
-管理员创建调用方账号并绑定来源与 user_id；临时访问用户打开 Runner 签发的链接即可对话，不能进入配置管理或其他会话。详见 [访问设计](docs/02-architecture/access.md) 与 [真实验证](docs/03-delivery/access-verification.md)。
+旧账号、会话、文件与原生 Session 保留；升级将旧来源范围转换为用户的 Agent 授权，来源级凭据停止使用。为调用账号生成新 Token 后更新调用系统配置。详见 [访问设计](docs/02-architecture/access.md)、[GitHub 示例](examples/github/README.md) 与 [真实验证](docs/03-delivery/access-verification.md)。
 
 ## 原生配置和恢复
 

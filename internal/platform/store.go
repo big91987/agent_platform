@@ -49,7 +49,6 @@ func OpenStore(dir string) (*Store, error) {
 	s := &Store{DB: db, Dir: dir, lock: lock}
 	_, e = db.Exec(`
  CREATE TABLE IF NOT EXISTS agents(id TEXT PRIMARY KEY,config TEXT NOT NULL);
- CREATE TABLE IF NOT EXISTS credentials(id TEXT PRIMARY KEY, hash TEXT UNIQUE NOT NULL, name TEXT NOT NULL, agents TEXT NOT NULL, enabled INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS conversations(id TEXT PRIMARY KEY,agent_id TEXT NOT NULL,source TEXT NOT NULL,user_id TEXT NOT NULL,title TEXT NOT NULL,status TEXT NOT NULL,error TEXT NOT NULL DEFAULT '',thread_id TEXT NOT NULL DEFAULT '',snapshot TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT,conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,role TEXT NOT NULL,content TEXT NOT NULL,kind TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,parent_id INTEGER NOT NULL DEFAULT 0,native_item TEXT NOT NULL DEFAULT '');
  CREATE UNIQUE INDEX IF NOT EXISTS native_message ON messages(conversation_id,parent_id,native_item) WHERE native_item!='';
@@ -58,6 +57,10 @@ func OpenStore(dir string) (*Store, error) {
  CREATE INDEX IF NOT EXISTS input_queue ON messages(role,status,id);
  CREATE INDEX IF NOT EXISTS conversation_events ON events(conversation_id,id);`)
 	if e != nil {
+		s.Close()
+		return nil, e
+	}
+	if e = s.initUsers(); e != nil {
 		s.Close()
 		return nil, e
 	}
@@ -86,6 +89,15 @@ func (s *Store) SaveAgent(a Agent) (Agent, error) {
 	}
 	if a.Sandbox == "" {
 		a.Sandbox = "workspace-write"
+	}
+	for _, id := range a.AuthorizedUsers {
+		var n int
+		if e := s.DB.QueryRow(`SELECT count(*) FROM users WHERE user_id=?`, id).Scan(&n); e != nil {
+			return a, e
+		}
+		if n != 1 {
+			return a, errors.New("authorized user does not exist")
+		}
 	}
 	b, e := json.Marshal(a)
 	if e != nil {
@@ -156,14 +168,11 @@ func (s *Store) Authorize(c Caller, id, user string) (Conversation, error) {
 		}
 		user = c.UserID
 	}
-	if c.ConversationID != "" && c.ConversationID != id {
-		return Conversation{}, ErrForbidden
-	}
 	v, e := s.Conversation(id)
 	if e != nil {
 		return v, e
 	}
-	if !c.Admin && (v.Source != c.Source || v.UserID != user || !allowed(c, v.AgentID)) {
+	if !c.Admin && (c.UserID == "" || v.UserID != c.UserID || !allowed(c, v.AgentID)) {
 		return v, ErrForbidden
 	}
 	return v, nil
@@ -178,12 +187,8 @@ func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
 	q := `SELECT ` + convColumns + ` FROM conversations`
 	args := []any{}
 	if !c.Admin {
-		q += ` WHERE source=? AND user_id=?`
-		args = append(args, c.Source, user)
-	}
-	if c.ConversationID != "" {
-		q += ` AND id=?`
-		args = append(args, c.ConversationID)
+		q += ` WHERE user_id=?`
+		args = append(args, c.UserID)
 	}
 	q += ` ORDER BY updated DESC LIMIT 200`
 	rows, e := s.DB.Query(q, args...)
@@ -212,7 +217,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		}
 		in.UserID = c.UserID
 	}
-	if c.ConversationID != "" && in.ConversationID != c.ConversationID {
+	if !c.Admin && c.UserID == "" {
 		return out, ErrForbidden
 	}
 	if c.Source == "" || strings.TrimSpace(in.UserID) == "" || strings.TrimSpace(in.Message) == "" {
@@ -238,6 +243,15 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 			if e = json.Unmarshal([]byte(r), &out); e != nil {
 				return out, e
 			}
+			if !c.Admin {
+				var owner, agent string
+				if e = tx.QueryRow(`SELECT user_id,agent_id FROM conversations WHERE id=?`, out.ConversationID).Scan(&owner, &agent); e != nil {
+					return out, ErrNotFound
+				}
+				if owner != c.UserID || !allowed(c, agent) {
+					return out, ErrForbidden
+				}
+			}
 			out.Duplicate = true
 			return out, nil
 		}
@@ -251,7 +265,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		if e != nil {
 			return out, e
 		}
-		if !c.Admin && (conv.Source != c.Source || conv.UserID != in.UserID || !allowed(c, conv.AgentID)) {
+		if !c.Admin && (conv.UserID != c.UserID || !allowed(c, conv.AgentID)) {
 			return out, ErrForbidden
 		}
 		if in.AgentID != "" && in.AgentID != conv.AgentID {
@@ -496,56 +510,4 @@ func (s *Store) Events(id string, after int64) ([]Event, error) {
 		out = append(out, v)
 	}
 	return out, rows.Err()
-}
-func (s *Store) CreateCredential(name string, agents []string) (Credential, string, error) {
-	if strings.TrimSpace(name) == "" || len(agents) == 0 {
-		return Credential{}, "", errors.New("name and allowed Agents are required")
-	}
-	for _, id := range agents {
-		if _, e := s.Agent(id); e != nil {
-			return Credential{}, "", e
-		}
-	}
-	c := Credential{ID: newID(), Name: name, Agents: agents, Enabled: true}
-	token := "ap_" + newID() + newID()
-	b, _ := json.Marshal(agents)
-	_, e := s.DB.Exec(`INSERT INTO credentials VALUES(?,?,?,?,1)`, c.ID, hashText(token), name, string(b))
-	return c, token, e
-}
-func (s *Store) Authenticate(token string) (Caller, error) {
-	var id, scope string
-	var enabled bool
-	e := s.DB.QueryRow(`SELECT id,agents,enabled FROM credentials WHERE hash=?`, hashText(token)).Scan(&id, &scope, &enabled)
-	if e != nil || !enabled {
-		return Caller{}, ErrForbidden
-	}
-	var agents []string
-	if e = json.Unmarshal([]byte(scope), &agents); e != nil {
-		return Caller{}, e
-	}
-	return Caller{Source: id, Agents: agents}, nil
-}
-func (s *Store) Credentials() ([]Credential, error) {
-	rows, e := s.DB.Query(`SELECT id,name,agents,enabled FROM credentials`)
-	if e != nil {
-		return nil, e
-	}
-	defer rows.Close()
-	out := []Credential{}
-	for rows.Next() {
-		var c Credential
-		var raw string
-		if e = rows.Scan(&c.ID, &c.Name, &raw, &c.Enabled); e != nil {
-			return nil, e
-		}
-		if e = json.Unmarshal([]byte(raw), &c.Agents); e != nil {
-			return nil, e
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
-}
-func (s *Store) RevokeCredential(id string) error {
-	_, e := s.DB.Exec(`UPDATE credentials SET enabled=0 WHERE id=?`, id)
-	return e
 }

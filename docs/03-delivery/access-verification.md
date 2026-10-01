@@ -1,4 +1,6 @@
-# 管理员、调用方与网页澄清验证
+# 访问验证记录
+
+此前临时入口验证是历史记录。当前用户确认的约定为用户 Token、Agent 用户授权和账号登录固定会话入口，见 access.md。
 
 日期：2026-10-01。功能已实现，管理员登录为 admin/admin。
 
@@ -42,3 +44,14 @@ Go 测试覆盖用户角色、账号停用、作用域、跨用户／来源／�
 正式 Runner 刷新作业 https://github.com/big91987/reading_list/actions/runs/36797481532 成功，回复 https://github.com/big91987/reading_list/issues/63#issuecomment-5922385515 包含临时、固定及刷新入口，消息总数保持 6，未再次执行 Agent。
 
 按用户要求通过正式用户管理接口创建 github 调用方账号，绑定现有 GitHub Runner 来源及 github:big91987；实际登录和查询原 Issue 会话成功。口令仅交给用户，不写入本仓库。
+
+## 2026-10-01：用户 Token 与固定账号入口
+
+- 旧 3 个账号和 10 段会话升级后保留；升级前后对比会话 ID、归属、native thread_id、状态和消息数完全一致。登录密码未重置，文件目录未变更。
+- 通过正式账号 Token API 为 GitHub 接入账号生成 Token，并更新忽略的 Runner 配置；旧来源凭据返回 401，新 Token 与账号登录读取同一 Issue 会话成功。其他账号返回 403，匿名访问返回 401，伪造 user_id 返回 403。
+- 真实浏览器未登录打开固定会话 URL，使用原账号密码登录后自动打开原会话，历史和 PRD 仍可读取；用户页面显示固定 User ID 与 Token 生成／重置／撤销，Agent 配置显示授权用户。
+- 正式 Runner 作业 https://github.com/big91987/reading_list/actions/runs/36803037945 成功；Issue 回复 https://github.com/big91987/reading_list/issues/63#issuecomment-5923117332 只含固定会话链接、会话 ID 和登录说明，无访问 Token、有效期或刷新入口。读取结果没有增加原生执行轮次或消息数。升级后实际重试原始 API 请求，返回 duplicate=true 和原会话／接收记录，消息数仍为 6；旧请求去重记录已迁入稳定用户范围。
+- Go 行为测试验证 Token 重置和撤销、账号禁用、API／网页登录接续、跨用户隔离、Agent 授权撤回（含去重请求）及旧数据库迁移；Node 验证登录前后保留原会话路径。格式、语法、vet、race 与构建通过。
+- 私有检查摘要 `.data/user-token-verification.json`、迁移前 SQLite 备份 `.data/backups/`、实际页面截图 `output/playwright/account-conversation.png` 均不提交。
+
+当前方案取消临时签发／兑换 API。API Token 不自动过期，管理员可显式撤销或重置；正常浏览器登录仍有常规会话期限，重新登录不会重建 Agent Session。

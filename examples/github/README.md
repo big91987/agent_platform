@@ -1,34 +1,20 @@
-# GitHub requirements 接入示例
+# GitHub → 本机 Agent 平台
 
-本示例把 GitHub Runner 作为调用方。真实 Agent 在本机平台后台执行，Runner 只负责请求、结果查询和 Issue 回复。产品 Issue 本身不成为平台内部研发状态机。
+Runner 只负责请求、结果查询和 Issue 回复；Agent 在本机平台后台执行。
 
-## 一次配置
+1. 创建平台用户，在 Agent 配置中勾选该用户。
+2. 在用户页面生成此用户的 API Token，保存到本机忽略的配置文件。
+3. 将 requirements.yml 安装到业务仓库的 .github/workflows/agent-platform.yml，配置仓库变量 AGENT_PLATFORM_ROOT 为本机平台目录。
+4. 在 Actions 手动运行，issue 填产品 Issue 编号。首次提交标题和正文；已有会话且 message 为空时只读取结果，message 非空时接续原会话。
 
-1. 管理员在平台创建需求用途的 Agent，配置指令和原生 Skill。
-2. 创建只授权该 Agent 的调用方凭据。
-3. 在平台本机的 `.data/github-runner.json` 保存私有配置，并设置文件仅当前用户可读：
+私有配置示例（不得提交）：
 
 ```json
-{"base_url":"http://127.0.0.1:8788","agent_id":"<agent-id>","token":"<caller-api-token>"}
+{"base_url":"<service-endpoint>","agent_id":"<agent-id>","token":"<user-api-token>"}
 ```
 
-4. 测试项目复制 `requirements.yml` 到 `.github/workflows/agent-platform.yml`，按实际本机 Runner 标签调整 `runs-on`。
-5. 配置项目变量 `AGENT_PLATFORM_ROOT=<platform-repository>`。Runner 与平台同机，该目录提供本示例脚本及私有配置。不要把 API token 写入 YAML、Issue、产物或仓库。
-6. 关闭同一 Issue 的旧自动执行工作流，避免两个系统同时处理同一输入。
+Runner 从 Token 确定平台用户，不把任意 Issue 作者字符串当作平台身份。Issue 与会话关联记录在可信作者评论的隐藏标记中；平台仍是会话、输入和原生历史的事实源。首次请求使用稳定业务键去重，后续请求使用运行 ID。
 
-## 用户旅程
+回复包含 Agent 最终消息、固定 conversation_url、会话 ID 和账号登录说明。链接不含 Token、无到期时间、不需刷新。用户未登录时输入用户名密码，随后自动回到原会话。message 留空读取结果不会重放 Agent。
 
-- 用户提出真实产品功能 Issue。
-- Owner 从 Actions 手动运行 Agent Platform requirements，输入 Issue 号。
-- Runner 取得 Issue 的标题、正文和发起人，转换为 API 输入，使用 `github:<login>` 作为 user_id。初次请求用稳定的业务键去重。
-- Agent 自己决定是否澄清；Runner 等待当前轮完成，把原始最终回复、1 小时临时入口、固定账号入口和刷新 Workflow 入口贴到 Issue。
-- 发起者打开入口，无需管理员账号，在同一个 Agent 会话回复。平台负责 resume；Runner 不持有原生 Session ID，也不维持等待人的长 Job。
-- 再次运行 Workflow，message 留空只读取最新结果并刷新入口，不新增输入或执行；有 message 时向关联会话提交新输入。
-
-平台 API 文档页面详细列出 agent_id、user_id、conversation_id、message、request_id、查询游标和临时入口期限。执行失败原样报告，不自动重放未知副作用。当前脚本保存关联的事实是 Issue 评论中的隐藏标记，平台仍是消息与原生会话的事实源。
-
-临时链接是访问凭证，持有者能接续指定会话；公开 Issue 并不能证明点击者是发起者。当前本机实验验证入口与隔离，部署到多人环境须选择合适的链接投递可见性或外部登录方式。
-
-## 固定账号入口
-
-需要持续访问时，管理员在用户页面创建 caller 账号，绑定该 Runner 凭据的来源和 Issue 作者对应的 `github:<login>`。账号只查看这一来源和用户的会话，不是管理员，也不替代 Runner 的 API 凭据。使用固定会话链接登录后，可直接查看历史、产物及继续交流；临时链接过期不会使已授权的账号退出。临时入口仍限时，未登录用户不能以过期链接获得访问权。
+已有来源级凭据升级后失效，管理员为对应平台账号生成用户 Token，更新上述私有配置。网页账号和 API Token 属于同一用户；控制台撤销 Token 不影响网页登录和会话记录。

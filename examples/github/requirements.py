@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub Runner adapter: persistent conversation API and a scoped web link.
+"""GitHub Runner adapter: user-token API and an account-login conversation link.
 
 Configuration is local private JSON: base_url, agent_id, token.
 The platform API token never enters Issue comments or GitHub artifacts.
@@ -14,8 +14,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 
 def github(path, body=None):
@@ -52,7 +50,6 @@ def main():
     issue = github(f"repos/{repo}/issues/{number}")
     if "pull_request" in issue:
         raise ValueError("Use a product Issue, not a pull request")
-    user = "github:" + issue["user"]["login"]
     # Durable external association; platform owns all native Session state.
     comments = github(f"repos/{repo}/issues/{number}/comments?per_page=100")
     marker = rf"<!-- agent-platform:{re.escape(config['agent_id'])}:([a-f0-9]{{32}}) -->"
@@ -61,7 +58,7 @@ def main():
                          and (match := re.search(marker, comment.get("body", "")))), "")
     message = os.environ.get("PLATFORM_MESSAGE", "").strip()
     if not conversation or message:
-        payload = {"agent_id": config["agent_id"], "user_id": user,
+        payload = {"agent_id": config["agent_id"],
                    "message": message or (issue["title"] + "\n\n" + (issue.get("body") or "")),
                    "request_id": f"{repo}:issue:{issue['id']}:{config['agent_id']}:"
                                  + (os.environ.get("GITHUB_RUN_ID", "local") if conversation else "initial")}
@@ -70,32 +67,24 @@ def main():
         receipt = api("/api/invoke", payload)
         conversation = receipt["conversation_id"]
         print(f"Input saved. Conversation: {conversation}", flush=True)
-    query = "?user_id=" + urllib.parse.quote(user)
     deadline = time.monotonic() + 600
     while True:
-        result = api("/api/conversations/" + conversation + query)
+        result = api("/api/conversations/" + conversation)
         status = result["conversation"]["status"]
         if status not in ("queued", "running", "stopping"):
             break
         if time.monotonic() > deadline:
             break
         time.sleep(3)
-    link = api("/api/conversations/" + conversation + "/web-access",
-               {"user_id": user, "expires_in": 3600})
     replies = [m for m in result["messages"] if m["role"] == "agent" and m["kind"] == "reply"]
     content = replies[-1]["content"] if replies else "Agent 正在处理，请进入会话查看实时进展。"
     if status == "failed":
         content = "执行失败：" + result["conversation"].get("error", "请进入平台查看日志")
     fixed_url = base + "/conversations/" + conversation
-    refresh_url = f"https://github.com/{repo}/actions/workflows/agent-platform.yml"
-    expiry = datetime.fromisoformat(link["expires_at"].replace("Z", "+00:00"))
-    expiry = expiry.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M（北京时间）")
     body = (f"<!-- agent-platform:{config['agent_id']}:{conversation} -->\n"
-            + content + f"\n\n[临时入口：无需账号，接着澄清]({link['url']})"
-            + f" · [账号登录后打开同一会话]({fixed_url})"
-            + f"\n\n临时入口有效至 {expiry}。账号入口不随临时链接过期，仍需账号具备会话权限。"
-            + f"\n\n[刷新临时入口]({refresh_url})：点击 Run workflow，Issue 填 `{number}`，"
-            + "message 留空。只刷新授权和读取结果，不会重建会话或重新执行 Agent。")
+            + content + f"\n\n[登录平台，查看与继续会话]({fixed_url})"
+            + f"\n\n会话 ID：`{conversation}`。链接长期有效；未登录时使用平台账号登录，随后自动打开原会话。"
+            + "API Token 只用于调用，不放进网页链接或评论。")
     comment = github(f"repos/{repo}/issues/{number}/comments", {"body": body})
     print("Issue response: " + comment["html_url"], flush=True)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

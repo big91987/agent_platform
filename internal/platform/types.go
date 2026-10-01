@@ -13,27 +13,27 @@ var ErrForbidden = errors.New("access denied")
 var ErrConflict = errors.New("request conflicts with existing state")
 
 type Agent struct {
-	ID           string             `json:"id"`
-	Name         string             `json:"name"`
-	Executor     string             `json:"executor"`
-	Model        string             `json:"model"`
-	Instructions string             `json:"instructions"`
-	SeedDir      string             `json:"seed_dir"`
-	Skills       []string           `json:"skills"`
-	NativeConfig string             `json:"native_config"`
-	InheritEnv   bool               `json:"inherit_env"`
-	Env          map[string]*string `json:"env"`
-	Sandbox      string             `json:"sandbox"`
-	TrustHooks   bool               `json:"trust_hooks"`
-	Enabled      bool               `json:"enabled"`
+	ID              string             `json:"id"`
+	AuthorizedUsers []string           `json:"authorized_users"`
+	Name            string             `json:"name"`
+	Executor        string             `json:"executor"`
+	Model           string             `json:"model"`
+	Instructions    string             `json:"instructions"`
+	SeedDir         string             `json:"seed_dir"`
+	Skills          []string           `json:"skills"`
+	NativeConfig    string             `json:"native_config"`
+	InheritEnv      bool               `json:"inherit_env"`
+	Env             map[string]*string `json:"env"`
+	Sandbox         string             `json:"sandbox"`
+	TrustHooks      bool               `json:"trust_hooks"`
+	Enabled         bool               `json:"enabled"`
 }
 type Caller struct {
-	Username       string
-	UserID         string
-	ConversationID string
-	Source         string
-	Admin          bool
-	Agents         []string
+	Username string
+	UserID   string
+	Source   string
+	Admin    bool
+	Agents   []string
 }
 type Input struct {
 	AgentID        string `json:"agent_id"`
@@ -78,12 +78,6 @@ type Receipt struct {
 	Status          string `json:"status"`
 	ConversationURL string `json:"conversation_url"`
 	Duplicate       bool   `json:"duplicate"`
-}
-type Credential struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Agents  []string `json:"agents"`
-	Enabled bool     `json:"enabled"`
 }
 
 func newID() string {

@@ -8,7 +8,7 @@
 
 ## 运行组成
 
-一个 Go 进程提供 HTTP API、静态界面、事件流和后台调度。SQLite 是 Agent 配置、调用凭据、会话、消息、执行事件与去重记录的事实源。会话目录保存独立工作区、配置快照、原生 Codex 记录和文件产物。
+一个 Go 进程提供 HTTP API、静态界面、事件流和后台调度。SQLite 是 Agent 配置、用户 Token、会话、消息、执行事件与去重记录的事实源。会话目录保存独立工作区、配置快照、原生 Codex 记录和文件产物。
 
 ```mermaid
 flowchart LR
@@ -27,7 +27,7 @@ flowchart LR
 ## 责任
 
 - HTTP：校验调用权限、保存输入、返回会话 ID 与页面链接；网页操作员可处理已授权平台里的会话。
-- 数据库：事务处理消息接收与请求去重，按来源和用户关联会话，保留执行事件；一次会话只有一个执行中的输入。
+- 数据库：事务处理消息接收与请求去重，按固定用户 ID 关联会话，保留执行事件；一次会话只有一个执行中的输入。
 - 调度：按并发上限领取排队消息，启动和停止本机进程；失败／停止保留队列，等待明确继续。
 - Codex：处理真实输入，执行工具、渐进加载允许的 Skill、执行配置的原生 Hook；平台不增加意图模型或阶段审批。
 - 网页：按时间展示真实消息；执行日志折叠；截图直接查看，其他文件预览／下载。
@@ -44,14 +44,14 @@ flowchart LR
 
 ## 对外契约
 
-- POST /api/invoke，POST /api/webhooks/{agent_id}：user_id、message、可选 conversation_id、可选 request_id。返回 conversation_id、message_id、status、conversation_url。
-- GET /api/conversations 与 GET /api/conversations/{id}：调用凭据仅访问自身来源及指定 user_id 的会话；已登录操作者可以查看平台记录。
+- POST /api/invoke，POST /api/webhooks/{agent_id}：message、可选 user_id、可选 conversation_id、可选 request_id。返回 conversation_id、message_id、status、conversation_url。
+- GET /api/conversations 与 GET /api/conversations/{id}：用户 Token 仅访问该用户自己的会话；已登录操作者可以查看平台记录。
 - POST /api/conversations/{id}/messages、/stop、/continue、/close：同样校验归属。
 - GET /api/conversations/{id}/events：SSE 按持久事件 ID 续读，断线不丢历史；也可查询会话快照。
 - GET /api/conversations/{id}/artifacts：仅开放独立工作区内正常文件，拒绝路径越界、符号链接和原生登录材料。
-- Agent 与调用凭据的创建、修改、检查、禁用和吊销只允许网页操作者。
+- Agent 与用户 Token 的创建、修改、检查、禁用和吊销只允许网页操作者。
 
-request_id 在调用来源内去重。相同键和内容返回原结果；内容不同拒绝。会话 ID 不是凭据，user_id 也不是认证。外部凭据控制可用 Agent；网页登录使用用户名、角色及 HttpOnly 持久会话 Cookie，调用方账号绑定来源和 user_id；临时链接只授权一个会话。详见 [用户与访问](access.md)。
+request_id 在平台用户范围内去重。相同键和内容返回原结果，内容不同拒绝。API Token 绑定用户，user_id 不能改变普通用户身份。Agent 配置授权用户；网页通过账号密码登录，固定会话链接不含访问凭证。详见 [用户与访问](access.md)。
 
 ## 原生配置
 

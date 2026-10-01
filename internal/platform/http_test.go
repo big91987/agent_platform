@@ -22,11 +22,11 @@ func requestJSON(t *testing.T, h http.Handler, method, path, token string, body 
 	h.ServeHTTP(w, r)
 	return w
 }
-func TestAPIRequiresCredentialAndDoesNotLeakCrossSourceConversation(t *testing.T) {
+func TestAPIRequiresUserTokenAndDoesNotLeakAnotherUsersConversation(t *testing.T) {
 	s := testStore(t)
 	a := testAgent(t, s)
-	_, t1, _ := s.CreateCredential("a", []string{a.ID})
-	_, t2, _ := s.CreateCredential("b", []string{a.ID})
+	_, t1 := testUser(t, s, &a, "alice")
+	_, t2 := testUser(t, s, &a, "bob")
 	server := NewServer(s, nil, nil, "password", "http://localhost")
 	input := Input{AgentID: a.ID, UserID: "alice", Message: "private", RequestID: "one"}
 	if w := requestJSON(t, server, "POST", "/api/invoke", "", input); w.Code != 401 {

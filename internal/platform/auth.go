@@ -14,40 +14,177 @@ import (
 )
 
 type User struct {
-	Username string `json:"username"`
-	Role     string `json:"role"`
-	Source   string `json:"source"`
-	UserID   string `json:"user_id"`
-	Enabled  bool   `json:"enabled"`
-	Password string `json:"password,omitempty"`
+	Username     string `json:"username"`
+	Role         string `json:"role"`
+	UserID       string `json:"user_id"`
+	Enabled      bool   `json:"enabled"`
+	TokenEnabled bool   `json:"token_enabled"`
+	Password     string `json:"password,omitempty"`
 }
 
 func passwordHash(password, salt string) string {
 	b, _ := pbkdf2.Key(sha256.New, password, []byte(salt), 100000, 32)
 	return hex.EncodeToString(b)
 }
-func (s *Store) initAuth(password string) error {
-	_, e := s.DB.Exec(`CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,role TEXT NOT NULL,source TEXT NOT NULL,user_id TEXT NOT NULL,enabled INTEGER NOT NULL,salt TEXT NOT NULL,password TEXT NOT NULL);
- CREATE TABLE IF NOT EXISTS browser_sessions(hash TEXT PRIMARY KEY,username TEXT NOT NULL DEFAULT '',source TEXT NOT NULL DEFAULT '',user_id TEXT NOT NULL DEFAULT '',conversation_id TEXT NOT NULL DEFAULT '',expires INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS web_access(hash TEXT PRIMARY KEY,source TEXT NOT NULL,user_id TEXT NOT NULL,conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,expires INTEGER NOT NULL);`)
-	if e != nil {
-		return e
+
+// Upgrade account ownership once; never recreate conversations or native histories.
+func (s *Store) initUsers() error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
 	}
+	defer tx.Rollback()
+	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,role TEXT NOT NULL,source TEXT NOT NULL DEFAULT '',user_id TEXT NOT NULL,enabled INTEGER NOT NULL,salt TEXT NOT NULL,password TEXT NOT NULL,token_hash TEXT NOT NULL DEFAULT '');`)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(`PRAGMA table_info(users)`)
+	if err != nil {
+		return err
+	}
+	hasToken := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, typ string
+		var def any
+		if err = rows.Scan(&cid, &name, &typ, &notnull, &def, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		hasToken = hasToken || name == "token_hash"
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	if !hasToken {
+		// Legacy keys only proved a source, not a user. They cannot be reused as user tokens.
+		if _, err = tx.Exec(`ALTER TABLE users ADD COLUMN token_hash TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+		type legacyUser struct{ name, source, id, role string }
+		rows, err = tx.Query(`SELECT username,source,user_id,role FROM users ORDER BY username`)
+		if err != nil {
+			return err
+		}
+		var users []legacyUser
+		pairs := map[string]bool{}
+		for rows.Next() {
+			var u legacyUser
+			if err = rows.Scan(&u.name, &u.source, &u.id, &u.role); err != nil {
+				rows.Close()
+				return err
+			}
+			pair := u.source + "\x00" + u.id
+			if pairs[pair] {
+				rows.Close()
+				return errors.New("ambiguous legacy account ownership; migration requires explicit mapping")
+			}
+			pairs[pair] = true
+			users = append(users, u)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+		var credentials int
+		if err = tx.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='credentials'`).Scan(&credentials); err != nil {
+			return err
+		}
+		seen := map[string]bool{}
+		for _, u := range users {
+			id := u.id
+			if id == "" || seen[id] {
+				id = newID()
+			}
+			seen[id] = true
+			if _, err = tx.Exec(`UPDATE conversations SET user_id=? WHERE source=? AND user_id=?`, id, u.source, u.id); err != nil {
+				return err
+			}
+			if _, err = tx.Exec(`UPDATE users SET user_id=? WHERE username=?`, id, u.name); err != nil {
+				return err
+			}
+			if credentials == 0 || u.role == "admin" {
+				continue
+			}
+			var scope string
+			err = tx.QueryRow(`SELECT agents FROM credentials WHERE id=? AND enabled=1`, u.source).Scan(&scope)
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			var agents []string
+			if err = json.Unmarshal([]byte(scope), &agents); err != nil {
+				return err
+			}
+			for _, aid := range agents {
+				var raw string
+				if err = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, aid).Scan(&raw); err != nil {
+					return err
+				}
+				var a Agent
+				if err = json.Unmarshal([]byte(raw), &a); err != nil {
+					return err
+				}
+				found := false
+				for _, v := range a.AuthorizedUsers {
+					found = found || v == id
+				}
+				if !found {
+					a.AuthorizedUsers = append(a.AuthorizedUsers, id)
+				}
+				b, _ := json.Marshal(a)
+				if _, err = tx.Exec(`UPDATE agents SET config=? WHERE id=?`, string(b), aid); err != nil {
+					return err
+				}
+			}
+		}
+		// Existing account logins remain valid. Anonymous temporary access is withdrawn.
+		if _, err = tx.Exec(`DELETE FROM browser_sessions WHERE username=''`); err != nil {
+			return err
+		}
+	}
+	_, err = tx.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS user_identity ON users(user_id);
+ CREATE UNIQUE INDEX IF NOT EXISTS user_api_token ON users(token_hash) WHERE token_hash!='';
+ CREATE TABLE IF NOT EXISTS browser_sessions(hash TEXT PRIMARY KEY,username TEXT NOT NULL,expires INTEGER NOT NULL);
+ DROP TABLE IF EXISTS web_access; DROP TABLE IF EXISTS credentials;`)
+	if err != nil {
+		return err
+	}
+	// Carry existing deduplication receipts into the same stable user namespace.
+	// A conflicting key fails the transaction rather than replaying an uncertain task.
+	_, err = tx.Exec(`UPDATE requests SET source=(
+ SELECT 'user:'||c.user_id FROM conversations c JOIN users u ON u.user_id=c.user_id
+ WHERE c.id=json_extract(requests.receipt,'$.conversation_id'))
+ WHERE source NOT LIKE 'user:%' AND EXISTS(
+ SELECT 1 FROM conversations c JOIN users u ON u.user_id=c.user_id
+ WHERE c.id=json_extract(requests.receipt,'$.conversation_id'))`)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Store) initAuth(password string) error {
 	salt := newID()
-	_, e = s.DB.Exec(`INSERT OR IGNORE INTO users VALUES('admin','admin','console','admin',1,?,?)`, salt, passwordHash(password, salt))
-	return e
+	_, err := s.DB.Exec(`INSERT OR IGNORE INTO users(username,role,source,user_id,enabled,salt,password) VALUES('admin','admin','','admin',1,?,?)`, salt, passwordHash(password, salt))
+	return err
 }
 func (s *Store) Users() ([]User, error) {
-	rows, e := s.DB.Query(`SELECT username,role,source,user_id,enabled FROM users ORDER BY username`)
-	if e != nil {
-		return nil, e
+	rows, err := s.DB.Query(`SELECT username,role,user_id,enabled,token_hash!='' FROM users ORDER BY username`)
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 	out := []User{}
 	for rows.Next() {
 		var u User
-		if e = rows.Scan(&u.Username, &u.Role, &u.Source, &u.UserID, &u.Enabled); e != nil {
-			return nil, e
+		if err = rows.Scan(&u.Username, &u.Role, &u.UserID, &u.Enabled, &u.TokenEnabled); err != nil {
+			return nil, err
 		}
 		out = append(out, u)
 	}
@@ -61,21 +198,28 @@ func (s *Store) SaveUser(u User) (User, error) {
 	if u.Username == "admin" && (u.Role != "admin" || !u.Enabled) {
 		return u, errors.New("built-in admin must remain enabled as administrator")
 	}
-	if u.Role == "caller" {
-		if strings.TrimSpace(u.UserID) == "" {
-			return u, errors.New("caller user_id is required")
-		}
-		if _, e := s.credentialCaller(u.Source); e != nil {
-			return u, errors.New("select an enabled caller credential")
-		}
-	} else {
-		u.Source = "console"
-		u.UserID = u.Username
+	var salt, hash, id string
+	err := s.DB.QueryRow(`SELECT salt,password,user_id FROM users WHERE username=?`, u.Username).Scan(&salt, &hash, &id)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return u, err
 	}
-	var salt, hash string
-	e := s.DB.QueryRow(`SELECT salt,password FROM users WHERE username=?`, u.Username).Scan(&salt, &hash)
-	if e != nil && !errors.Is(e, sql.ErrNoRows) {
+	if err == nil {
+		if u.UserID != "" && u.UserID != id {
+			return u, errors.New("user_id is immutable")
+		}
+		u.UserID = id
+	} else if u.UserID == "" {
+		u.UserID = newID()
+	}
+	if len(u.UserID) > 256 || strings.TrimSpace(u.UserID) == "" {
+		return u, errors.New("invalid user_id")
+	}
+	var duplicates int
+	if e := s.DB.QueryRow(`SELECT count(*) FROM users WHERE user_id=? AND username!=?`, u.UserID, u.Username).Scan(&duplicates); e != nil {
 		return u, e
+	}
+	if duplicates > 0 {
+		return u, errors.New("user_id already belongs to another account")
 	}
 	if u.Password != "" {
 		if (len(u.Password) < 12 && !(u.Username == "admin" && u.Password == "admin")) || len(u.Password) > 256 {
@@ -83,120 +227,94 @@ func (s *Store) SaveUser(u User) (User, error) {
 		}
 		salt = newID()
 		hash = passwordHash(u.Password, salt)
-	} else if errors.Is(e, sql.ErrNoRows) {
+	} else if errors.Is(err, sql.ErrNoRows) {
 		return u, errors.New("new user password is required")
 	}
-	_, e = s.DB.Exec(`INSERT INTO users VALUES(?,?,?,?,?,?,?) ON CONFLICT(username) DO UPDATE SET role=excluded.role,source=excluded.source,user_id=excluded.user_id,enabled=excluded.enabled,salt=excluded.salt,password=excluded.password`, u.Username, u.Role, u.Source, u.UserID, u.Enabled, salt, hash)
-	if e == nil {
-		_, e = s.DB.Exec(`DELETE FROM browser_sessions WHERE username=?`, u.Username)
+	tx, e := s.DB.Begin()
+	if e != nil {
+		return u, e
+	}
+	defer tx.Rollback()
+	_, e = tx.Exec(`INSERT INTO users(username,role,source,user_id,enabled,salt,password) VALUES(?,?,'',?,?,?,?) ON CONFLICT(username) DO UPDATE SET role=excluded.role,enabled=excluded.enabled,salt=excluded.salt,password=excluded.password`, u.Username, u.Role, u.UserID, u.Enabled, salt, hash)
+	if e != nil {
+		return u, e
+	}
+	if _, e = tx.Exec(`DELETE FROM browser_sessions WHERE username=?`, u.Username); e != nil {
+		return u, e
 	}
 	u.Password = ""
-	return u, e
-}
-func (s *Store) credentialCaller(source string) (Caller, error) {
-	var scope string
-	var enabled bool
-	e := s.DB.QueryRow(`SELECT agents,enabled FROM credentials WHERE id=?`, source).Scan(&scope, &enabled)
-	if e != nil || !enabled {
-		return Caller{}, ErrForbidden
-	}
-	c := Caller{Source: source}
-	e = json.Unmarshal([]byte(scope), &c.Agents)
-	return c, e
+	return u, tx.Commit()
 }
 func (s *Store) userCaller(username string) (Caller, error) {
 	var u User
-	e := s.DB.QueryRow(`SELECT username,role,source,user_id,enabled FROM users WHERE username=?`, username).Scan(&u.Username, &u.Role, &u.Source, &u.UserID, &u.Enabled)
-	if e != nil || !u.Enabled {
+	err := s.DB.QueryRow(`SELECT username,role,user_id,enabled FROM users WHERE username=?`, username).Scan(&u.Username, &u.Role, &u.UserID, &u.Enabled)
+	if err != nil || !u.Enabled {
 		return Caller{}, ErrForbidden
 	}
-	if u.Role == "admin" {
-		return Caller{Source: "console", Admin: true, Username: u.Username, UserID: u.UserID}, nil
+	c := Caller{Source: "user:" + u.UserID, Username: u.Username, UserID: u.UserID, Admin: u.Role == "admin"}
+	agents, err := s.Agents()
+	if err != nil {
+		return Caller{}, err
 	}
-	c, e := s.credentialCaller(u.Source)
-	c.Username = u.Username
-	c.UserID = u.UserID
-	return c, e
+	for _, a := range agents {
+		for _, id := range a.AuthorizedUsers {
+			if id == u.UserID {
+				c.Agents = append(c.Agents, a.ID)
+				break
+			}
+		}
+	}
+	return c, nil
 }
 func (s *Store) Login(username, password string) (string, error) {
 	var salt, hash string
-	if e := s.DB.QueryRow(`SELECT salt,password FROM users WHERE username=? AND enabled=1`, username).Scan(&salt, &hash); e != nil {
+	if err := s.DB.QueryRow(`SELECT salt,password FROM users WHERE username=? AND enabled=1`, username).Scan(&salt, &hash); err != nil {
 		return "", ErrForbidden
 	}
 	if subtle.ConstantTimeCompare([]byte(passwordHash(password, salt)), []byte(hash)) != 1 {
 		return "", ErrForbidden
 	}
-	if _, e := s.userCaller(username); e != nil {
-		return "", e
+	if _, err := s.userCaller(username); err != nil {
+		return "", err
 	}
 	token := newID() + newID()
-	_, e := s.DB.Exec(`INSERT INTO browser_sessions(hash,username,expires) VALUES(?,?,?)`, hashText(token), username, time.Now().Add(24*time.Hour).Unix())
-	return token, e
+	_, err := s.DB.Exec(`INSERT INTO browser_sessions(hash,username,expires) VALUES(?,?,?)`, hashText(token), username, time.Now().Add(24*time.Hour).Unix())
+	return token, err
 }
 func (s *Store) BrowserCaller(token string) (Caller, error) {
-	var username, source, user, id string
+	var username string
 	var expiry int64
-	e := s.DB.QueryRow(`SELECT username,source,user_id,conversation_id,expires FROM browser_sessions WHERE hash=?`, hashText(token)).Scan(&username, &source, &user, &id, &expiry)
-	if e != nil || time.Now().Unix() >= expiry {
+	err := s.DB.QueryRow(`SELECT username,expires FROM browser_sessions WHERE hash=?`, hashText(token)).Scan(&username, &expiry)
+	if err != nil || username == "" || time.Now().Unix() >= expiry {
 		return Caller{}, ErrForbidden
 	}
-	if username != "" {
-		return s.userCaller(username)
-	}
-	c, e := s.credentialCaller(source)
-	if e != nil {
-		return c, e
-	}
-	c.UserID = user
-	c.ConversationID = id
-	_, e = s.Authorize(c, id, user)
-	return c, e
+	return s.userCaller(username)
 }
-func (s *Store) WebAccess(c Caller, id, user string, seconds int) (string, int64, error) {
-	v, e := s.Authorize(c, id, user)
-	if e != nil {
-		return "", 0, e
+func (s *Store) UserToken(id string, revoke bool) (string, error) {
+	var enabled bool
+	if err := s.DB.QueryRow(`SELECT enabled FROM users WHERE user_id=?`, id).Scan(&enabled); err != nil {
+		return "", ErrNotFound
 	}
-	if v.Source == "console" {
-		return "", 0, errors.New("temporary caller links require an external conversation")
+	if !enabled && !revoke {
+		return "", ErrForbidden
 	}
-	if _, e = s.credentialCaller(v.Source); e != nil {
-		return "", 0, e
+	token, hash := "", ""
+	if !revoke {
+		token = "ap_" + newID() + newID()
+		hash = hashText(token)
 	}
-	if seconds == 0 {
-		seconds = 3600
-	}
-	if seconds < 60 || seconds > 86400 {
-		return "", 0, errors.New("expires_in must be between 60 and 86400 seconds")
-	}
-	token := newID() + newID()
-	expires := time.Now().Add(time.Duration(seconds) * time.Second).Unix()
-	_, e = s.DB.Exec(`INSERT INTO web_access VALUES(?,?,?,?,?)`, hashText(token), v.Source, v.UserID, id, expires)
-	return token, expires, e
+	_, err := s.DB.Exec(`UPDATE users SET token_hash=? WHERE user_id=?`, hash, id)
+	return token, err
 }
-
-var errAccessExpired = errors.New("temporary conversation link expired")
-
-func (s *Store) ExchangeAccess(token string) (string, string, error) {
-	var source, user, id string
-	var expires int64
-	e := s.DB.QueryRow(`SELECT source,user_id,conversation_id,expires FROM web_access WHERE hash=?`, hashText(token)).Scan(&source, &user, &id, &expires)
-	if e != nil {
-		return "", "", ErrForbidden
+func (s *Store) Authenticate(token string) (Caller, error) {
+	if token == "" {
+		return Caller{}, ErrForbidden
 	}
-	if time.Now().Unix() >= expires {
-		return "", "", errAccessExpired
+	var username string
+	if err := s.DB.QueryRow(`SELECT username FROM users WHERE token_hash=? AND enabled=1`, hashText(token)).Scan(&username); err != nil {
+		return Caller{}, ErrForbidden
 	}
-	c, e := s.credentialCaller(source)
-	if e != nil {
-		return "", "", e
-	}
-	if _, e = s.Authorize(c, id, user); e != nil {
-		return "", "", e
-	}
-	session := newID() + newID()
-	_, e = s.DB.Exec(`INSERT INTO browser_sessions(hash,source,user_id,conversation_id,expires) VALUES(?,?,?,?,?)`, hashText(session), source, user, id, expires)
-	return session, id, e
+	return s.userCaller(username)
 }
 func (h *Server) cookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{Name: "platform_session", Value: token, Path: "/", HttpOnly: true, Secure: strings.HasPrefix(h.base, "https://"), SameSite: http.SameSiteLaxMode, MaxAge: 86400})
@@ -223,54 +341,11 @@ func (h *Server) users(w http.ResponseWriter, r *http.Request, c Caller) {
 	}
 	respond(w, 200, v)
 }
-func (h *Server) webAccess(w http.ResponseWriter, r *http.Request, c Caller) {
-	if c.ConversationID != "" {
-		fail(w, ErrForbidden)
-		return
-	}
-	var in struct {
-		UserID  string `json:"user_id"`
-		Expires int    `json:"expires_in"`
-	}
-	if e := decode(w, r, &in); e != nil {
-		fail(w, e)
-		return
-	}
-	if c.UserID != "" && !c.Admin {
-		if in.UserID != "" && in.UserID != c.UserID {
-			fail(w, ErrForbidden)
-			return
-		}
-		in.UserID = c.UserID
-	}
-	token, expires, e := h.store.WebAccess(c, r.PathValue("id"), in.UserID, in.Expires)
+func (h *Server) userToken(w http.ResponseWriter, r *http.Request, c Caller) {
+	token, e := h.store.UserToken(r.PathValue("id"), r.Method == "DELETE")
 	if e != nil {
 		fail(w, e)
 		return
 	}
-	respond(w, 201, map[string]any{"conversation_id": r.PathValue("id"), "url": h.base + "/conversations/" + r.PathValue("id") + "#access=" + token, "expires_at": time.Unix(expires, 0).UTC().Format(time.RFC3339)})
-}
-func (h *Server) exchangeAccess(w http.ResponseWriter, r *http.Request) {
-	if !h.sameOrigin(r) {
-		fail(w, ErrForbidden)
-		return
-	}
-	var in struct {
-		Token string `json:"token"`
-	}
-	if e := decode(w, r, &in); e != nil {
-		fail(w, e)
-		return
-	}
-	token, id, e := h.store.ExchangeAccess(in.Token)
-	if e != nil {
-		message := "链接无效或调用方已停用，请联系发起系统重新获取链接。"
-		if errors.Is(e, errAccessExpired) {
-			message = "此会话链接已过期，请在发起系统刷新临时链接。"
-		}
-		respond(w, 401, map[string]string{"error": message})
-		return
-	}
-	h.cookie(w, token)
-	respond(w, 200, map[string]string{"conversation_id": id})
+	respond(w, 200, map[string]any{"user_id": r.PathValue("id"), "token": token, "revoked": r.Method == "DELETE"})
 }
