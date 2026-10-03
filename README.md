@@ -97,7 +97,9 @@ SQLite、原生会话、日志与平台工作区保存在 `.data/`；外部工�
 
 ## 验证和边界
 
-开发检查执行 `scripts/verify.sh`，包含 Python SDK 行为测试、Ruff 格式／lint、前端检查及 Go race/vet/build。开发机需要 Python 3.10+、Ruff、Node、Go 和 C 编译器；SDK 使用方不需要这些开发检查工具。
+开发检查执行 `scripts/verify.sh`，包含 Python SDK 行为测试、Ruff 格式／lint、前端检查、真实浏览器连接生命周期回归及 Go race/vet/build。开发机需要 Python 3.10+、Ruff、Node、Go 和 C 编译器；SDK 使用方不需要这些开发检查工具。
+
+首次运行真实浏览器回归前，执行 `bash examples/github/install-tooling.sh` 安装锁定版本的 Playwright/Chromium。
 
 ```sh
 ./scripts/verify.sh

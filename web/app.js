@@ -12,7 +12,42 @@ async function api(path, method='GET', body) {
   if (!response.ok) { if (response.status === 401 && path !== '/api/login') { clearLive(); login(); } const error=new Error(data.error || `请求失败：${response.status}`);error.status=response.status;throw error; }
   return data;
 }
-function clearLive(){state.stream?.close();state.stream=null;clearInterval(state.timer);clearInterval(state.clock);state.timer=null;state.clock=null;state.id=null;}
+function closeConversationStream(){state.stream?.close();state.stream=null;state.connection='paused';}
+function pauseConversationLive(){state.live=false;closeConversationStream();clearInterval(state.timer);clearInterval(state.clock);state.timer=null;state.clock=null;}
+function clearLive(){pauseConversationLive();state.id=null;}
+function syncConversationStream(){
+ const id=state.id;
+ if(!state.live||document.hidden||state.pageHidden||!id||!['running','queued','stopping'].includes(state.view?.conversation.status)){closeConversationStream();return}
+ if(state.stream)return;
+ const stream=new EventSource('/api/conversations/'+id+'/events?after='+(state.historyEventID||0));
+ state.stream=stream;state.connection='connecting';
+ const current=()=>state.id===id&&state.stream===stream;
+ let scheduled=false;
+ stream.onopen=()=>{if(current()){state.connection='connected';renderExecutionStatus(state.view)}};
+ stream.onmessage=e=>{
+  if(!current())return;
+  receiveConversationEvent(JSON.parse(e.data));
+  if(!scheduled){scheduled=true;setTimeout(()=>{scheduled=false;if(current())refreshConversation(id).catch(()=>{})},100)}
+ };
+ stream.onerror=()=>{if(current()){state.connection='reconnecting';renderExecutionStatus(state.view)}};
+}
+function startConversationLive(){
+ if(!state.id||document.hidden||state.pageHidden)return;
+ state.live=true;
+ const id=state.id;
+ if(!state.timer)state.timer=setInterval(()=>{if(state.id===id&&!document.hidden)refreshConversation(id).catch(()=>{})},2000);
+ if(!state.clock)state.clock=setInterval(()=>{if(state.id===id&&!document.hidden)renderExecutionStatus(state.view)},1000);
+ syncConversationStream();renderExecutionStatus(state.view);
+}
+async function resumeConversationLive(){
+ const id=state.id,owner=state.events;
+ if(!id||document.hidden||state.pageHidden)return;
+ try{await refreshConversation(id)}catch{} // Keep visible polling available after a transient failure.
+ if(state.id===id&&state.events===owner)startConversationLive();
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseConversationLive();else resumeConversationLive()});
+window.addEventListener('pagehide',()=>{state.pageHidden=true;pauseConversationLive()});
+window.addEventListener('pageshow',()=>{state.pageHidden=false;resumeConversationLive()});
 function login(note=''){clearLive();$('#app').innerHTML=`<div class="login-page"><div class="login-intro"><div class="brand"><span class="brand-icon">A</span> Agent Platform</div><h1>让 Agent 接进你的工作流</h1><p>配置原生能力，连接外部系统，<br>在同一段会话里持续协作。</p><div class="login-features"><span>可配置的 Agent</span><span>持久会话与实时进展</span><span>API · Webhook · 网页接续</span></div></div><form class="login-card" id="login-form"><h2>登录工作台</h2><p class="muted">管理员配置平台；用户查看并接续自己的会话。</p>${note?`<div class="callout" role="status">${esc(note)}</div>`:''}<div class="field"><label for="username">用户名</label><input id="username" autocomplete="username" required value="admin"></div><div class="field"><label for="password">密码</label><input id="password" type="password" autocomplete="current-password" required placeholder="输入登录密码"></div><button class="primary" type="submit">登录</button><p class="muted small">从业务系统打开会话链接时，登录后会自动回到原会话。</p></form></div>`;$('#login-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{await api('/api/login','POST',{username:$('#username').value,password:$('#password').value});await route()}catch(err){toast(err.message);if($('#login-form'))$('#login-form button').disabled=false}};}
 function shell(active,title){const admin=state.me.admin;const navigation=admin?[['conversations','◫','会话','/conversations/'],['agents','◇','智能体','/agents'],['tools','⚒','外部工具','/tools'],['integrations','↗','API 接入','/integrations'],['users','◎','用户与角色','/users'],['api-docs','⌘','API 文档','/api-docs']]:[['conversations','◫','我的会话','/conversations/']];$('#app').innerHTML=`<div class="layout ${admin?'':'caller-layout'}"><aside class="sidebar"><div class="brand"><span class="brand-icon">A</span> Agent Platform</div><div class="edition">${admin?'管理工作台':'会话工作台'}</div><nav class="nav">${navigation.map(([key,icon,label,url])=>`<a href="${url}" data-nav class="${active===key?'active':''}"><span class="nav-label">${icon}</span>${label}</a>`).join('')}</nav><div class="nav-caption">${admin?'配置 · 接入 · 持续协作':'专属会话 · 持续交流'}</div><div class="local-card"><strong><span class="dot"></span>本机平台已连接</strong>${admin?'原生 Agent 后台运行':'你的输入和 Agent 历史持续保存'}</div></aside><main class="main"><header class="topbar"><div>${esc(title)} <small> / ${admin?'管理工作台':'用户工作台'}</small></div><div class="topbar-right"><span class="role-chip">${admin?'管理员':'用户'}</span><span class="avatar">${esc((state.me.username||state.me.user_id||'访')[0])}</span><span>${esc(state.me.username||state.me.user_id)}</span><button id="logout" class="quiet small">退出</button></div></header><section class="content" id="content"></section></main></div><dialog id="dialog"></dialog>`;$('#logout').onclick=async()=>{try{await api('/api/logout','POST',{});history.replaceState({},'','/');login()}catch(e){toast(e.message)}};}
 function go(path){history.pushState({},'',path);route().catch(showRouteError);}
@@ -241,17 +276,7 @@ async function conversationView(id){state.id=id;state.events=[];state.lastEventI
  $('#reply-form').onsubmit=async e=>{e.preventDefault();const text=$('#reply').value;$('#send-reply').disabled=true;try{await api('/api/conversations/'+id+'/messages','POST',platformInputs.body(id,{message:text,user_id:state.current?.user_id||'operator'}));platformInputs.accepted(id);$('#reply').value='';await refreshConversation(id)}catch(err){toast(err.message)}finally{if($('#send-reply'))$('#send-reply').disabled=false}};
  $('#delete-chat').onclick=async()=>{if(confirm('永久删除这段已关闭会话、原生记录和平台工作区？外部项目目录不会删除；删除后无法接续。')){try{await api('/api/conversations/'+id,'DELETE');go('/conversations/')}catch(e){toast(e.message)}}};$('#stop-chat').onclick=()=>conversationAction(id,'stop');$('#continue-chat').onclick=()=>conversationAction(id,'continue');$('#close-chat').onclick=()=>{if(confirm('关闭后保留历史，但不能继续执行。确定关闭？'))conversationAction(id,'close')};
  await refreshConversation(id);if(state.id!==id)return;
- state.stream=new EventSource('/api/conversations/'+id+'/events?after='+(state.historyEventID||0));
- let scheduled=false;
- state.stream.onopen=()=>{if(state.id===id){state.connection='connected';renderExecutionStatus(state.view)}};
- state.stream.onmessage=e=>{
-  if(state.id!==id)return;
-  receiveConversationEvent(JSON.parse(e.data));
-  if(!scheduled){scheduled=true;setTimeout(()=>{scheduled=false;if(state.id===id)refreshConversation(id).catch(()=>{})},100)}
- };
- state.stream.onerror=()=>{if(state.id===id){state.connection='reconnecting';renderExecutionStatus(state.view)}};
- state.timer=setInterval(()=>{if(state.id===id)refreshConversation(id).catch(()=>{})},2000);
- state.clock=setInterval(()=>{if(state.id===id)renderExecutionStatus(state.view)},1000);
+ startConversationLive();
 }
 function renderTranscript(data) {
  if (!data) return;
@@ -291,10 +316,18 @@ function renderTranscript(data) {
  timeline.querySelectorAll('details[data-disclosure]').forEach(el=>{el.open=expanded.has(el.dataset.disclosure)});
  if(bottom)timeline.scrollTop=timeline.scrollHeight;
 }
-async function refreshConversation(id){const revision=(state.refreshRevision||0)+1;state.refreshRevision=revision;let data;try{data=await api('/api/conversations/'+id);await syncConversationEvents(id)}catch(error){if(state.id===id){state.syncFailed=true;renderExecutionStatus(state.view)}throw error}if(state.id!==id||revision<(state.appliedRevision||0))return;state.appliedRevision=revision;state.syncFailed=false;state.view=data;const c=data.conversation;state.current=c;$('#chat-title').textContent=c.agent_name;$('#chat-status').innerHTML=badge(c.status);$('#chat-error').innerHTML=c.error?`<div class="error-box">${esc(c.error)}</div>`:'';$('#chat-info').innerHTML=`<div><dt>会话标识</dt><dd class="mono">${esc(c.id)}</dd></div><div><dt>用户</dt><dd>${esc(c.user_id)}</dd></div><div><dt>工作目录</dt><dd class="mono">${esc(c.workspace_path||'平台会话目录')}</dd></div><div><dt>创建时间</dt><dd>${time(c.created_at)}</dd></div>`;$('#status-note').textContent=({running:'Agent 正在执行。新消息默认排队，可点击消息旁的“引导”送入当前轮。',queued:'输入已保存，等待本机执行位置。',idle:'本轮已结束。是否需要进一步处理，以 Agent 的回复为准。',stopping:'正在终止当前执行，已完成的操作不会被撤销。',stopped:'已停止。队列保留，明确继续后再处理。',failed:'本轮失败，已保留记录。查看原因后可补充消息并继续。',closed:'会话已关闭，历史和文件仍可查看。'}[c.status]||'');$('#stop-chat').hidden=!['running','queued','stopping'].includes(c.status);$('#stop-chat').disabled=c.status==='stopping';$('#continue-chat').hidden=!['failed','stopped'].includes(c.status);$('#close-chat').disabled=c.status==='closed';$('#delete-chat').hidden=!state.me.admin||c.status!=='closed';$('#reply').disabled=c.status==='closed';$('#send-reply').disabled=c.status==='closed';
+async function refreshConversation(id){
+ const owner=state.events;
+ if(state.refresh?.owner===owner&&state.refresh.id===id)return state.refresh.promise;
+ const refresh={owner,id};state.refresh=refresh;
+ refresh.promise=loadConversation(id);
+ try{return await refresh.promise}finally{if(state.refresh===refresh)state.refresh=null}
+}
+async function loadConversation(id){const revision=(state.refreshRevision||0)+1;state.refreshRevision=revision;let data;try{data=await api('/api/conversations/'+id);await syncConversationEvents(id)}catch(error){if(state.id===id){state.syncFailed=true;renderExecutionStatus(state.view)}throw error}if(state.id!==id||revision<(state.appliedRevision||0))return;state.appliedRevision=revision;state.syncFailed=false;state.view=data;const c=data.conversation;state.current=c;$('#chat-title').textContent=c.agent_name;$('#chat-status').innerHTML=badge(c.status);$('#chat-error').innerHTML=c.error?`<div class="error-box">${esc(c.error)}</div>`:'';$('#chat-info').innerHTML=`<div><dt>会话标识</dt><dd class="mono">${esc(c.id)}</dd></div><div><dt>用户</dt><dd>${esc(c.user_id)}</dd></div><div><dt>工作目录</dt><dd class="mono">${esc(c.workspace_path||'平台会话目录')}</dd></div><div><dt>创建时间</dt><dd>${time(c.created_at)}</dd></div>`;$('#status-note').textContent=({running:'Agent 正在执行。新消息默认排队，可点击消息旁的“引导”送入当前轮。',queued:'输入已保存，等待本机执行位置。',idle:'本轮已结束。是否需要进一步处理，以 Agent 的回复为准。',stopping:'正在终止当前执行，已完成的操作不会被撤销。',stopped:'已停止。队列保留，明确继续后再处理。',failed:'本轮失败，已保留记录。查看原因后可补充消息并继续。',closed:'会话已关闭，历史和文件仍可查看。'}[c.status]||'');$('#stop-chat').hidden=!['running','queued','stopping'].includes(c.status);$('#stop-chat').disabled=c.status==='stopping';$('#continue-chat').hidden=!['failed','stopped'].includes(c.status);$('#close-chat').disabled=c.status==='closed';$('#delete-chat').hidden=!state.me.admin||c.status!=='closed';$('#reply').disabled=c.status==='closed';$('#send-reply').disabled=c.status==='closed';
  renderTranscript(data);
  renderConversationFiles(data);
  renderToolApprovals(data,id);
+ if(state.live)syncConversationStream();
  renderExecutionStatus(data);
 }
 async function conversationAction(id,action){try{await api('/api/conversations/'+id+'/'+action,'POST',{});await refreshConversation(id);toast(action==='continue'?'已恢复队列；失败输入不会自动重放。':action==='stop'?'已请求停止当前执行。':'会话已关闭。')}catch(e){toast(e.message)}}

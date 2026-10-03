@@ -9,6 +9,7 @@ node --check web/app.js
 node --check web/markdown.js
 node --check web/transcript.js
 node --test web/request_test.js web/markdown_test.js web/app_test.js web/transcript_test.js
+NODE_PATH=examples/github/tooling/full_harness/browser/node_modules node --test web/live_browser_test.cjs
 ruff check sdk/python examples
 ruff format --check sdk/python examples
 PYTHONPATH=sdk/python python3 -m unittest discover -s sdk/python/tests -v
