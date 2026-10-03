@@ -337,7 +337,6 @@ async function main() {
             );
             assert.equal(
               storageWrites,
-              observations,
               writeSnapshot,
               "localStorage write attempts changed",
             );

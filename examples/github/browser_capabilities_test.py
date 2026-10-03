@@ -154,3 +154,38 @@ class BrowserCapabilitiesTest(unittest.TestCase):
         self.assertEqual(
             json.loads(text)["result"]["observations"][0]["value"], {"blocked": True}
         )
+
+    def test_unchanged_storage_writes_passes_across_reload_with_observations(self):
+        reply, text = self.check(
+            [
+                {"action": "snapshot_storage"},
+                {"action": "zoom", "factor": 2},
+                {"action": "accessibility", "contains": "0.1.0 rc2"},
+                {"action": "reload"},
+                {"action": "unchanged_storage"},
+                {"action": "unchanged_storage_writes"},
+            ]
+        )
+        self.assertFalse(reply.get("isError"), text)
+        result = json.loads(text)["result"]
+        self.assertEqual(result["storageWrites"], 0)
+        self.assertEqual(result["observations"][0]["actual"], 2)
+
+    def test_new_storage_writes_fail_even_when_original_value_is_restored(self):
+        reply, text = self.check(
+            [
+                {"action": "snapshot_storage"},
+                self.script(
+                    "() => { localStorage.setItem('probe', 'value'); localStorage.removeItem('probe'); return true; }"
+                ),
+                {"action": "reload"},
+                {"action": "unchanged_storage"},
+                {"action": "unchanged_storage_writes"},
+            ]
+        )
+        self.assertTrue(reply.get("isError"), text)
+        result = json.loads(text)["result"]
+        self.assertEqual(result["storageWrites"], 2)
+        self.assertEqual(result["performed"][-1]["action"], "unchanged_storage")
+        self.assertIn("localStorage write attempts changed", result["failure"])
+        self.assertNotIn("message", result["failure"])
