@@ -2,7 +2,7 @@
 
 This directory bundles the minimum import closure used by the GitHub example:
 `browser.py`, `common.py`, `console.py`, `quality.py`, their configuration and
-locked JavaScript browser runtime. The files were copied byte-for-byte from the
+locked JavaScript browser runtime. The initial files were copied byte-for-byte from the
 owner-maintained `big91987/he_skeleton` checkout. `SOURCE.json` records the exact
 source commit and SHA-256 for each included file; it includes the previously
 validated browser-interaction fixes. No other Harness workflow/router is bundled.
@@ -11,6 +11,8 @@ The source checkout did not contain a standalone LICENSE file at packaging time.
 This notice records provenance and does not assign or invent a new license.
 Playwright and its transitive dependencies retain their own upstream licenses;
 install them from the lock file rather than committing node_modules.
+
+Local adaptations are listed in SOURCE.json under local_files with their current hashes: native zoom, accessibility evidence and page-only task assertions. The original files map remains the unmodified upstream provenance.
 
 Keep this snapshot immutable when possible. To update, select and verify an
 upstream revision, copy the same dependency closure, refresh SOURCE.json, run the

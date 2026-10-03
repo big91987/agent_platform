@@ -204,7 +204,7 @@ for stage, names in stages.items():
             }
         )
     a["instructions"] = (
-        f"你是 {stage} 阶段的 Agent。遵循当前项目 AGENTS.md 和本阶段 Skills，独立完成本阶段工作。与人对话使用自然语言，原样呈现真实进展和结果，明确是否需要用户回答。不要输出框架 JSON。读取已确认的任务文档，不重复询问已经确认的决定。只能使用当前已注册的工具，依据真实调用结果说明进展。不要自行调用 GitHub，不操作 Git 分支/提交/推送。"
+        f"你是 {stage} 阶段的 Agent。遵循当前项目 AGENTS.md 和本阶段 Skills，独立完成本阶段工作。与人对话使用自然语言，原样呈现真实进展和结果，明确是否需要用户回答。不要输出框架 JSON。读取已确认的任务文档，不重复询问已经确认的决定。使用已注册的工具及既有执行权限内的任务级测试脚本，依据真实调用结果说明进展。工具动作不足时可用 check.page_script 执行任务页面断言，不修改公共 Harness 或绕过质量检查。不要自行调用 GitHub，不操作 Git 分支/提交/推送。"
     )
     if stage == "requirements":
         a["instructions"] += (

@@ -1,4 +1,4 @@
-// Trusted Runner program. Plans contain data, never host JavaScript or commands.
+// Trusted Runner program. Task scripts run only inside the isolated web page.
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
@@ -56,7 +56,6 @@ async function main() {
   });
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, chromiumSandbox: true });
     const deviceStep = plan[0]?.action === "device" ? plan[0] : null;
     if (
       deviceStep &&
@@ -74,11 +73,33 @@ async function main() {
         height: deviceStep ? 844 : 1000,
       },
     };
-    const context = await browser.newContext({
+    const nativeZoom = plan.some((step) => step.action === "zoom");
+    const options = {
       ...device,
       serviceWorkers: "block",
       acceptDownloads: true,
-    });
+    };
+    let context;
+    if (nativeZoom) {
+      const extension = path.join(__dirname, "zoom-extension");
+      context = await chromium.launchPersistentContext("", {
+        ...options,
+        headless: true,
+        channel: "chromium",
+        chromiumSandbox: true,
+        args: [
+          `--disable-extensions-except=${extension}`,
+          `--load-extension=${extension}`,
+        ],
+      });
+      browser = context;
+    } else {
+      browser = await chromium.launch({
+        headless: true,
+        chromiumSandbox: true,
+      });
+      context = await browser.newContext(options);
+    }
     const base = `http://127.0.0.1:${server.address().port}`;
     await context.route("**/*", (route) =>
       route
@@ -108,7 +129,8 @@ async function main() {
     page.setDefaultTimeout(5000);
     const errors = [],
       performed = [],
-      downloads = [];
+      downloads = [],
+      observations = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const response = await page.goto(base + "/");
     if (!response.ok() || !(await page.locator("body").innerText()).trim())
@@ -135,6 +157,107 @@ async function main() {
                 ? page.getByText(step.text, { exact: true })
                 : null;
         switch (step.action) {
+          case "zoom": {
+            if (
+              !Number.isFinite(step.factor) ||
+              step.factor < 0.5 ||
+              step.factor > 3
+            )
+              throw new Error("zoom factor must be 0.5..3");
+            const worker =
+              context.serviceWorkers()[0] ||
+              (await context.waitForEvent("serviceworker", { timeout: 5000 }));
+            const actual = await worker.evaluate(
+              async ({ url, factor }) => {
+                const tabs = await chrome.tabs.query({});
+                const tab = tabs.find((item) => item.url === url);
+                if (!tab) throw Error("Browser tab not found");
+                await chrome.tabs.setZoomSettings(tab.id, {
+                  mode: "automatic",
+                  scope: "per-tab",
+                });
+                await chrome.tabs.setZoom(tab.id, factor);
+                return chrome.tabs.getZoom(tab.id);
+              },
+              { url: page.url(), factor: step.factor },
+            );
+            assert.ok(
+              Math.abs(actual - step.factor) < 0.001,
+              "Native zoom differs",
+            );
+            await page.evaluate(
+              () =>
+                new Promise((resolve) =>
+                  requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                ),
+            );
+            const metrics = await page.evaluate(() => ({
+              width: innerWidth,
+              height: innerHeight,
+              devicePixelRatio,
+              visualScale: visualViewport.scale,
+            }));
+            const screenshot = `zoom-${performed.length + 1}.png`;
+            await page.screenshot({
+              path: path.join(output, screenshot),
+              fullPage: true,
+            });
+            observations.push({
+              action: "zoom",
+              actual,
+              ...metrics,
+              screenshot,
+            });
+            break;
+          }
+          case "accessibility": {
+            const session = await context.newCDPSession(page);
+            let tree;
+            try {
+              tree = await session.send("Accessibility.getFullAXTree");
+            } finally {
+              await session.detach();
+            }
+            const file = `accessibility-${performed.length + 1}.json`;
+            fs.writeFileSync(
+              path.join(output, file),
+              JSON.stringify(tree, null, 2),
+            );
+            if (step.contains !== undefined) {
+              if (typeof step.contains !== "string" || !step.contains.trim())
+                throw Error("accessibility contains must be nonempty text");
+              assert.ok(
+                tree.nodes.some(
+                  (node) =>
+                    !node.ignored && node.name?.value?.includes(step.contains),
+                ),
+                "Accessible text not found: " + step.contains,
+              );
+            }
+            observations.push({ action: "accessibility", file });
+            break;
+          }
+          case "page_script": {
+            if (typeof step.source !== "string")
+              throw Error("page_script requires prepared source");
+            const value = await Promise.race([
+              page.evaluate(`(${step.source})()`),
+              new Promise((_, reject) => {
+                const timer = setTimeout(
+                  () => reject(Error("page_script timed out")),
+                  5000,
+                );
+                timer.unref();
+              }),
+            ]);
+            if (value === false) throw Error("page_script returned false");
+            observations.push({
+              action: "page_script",
+              script: step.script,
+              value: value ?? null,
+            });
+            break;
+          }
           case "device":
             if (step !== plan[0])
               throw new Error("device must be the first step");
@@ -214,6 +337,7 @@ async function main() {
             );
             assert.equal(
               storageWrites,
+              observations,
               writeSnapshot,
               "localStorage write attempts changed",
             );
@@ -361,6 +485,7 @@ async function main() {
           downloads,
           device,
           storageWrites,
+          observations,
         },
         null,
         2,

@@ -139,3 +139,7 @@ python3 examples/github/setup.py --config '<private-runner-json>'
 - 注册测试覆盖两个独立仓库与旧配置共存、重复注册不改变 Agent ID；随附 9 个源文件的 SHA-256 与清单一致；发布前脱敏检查通过。
 
 尚未用这份打包版本在另一个 GitHub 仓库完成需求到 PR 的全阶段运行。新项目上线前按第 5 节验证，不将上述本机验证当成该项目的端到端验收。
+
+## 验证工具不足时
+
+参见 [补充浏览器验证](BROWSER_CHECKS.md)：原生缩放、可访问性树及 Agent 任务级页面断言，含旧安装升级方式。

@@ -19,11 +19,13 @@ def main():
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())["pipeline"]
     sys.path.insert(0, str(tooling_source(config)))
-    from full_harness.browser import check
+    from full_harness import browser
+
+    check = browser.check
 
     tool = {
         "name": "check",
-        "description": "Run real browser checks on this task's product or prototype. Write a project-relative JSON plan of fill(label,value), click(role,name), visible(text), absent(text), reload, viewport(width), key(key), snapshot_storage/unchanged_storage, storage_write_failure(enabled: boolean), fail_download, download(role/name or label, expected JSON, optional filename/suffix) actions. storage_write_failure controls localStorage.setItem failure until disabled or the page reloads; it does not modify stored data. Additional actions: hover(locator, optional duration_ms 0..2000), pointer(x,y), tap(locator), device(touch:boolean,width:320..1920) as first step to create a touch-capable context, snapshot_geometry/unchanged_geometry(same locator, selector supported), unchanged_storage_writes after snapshot_storage (observes attempts, including across reload). All locators also accept selector. Save desktop/mobile screenshots and browser.json; resized screenshots alone do not prove touch. No arbitrary JavaScript or shell. Inspect failed results and fix before retrying.",
+        "description": "Run real browser checks on this task's product or prototype. Write a project-relative JSON plan of fill(label,value), click(role,name), visible(text), absent(text), reload, viewport(width), key(key), snapshot_storage/unchanged_storage, storage_write_failure(enabled: boolean), fail_download, download(role/name or label, expected JSON, optional filename/suffix) actions. storage_write_failure controls localStorage.setItem failure until disabled or the page reloads; it does not modify stored data. Additional actions: hover(locator, optional duration_ms 0..2000), pointer(x,y), tap(locator), device(touch:boolean,width:320..1920) as first step to create a touch-capable context, snapshot_geometry/unchanged_geometry(same locator, selector supported), unchanged_storage_writes after snapshot_storage (observes attempts, including across reload). All locators also accept selector. Save desktop/mobile screenshots and browser.json; resized screenshots alone do not prove touch. Inspect failed results and fix before retrying.",
         "inputSchema": {
             "type": "object",
             "properties": {"root": {"type": "string"}, "plan": {"type": "string"}},
@@ -31,6 +33,7 @@ def main():
             "additionalProperties": False,
         },
     }
+    tool["description"] += getattr(browser, "EXTRA_ACTIONS_DESCRIPTION", "")
     verify_tool = {
         "name": "verify",
         "description": "Run the owner-configured product quality and browser checks on the host, outside the Agent shell sandbox. No command arguments. Returns current real outcomes before handoff. On failure fix the product or report the actual limitation. Does not approve or hand off.",

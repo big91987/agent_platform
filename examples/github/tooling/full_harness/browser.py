@@ -18,6 +18,8 @@ from full_harness.common import (
     write_json,
 )
 
+EXTRA_ACTIONS_DESCRIPTION = " Additional actions: zoom(factor:0.5..3) uses native Chromium tab zoom, saves actual zoom metrics and screenshot; accessibility(contains:optional text) saves the real accessibility tree and asserts visible-to-AX text, not screen-reader audio. For checks not covered by fixed actions, write a zero-argument JS function expression in docs/05-validation/tasks/<issue>/browser-scripts/*.js and call page_script(script:project-relative path). It runs in the isolated page (DOM APIs only, no Node/shell/filesystem), throws or returns false to fail, returns measurements for evidence. Same local-only network policy. Supplement existing checks; never rewrite trusted gates. Host scripts are not accepted."
+
 
 def prepare(source, environment=None):
     """Reproducible installation; only called by the controller, never by task code."""
@@ -67,11 +69,35 @@ def check(context, arguments):
     runs = read_json(receipt) if receipt.exists() else []
     name = f"docs/05-validation/tasks/{c['task']['number']}/browser/{c['stage']}-{c['state']['turn']}-{len(runs) + 1}"
     output = relative_file(workspace, name)
+    prepared = []
+    scripts_root = (
+        workspace / f"docs/05-validation/tasks/{c['task']['number']}/browser-scripts"
+    )
+    for step in steps:
+        if not isinstance(step, dict) or "source" in step:
+            raise ValueError("Expected action data; inline source is not accepted")
+        if step.get("action") == "page_script":
+            script_file = relative_file(workspace, step.get("script", ""))
+            if (
+                not script_file.is_relative_to(scripts_root)
+                or script_file.suffix != ".js"
+            ):
+                raise ValueError(
+                    "Script must be in this task browser-scripts directory"
+                )
+            source = script_file.read_text()
+            if len(source.encode()) > 65536:
+                raise ValueError("Page script exceeds 64 KiB")
+            step = {**step, "source": source}
+        prepared.append(step)
     output.mkdir(parents=True, exist_ok=False)
+    # Capture the exact assertions alongside evidence for independent QA/replay.
+    prepared_plan = output / "executed-plan.json"
+    write_json(prepared_plan, prepared)
     script = Path(c["source"]) / "full_harness/browser/check.cjs"
     log = evidence / f"browser-{len(runs) + 1}.log"
     code = run_process(
-        ["node", str(script), str(root), str(output), str(plan)],
+        ["node", str(script), str(root), str(output), str(prepared_plan)],
         workspace,
         clean_env(c["config"].get("environment")),
         log,
@@ -123,6 +149,12 @@ def serve(context):
             "additionalProperties": False,
         },
     }
+    tool["description"] = (
+        tool["description"].replace(
+            "No arbitrary JavaScript or shell.", "No host JavaScript or shell."
+        )
+        + EXTRA_ACTIONS_DESCRIPTION
+    )
     for line in sys.stdin:
         request = json.loads(line)
         if "id" not in request:

@@ -113,6 +113,18 @@ def approval_policy(stage, autonomous=False, integrating=False) -> str:
         )
 
     lines.append("本阶段就绪条件：" + readiness[stage] + "。")
+    lines.append(
+        "验收条款注明来源（用户明确要求、项目既有约束、Agent 推荐默认）、验证方法和负责阶段。"
+        "新增推荐默认应与变更风险相称，先确认验证方法可执行；不要把工具缺口留到下游才发现。"
+        "研发就绪与最终 QA 放行分别判断：已明确归属 QA 的检查可交给 QA 执行，但研发自己负责的必需检查不能跳过。"
+        "已接受条款不能因为工具不支持就删除、降低或写成通过。"
+        "遇到验证能力缺口，先查看 check 的能力并自行补充任务级验证：可在既有执行权限内编写测试，"
+        "浏览器自定义断言写入 docs/05-validation/tasks/<issue>/browser-scripts/*.js，通过 check 的 page_script 执行。"
+        "原生缩放用 zoom，可访问性树用 accessibility；CSS 放大不替代原生缩放，树快照不冒充读屏器实测。"
+        "补充脚本不替代已有质量门禁，不修改共享 Harness、受保护配置或验收条款来制造通过。"
+        "仍缺权限、设备或接口时，记录已尝试的方法、缺口及最小补齐方案，按现有交接策略退回负责该决定的阶段；"
+        "不要只反复回复环境不支持，也不要把同一缺口原样交给同样没有能力的 QA。"
+    )
     if policy.automatic_handoff:
         lines.append(
             "满足就绪条件且所需检查通过后，简要展示成果、验证证据和剩余非阻断问题，"
