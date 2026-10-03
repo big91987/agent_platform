@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +21,7 @@ func TestCancelKillsTermIgnoringDescendants(t *testing.T) {
 	os.MkdirAll(home, 0700)
 	os.WriteFile(filepath.Join(home, "prepared"), []byte("ready"), 0600)
 	pidfile := filepath.Join(root, "pid")
-	os.WriteFile(x.Binary, []byte("#!/bin/sh\ntrap '' TERM\necho $$ > "+pidfile+"\nsleep 120 &\nprintf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"proof\"}'\nwait\n"), 0700)
+	os.WriteFile(x.Binary, []byte("#!/bin/sh\ntrap '' TERM\necho $$ > "+pidfile+"\nsleep 120 &\nprintf '%s\\n' '{\"method\":\"turn/started\",\"params\":{}}'\nwait\n"), 0700)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	started := make(chan struct{}, 1)
@@ -79,7 +80,7 @@ func TestCrashHelper(t *testing.T) {
 	os.MkdirAll(filepath.Join(h, "sessions"), 0700)
 	os.WriteFile(filepath.Join(h, "sessions", "crash-proof.jsonl"), []byte("native record"), 0600)
 	os.WriteFile(filepath.Join(root, "conversation"), []byte(r.ConversationID), 0600)
-	script := "#!/bin/sh\necho $$ > " + filepath.Join(root, "native-pid") + "\nprintf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"crash-proof\"}'\nsleep 120 &\nwait\n"
+	script := "#!/bin/sh\necho $$ > " + filepath.Join(root, "native-pid") + "\nprintf '%s\\n' '{\"method\":\"turn/started\",\"params\":{}}'\nsleep 120 &\nwait\n"
 	os.WriteFile(x.Binary, []byte(script), 0700)
 	x.Execute(context.Background(), c, m, func(b []byte) error {
 		s.SetThread(c.ID, "crash-proof")
@@ -127,5 +128,58 @@ func TestCrashReconcilesNativeExecutionBeforeContinuing(t *testing.T) {
 	}
 	if e = syscall.Kill(pid, 0); e == nil {
 		t.Fatal("restart admitted next turn while previous native process survived platform crash")
+	}
+}
+
+func TestStopDuringNativeToolConfirmation(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "workspace")
+	home := filepath.Join(root, "native")
+	os.MkdirAll(workspace, 0700)
+	os.MkdirAll(home, 0700)
+	binary := filepath.Join(root, "interactive")
+	// A protocol peer that leaves a TERM-ignoring child behind until the group is killed.
+	script := `#!/usr/bin/env python3
+import json, signal, subprocess, sys
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+subprocess.Popen(['sleep','120'])
+for line in sys.stdin:
+ p=json.loads(line)
+ if p.get('method')=='initialize': print(json.dumps({'id':1,'result':{}}),flush=True)
+ if p.get('method')=='thread/start': print(json.dumps({'id':2,'result':{'thread':{'id':'test-thread'}}}),flush=True)
+ if p.get('method')=='turn/start':
+  print(json.dumps({'id':3,'result':{}}),flush=True)
+  print(json.dumps({'id':99,'method':'mcpServer/elicitation/request','params':{'threadId':'test-thread','mode':'form','_meta':{'codex_approval_kind':'mcp_tool_call'}}}),flush=True)
+`
+	os.WriteFile(binary, []byte(script), 0700)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pending := make(chan struct{})
+	done := make(chan error, 1)
+	x := Codex{Root: root, Binary: binary, Approve: func(ctx context.Context, c Conversation, m Message, raw json.RawMessage) (string, error) {
+		close(pending)
+		<-ctx.Done()
+		return "", ctx.Err()
+	}}
+	go func() {
+		done <- x.executeAppServer(ctx, Conversation{Snapshot: Agent{Executor: "codex"}}, Message{Content: "test"}, workspace, home, os.Environ(), func([]byte) error { return nil })
+	}()
+	select {
+	case <-pending:
+	case <-time.After(5 * time.Second):
+		cancel()
+		t.Fatal("no confirmation request")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("stopped turn marked successful")
+		}
+	case <-time.After(7 * time.Second):
+		t.Fatal("native confirmation did not cancel")
+	}
+	if _, err := os.Stat(filepath.Join(home, "process.json")); !os.IsNotExist(err) {
+		t.Fatalf("process guard not removed after stop: %v", err)
 	}
 }

@@ -77,7 +77,31 @@ Agent 回复的 `parent_id` 指向它对应的用户输入 ID；Runner 可据此
 - `me()`、`agents()`：身份与授权 Agent。
 - `conversations()`、`conversation(id)`：已有会话及状态、消息、文件。
 - `stop(id)`：终止当前执行，保留队列和历史。
+- `stop(id, expected_message_id=..., discard_queued=True)`：只有最新用户输入仍是指定 ID 时停止并将待执行输入标为停止；否则返回 409，不更改执行。用于调用方明确撤回一次工作，保留历史。
+- `steer(id, message_id)`：将已排队输入引导给运行中的 Agent；不新建输入。不能引导时返回 409，输入仍在队列。
+- `workspace_access(id, read_only=True)`：在无执行时切换工作区访问模式；活跃执行返回 409。只读会话可与同目录写会话并行，写会话仍互斥。原生 Codex 使用 read-only sandbox，外部工具权限仍按注册与审批配置。恢复写入用 `read_only=False`。
 - `continue_queue(id)`：明确释放已暂停队列；不重放已失败或已停止的输入。
 - `close(id)`：关闭会话，保留记录。
 
 `APIError.status_code` 保留 HTTP 拒绝原因，例如 401、403、409。网络问题抛出 `ConnectionError`；等待到期抛出 `TimeoutError`，只结束观察，不停止 Agent、不删 Session。失败／停止的会话直接返回快照，调用方决定后续操作。SDK 拒绝跟随 HTTP 重定向，避免把用户 Token 转发给另一地址。
+
+## 注册外部 MCP（管理员）
+
+管理员 Token 可注册并发现工具；普通调用用户不能管理工具来源。
+
+```python
+server = client.register_tool_server(
+    {
+        "id": "external-tools",
+        "name": "外部工具服务",
+        "enabled": True,
+        "connection": {"url": "https://tools.example/mcp"},
+    }
+)
+inventory = client.discover_tool_server(server["id"])
+print([tool["name"] for tool in inventory.get("tools", [])])
+```
+
+然后在智能体配置中选择该服务的具体工具。注册保存的是连接配置，工具代码与参数 Schema 由外部服务提供；平台不安装 Dify 专用插件。Skill 仍选择本机 Skill 目录并由原生执行器加载。
+
+Agent 的工具绑定可配置 `approvals: {"tool_name": "auto"}`（默认）或 `"confirm"`。确认请求从 `conversation(id)["approvals"]` 查询，使用 `decide_tool(id, approval_id, "accept")` 或 `"decline"` 决定本次调用；网页也有同样按钮。完整说明见 [外部工具设计](../../docs/02-architecture/external-tools.md)。

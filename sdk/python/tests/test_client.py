@@ -85,6 +85,38 @@ class ClientTest(unittest.TestCase):
         self.assertNotIn("workspace_path", json.loads(self.calls[-1][3]))
         self.assertEqual("c1", json.loads(self.calls[-1][3])["conversation_id"])
 
+    def test_external_tool_registration_keeps_mcp_schema_and_auth(self):
+        server = {
+            "id": "external",
+            "name": "External service",
+            "enabled": True,
+            "connection": {"url": "https://tools.example/mcp"},
+        }
+        self.respond(server)
+        self.assertEqual(server, self.client.register_tool_server(server))
+        method, path, headers, body = self.calls[-1]
+        self.assertEqual(("POST", "/api/tool-servers"), (method, path))
+        self.assertEqual("Bearer private-token", headers["Authorization"])
+        self.assertEqual(server, json.loads(body))
+        server["tools"] = [{"name": "handoff", "inputSchema": {"type": "object"}}]
+        self.respond(server)
+        self.assertEqual(server, self.client.discover_tool_server("external"))
+        self.assertEqual("/api/tool-servers/external/discover", self.calls[-1][1])
+        self.respond([server])
+        self.assertEqual([server], self.client.tool_servers())
+        self.assertEqual("GET", self.calls[-1][0])
+
+    def test_tool_confirmation_uses_the_same_conversation(self):
+        self.respond({"ok": True})
+        self.client.decide_tool("conversation", "approval", "decline")
+        method, path, headers, body = self.calls[-1]
+        self.assertEqual(
+            (method, path),
+            ("POST", "/api/conversations/conversation/approvals/approval"),
+        )
+        self.assertEqual(json.loads(body), {"decision": "decline"})
+        self.assertEqual(headers["Authorization"], "Bearer private-token")
+
     def test_http_failure_is_visible_without_replay_or_credential_redirect(self):
         for status, data in [
             (401, {"error": "invalid credential"}),

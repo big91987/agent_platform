@@ -11,3 +11,5 @@ __pycache__/
 build/
 dist/
 .ruff_cache/
+
+examples/github/quality/node_modules/

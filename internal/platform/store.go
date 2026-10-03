@@ -71,11 +71,30 @@ func OpenStore(dir string) (*Store, error) {
 			return nil, e
 		}
 	}
+	var accessColumn int
+	if e = db.QueryRow(`SELECT count(*) FROM pragma_table_info('conversations') WHERE name='read_only'`).Scan(&accessColumn); e != nil {
+		s.Close()
+		return nil, e
+	}
+	if accessColumn == 0 {
+		if _, e = db.Exec(`ALTER TABLE conversations ADD COLUMN read_only INTEGER NOT NULL DEFAULT 0`); e != nil {
+			s.Close()
+			return nil, e
+		}
+	}
+	if e = s.initApprovals(); e != nil {
+		s.Close()
+		return nil, e
+	}
+	if e = s.initToolServers(); e != nil {
+		s.Close()
+		return nil, e
+	}
 	if e = s.initUsers(); e != nil {
 		s.Close()
 		return nil, e
 	}
-	_, e = db.Exec(`UPDATE messages SET status='failed' WHERE role='user' AND status='running'; UPDATE conversations SET status='failed',error='Platform restarted during execution. Previous effects may have completed; review the log before continuing.',updated=? WHERE status='running'; UPDATE conversations SET status='stopped',error='' WHERE status='stopping'`, now())
+	_, e = db.Exec(`UPDATE messages SET status='failed' WHERE role='user' AND status IN('running','steering'); UPDATE conversations SET status='failed',error='Platform restarted during execution. Previous effects may have completed; review the log before continuing.',updated=? WHERE status='running'; UPDATE conversations SET status='stopped',error='' WHERE status='stopping'`, now())
 	if e != nil {
 		s.Close()
 		return nil, e
@@ -89,6 +108,12 @@ func (s *Store) Close() error {
 	return e
 }
 func (s *Store) SaveAgent(a Agent) (Agent, error) {
+	if len(a.ResolvedTools) > 0 {
+		return a, errors.New("resolved_tools is managed by the platform")
+	}
+	if _, e := resolveToolServers(s.DB, a); e != nil {
+		return a, e
+	}
 	if strings.TrimSpace(a.Name) == "" {
 		return a, errors.New("Agent name is required")
 	}
@@ -153,12 +178,12 @@ func (s *Store) Agents() ([]Agent, error) {
 
 type scanner interface{ Scan(...any) error }
 
-const convColumns = "id,agent_id,source,user_id,title,status,error,thread_id,workspace_path,snapshot,created,updated"
+const convColumns = "id,agent_id,source,user_id,title,status,error,thread_id,workspace_path,read_only,snapshot,created,updated"
 
 func scanConv(row scanner) (Conversation, error) {
 	var c Conversation
 	var snapshot string
-	e := row.Scan(&c.ID, &c.AgentID, &c.Source, &c.UserID, &c.Title, &c.Status, &c.Error, &c.ThreadID, &c.WorkspacePath, &snapshot, &c.Created, &c.Updated)
+	e := row.Scan(&c.ID, &c.AgentID, &c.Source, &c.UserID, &c.Title, &c.Status, &c.Error, &c.ThreadID, &c.WorkspacePath, &c.ReadOnly, &snapshot, &c.Created, &c.Updated)
 	if errors.Is(e, sql.ErrNoRows) {
 		return c, ErrNotFound
 	}
@@ -332,6 +357,15 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		if len(title) > 60 {
 			title = title[:60]
 		}
+		a, e = resolveToolServers(tx, a)
+		if e != nil {
+			return out, e
+		}
+		snapshot, e := json.Marshal(a)
+		if e != nil {
+			return out, e
+		}
+		cfg = string(snapshot)
 		stamp := now()
 		conv = Conversation{ID: newID(), AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
 		_, e = tx.Exec(`INSERT INTO conversations(id,agent_id,source,user_id,title,status,workspace_path,snapshot,created,updated)VALUES(?,?,?,?,?,?,?,?,?,?)`, conv.ID, a.ID, c.Source, in.UserID, conv.Title, conv.Status, workspace, cfg, stamp, stamp)
@@ -366,7 +400,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	return out, tx.Commit()
 }
 func (s *Store) Messages(id string) ([]Message, error) {
-	rows, e := s.DB.Query(`SELECT id,parent_id,conversation_id,role,content,kind,status,created FROM messages WHERE conversation_id=? ORDER BY id`, id)
+	rows, e := s.DB.Query(`SELECT id,parent_id,conversation_id,role,content,kind,status,created,native_item FROM messages WHERE conversation_id=? ORDER BY id`, id)
 	if e != nil {
 		return nil, e
 	}
@@ -374,7 +408,7 @@ func (s *Store) Messages(id string) ([]Message, error) {
 	out := []Message{}
 	for rows.Next() {
 		var m Message
-		if e = rows.Scan(&m.ID, &m.ParentID, &m.ConversationID, &m.Role, &m.Content, &m.Kind, &m.Status, &m.Created); e != nil {
+		if e = rows.Scan(&m.ID, &m.ParentID, &m.ConversationID, &m.Role, &m.Content, &m.Kind, &m.Status, &m.Created, &m.NativeItem); e != nil {
 			return nil, e
 		}
 		out = append(out, m)
@@ -389,11 +423,11 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 		return conv, m, e
 	}
 	defer tx.Rollback()
-	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.status IN('running','stopping')))`
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
 	args := []any{}
 	for _, path := range busyWorkspaces {
 		if path != "" {
-			query += ` AND c.workspace_path!=?`
+			query += ` AND (c.read_only=1 OR c.workspace_path!=?)`
 			args = append(args, path)
 		}
 	}
@@ -419,6 +453,9 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	return conv, m, tx.Commit()
 }
 func (s *Store) Halt(id, status, reason string) error {
+	return s.HaltExpected(id, status, reason, 0, false)
+}
+func (s *Store) HaltExpected(id, status, reason string, expected int64, discard bool) error {
 	tx, e := s.DB.Begin()
 	if e != nil {
 		return e
@@ -430,6 +467,23 @@ func (s *Store) Halt(id, status, reason string) error {
 	}
 	if c.Status == "closed" && status != "closed" {
 		return ErrConflict
+	}
+	if expected > 0 {
+		var latest int64
+		if e = tx.QueryRow(`SELECT COALESCE(MAX(id),0) FROM messages WHERE conversation_id=? AND role='user'`, id).Scan(&latest); e != nil {
+			return e
+		}
+		if latest != expected {
+			return ErrConflict
+		}
+	}
+	if discard {
+		if expected <= 0 {
+			return ErrConflict
+		}
+		if _, e = tx.Exec(`UPDATE messages SET status='stopped' WHERE conversation_id=? AND role='user' AND status IN ('queued','steering')`, id); e != nil {
+			return e
+		}
 	}
 	_, e = tx.Exec(`UPDATE conversations SET status=?,error=?,updated=? WHERE id=?; UPDATE messages SET status='stopped' WHERE conversation_id=? AND role='user' AND status='running'`, status, reason, now(), id, id)
 	if e != nil {

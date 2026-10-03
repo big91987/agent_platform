@@ -48,7 +48,7 @@ func main() {
 			log.Fatal(e)
 		}
 	}
-	x := &platform.Codex{Root: s.Dir, Binary: *binary, AuthHome: *auth}
+	x := &platform.Codex{Root: s.Dir, Binary: *binary, AuthHome: *auth, Approve: s.AwaitToolApproval}
 	scheduler := platform.NewScheduler(s, x, *concurrency)
 	scheduler.Start()
 	defer scheduler.Close()

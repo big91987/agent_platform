@@ -23,3 +23,7 @@ Final: Ruling: strong malicious-code isolation, remote execution and multi-Agent
 2026-10-01: 用户批准本机工作目录输入，云端沙箱与仓库初始化后置。首次调用可传 workspace_path，原生 Session 和该目录分别留存；外部项目 AGENTS.md 不改写，阶段文件可直接读取和下载。GitHub 业务接入脚本要求准备好的目录，接续固定原目录。验证结果见 local-workspace-verification.md。
 
 2026-10-01: Python SDK、一次性 Runner 安装脚本及共享目录 GitLab 示例完成。GitHub PR #67 已合入，正式 Runner 使用 SDK 成功接续 Issue #66 的原会话；本机共享目录经过真实 Codex、平台重启、请求去重、事件查询及文件下载验证。回复关联复用已有 parent_id，不增加状态机。4 个 SDK 边界测试及现有开发检查全部通过。真实 GitLab Runner、云端沙箱仍未部署，未将模拟 CI 当成云端验收。详见 sdk-runner-verification.md。
+
+2026-10-03: 已发出交接现在返回 GitHub Run ID；各阶段外部 MCP 支持补充与撤回重派。独立 Issue #90 的网页路径已验证：上游补充引导至运行中的设计 → 确认撤回 → 旧 Run 取消、旧 Agent 停止 → 新 Run 恢复原需求会话并修订文档。同机只读管理会话可与下游写任务并行。全套检查通过，独立评审无阻断项；见 handoff-management-verification.md。撤回工具保留单次确认策略。
+
+2026-10-03 publication: user requested publishing the current platform to `big91987/agent_platform`. Source, SDK, external integration examples and durable documentation are included. Local databases, native sessions, credentials, screenshots, dependencies and binaries remain ignored. Current files and existing Git history passed the sensitive-pattern scan. Full verification passed: 10 frontend tests, 6 SDK tests, 58 GitHub adapter tests, Ruff, Go vet and Go race tests. Tool/Thinking history recovery is documented in tool-timeline-verification.md.

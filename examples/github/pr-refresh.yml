@@ -1,0 +1,30 @@
+name: Refresh ready PRs
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [ready_for_review, synchronize]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: refresh-ready-prs
+  cancel-in-progress: false
+  queue: max
+jobs:
+  refresh:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft))
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    steps:
+      - name: Request refresh of registered ready PRs
+        env:
+          GH_REPO: ${{ github.repository }}
+          AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_ROOT"
+          "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
+            "$AGENT_PLATFORM_ROOT/examples/github/pr_refresh.py" \
+            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json"

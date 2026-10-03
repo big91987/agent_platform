@@ -13,20 +13,22 @@ var ErrForbidden = errors.New("access denied")
 var ErrConflict = errors.New("request conflicts with existing state")
 
 type Agent struct {
-	ID              string             `json:"id"`
-	AuthorizedUsers []string           `json:"authorized_users"`
-	Name            string             `json:"name"`
-	Executor        string             `json:"executor"`
-	Model           string             `json:"model"`
-	Instructions    string             `json:"instructions"`
-	SeedDir         string             `json:"seed_dir"`
-	Skills          []string           `json:"skills"`
-	NativeConfig    string             `json:"native_config"`
-	InheritEnv      bool               `json:"inherit_env"`
-	Env             map[string]*string `json:"env"`
-	Sandbox         string             `json:"sandbox"`
-	TrustHooks      bool               `json:"trust_hooks"`
-	Enabled         bool               `json:"enabled"`
+	ToolServers     []ToolBinding                 `json:"tool_servers,omitempty"`
+	ResolvedTools   map[string]ResolvedToolServer `json:"resolved_tools,omitempty"`
+	ID              string                        `json:"id"`
+	AuthorizedUsers []string                      `json:"authorized_users"`
+	Name            string                        `json:"name"`
+	Executor        string                        `json:"executor"`
+	Model           string                        `json:"model"`
+	Instructions    string                        `json:"instructions"`
+	SeedDir         string                        `json:"seed_dir"`
+	Skills          []string                      `json:"skills"`
+	NativeConfig    string                        `json:"native_config"`
+	InheritEnv      bool                          `json:"inherit_env"`
+	Env             map[string]*string            `json:"env"`
+	Sandbox         string                        `json:"sandbox"`
+	TrustHooks      bool                          `json:"trust_hooks"`
+	Enabled         bool                          `json:"enabled"`
 }
 type Caller struct {
 	Username string
@@ -44,6 +46,7 @@ type Input struct {
 	WorkspacePath  string `json:"workspace_path,omitempty"`
 }
 type Conversation struct {
+	ReadOnly      bool   `json:"read_only"`
 	ID            string `json:"id"`
 	AgentID       string `json:"agent_id"`
 	AgentName     string `json:"agent_name"`
@@ -59,6 +62,7 @@ type Conversation struct {
 	Updated       string `json:"updated_at"`
 }
 type Message struct {
+	NativeItem     string `json:"native_item,omitempty"`
 	ID             int64  `json:"id"`
 	ParentID       int64  `json:"parent_id,omitempty"`
 	ConversationID string `json:"conversation_id"`

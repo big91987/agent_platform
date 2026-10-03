@@ -84,19 +84,29 @@ func TestNativeStreamProtectsCredentialsAndReportsMalformedOutput(t *testing.T) 
 			os.MkdirAll(workspace, 0700)
 			os.MkdirAll(home, 0700)
 			os.WriteFile(filepath.Join(home, "prepared"), []byte("ready"), 0600)
-			script := "#!/bin/sh\nprintf '%s\\n' '{\"type\":\"thread.started\",\"thread_id\":\"native-test\"}'\nprintf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"id\":\"message\",\"type\":\"agent_message\",\"text\":\"" + secret + "\"}}'\n"
-			if malformed {
-				script += "(i=0; while [ $i -lt 300 ]; do echo diagnostic >&2; i=$((i+1)); done) &\nprintf '%s\\n' not-json\nwait\n"
-			} else {
-				script += "echo '" + secret + "' >&2\nprintf '%s\\n' '{\"type\":\"turn.completed\"}'\n"
-			}
+			script := fmt.Sprintf(`#!/usr/bin/env python3
+import json, sys
+secret = %q
+for line in sys.stdin:
+ p=json.loads(line)
+ if p.get('method')=='initialize': print(json.dumps({'id':1,'result':{}}),flush=True)
+ if p.get('method')=='thread/start': print(json.dumps({'id':2,'result':{'thread':{'id':'native-test'}}}),flush=True)
+ if p.get('method')=='turn/start':
+  print(json.dumps({'method':'item/agentMessage/delta','params':{'itemId':'m','delta':secret}}),flush=True)
+  if %s:
+   print('not-json',flush=True)
+  else:
+   print(json.dumps({'method':'item/completed','params':{'item':{'id':'m','type':'agentMessage','text':secret}}}),flush=True)
+   print(json.dumps({'method':'turn/completed','params':{'turn':{'status':'completed'}}}),flush=True)
+  break
+`, secret, map[bool]string{true: "True", false: "False"}[malformed])
 			os.WriteFile(x.Binary, []byte(script), 0700)
 			var output strings.Builder
 			err := x.Execute(context.Background(), Conversation{ID: "stream", Snapshot: Agent{Executor: "codex"}}, Message{Content: "run"}, func(b []byte) error { output.Write(b); return nil })
 			if strings.Contains(output.String(), secret) {
 				t.Fatal("native credential leaked into public events")
 			}
-			if malformed && (err == nil || !strings.Contains(err.Error(), "invalid native event")) {
+			if malformed && (err == nil || !strings.Contains(err.Error(), "invalid app-server frame")) {
 				t.Fatalf("malformed stream: %v", err)
 			}
 			if !malformed && err != nil {
@@ -121,19 +131,19 @@ func TestExternalWorkspaceUsesCWDWithoutRewritingProject(t *testing.T) {
 	os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600)
 	os.WriteFile(filepath.Join(auth, "config.toml"), []byte(`model="test-model"`), 0600)
 	x := Codex{Root: root, AuthHome: auth, Binary: filepath.Join(root, "executor")}
-	script := `#!/bin/sh
-if [ "$1" = app-server ]; then
- while IFS= read -r line; do
-  case "$line" in
-   *'"id":1'*) printf '%s\n' '{"id":1,"result":{}}' ;;
-   *'"id":2'*) printf '%s\n' '{"id":2,"result":{"data":[{"skills":[],"errors":[]}]}}' ;;
-  esac
- done
-else
- printf '%s' "$PWD" > "$CODEX_HOME/cwd.txt"
- cat > "$CODEX_HOME/input.txt"
- printf '%s\n' '{"type":"thread.started","thread_id":"workspace-proof"}' '{"type":"turn.completed"}'
-fi
+	script := `#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+for line in sys.stdin:
+ p=json.loads(line); method=p.get('method')
+ if method=='initialize': print(json.dumps({'id':1,'result':{}}),flush=True)
+ if method=='skills/list': print(json.dumps({'id':2,'result':{'data':[{'skills':[],'errors':[]}]}}),flush=True)
+ if method in ('thread/start','thread/resume'):
+  Path(os.environ['CODEX_HOME'],'cwd.txt').write_text(os.getcwd())
+  print(json.dumps({'id':2,'result':{'thread':{'id':'workspace-proof'}}}),flush=True)
+ if method=='turn/start':
+  print(json.dumps({'method':'turn/completed','params':{'turn':{'status':'completed'}}}),flush=True)
+  break
 `
 	os.WriteFile(x.Binary, []byte(script), 0700)
 	c := Conversation{ID: "external", WorkspacePath: workspace, Snapshot: Agent{Executor: "codex", Instructions: "Use project documents before asking questions.", NativeConfig: "developer_instructions='Existing native guidance'", SeedDir: "/missing-template"}}

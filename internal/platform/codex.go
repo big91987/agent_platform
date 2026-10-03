@@ -14,14 +14,15 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
 )
 
-type Codex struct{ Root, Binary, AuthHome string }
+type Codex struct {
+	Root, Binary, AuthHome string
+	Approve                func(context.Context, Conversation, Message, json.RawMessage) (string, error)
+}
 type CheckResult struct {
 	Ready   bool     `json:"ready"`
 	Version string   `json:"version"`
@@ -58,6 +59,25 @@ func executorEnv(a Agent, home string) ([]string, error) {
 			values[k] = *v
 		}
 	}
+	for _, server := range a.ResolvedTools {
+		names := append([]string{}, server.Connection.EnvVars...)
+		if server.Connection.BearerTokenEnvVar != "" {
+			names = append(names, server.Connection.BearerTokenEnvVar)
+		}
+		for _, name := range names {
+			if _, overridden := a.Env[name]; overridden {
+				continue
+			}
+			if name == "HOME" || strings.HasPrefix(name, "CODEX_") || strings.HasPrefix(name, "AGENT_PLATFORM_") {
+				return nil, fmt.Errorf("MCP environment key is reserved: %s", name)
+			}
+			if value, ok := os.LookupEnv(name); ok {
+				values[name] = value
+			} else {
+				return nil, fmt.Errorf("MCP environment variable is missing: %s", name)
+			}
+		}
+	}
 	values["CODEX_HOME"] = home
 	values["NO_COLOR"] = "1"
 	out := make([]string, 0, len(values))
@@ -86,6 +106,9 @@ func nativeConfig(a Agent) ([]byte, error) {
 		return nil, errors.New("sandbox must be workspace-write or read-only")
 	}
 	cfg["approval_policy"] = "never"
+	if needsToolConfirmation(a) {
+		cfg["approval_policy"] = map[string]any{"granular": map[string]bool{"sandbox_approval": false, "rules": false, "skill_approval": false, "request_permissions": false, "mcp_elicitations": true}}
+	}
 	cfg["sandbox_mode"] = "workspace-write"
 	if a.Sandbox != "" {
 		cfg["sandbox_mode"] = a.Sandbox
@@ -111,6 +134,20 @@ func nativeConfig(a Agent) ([]byte, error) {
 		}
 		features["hooks"] = true
 		cfg["features"] = features
+	}
+	if len(a.ResolvedTools) > 0 {
+		servers, _ := cfg["mcp_servers"].(map[string]any)
+		if servers == nil {
+			servers = map[string]any{}
+		}
+		for name, server := range a.ResolvedTools {
+			key := "registered_" + name
+			if _, exists := servers[key]; exists {
+				return nil, fmt.Errorf("MCP server %s is configured twice", key)
+			}
+			servers[key] = server.native()
+		}
+		cfg["mcp_servers"] = servers
 	}
 	return toml.Marshal(cfg)
 }
@@ -536,175 +573,5 @@ func (x *Codex) Execute(ctx context.Context, c Conversation, m Message, onEvent 
 	if e != nil {
 		return e
 	}
-	args := []string{"exec"}
-	if c.ThreadID != "" {
-		args = append(args, "resume", c.ThreadID)
-	}
-	args = append(args, "--strict-config", "--json", "--skip-git-repo-check", "--ignore-rules")
-	if c.Snapshot.TrustHooks {
-		args = append(args, "--dangerously-bypass-hook-trust")
-	}
-	args = append(args, "-")
-	runCtx, cancelRun := context.WithCancel(ctx)
-	defer cancelRun()
-	nonce := "agent-platform-run-" + newID()
-	// Hold the native prompt until its supervised group is durably registered.
-	supervisor := `IFS= read -r start || exit 1; [ "$start" = "$0" ] || exit 1; "$@" <&0 & child=$!; wait "$child"`
-	supervisorArgs := append([]string{"-c", supervisor, nonce, x.binary()}, args...)
-	cmd := exec.CommandContext(runCtx, "/bin/sh", supervisorArgs...)
-	cmd.Dir = workspace
-	cmd.Env = env
-	input, e := cmd.StdinPipe()
-	if e != nil {
-		return e
-	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.WaitDelay = 3 * time.Second
-	cmd.Cancel = func() error {
-		if cmd.Process != nil {
-			return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-		}
-		return nil
-	}
-	out, e := cmd.StdoutPipe()
-	if e != nil {
-		return e
-	}
-	errpipe, e := cmd.StderrPipe()
-	if e != nil {
-		return e
-	}
-	if e = cmd.Start(); e != nil {
-		return e
-	}
-	executionDone := make(chan struct{})
-	defer close(executionDone)
-	go func() {
-		select {
-		case <-executionDone:
-			return
-		case <-runCtx.Done():
-		}
-		timer := time.NewTimer(3 * time.Second)
-		defer timer.Stop()
-		select {
-		case <-executionDone:
-			return
-		case <-timer.C:
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		}
-	}()
-	if e = registerProcess(home, cmd.Process.Pid, nonce); e != nil {
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		input.Close()
-		cmd.Wait()
-		return e
-	}
-	defer os.Remove(filepath.Join(home, "process.json"))
-	go func() { defer input.Close(); io.WriteString(input, nonce+"\n"+m.Content) }()
-	redact := x.redactor(c.Snapshot)
-	var mu sync.Mutex
-	var callbackErr error
-	var lastError string
-	var stderrText strings.Builder
-	var seenThread, completed bool
-	emit := func(raw []byte) {
-		mu.Lock()
-		defer mu.Unlock()
-		if callbackErr == nil {
-			callbackErr = onEvent(redactJSON(raw, redact))
-		}
-	}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		scan := bufio.NewScanner(errpipe)
-		scan.Buffer(make([]byte, 4096), 1024*1024)
-		for scan.Scan() {
-			text := redact(scan.Text())
-			mu.Lock()
-			if stderrText.Len() < 16384 {
-				stderrText.WriteString(text + "\n")
-			}
-			mu.Unlock()
-			b, _ := json.Marshal(map[string]any{"type": "executor.stderr", "text": text})
-			emit(b)
-		}
-	}()
-	scan := bufio.NewScanner(out)
-	scan.Buffer(make([]byte, 4096), 4*1024*1024)
-	for scan.Scan() {
-		raw := append([]byte(nil), scan.Bytes()...)
-		var event struct {
-			Type     string `json:"type"`
-			ThreadID string `json:"thread_id"`
-			Message  string `json:"message"`
-			Error    struct {
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		if e = json.Unmarshal(raw, &event); e != nil {
-			mu.Lock()
-			callbackErr = fmt.Errorf("invalid native event: %w", e)
-			mu.Unlock()
-			break
-		}
-		if event.Type == "thread.started" {
-			if c.ThreadID != "" && event.ThreadID != c.ThreadID {
-				mu.Lock()
-				callbackErr = errors.New("native session identity changed during resume")
-				mu.Unlock()
-				break
-			}
-			seenThread = true
-		}
-		if event.Type == "turn.completed" {
-			completed = true
-		}
-		if event.Type == "turn.failed" {
-			lastError = event.Error.Message
-		}
-		if event.Type == "error" {
-			lastError = event.Message
-		}
-		emit(raw)
-		mu.Lock()
-		bad := callbackErr != nil
-		mu.Unlock()
-		if bad {
-			break
-		}
-	}
-	if scan.Err() != nil {
-		mu.Lock()
-		callbackErr = scan.Err()
-		mu.Unlock()
-	}
-	mu.Lock()
-	bad := callbackErr != nil
-	mu.Unlock()
-	if bad {
-		cancelRun()
-	}
-	waitErr := cmd.Wait()
-	syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	<-done
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	mu.Lock()
-	defer mu.Unlock()
-	if callbackErr != nil {
-		return callbackErr
-	}
-	if waitErr != nil || !seenThread || !completed {
-		if lastError == "" {
-			lastError = strings.TrimSpace(stderrText.String())
-		}
-		if len(lastError) > 4000 {
-			lastError = lastError[:4000]
-		}
-		return fmt.Errorf("Codex execution did not complete: %v %s", waitErr, redact(lastError))
-	}
-	return nil
+	return x.executeAppServer(ctx, c, m, workspace, home, env, onEvent)
 }

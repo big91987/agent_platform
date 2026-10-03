@@ -53,9 +53,10 @@ class Client:
         self.timeout = timeout
         self._opener = urllib.request.build_opener(_NoRedirect())
 
-    def _open(self, path, body=None, headers=None):
+    def _open(self, path, body=None, headers=None, method=None):
         request = urllib.request.Request(
             self.base_url + path,
+            method=method,
             data=None
             if body is None
             else json.dumps(body, ensure_ascii=False).encode(),
@@ -80,8 +81,8 @@ class Client:
             reason = str(error).replace(self._token, "[redacted]")
             raise ConnectionError(f"Platform transport failed: {reason}") from None
 
-    def _json(self, path, body=None):
-        with self._open(path, body) as response:
+    def _json(self, path, body=None, *, method=None):
+        with self._open(path, body, method=method) as response:
             try:
                 return json.load(response)
             except (ValueError, UnicodeError):
@@ -91,6 +92,21 @@ class Client:
                 raise ConnectionError(
                     f"Platform response interrupted: {reason}"
                 ) from None
+
+    def tool_servers(self):
+        """List registered external MCP servers (administrator only)."""
+        return self._json("/api/tool-servers")
+
+    def register_tool_server(self, server):
+        """Save an external MCP connection, without uploading tool code."""
+        return self._json("/api/tool-servers", server)
+
+    def discover_tool_server(self, server_id):
+        """Discover names and schemas from the external MCP service."""
+        return self._json(
+            "/api/tool-servers/" + urllib.parse.quote(server_id, safe="") + "/discover",
+            {},
+        )
 
     @staticmethod
     def _conversation_path(conversation_id):
@@ -146,6 +162,17 @@ class Client:
 
     def conversation(self, conversation_id):
         return self._json(self._conversation_path(conversation_id))
+
+    def decide_tool(self, conversation_id, approval_id, decision):
+        """Approve or decline one pending native tool call in this conversation."""
+        if decision not in ("accept", "decline"):
+            raise ValueError("decision must be accept or decline")
+        path = (
+            self._conversation_path(conversation_id)
+            + "/approvals/"
+            + urllib.parse.quote(approval_id, safe="")
+        )
+        return self._json(path, {"decision": decision})
 
     def events(self, conversation_id, *, after=0):
         query = urllib.parse.urlencode({"after": after, "format": "json"})
@@ -214,8 +241,27 @@ class Client:
                 )
             time.sleep(min(poll_interval, remaining))
 
-    def stop(self, conversation_id):
-        return self._json(self._conversation_path(conversation_id) + "/stop", {})
+    def workspace_access(self, conversation_id, *, read_only):
+        """Change workspace access between turns; running processes are unchanged."""
+        return self._json(
+            self._conversation_path(conversation_id) + "/workspace-access",
+            {"read_only": read_only},
+            method="PATCH",
+        )
+
+    def stop(self, conversation_id, *, expected_message_id=None, discard_queued=False):
+        body = {}
+        if expected_message_id is not None:
+            body["expected_message_id"] = expected_message_id
+        if discard_queued:
+            body["discard_queued"] = True
+        return self._json(self._conversation_path(conversation_id) + "/stop", body)
+
+    def steer(self, conversation_id, message_id):
+        return self._json(
+            self._conversation_path(conversation_id) + "/steer",
+            {"message_id": message_id},
+        )
 
     def continue_queue(self, conversation_id):
         return self._json(self._conversation_path(conversation_id) + "/continue", {})

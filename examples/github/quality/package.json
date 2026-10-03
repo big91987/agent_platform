@@ -1,0 +1,9 @@
+{
+  "name": "agent-platform-github-example-quality",
+  "private": true,
+  "version": "1.0.0",
+  "devDependencies": {
+    "eslint": "10.11.0",
+    "prettier": "3.6.2"
+  }
+}

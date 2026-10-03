@@ -18,6 +18,7 @@ type Scheduler struct {
 	limit    int
 	mu       sync.Mutex
 	active   map[string]context.CancelFunc
+	steering map[string]chan steeringInput
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
@@ -28,7 +29,7 @@ func NewScheduler(s *Store, x Executor, n int) *Scheduler {
 		n = 1
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Scheduler{store: s, executor: x, limit: n, active: map[string]context.CancelFunc{}, ctx: ctx, cancel: cancel}
+	return &Scheduler{store: s, executor: x, limit: n, active: map[string]context.CancelFunc{}, steering: map[string]chan steeringInput{}, ctx: ctx, cancel: cancel}
 }
 func (s *Scheduler) Start() {
 	s.wg.Add(1)
@@ -60,7 +61,9 @@ func (s *Scheduler) dispatch() {
 				log.Printf("scheduler workspace: %v", err)
 				return
 			}
-			busy = append(busy, active.WorkspacePath)
+			if !active.ReadOnly {
+				busy = append(busy, active.WorkspacePath)
+			}
 		}
 		c, m, e := s.store.Claim(busy...)
 		if errors.Is(e, ErrNotFound) {
@@ -72,6 +75,11 @@ func (s *Scheduler) dispatch() {
 		}
 		ctx, cancel := context.WithCancel(s.ctx)
 		s.active[c.ID] = cancel
+		if x, ok := s.executor.(interface{ SupportsSteering() bool }); ok && x.SupportsSteering() {
+			ch := make(chan steeringInput, 16)
+			s.steering[c.ID] = ch
+			ctx = context.WithValue(ctx, steeringKey{}, ch)
+		}
 		s.wg.Add(1)
 		go s.execute(ctx, c, m)
 	}
@@ -108,6 +116,13 @@ func (s *Scheduler) execute(ctx context.Context, c Conversation, m Message) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if ch := s.steering[c.ID]; ch != nil {
+		delete(s.steering, c.ID)
+		for len(ch) > 0 {
+			req := <-ch
+			req.Finish(errors.New("当前轮已结束，消息仍在队列中"), true)
+		}
+	}
 	if cancel, ok := s.active[c.ID]; ok {
 		cancel()
 		delete(s.active, c.ID)
@@ -124,6 +139,9 @@ func (s *Scheduler) execute(ctx context.Context, c Conversation, m Message) {
 	s.store.RecordEvent(c.ID, m.ID, ended)
 }
 func (s *Scheduler) Stop(id string, close bool) error {
+	return s.StopExpected(id, close, 0, false)
+}
+func (s *Scheduler) StopExpected(id string, close bool, expected int64, discard bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	state := "stopped"
@@ -134,7 +152,7 @@ func (s *Scheduler) Stop(id string, close bool) error {
 	if close {
 		state = "closed"
 	}
-	if e := s.store.Halt(id, state, ""); e != nil {
+	if e := s.store.HaltExpected(id, state, "", expected, discard); e != nil {
 		return e
 	}
 	if active {
@@ -151,3 +169,24 @@ func (s *Scheduler) Continue(id string) error {
 	return s.store.Continue(id)
 }
 func (s *Scheduler) Close() { s.cancel(); s.wg.Wait() }
+
+// Access changes apply only between turns; a running process keeps its sandbox.
+func (s *Scheduler) SetWorkspaceAccess(id string, readOnly bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, active := s.active[id]; active {
+		return ErrConflict
+	}
+	changed, err := s.store.DB.Exec(`UPDATE conversations SET read_only=?,updated=? WHERE id=? AND status NOT IN ('running','stopping','closed')`, readOnly, now(), id)
+	if err != nil {
+		return err
+	}
+	n, err := changed.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return ErrConflict
+	}
+	return nil
+}

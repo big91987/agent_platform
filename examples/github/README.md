@@ -33,3 +33,239 @@ gh workflow run agent-platform.yml --repo <owner>/<repository> -f issue=<issue-n
 ```
 
 工作目录需要持续保留；不要把会被 Runner 清理的 checkout 临时目录传给异步平台。可在本机私有配置中设置 workspace_path 默认值；工作流输入优先。该 API 面向受信同机调用方，目录参数不提供租户文件系统隔离。
+
+## Pipeline with independent QA and code review
+
+`pipeline.yml` replaces the single-stage workflow when requirements, design and
+implementation should hand off through externally registered stdio MCP tools.
+The platform remains generic. The integration lives in this directory and
+`examples/pipeline-tool`; it uses existing platform APIs without adding pipeline
+fields to the platform's schema.
+
+On the same machine as the platform and self-hosted Runner:
+
+1. Build `go build -o bin/pipeline-tool ./examples/pipeline-tool`.
+2. Keep a trusted checkout of the product's shared `full_harness` browser checker,
+   install its locked browser dependencies, and run its `check.cjs --probe`.
+3. Extend the private Runner JSON (base_url, token, agent_id) with `pipeline`:
+
+   ```json
+   {
+     "repository": "owner/repository",
+     "checkout": "<trusted-tooling-checkout>",
+     "workspaces": "<task-workspace-root>",
+     "registry": "<private-integration-state-root>",
+     "delivery_token_file": "<private-config-root>/github-delivery-token",
+     "python": "<platform-root>/.data/runner-venv/bin/python",
+     "skills_root": "<harness-repository>/skills",
+     "agents": {}
+   }
+   ```
+
+4. Run `python3 examples/github/setup.py --config <private-runner-json>`.
+   It prompts for the existing platform admin password, registers/discovers MCP
+   servers, and creates or updates five independent stage Agents. Existing conversations
+   retain their snapshots; use a new Issue to exercise updated bindings.
+5. Install `pipeline.yml` as `.github/workflows/agent-platform.yml`, set the
+   existing `AGENT_PLATFORM_ROOT` repository variable, and keep legacy workflows
+   disabled. The local `gh` identity must have dispatch and delivery permission
+   for the configured repository. `run.sh` reads this identity at process startup;
+   tokens never enter model arguments, URLs or committed files. For report delivery,
+   provision the existing integration credential in `delivery_token_file` (absolute
+   path, mode 0600, outside the task workspace/repository). The unattended Runner
+   reads that file instead of the desktop login keychain. The credential needs
+   contents and pull-request write access to the configured repository; renew the
+   private file when rotating it. Never put its value in the Runner JSON or logs.
+6. Open a product Issue as owner. A non-owner Issue is started by an owner through
+   workflow_dispatch (`after=start`). The Runner creates its task branch/worktree
+   and publishes a platform conversation link immediately after saving input.
+7. Clarify and approve requirements in the platform UI. The Agent calls
+   `submit_handoff`; the tool snapshots documents and dispatches GitHub with the
+   source stage and digest. GitHub waits for the previous turn to finish, verifies
+   the handoff, and starts a distinct design conversation in the same workspace.
+8. Review the prototype, architecture and contracts; approve in the design chat.
+   Its MCP call starts development. Development has a native Stop check and real
+   browser tool and implements/verifies the feature. It presents the deliverable
+   and waits for explicit user confirmation before handing off to QA.
+9. QA independently exercises the real product and writes `qa.md` with AC results,
+   reproduction steps, screenshots and limitations. For a demonstrated product
+   defect, QA chooses `target_stage=requirements`, `design` or `development` in
+   `submit_handoff`. No extra approval is required just to return a defect. Tool
+   or environment failures remain blocked/recoverable and are not product defects.
+10. The receiver records the return on the original Issue and resumes the target
+    role's own conversation with the QA feedback and current documents. Subsequent
+    stages run again in new Workflow Runs, using the same task branch/workspace.
+    Requirement or design changes are reviewed normally; unchanged decisions are
+    not approved again. Passing QA requires human confirmation to hand off with
+    `target_stage=report` and create a draft PR.
+11. The report Job re-runs existing and feature browser journeys, syntax and diff
+    checks, commits/pushes the task branch, and creates a draft PR. It never merges.
+12. Code review is separate: click **Ready for review** on a pipeline-delivered
+    PR to start the independent Reviewer when its GitHub merge reference includes
+    this workflow version. Older PR references may still carry the previous
+    workflow; use the manual entry below in that case. The Runner resolves its original Issue
+    from the delivery record and verifies the registered checkout matches the PR
+    head. A conversation link and the final findings appear on that PR.
+    To request another review manually, run the workflow with `after=code_review` and the
+    original Issue number after PR creation. An independent Agent inspects the
+    branch and writes `code-review.md`; its final findings are posted to the PR
+    and Issue. It has no handoff tool. Humans decide fixes and merging. The QA
+    feedback loop does not use review as an automatic pass/fail routing stage.
+
+Runner-owned registrations select credentials, destination and receipt paths.
+The Agent supplies summary, relative UTF-8 document paths and an optional target
+stage. Every product stage may return to an earlier stage. QA must explicitly choose this target; omission is rejected rather than
+defaulting to delivery. A QA return increments the task round; every later stage gets a new input
+and handoff receipt but retains its own conversation. Old reports remain in
+immutable handoff snapshots. Previous verification does not approve changed code.
+
+A dispatch carries source stage, receipt path and digest. The receiver verifies
+that these belong to the active task round and snapshots match workspace files.
+It persists the accepted transition before invoking the next Agent with a stable
+request ID. Retrying that same transition reconnects instead of issuing another
+input; callbacks from superseded stages or rounds fail. Duplicate queued Runs
+may appear after a network-uncertain retry, but they cannot advance stale state.
+The Issue-level concurrency group serializes CI Runs; the receiver also waits
+for the source Agent to finish before handing the workspace to the next role.
+
+The MCP tool saves evidence before HTTP dispatch. A successful dispatch is never
+resent. After a rejected or uncertain request, repeat the same tool call; the
+receiver deduplicates the receipt. Changed content cannot overwrite a receipt.
+Saving a file alone does not trigger GitHub: the external tool explicitly calls
+`workflow_dispatch`. No polling service or platform-specific pipeline state is
+introduced.
+
+The JSON registry contains integration receipts, not native session histories.
+Native threads, messages and queue state remain owned by Agent Platform. This
+example uses a shared local filesystem; it does not imply remote sandbox support.
+
+Before enabling development, install the pinned quality tools with
+`npm ci --ignore-scripts --prefix examples/github/quality`. The Agent receives
+`verify.py --fix` for formatting/autofix and `verify.py` for checks. Native Stop
+and delivery use the same check path (Prettier, ESLint, syntax, diff and browser
+journeys). Do not replace real functional assertions with a formatter pass.
+
+Runner report evidence is saved under `runner-checks/`; the Agent's own
+`delivery-checks/` logs remain intact. A draft PR is a review handoff, not a claim
+that outstanding human acceptance evidence has passed.
+
+Product regression plans belong in `tests/browser/core.json`, where they can be
+reviewed and updated with UI changes. When absent, the integration uses the
+legacy `.harness/reading-core.json`; an invalid or empty product plan fails rather
+than falling back. Migrate by preserving the existing business actions and
+assertions, updating only obsolete locators, and include the plan in the product
+PR. Harness execution controls remain protected. The feature-specific plan is
+still required and is checked independently by the delivery Runner.
+
+QA receipts bind to the product/test digest actually inspected. Missing QA evidence
+or a later code change prevents publication. A human acceptance requirement is
+an Agent instruction, not a machine-verifiable approval record; the integration
+checks handoff integrity, not whether prose constitutes approval. Existing
+conversations keep their original Agent configuration snapshots. Use a new Issue
+to validate newly installed role/tool instructions.
+
+## Re-verify after fixes
+
+For manually applied repairs, the owner may select `after=verify` and the Issue
+number once participating conversations are idle. This starts a fresh QA round
+in its original conversation. It is not acceptance of QA findings or permission
+to create a PR. Automatic QA return uses `target_stage` instead; it does not
+require this manual entry.
+
+
+## User-requested and Agent-proposed returns
+
+At the active product stage, a user can request an earlier stage in natural
+language. The Agent resolves the destination; an explicit user request needs no
+second approval. In strict mode, an Agent-proposed return first needs human confirmation, except
+QA may return an evidenced product defect autonomously. Same-stage corrections
+stay in the conversation. Independent code review remains separate.
+
+Use the same submit_handoff tool with target_stage. Its summary records the
+reason, requested changes, affected conclusions and the user request/confirmation
+(or QA evidence); artifacts preserve supporting documents. The receiver validates
+the registered source and route, increments the round on any backward handoff,
+and resumes the recipient's own conversation. Subsequent stages must run again;
+old round callbacks cannot advance the new round. Natural-language approval is
+interpreted by the Agent, not by keyword matching in the framework.
+
+## 管理已发出的交接
+
+`submit_handoff` 的成功回执包含 GitHub `run_id`、`run_url`。已有的 Run ID
+就是后续管理句柄，不增加另一套任务 ID。GitHub dispatch 固定使用 API
+`2022-11-28` 和 `return_run_details: true`；接收方会为响应丢失的交接补回 Run ID。
+
+每个阶段注册三个外部 MCP 工具：
+
+- `submit_handoff(summary, artifacts, target_stage?)`：完成当前阶段并交接。
+- `supplement_handoff(run_id, content)`：向这次交接对应的目标会话追加内容。
+  目标执行中时使用通用引导接口；尚未启动时保存到交接，由启动输入带入。
+- `replace_handoff(run_id, content, target_stage)`：撤回旧交接，停止目标 Agent，
+  取消尚未结束的 GitHub Run，再向指定阶段重新 dispatch。旧文件、历史和补充保留。
+
+例如用户在原 QA 会话说“刚才回设计不对，请撤回，回需求重新确定范围”，
+QA Agent 使用此前返回的 Run ID 调用 `replace_handoff(..., target_stage="requirements")`。
+用户不必进入目标会话。接收 Run 在同一个 Issue 回复并复用任务工作区、分支与目标阶段会话。
+本工具只管理 requirements/design/development/qa；不撤销已发布 PR 或代码合并。
+
+新安装默认自动允许提交与补充，撤回使用 `confirm`，网页批准本次调用后执行。
+审批策略属于通用工具绑定配置；`setup.py --tools-only` 只刷新既有 Agent 的工具绑定，
+保留已配置的审批、模型、提示词和 Skill。既有会话使用创建时的工具快照。
+部署 SDK 变更时重新执行 `scripts/setup-runner.sh`，再构建 MCP 工具。
+
+交接后，上游会话切成通用只读工作区模式，可与下游写任务并行处理管理消息；
+回到该阶段时恢复写权限。读写模式不是租户沙箱，外部 MCP 权限由工具注册与审批控制。
+同一工作区仍最多一个写任务，全局执行并发上限照常生效。
+
+撤回首先持久化失效标记；只有旧 Agent 确认停止才下发新 Run。停止操作带观察到的
+最新输入 ID；此后新增输入会导致冲突，不会被相同请求重试顺带取消。撤回移除旧队列的
+待执行资格，但保留消息记录。任何失败均保留可重试状态，完全相同的管理请求返回原结果。
+旧句柄不能取消已经推进的其他阶段。目标已回到调用者自身阶段时，继续当前会话并用
+正常 `submit_handoff` 推进，不允许管理工具停止自己的调用进程。
+
+交接已被接收、但目标调用回执因中断尚未保存时，管理工具会拒绝猜测目标；先重试接收
+Workflow，由稳定请求键恢复同一次调用，再管理。GitHub HTTP 响应不确定时可能出现
+重复 Run，但接收方按冻结交接文件和摘要去重，不重复启动 Agent。
+
+
+## Issue 自主推进与 PR 自动复验
+
+新 Issue 专属 `### 自主推进` 区块中的 `- [x] 按推荐方案自主推进`
+启用任务级自主模式；默认关闭。创建时保存，不随 Issue 后续编辑隐式变更。
+所有阶段和返工沿用该策略：普通澄清选择有依据的推荐项，完成产物和实际验证后自动交接；
+目标无法判断或 P0 重大风险仍请求人工决定。不得伪造用户确认或跳过 QA。
+最终 PR 合并与高风险部署不属于自动授权。
+
+安装 `pipeline.yml` 与 `pr-refresh.yml` 到项目工作流目录，并配置本地适配器。
+Ready for review 和 main push 触发已登记 Ready PR 的自动同步；Draft/fork 不处理。
+框架 merge 精确 main commit，研发 Agent 只编辑普通产品冲突，框架完成提交，再独立 QA 和代码审查。
+`pipeline/refresh` 成功仅表示这一版本完成验证与审查，不代表人工批准或自动合并。
+审查发现仍交给人判断。主线在验证中变化会重新启动同步；失败保留现场可重跑。
+阶段工作流使用 `queue: max` 保留排队交接，不能用新刷新挤掉已提交的阶段回调。
+
+`approval_policy.py` 只属于 GitHub 集成；通用平台的 Agent/工具/会话协议不增加研发阶段或审批语义。
+
+### Browser runtime and delayed results
+
+The browser MCP and verification gate use `pipeline.browser_source` when configured,
+otherwise `pipeline.checkout`. Install an owner-managed Harness checkout at a fixed
+commit and run its `full_harness.browser.prepare` before registering it with
+`setup.py --tools-only --browser-source <harness-checkout>`. Keep it outside task
+workspaces. This preserves the task's Git baseline and avoids editing Runner copies.
+
+`check` supports real hover/pointer movement, touch contexts and taps, geometry
+snapshots, and storage write observations. `verify` runs the owner quality gate on
+the host and returns the result before handoff, avoiding Agent shell port restrictions.
+Existing conversations retain their tool bindings; updated tools remain available
+through the same `check` connection, while newly attached `verify` is available in
+new conversations. A failed verification overwrites the current checks receipt with
+its actual failure instead of leaving a previous success behind.
+
+Deploy the matching `pipeline.yml` before relying on delayed-result continuation.
+For a staged rollout, `setup.py --tools-only --observer-ref <workflow-branch>`
+selects the owner-controlled observer workflow ref; the default is `main`.
+This selects only result observation, not product stage or merge behavior.
+After a Runner wait expires, `after=observe` continues receiving the original
+conversation/message and posts its final reply to the same Issue. It never calls
+`invoke`, never approves a stage, and never recreates a native Session. Replaced
+inputs and previous iterations are ignored; comments are deduplicated by input ID.

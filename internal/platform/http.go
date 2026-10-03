@@ -59,6 +59,10 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("POST /api/agents", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("PUT /api/agents/{id}", h.protect(true, h.saveAgent))
 	h.mux.HandleFunc("POST /api/agents/{id}/check", h.protect(true, h.checkAgent))
+	h.mux.HandleFunc("GET /api/tool-servers", h.protect(true, h.toolServers))
+	h.mux.HandleFunc("POST /api/tool-servers", h.protect(true, h.toolServers))
+	h.mux.HandleFunc("PUT /api/tool-servers/{id}", h.protect(true, h.toolServers))
+	h.mux.HandleFunc("POST /api/tool-servers/{id}/discover", h.protect(true, h.discoverToolServer))
 	h.mux.HandleFunc("GET /api/users", h.protect(true, h.users))
 	h.mux.HandleFunc("POST /api/users", h.protect(true, h.users))
 	h.mux.HandleFunc("POST /api/users/{id}/token", h.protect(true, h.userToken))
@@ -68,6 +72,9 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("POST /api/conversations/{id}/messages", h.protect(false, h.invoke))
 	h.mux.HandleFunc("GET /api/conversations", h.protect(false, h.conversations))
 	h.mux.HandleFunc("GET /api/conversations/{id}", h.protect(false, h.conversation))
+	h.mux.HandleFunc("POST /api/conversations/{id}/approvals/{approval}", h.protect(false, h.approveTool))
+	h.mux.HandleFunc("PATCH /api/conversations/{id}/workspace-access", h.protect(false, h.workspaceAccess))
+	h.mux.HandleFunc("POST /api/conversations/{id}/steer", h.protect(false, h.steer))
 	h.mux.HandleFunc("POST /api/conversations/{id}/stop", h.protect(false, h.action))
 	h.mux.HandleFunc("POST /api/conversations/{id}/continue", h.protect(false, h.action))
 	h.mux.HandleFunc("POST /api/conversations/{id}/close", h.protect(false, h.action))
@@ -255,6 +262,11 @@ func (h *Server) checkAgent(w http.ResponseWriter, r *http.Request, c Caller) {
 		fail(w, e)
 		return
 	}
+	a, e = resolveToolServers(h.store.DB, a)
+	if e != nil {
+		fail(w, e)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 70*time.Second)
 	defer cancel()
 	v, e := h.codex.Check(ctx, a)
@@ -330,7 +342,12 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	respond(w, 200, map[string]any{"conversation": v, "messages": messages, "artifacts": artifacts})
+	approvals, e := h.store.Approvals(v.ID)
+	if e != nil {
+		fail(w, e)
+		return
+	}
+	respond(w, 200, map[string]any{"conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals})
 }
 func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, ok := h.authorize(w, r, c)
@@ -344,7 +361,15 @@ func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	case strings.HasSuffix(r.URL.Path, "/close"):
 		e = h.scheduler.Stop(v.ID, true)
 	default:
-		e = h.scheduler.Stop(v.ID, false)
+		var in struct {
+			ExpectedMessageID int64 `json:"expected_message_id"`
+			DiscardQueued     bool  `json:"discard_queued"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil && err != io.EOF {
+			fail(w, ErrConflict)
+			return
+		}
+		e = h.scheduler.StopExpected(v.ID, false, in.ExpectedMessageID, in.DiscardQueued)
 	}
 	if e != nil {
 		fail(w, e)
@@ -479,7 +504,11 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 		return
 	}
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
-	if imageArtifact(path) && r.URL.Query().Get("download") != "1" {
+	if r.URL.Query().Get("preview") == "1" && r.URL.Query().Get("download") != "1" && (strings.EqualFold(filepath.Ext(path), ".html") || strings.EqualFold(filepath.Ext(path), ".htm")) {
+		// Generated HTML runs in an opaque origin, without platform cookies or API access.
+		w.Header().Set("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'self'")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	} else if imageArtifact(path) && r.URL.Query().Get("download") != "1" {
 		w.Header().Set("Content-Type", mime.TypeByExtension(strings.ToLower(filepath.Ext(path))))
 	} else {
 		w.Header().Set("Content-Type", "application/octet-stream")
@@ -489,10 +518,10 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 }
 func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")
-	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "integrations" || name == "users" || name == "api-docs" {
+	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "tools" || name == "integrations" || name == "users" || name == "api-docs" {
 		name = "index.html"
 	}
-	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" && name != "markdown.js" && name != "favicon.svg" {
+	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" && name != "markdown.js" && name != "transcript.js" && name != "favicon.svg" {
 		http.NotFound(w, r)
 		return
 	}
@@ -504,4 +533,43 @@ func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(name)))
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Write(b)
+}
+
+func (h *Server) steer(w http.ResponseWriter, r *http.Request, c Caller) {
+	v, ok := h.authorize(w, r, c)
+	if !ok {
+		return
+	}
+	var in struct {
+		MessageID int64 `json:"message_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.MessageID <= 0 {
+		fail(w, ErrConflict)
+		return
+	}
+	if err := h.scheduler.Steer(v.ID, in.MessageID); err != nil {
+		fail(w, err)
+		return
+	}
+	respond(w, 202, map[string]any{"message_id": in.MessageID, "status": "steering"})
+}
+
+func (h *Server) workspaceAccess(w http.ResponseWriter, r *http.Request, c Caller) {
+	v, ok := h.authorize(w, r, c)
+	if !ok {
+		return
+	}
+	var in struct {
+		ReadOnly *bool `json:"read_only"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.ReadOnly == nil {
+		fail(w, ErrConflict)
+		return
+	}
+	if err := h.scheduler.SetWorkspaceAccess(v.ID, *in.ReadOnly); err != nil {
+		fail(w, err)
+		return
+	}
+	updated, _ := h.store.Conversation(v.ID)
+	respond(w, 200, updated)
 }

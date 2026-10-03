@@ -29,7 +29,7 @@ def github(path, body=None, *, paginate=False):
         check=True,
         timeout=60,
     )
-    value = json.loads(result.stdout)
+    value = json.loads(result.stdout) if result.stdout.strip() else None
     return [item for page in value for item in page] if paginate else value
 
 
