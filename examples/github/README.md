@@ -1,5 +1,11 @@
 # GitHub → 本机 Agent 平台
 
+新仓库接入请从 [完整复现说明](GETTING_STARTED.md) 开始；验证工具已随 `tooling/` 分发，可选部署见 `local-preview/`。
+
+## 单阶段接入（可选）
+
+以下 `requirements.yml` 是早期单阶段示例，不与完整 Pipeline 同时安装。完整研发流程请使用上面的复现说明。
+
 Runner 只负责请求、结果查询和 Issue 回复；Agent 在本机平台后台执行。
 
 1. 创建平台用户，在 Agent 配置中勾选该用户。
@@ -45,19 +51,20 @@ fields to the platform's schema.
 On the same machine as the platform and self-hosted Runner:
 
 1. Build `go build -o bin/pipeline-tool ./examples/pipeline-tool`.
-2. Keep a trusted checkout of the product's shared `full_harness` browser checker,
-   install its locked browser dependencies, and run its `check.cjs --probe`.
+2. Run `bash examples/github/install-tooling.sh` to install the bundled browser
+   runtime, SDK, MCP binary and locked quality dependencies; no separate Harness checkout is required.
 3. Extend the private Runner JSON (base_url, token, agent_id) with `pipeline`:
 
    ```json
    {
      "repository": "owner/repository",
-     "checkout": "<trusted-tooling-checkout>",
+     "checkout": "<persistent-product-clone>",
+     "namespace": "owner-project",
      "workspaces": "<task-workspace-root>",
      "registry": "<private-integration-state-root>",
      "delivery_token_file": "<private-config-root>/github-delivery-token",
      "python": "<platform-root>/.data/runner-venv/bin/python",
-     "skills_root": "<harness-repository>/skills",
+     "skills_root": "<skill-assets-root>",
      "agents": {}
    }
    ```
@@ -67,7 +74,7 @@ On the same machine as the platform and self-hosted Runner:
    servers, and creates or updates five independent stage Agents. Existing conversations
    retain their snapshots; use a new Issue to exercise updated bindings.
 5. Install `pipeline.yml` as `.github/workflows/agent-platform.yml`, set the
-   existing `AGENT_PLATFORM_ROOT` repository variable, and keep legacy workflows
+   `AGENT_PLATFORM_ROOT` and per-repository `AGENT_PLATFORM_CONFIG` variables, and keep legacy workflows
    disabled. The local `gh` identity must have dispatch and delivery permission
    for the configured repository. `run.sh` reads this identity at process startup;
    tokens never enter model arguments, URLs or committed files. For report delivery,
@@ -248,10 +255,12 @@ Ready for review 和 main push 触发已登记 Ready PR 的自动同步；Draft/
 ### Browser runtime and delayed results
 
 The browser MCP and verification gate use `pipeline.browser_source` when configured,
-otherwise `pipeline.checkout`. Install an owner-managed Harness checkout at a fixed
-commit and run its `full_harness.browser.prepare` before registering it with
-`setup.py --tools-only --browser-source <harness-checkout>`. Keep it outside task
-workspaces. This preserves the task's Git baseline and avoids editing Runner copies.
+otherwise the bundled `examples/github/tooling` snapshot. Run
+`bash examples/github/install-tooling.sh` to install its locked dependencies.
+An optional owner-managed fixed Harness checkout can still be registered with
+`setup.py --tools-only --browser-source <harness-checkout>` after preparing that
+runtime. Keep overrides outside task workspaces. `pipeline.checkout` is only
+the persistent product clone, not the default tool installation.
 
 `check` supports real hover/pointer movement, touch contexts and taps, geometry
 snapshots, and storage write observations. `verify` runs the owner quality gate on

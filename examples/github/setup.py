@@ -3,6 +3,7 @@ import getpass
 import http.cookiejar
 import json
 import os
+import re
 import urllib.request
 from pathlib import Path
 
@@ -18,7 +19,7 @@ parser.add_argument(
 parser.add_argument(
     "--browser-source",
     type=Path,
-    help="Owner-managed pinned Harness checkout for the browser runtime; defaults to pipeline checkout",
+    help="Owner-managed pinned Harness checkout for the browser runtime; defaults to the bundled examples/github/tooling snapshot",
 )
 parser.add_argument(
     "--observer-ref",
@@ -29,6 +30,13 @@ root = Path(__file__).resolve().parents[2]
 configpath = args.config.resolve()
 c = json.loads(configpath.read_text())
 settings = c["pipeline"]
+namespace = settings.get("namespace", "")
+if namespace and not re.fullmatch(r"[a-zA-Z0-9_-]+", namespace):
+    raise ValueError(
+        "namespace must contain only letters, digits, underscores or hyphens"
+    )
+prefix = namespace + "-" if namespace else ""
+name_prefix = "[" + namespace + "] " if namespace else ""
 if args.observer_ref:
     settings["observer_ref"] = args.observer_ref
 if args.browser_source:
@@ -63,7 +71,7 @@ registry = Path(settings["registry"])
 Path(settings["workspaces"]).mkdir(parents=True, exist_ok=True)
 registry.mkdir(parents=True, exist_ok=True)
 for stage in ["requirements", "design", "development", "qa"]:
-    sid = "pipeline-" + stage
+    sid = prefix + "pipeline-" + stage
     server = api(
         "/api/tool-servers",
         {
@@ -84,7 +92,7 @@ for stage in ["requirements", "design", "development", "qa"]:
     )
     api("/api/tool-servers/" + sid + "/discover", {})
     if stage in ("design", "development", "qa"):
-        bid = "browser-" + stage
+        bid = prefix + "browser-" + stage
         api(
             "/api/tool-servers",
             {
@@ -108,14 +116,16 @@ c["pipeline"] = settings
 configpath.write_text(json.dumps(c, indent=2))
 configpath.chmod(0o600)
 for stage in ["design", "development", "qa"]:
-    api("/api/tool-servers/browser-" + stage + "/discover", {})
+    api("/api/tool-servers/" + prefix + "browser-" + stage + "/discover", {})
 agents = api("/api/agents")
 if args.tools_only:
     for stage in ("requirements", "design", "development", "qa"):
         agent = next(a for a in agents if a["id"] == settings["agents"][stage])
         agent.pop("resolved_tools", None)
         registration = next(
-            r for r in agent["tool_servers"] if r["server_id"] == "pipeline-" + stage
+            r
+            for r in agent["tool_servers"]
+            if r["server_id"] == prefix + "pipeline-" + stage
         )
         for name, mode in (
             ("submit_handoff", "auto"),
@@ -127,7 +137,9 @@ if args.tools_only:
             registration.setdefault("approvals", {}).setdefault(name, mode)
         if stage in ("design", "development", "qa"):
             browser = next(
-                r for r in agent["tool_servers"] if r["server_id"] == "browser-" + stage
+                r
+                for r in agent["tool_servers"]
+                if r["server_id"] == prefix + "browser-" + stage
             )
             if "verify" not in browser["tools"]:
                 browser["tools"].append("verify")
@@ -140,7 +152,9 @@ base = next(
     for a in agents
     if a["id"] == settings["agents"].get("requirements", c["agent_id"])
 )
-(root / ".data/requirements-agent-before-handoff.json").write_text(json.dumps(base))
+backup = registry / "requirements-agent-before-handoff.json"
+backup.write_text(json.dumps(base))
+backup.chmod(0o600)
 source = Path(settings["skills_root"])
 stages = {
     "requirements": ["resumable-batch-grilling", "defining-platform-products-cn"],
@@ -157,17 +171,20 @@ stages = {
 for stage, names in stages.items():
     a = dict(base)
     a.pop("resolved_tools", None)
-    a["name"] = {
-        "requirements": "需求澄清助手",
-        "design": "设计助手",
-        "development": "研发助手",
-        "qa": "QA 验证助手",
-        "review": "代码审查助手",
-    }[stage]
+    a["name"] = (
+        name_prefix
+        + {
+            "requirements": "需求澄清助手",
+            "design": "设计助手",
+            "development": "研发助手",
+            "qa": "QA 验证助手",
+            "review": "代码审查助手",
+        }[stage]
+    )
     a["skills"] = [str(source / name) for name in names]
     a["tool_servers"] = [
         {
-            "server_id": "pipeline-" + stage,
+            "server_id": prefix + "pipeline-" + stage,
             "tools": ["submit_handoff", "supplement_handoff", "replace_handoff"],
             "approvals": {
                 "submit_handoff": "auto",
@@ -181,7 +198,7 @@ for stage, names in stages.items():
     if stage in ("design", "development", "qa"):
         a["tool_servers"].append(
             {
-                "server_id": "browser-" + stage,
+                "server_id": prefix + "browser-" + stage,
                 "tools": ["check", "verify"],
                 "approvals": {"check": "auto"},
             }

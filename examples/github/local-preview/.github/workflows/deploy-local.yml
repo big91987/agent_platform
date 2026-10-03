@@ -1,0 +1,67 @@
+name: Deploy static app locally
+run-name: Deploy main to local preview · ${{ github.sha }}
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      review:
+        description: Require approval for this deployment (also useful to inspect the plan)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: local-preview-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 10
+    outputs:
+      review: ${{ steps.plan.outputs.review }}
+    steps:
+      - name: Prepare exact main version and assess data impact
+        id: plan
+        env:
+          DEPLOY_ROOT: ${{ vars.LOCAL_DEPLOY_ROOT }}
+          TARGET_SHA: ${{ github.sha }}
+          REQUEST_REVIEW: ${{ inputs.review || false }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$DEPLOY_ROOT"
+          args=()
+          if [ "$REQUEST_REVIEW" = true ]; then args+=(--review); fi
+          python3 "$DEPLOY_ROOT/controller/local_deploy.py" prepare \
+            --root "$DEPLOY_ROOT" --sha "$TARGET_SHA" \
+            --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" "${args[@]}"
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.review == 'false'
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    steps:
+      - name: Activate compatible release
+        env:
+          DEPLOY_ROOT: ${{ vars.LOCAL_DEPLOY_ROOT }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
+            --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json"
+  deploy-reviewed:
+    needs: prepare
+    if: needs.prepare.outputs.review == 'true'
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    environment:
+      name: local-data-review
+      url: ${{ vars.LOCAL_PREVIEW_URL }}
+    steps:
+      - name: Activate this exact reviewed release
+        env:
+          DEPLOY_ROOT: ${{ vars.LOCAL_DEPLOY_ROOT }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
+            --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" --approved

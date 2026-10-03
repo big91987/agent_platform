@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 test -z "$(gofmt -l cmd internal web examples/pipeline-tool)"
-for script in scripts/*.sh examples/gitlab/prepare.sh; do
+for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-tooling.sh; do
   bash -n "$script"
 done
 node --check web/app.js
@@ -13,6 +13,7 @@ ruff check sdk/python examples
 ruff format --check sdk/python examples
 PYTHONPATH=sdk/python python3 -m unittest discover -s sdk/python/tests -v
 PYTHONPATH=sdk/python:examples/github python3 -m unittest discover -s examples/github -p '*_test.py' -v
+python3 -m unittest discover -s examples/github/local-preview/tests -p '*_test.py' -v
 go vet ./...
 go test -race ./... -timeout 120s
 go build -o bin/agent-platform ./cmd/agent-platform

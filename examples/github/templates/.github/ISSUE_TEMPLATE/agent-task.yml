@@ -1,0 +1,31 @@
+name: Agent 研发任务
+description: 从需求、文档、原型或现有代码开始，分阶段研发与评审；不限定产品形态。
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标与预期行为
+      description: 要解决什么问题？谁会使用？现有项目希望改变什么？
+    validations:
+      required: true
+  - type: textarea
+    id: existing
+    attributes:
+      label: 已有材料
+      description: 填写 PRD、AC、设计、原型或现有代码的位置；没有可以留空。
+  - type: textarea
+    id: constraints
+    attributes:
+      label: 约束与验收
+      description: 兼容要求、环境限制、必须跑通的用户路径和已确认决定。
+  - type: checkboxes
+    id: autonomous
+    attributes:
+      label: 自主推进
+      description: 可选；不开启则保留阶段确认。开启后普通澄清按推荐方案、阶段自动交接；目标无法判断或 P0 风险时才询问。最终 PR 合并及高风险部署仍需人工决定。
+      options:
+        - label: 按推荐方案自主推进
+          required: false
+  - type: markdown
+    attributes:
+      value: 当前示例仅仓库 Owner 自动触发；其他人的需求由 Owner 手动启动 Workflow。在平台会话中继续澄清和接续任务。

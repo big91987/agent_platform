@@ -15,6 +15,7 @@ import pr_refresh
 from agent_platform_client import Client
 from approval_policy import approval_policy, read_autonomous
 from requirements import github
+from tooling import tooling_source
 
 STAGES = ("requirements", "design", "development", "qa")
 FORWARD = {
@@ -195,7 +196,7 @@ def prepare_registration(settings, task, stage, number):
     workspace = Path(task["workspace"])
     directory = task_directory(settings, workspace)
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    sys.path.insert(0, settings["checkout"])
+    sys.path.insert(0, str(tooling_source(settings)))
     from full_harness.common import controls
 
     save(
@@ -254,7 +255,7 @@ def stage_prompt(
     elif stage == "development":
         context += (
             "实现已确认设计，运行功能与格式/lint检查，修复发现的问题。真实浏览器使用已挂载的 check 工具。"
-            "产品核心回归计划使用 tests/browser/core.json；首次从 .harness/reading-core.json 复制，"
+            "产品核心回归计划使用 tests/browser/core.json；已有旧 .harness/reading-core.json 时迁移其断言，否则依据本项目核心旅程建立，"
             "产品 UI 变化时维护定位信息，保留原有业务动作和断言，不修改受保护的 Harness 配置。"
             f"新增功能浏览器验收计划放在 docs/05-validation/tasks/{number}/browser-plan.json，"
             f"验证报告放在 docs/05-validation/tasks/{number}/validation.md。"

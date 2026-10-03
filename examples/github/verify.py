@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tooling import tooling_source
+
 
 def quality_commands(fix=False):
     quality = Path(__file__).with_name("quality")
@@ -52,10 +54,7 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
         )
     evidence = root / f"docs/05-validation/tasks/{number}/{evidence_name}"
     evidence.mkdir(parents=True, exist_ok=True)
-    script = str(
-        Path(config.get("browser_source", config["checkout"]))
-        / "full_harness/browser/check.cjs"
-    )
+    script = str(tooling_source(config) / "full_harness/browser/check.cjs")
     commands = [["git", "diff", "--check"], *quality_commands()]
     commands += [
         ["node", "--check", str(p)] for p in sorted((root / "app").rglob("*.js"))
@@ -88,7 +87,7 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
         commands.append(
             [
                 config["python"],
-                str(Path(config["checkout"]) / "full_harness/quality.py"),
+                str(tooling_source(config) / "full_harness/quality.py"),
                 "check",
             ]
         )
@@ -104,7 +103,7 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
                 "command": [
                     v.replace(str(root), "<workspace>")
                     .replace(
-                        config.get("browser_source", config["checkout"]),
+                        str(tooling_source(config)),
                         "<browser-tooling>",
                     )
                     .replace(config["checkout"], "<tooling>")

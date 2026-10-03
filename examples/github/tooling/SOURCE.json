@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/big91987/he_skeleton",
+  "commit": "0f84db35407393293b459c57596a697577fd18f5",
+  "files": {
+    "full_harness/__init__.py": "86b13c12a7ee5fced29104fd779e5b63ce01ced8faa45124c4c4059106d0a507",
+    "full_harness/common.py": "17326564508cda06da4ed835941be47c0233eef407b9ab25394cc4aa4f5823c2",
+    "full_harness/console.py": "995ee713c4c0b35f6b0892e9024c391c1cd1551471c25af498e8b66f2d1f46b2",
+    "full_harness/browser.py": "50f0831226d795f7b1d99a516d11e28d51bcf85d187bf6e2c5a5faee45b0f639",
+    "full_harness/quality.py": "ead80d0adca6098704b77d954504c84ea76ea08dcc4f17ce5a0a3748ab2133d8",
+    "full_harness/ruff.toml": "1a6c894195322458057764bcda3c7984109d6f0317cf57119558356825df4fbc",
+    "full_harness/browser/check.cjs": "981dca90c28c6b158938ab8168ab7b4db342f90e683298ab42d19d4b65c14509",
+    "full_harness/browser/package.json": "8f80bb485d033bd0ebfd060f812f0b7e147343406c54046ae5f0ae9057c3d7ad",
+    "full_harness/browser/package-lock.json": "bafef266b6f16922584055fe536677f92578553d09f822560dcbf1233d900a43"
+  }
+}

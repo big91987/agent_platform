@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+from tooling import tooling_source
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -16,7 +18,7 @@ def main():
     )
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())["pipeline"]
-    sys.path.insert(0, config.get("browser_source", config["checkout"]))
+    sys.path.insert(0, str(tooling_source(config)))
     from full_harness.browser import check
 
     tool = {
@@ -99,7 +101,7 @@ def main():
                 evidence.mkdir(exist_ok=True)
                 context = {
                     "workspace": str(workspace),
-                    "source": config.get("browser_source", config["checkout"]),
+                    "source": str(tooling_source(config)),
                     "task": {"number": number},
                     "stage": args.stage,
                     "state": {"turn": 1},

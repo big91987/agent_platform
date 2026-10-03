@@ -34,7 +34,7 @@ go build -o bin/agent-platform ./cmd/agent-platform
 
 ## API / Webhook
 
-Python 接入可使用无运行时依赖的 [SDK](sdk/python/README.md)。Runner 首次执行 `scripts/setup-runner.sh`，之后复用安装环境；[GitHub 示例](examples/github/README.md) 已使用 SDK，[GitLab 示例](examples/gitlab/README.md) 演示共享项目目录、任务分支、前序产物与结果回收。
+Python 接入可使用无运行时依赖的 [SDK](sdk/python/README.md)。Runner 首次执行 `scripts/setup-runner.sh`，之后复用安装环境；[GitHub 示例](examples/github/README.md) 已使用 SDK；迁移其他仓库见[完整接入说明](examples/github/GETTING_STARTED.md)（含随附验收工具、模板和可选本机部署），[GitLab 示例](examples/gitlab/README.md) 演示共享项目目录、任务分支、前序产物与结果回收。
 
 首次输入不传 `conversation_id`。Token 绑定平台用户；`user_id` 可省略，普通用户传入时必须与 Token 对应的 ID 相同。会话标识和页面链接不是访问凭据。
 

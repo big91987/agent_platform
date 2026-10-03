@@ -22,9 +22,10 @@ jobs:
         env:
           GH_REPO: ${{ github.repository }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pr_refresh.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json"
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}"

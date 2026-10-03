@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/big91987/reading_list",
+  "commit": "8cee8315af0ee9e736d2e2040eee30cac240cdbb",
+  "upstream_files": {
+    "scripts/local_deploy.py": "7ccb9beeba9da831df53d222288295631e6e05507c4934e524e71092ad005c1a",
+    "scripts/install_local_preview.py": "10300e624602cbab37238d76acb8dfa2610f730454eae7aa74572a706054251c",
+    "tests/local_deploy_test.py": "3f3b1af58f96cc59d200f8b8ed8b1a031af0da782a5acb946333bd924b12d82b",
+    ".github/workflows/deploy-local.yml": "be5bb73f5cf90bc32d8b00766e91296c0d144628408cdc1ff0cf489acb93bd14"
+  },
+  "adaptations": [
+    "Repository, service name and port are installer arguments; no product-specific host path.",
+    "GitHub deployment variables and concurrency group are repository-scoped.",
+    "Application packaging, compatibility checks and manual review policy are retained."
+  ]
+}

@@ -54,12 +54,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage requirements
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage requirements
   design:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && (((inputs.after == 'requirements' && (inputs.target_stage == '' || inputs.target_stage == 'design')) || (github.event_name == 'workflow_dispatch' && (inputs.after == 'development' || inputs.after == 'qa') && inputs.target_stage == 'design')) || (github.event_name == 'workflow_dispatch' && inputs.after == 'redirect' && inputs.target_stage == 'design'))
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -74,12 +75,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage design
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage design
   development:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && (((inputs.after == 'design' && (inputs.target_stage == '' || inputs.target_stage == 'development')) || (github.event_name == 'workflow_dispatch' && (inputs.after == 'qa') && inputs.target_stage == 'development')) || (github.event_name == 'workflow_dispatch' && inputs.after == 'redirect' && inputs.target_stage == 'development'))
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -94,12 +96,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage development
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage development
   qa:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && ((((inputs.after == 'development' && (inputs.target_stage == '' || inputs.target_stage == 'qa')) || inputs.after == 'verify')) || (github.event_name == 'workflow_dispatch' && inputs.after == 'redirect' && inputs.target_stage == 'qa'))
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -115,12 +118,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage qa
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage qa
   review:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.event_name == 'workflow_dispatch' && inputs.after == 'code_review'
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -136,12 +140,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage review
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage review
   report:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && (github.event_name == 'workflow_dispatch' && inputs.after == 'qa' && (inputs.target_stage == '' || inputs.target_stage == 'report'))
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -156,12 +161,13 @@ jobs:
           RESULT_SHA256: ${{ inputs.result_sha256 }}
           RESULT_FILE: ${{ inputs.result_file }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage report
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage report
   integrate:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.event_name == 'workflow_dispatch' && inputs.after == 'integrate'
     runs-on: [self-hosted, macOS, ARM64, he-full]
@@ -174,12 +180,13 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue }}
           AFTER_STAGE: integrate
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/pipeline.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" --stage integrate
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" --stage integrate
 
   observe:
     if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && github.event_name == 'workflow_dispatch' && inputs.after == 'observe'
@@ -194,10 +201,11 @@ jobs:
           OBSERVE_STAGE: ${{ inputs.target_stage }}
           OBSERVE_MESSAGE: ${{ inputs.message_id }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_ROOT"
           "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
             "$AGENT_PLATFORM_ROOT/examples/github/observe.py" \
-            --config "$AGENT_PLATFORM_ROOT/.data/github-runner.json" \
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}" \
             --stage "$OBSERVE_STAGE" --message-id "$OBSERVE_MESSAGE"
