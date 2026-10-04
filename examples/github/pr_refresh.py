@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+from product_scope import allowed_product_path
 from requirements import github
 
 
@@ -276,10 +277,10 @@ def start(settings, task, task_path, client, run_id):
     return stage
 
 
-def finish_conflicts(task, workspace, task_path):
+def finish_conflicts(task, workspace, task_path, settings=None):
     """Finish or recognize a saved merge under the issue lock, then persist QA."""
     from pipeline import run, save
-    from pr_merge import MERGE_MESSAGE, finish_merge
+    from pr_merge import MERGE_MESSAGE, _protected, finish_merge
 
     workspace = Path(workspace)
     integration = task.get("integration", {})
@@ -323,7 +324,7 @@ def finish_conflicts(task, workspace, task_path):
             )
         )
         if any(
-            not allowed_product_path(name) or "AGENTS.md" in Path(name).parts
+            not allowed_product_path(name, settings) or _protected(name)
             for name in paths
         ):
             raise ValueError("Conflict repair modified protected files")
@@ -335,13 +336,6 @@ def finish_conflicts(task, workspace, task_path):
         head = finish_merge(workspace, integration["conflicts"])
     integration.update(merge_head=head, conflicts=[], state="qa")
     save(task_path, task)
-
-
-def allowed_product_path(name):
-    return (
-        name.startswith(("app/", "docs/", "tests/", ".trellis/spec/", "deploy/"))
-        or name == "README.md"
-    )
 
 
 def published(settings, task, path, number, head):

@@ -78,6 +78,46 @@ class PublicationTest(unittest.TestCase):
             pipeline.publish(settings, task, 74, root / "receipts")
         return created, commands
 
+    def test_delivery_stages_exact_backend_and_deletions_but_rejects_other_scripts(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            run(["git", "init", "-q", str(root)])
+            (root / "app").mkdir()
+            (root / "app/old.js").write_text("old")
+            run(["git", "add", "."], root)
+            run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.test",
+                    "commit",
+                    "-qm",
+                    "base",
+                ],
+                root,
+            )
+            (root / "app/old.js").unlink()
+            (root / "scripts").mkdir()
+            backend = root / "scripts/服务 script.py"
+            backend.write_text("backend")
+            settings = {"extra_product_files": ["scripts/服务 script.py"]}
+            with self.assertRaisesRegex(ValueError, "outside product/doc scope"):
+                pipeline.stage_product_changes({}, root)
+            self.assertEqual(run(["git", "diff", "--cached", "--name-only"], root), "")
+            pipeline.stage_product_changes(settings, root)
+            staged = run(["git", "diff", "--cached", "--name-only", "-z"], root).split(
+                "\0"
+            )
+            self.assertIn("scripts/服务 script.py", staged)
+            self.assertIn("app/old.js", staged)
+            (root / "scripts/unreviewed.py").write_text("unreviewed")
+            with self.assertRaisesRegex(ValueError, "outside product/doc scope"):
+                pipeline.stage_product_changes(settings, root)
+
     def test_new_pr_uses_actual_delivery_description_and_preserves_limitations(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -720,6 +760,27 @@ class HandoffTest(unittest.TestCase):
             code.unlink()
             with self.assertRaises(ValueError):
                 require_verified_product(task, root)
+
+    def test_configured_backend_is_bound_to_qa_and_policy_changes_invalidate_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run(["git", "init", "-q", str(root)])
+            (root / "scripts").mkdir()
+            code = root / "scripts/service.py"
+            code.write_text("original")
+            settings = {"extra_product_files": ["scripts/service.py"]}
+            old = product_digest(root)
+            digest = product_digest(root, settings)
+            self.assertNotEqual(old, digest)
+            task = {"stages": {"qa": {"product_sha256": digest}}}
+            require_verified_product(task, root, settings)
+            code.write_text("changed after QA")
+            with self.assertRaises(ValueError):
+                require_verified_product(task, root, settings)
+            code.write_text("original")
+            settings["extra_product_files"].append("scripts/another.py")
+            with self.assertRaises(ValueError):
+                require_verified_product(task, root, settings)
 
     def test_receiver_rejects_wrong_digest_and_changed_document(self):
         with tempfile.TemporaryDirectory() as directory:

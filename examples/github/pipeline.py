@@ -17,6 +17,12 @@ import pr_refresh
 from agent_platform_client import Client
 from approval_policy import approval_policy, read_autonomous
 from network_policy import issue_network
+from product_scope import (
+    allowed_product_path,
+    extra_files,
+    product_paths,
+    validate_files,
+)
 from requirements import github
 from tooling import tooling_source
 
@@ -94,11 +100,7 @@ def issue_for_review(settings, repo, pr_number):
                 "--porcelain",
                 "--untracked-files=all",
                 "--",
-                "app",
-                "tests",
-                ".trellis/spec",
-                "README.md",
-                "deploy",
+                *product_paths(settings),
             ],
             workspace,
         ):
@@ -339,8 +341,9 @@ def delivery_token(settings):
     return value
 
 
-def product_digest(workspace):
+def product_digest(workspace, settings=None):
     """Bind independent verification to the product and tests actually inspected."""
+    validate_files(workspace, settings)
     files = run(
         [
             "git",
@@ -349,15 +352,14 @@ def product_digest(workspace):
             "--exclude-standard",
             "-z",
             "--",
-            "app",
-            "tests",
-            ".trellis/spec",
-            "README.md",
-            "deploy",
+            *product_paths(settings),
         ],
         workspace,
     ).split("\0")
     digest = hashlib.sha256()
+    extras = extra_files(settings)
+    if extras:
+        digest.update(json.dumps(extras).encode() + b"\0")
     for name in sorted(set(filter(None, files))):
         path = workspace / name
         if path.is_symlink():
@@ -370,8 +372,8 @@ def product_digest(workspace):
     return digest.hexdigest()
 
 
-def require_verified_product(task, workspace):
-    current = product_digest(workspace)
+def require_verified_product(task, workspace, settings=None):
+    current = product_digest(workspace, settings)
     for stage in ("qa",):
         if task["stages"].get(stage, {}).get("product_sha256") != current:
             raise ValueError(
@@ -417,11 +419,40 @@ def pull_request_content(workspace, number, repository, branch):
     }
 
 
+def stage_product_changes(settings, workspace):
+    validate_files(workspace, settings)
+    # Diff without rename detection checks both sides of a rename and preserves
+    # exact paths (spaces/non-ASCII/deletions); never interpret them as pathspecs.
+    names = set(
+        filter(
+            None,
+            run(
+                ["git", "diff", "HEAD", "--name-only", "--no-renames", "-z"], workspace
+            ).split("\0"),
+        )
+    )
+    names.update(
+        filter(
+            None,
+            run(
+                ["git", "ls-files", "--others", "--exclude-standard", "-z"], workspace
+            ).split("\0"),
+        )
+    )
+    for name in names:
+        if not allowed_product_path(name, settings):
+            raise ValueError(
+                "Unexpected delivery change outside product/doc scope: " + name
+            )
+    if names:
+        run(["git", "--literal-pathspecs", "add", "--", *sorted(names)], workspace)
+
+
 def publish(settings, task, number, directory):
     workspace = Path(task["workspace"])
     if run(["git", "branch", "--show-current"], workspace) != task["branch"]:
         raise ValueError("Workspace is no longer on its registered task branch")
-    require_verified_product(task, workspace)
+    require_verified_product(task, workspace, settings)
     if task.get("integration"):
         pr = pr_refresh.current_pr(settings, task)
         if pr["head"]["sha"] not in (
@@ -462,24 +493,9 @@ def publish(settings, task, number, directory):
     except subprocess.CalledProcessError as error:
         detail = ((error.stdout or "") + (error.stderr or ""))[-6000:]
         raise RuntimeError("Delivery verification failed:\n" + detail) from None
-    names = run(
-        ["git", "status", "--porcelain", "--untracked-files=all"], workspace
-    ).splitlines()
-    for entry in names:
-        name = entry[3:]
-        if not (
-            name.startswith(("app/", "docs/", "tests/", ".trellis/spec/", "deploy/"))
-            or name == "README.md"
-        ):
-            raise ValueError(
-                "Unexpected delivery change outside product/doc scope: " + name
-            )
-    paths = [
-        name
-        for name in ("app", "docs", "tests", ".trellis/spec", "README.md", "deploy")
-        if (workspace / name).exists()
-    ]
-    run(["git", "add", "--", *paths], workspace)
+    # A verification command must not change the code it is verifying.
+    require_verified_product(task, workspace, settings)
+    stage_product_changes(settings, workspace)
     if run(["git", "diff", "--cached", "--name-only"], workspace):
         run(
             ["git", "commit", "-m", f"Implement reading-list Issue #{number}"],
@@ -689,7 +705,7 @@ def main():
                 report_path = f"docs/05-validation/tasks/{number}/qa.md"
                 if not handoff["documents"].get(report_path, "").strip():
                     raise ValueError("Missing independent QA report: " + report_path)
-                if prior.get("product_sha256") != product_digest(workspace):
+                if prior.get("product_sha256") != product_digest(workspace, settings):
                     # Retry after the recipient has already edited the product is
                     # allowed; it only reconnects to its saved invocation.
                     current = task["stages"].get(args.stage, {})
@@ -702,7 +718,7 @@ def main():
                 and args.stage == "qa"
                 and task.get("integration")
             ):
-                pr_refresh.finish_conflicts(task, workspace, path)
+                pr_refresh.finish_conflicts(task, workspace, path, settings)
             save(path, task)
             if source == "redirect" or args.stage in STAGES[: STAGES.index(source)]:
                 comment_once(
@@ -804,11 +820,18 @@ def main():
                     + quality
                     + "\n"
                 )
+            prompt += (
+                "\n维护者配置的产品交付路径："
+                + ", ".join(product_paths(settings))
+                + "。docs 可保存交付文档。额外路径不代表可修改共享 Harness 或绕过仓库权限；部署控制器变更由维护者审查。\n"
+            )
             if args.stage == "review":
                 base = run(["git", "merge-base", "HEAD", "origin/main"], workspace)
-                prompt += f"\n审查基线 commit：{base}。使用 git diff {base} -- app tests .trellis/spec README.md deploy，并检查 git ls-files --others --exclude-standard 的新增产品文件。\n"
+                prompt += f"\n审查基线 commit：{base}。使用 git diff {base} -- {shlex.join(product_paths(settings))}，并检查 git ls-files --others --exclude-standard 的新增产品文件。\n"
             inspected_product = (
-                product_digest(workspace) if args.stage in ("qa", "review") else None
+                product_digest(workspace, settings)
+                if args.stage in ("qa", "review")
+                else None
             )
             invoke_options = (
                 {"conversation_id": receipt["conversation_id"]}
@@ -924,8 +947,8 @@ def main():
                 + f"\n\n[独立审查会话]({url})\n\n由人工决定修改与合并。",
             )
         if args.stage == "review" and replies and current.get("integration"):
-            require_verified_product(current, workspace)
-            if receipt.get("product_sha256") != product_digest(workspace):
+            require_verified_product(current, workspace, settings)
+            if receipt.get("product_sha256") != product_digest(workspace, settings):
                 raise ValueError("Product changed during independent review")
             pr_refresh.reviewed(settings, current, path, number, receipt["head_sha"])
         if replies:

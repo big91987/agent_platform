@@ -308,3 +308,17 @@ GH_REPO=owner/project-a PYTHONPATH=sdk/python:examples/github \
 本地执行日志和 head/main/检查配置凭证写入私有 `registry/maintenance/`，不提交仓库。主线、PR head 或检查配置变更后凭证失效；下一次扫描要求重新验证。分支规则保留 `pipeline/refresh` 并启用要求分支保持最新，防止主线更新与异步扫描之间的空窗。
 
 升级：先更新可信宿主的这些源码（包含 `maintenance.py`），再同步 `pr-refresh.yml` 到目标仓库、配置维护范围与检查，最后手动运行 Refresh ready PRs 验证路由。旧配置无需迁移：已登记产品继续原有流程，未登记 PR 默认明确阻塞。不要伪造登记记录、人工补成功状态或以管理员强合作为标准流程。当前框架收敛期间，维护者验证由框架开发者负责，不增加工程维护 Agent。
+
+### 后端及仓库特有的交付文件
+
+默认产品范围为 `app/`、`tests/`、`.trellis/spec/`、`README.md`、`deploy/`，另可交付 `docs/` 文档。产品后端若在其他位置，由维护者在可信 Runner 配置设置 `pipeline.extra_product_files`，例如：
+
+```json
+{"extra_product_files": ["scripts/service.py", "scripts/install_service.py"]}
+```
+
+这是仓库级持久配置，与 Issue、会话无关。只允许精确的仓库相对文件路径，不允许目录、通配符、链接或 Harness 控制文件。先审查文件的职责和改动，再配置；不能为了通过发布而开放整个 `scripts/`。部署控制器等工程文件由维护者检查，配置交付范围不等于将框架维护授权给产品 Agent，也不代表安装服务、启用采集或放行合并。脚本冲突仍交维护者处理。
+
+新增文件范围同时参与 QA 指纹、PR 发布和代码审查范围；内容或配置变化使旧 QA 失效。Runner 和开发 Stop Hook 都运行 `tests/*_test.py` 的 Python 回归（包括部署与后端），以及已有 Node 和浏览器检查。发布验证不能改动已通过 QA 的代码。默认配置的旧 QA 指纹兼容；增加范围后，通过 workflow_dispatch 的 `after=verify` 重新执行 QA，再由交接触发 report，不编辑旧检查点、不直接重跑旧 report 来复用旧结论。
+
+升级时更新可信宿主源码（包括 `product_scope.py`、`pipeline.py`、`pr_refresh.py`、`verify.py`），记录采用的版本和仓库配置。新仓库安装相同版本并配置自己的额外文件即可获得同样的行为；无需修改产品 Workflow YAML。回退此配置同样需要重新 QA，不能用于忽略已交付的后端。

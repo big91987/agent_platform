@@ -69,7 +69,7 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
     tests = sorted((root / "tests").glob("*.test.cjs"))
     if tests:
         commands.append(["node", "--test", *map(str, tests)])
-    if (root / "tests/local_deploy_test.py").is_file():
+    if list((root / "tests").glob("*_test.py")):
         commands.append(
             [
                 config["python"],
@@ -79,7 +79,7 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
                 "-s",
                 "tests",
                 "-p",
-                "local_deploy_test.py",
+                "*_test.py",
             ]
         )
     # Product Python, when present, uses the existing repository quality contract.
