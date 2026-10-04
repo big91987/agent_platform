@@ -172,3 +172,23 @@ QA 在交付时整理 `docs/05-validation/tasks/<issue>/pull-request.md` 并附�
 ### 需要访问外部资料的任务
 
 在平台的 Agent 配置中为需要联网的阶段勾选“允许联网”。也可保留联网关闭、勾选“权限不足时允许申请管理员审批”，由原生 Agent 发起一次性提权请求，管理员在会话页面批准或拒绝。自主推进参数只管理业务决策，不授予网络或主机权限。已有会话需要在空闲时从会话信息侧栏应用 Agent 当前权限，再接续原会话；不要复制会话或手改原生配置绕过审批。
+
+### 将提权申请与结果通知到 Issue
+
+`permission_notifications.py` 是 GitHub 集成的通知进程，使用现有调用账号读取审批记录、使用 `delivery_token_file` 回贴 Issue。它不审批权限、不提交 Agent 消息、不重启 Workflow。记录来自任务注册表中的会话，网页直接接续的轮次也覆盖。
+
+macOS 本地部署可安装为用户服务（每份配置安装一个，重复安装会更新该服务）：
+
+```sh
+python3 examples/github/install-permission-notifier.py --config <private-runner-config.json>
+```
+
+其他环境使用现有进程管理器启动：
+
+```sh
+PYTHONPATH=sdk/python python3 examples/github/permission_notifications.py --config <private-runner-config.json>
+```
+
+默认每 5 秒检查正在运行、等待审批或状态变化的关联会话；空闲且未变化的会话不加载历史。申请时回贴原因、权限类型、一次/单轮有效范围和平台链接；批准、拒绝、取消后各反馈一次。快速完成的审批直接通知结果。首次启用不补发已经结束的历史审批，但会通知仍在等待的申请。完整命令、文件路径、原始审批 JSON 和凭据不写入 Issue。
+
+本机通知状态及日志保存在任务注册目录的 `permission-notifications.json` / `.log`。平台或 GitHub 暂时失败会重试；一个会话失败不阻断其他会话的通知。审批 ID 和 Issue 隐藏标记用于去重，进程重启后不重复发送；审批只在平台由管理员完成，Issue 中回复“同意”不会授予权限。
