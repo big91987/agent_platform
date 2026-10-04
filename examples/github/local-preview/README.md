@@ -91,3 +91,5 @@ python3 examples/github/local-preview/scripts/install_local_preview.py \
 ```sh
 python3 -m unittest discover -s examples/github/local-preview/tests -p '*_test.py' -v
 ```
+
+完整提交输入、失败重试及已有安装升级的实测证据见 [部署验证记录](../../../docs/validation/2026-10-04-deployment-inputs.md)。
