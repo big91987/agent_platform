@@ -2,6 +2,8 @@
 
 本机通用 Agent 平台实验版。配置一个原生 Codex，通过 API、Webhook 或网页创建会话，随后在同一会话继续交流、观察执行和查看文件。研发阶段和产出形式由 Agent 配置与用户输入决定。
 
+文档见 [docs 索引](docs/README.md)；各类 Agent 工作流的架构、实践与选型见 [工作流方案目录](docs/02-architecture/workflows/README.md)。
+
 ## 启动与使用
 
 需要 Go 1.25+、C 编译器、Python 3，以及已安装并完成 `codex login` 的 Codex CLI。当前实际验证版本是 Codex 0.151.0。Node 用于前端检查，不是服务运行依赖。
