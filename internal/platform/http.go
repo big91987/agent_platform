@@ -522,12 +522,8 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 }
 func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")
-	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "tools" || name == "integrations" || name == "users" || name == "api-docs" {
+	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "tools" || name == "integrations" || name == "users" || name == "api-docs" || name == "workflows" || strings.HasPrefix(name, "workflows/") {
 		name = "index.html"
-	}
-	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" && name != "markdown.js" && name != "transcript.js" && name != "favicon.svg" {
-		http.NotFound(w, r)
-		return
 	}
 	b, e := web.Files.ReadFile(name)
 	if e != nil {

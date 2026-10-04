@@ -5,6 +5,9 @@ test -z "$(gofmt -l cmd internal web examples/pipeline-tool)"
 for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-tooling.sh; do
   bash -n "$script"
 done
+node --check web/workflow-model.js
+node --check web/workflows.js
+node --test web/workflow-model_test.js
 node --check web/app.js
 node --check web/markdown.js
 node --check web/transcript.js
