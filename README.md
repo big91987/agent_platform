@@ -2,7 +2,7 @@
 
 本机通用 Agent 平台实验版。配置一个原生 Codex，通过 API、Webhook 或网页创建会话，随后在同一会话继续交流、观察执行和查看文件。研发阶段和产出形式由 Agent 配置与用户输入决定。
 
-文档见 [docs 索引](docs/README.md)；两套研发流程的实践和比较见 [Runner 直调与平台接入归档](docs/02-architecture/workflow-evolution.md)。
+文档见 [docs 索引](docs/README.md)；各类 Agent 工作流的架构、实践与选型见 [工作流方案目录](docs/02-architecture/workflows/README.md)。
 
 ## 启动与使用
 

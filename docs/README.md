@@ -7,7 +7,13 @@
 - [本机平台架构](02-architecture/architecture.md)
 - [账号与访问](02-architecture/access.md)
 - [外部工具](02-architecture/external-tools.md)
-- [研发流程演进归档：Runner 直调与 GitHub + Agent Platform](02-architecture/workflow-evolution.md)：两套实践、典型 Workflow、触发原理、状态责任、优缺点和后续平台编排方向。
+
+## 工作流方案
+
+- [方案目录与维护方式](02-architecture/workflows/README.md)
+- [CI/CD Runner 直接调用 Agent](02-architecture/workflows/runner-direct.md)
+- [GitHub CI + Agent Platform](02-architecture/workflows/github-agent-platform.md)
+- [方案比较与选型](02-architecture/workflows/comparison.md)
 
 ## 接入与验证
 
