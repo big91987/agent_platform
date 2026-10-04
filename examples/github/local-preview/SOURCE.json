@@ -11,6 +11,7 @@
     "Repository, service name and port are installer arguments; no product-specific host path.",
     "GitHub deployment variables and concurrency group are repository-scoped.",
     "Application packaging, compatibility checks and manual review policy are retained.",
-    "Latest-only concurrency, obsolete-request skips and cancellation rollback added with real SIGINT/SIGTERM regression tests."
+    "Latest-only concurrency, obsolete-request skips and cancellation rollback added with real SIGINT/SIGTERM regression tests.",
+    "Validation extracts the complete exact commit while public releases remain app-only; failures retain output; controller-only upgrades preserve existing services and data with version hashes."
   ]
 }

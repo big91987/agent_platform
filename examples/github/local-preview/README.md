@@ -27,7 +27,9 @@ python3 examples/github/local-preview/scripts/install_local_preview.py \
 
 ## 每次发布
 
-产品目录需有 `app/index.html`、`app/app.js`、`app/styles.css`。其他 `app/` 静态资源会一并发布。部署前执行 JS 语法检查及 `tests/*.test.cjs`。
+产品目录需有 `app/index.html`、`app/app.js`、`app/styles.css`。验证时从目标 SHA 提取完整普通文件快照，以该目录为 cwd 执行 JS 语法检查及 `tests/*.test.cjs`，测试可读取同一提交中的文档、fixture 和其他依赖。符号链接及特殊文件仍拒绝导入。不会使用未提交的本机文件补齐验证输入。
+
+通过后仅将 `app/` 静态资源复制到公开版本目录；文档、测试及仓库控制文件不发布。验证输出写入 Actions 控制台，并逐次保存到部署根目录 `logs/validation/<sha>-*.log`，失败时日志仍保留，当前版本和数据不变。
 
 产品提交中应包含覆盖当前 app 内容的 `deploy/release.json`。在完成数据兼容验证后生成并一同提交：
 
@@ -68,7 +70,19 @@ python3 '<platform-root>/examples/github/local-preview/scripts/local_deploy.py' 
 
 `http://127.0.0.1:5533/__deployment.json` 可查看已部署 SHA（端口随配置）。日志在部署目录 `logs/`，计划在 `plans/`，历史静态版本在 `releases/`。页面仅绑定 loopback。
 
-控制器在安装时复制到运行目录，更新本示例后需以相同参数重跑安装器；更新 YAML 不会替换控制器。安装器重启预览服务，但不主动更新产品版本。运行中的 reading_list 部署没有被本次整理迁移。
+控制器在安装时复制到运行目录，更新 YAML 不会替换控制器。一般安装会重启预览服务，但不主动更新产品版本。
+
+对于仅涉及 `prepare` / `activate` 的控制器修复，已有安装可执行：
+
+```sh
+python3 examples/github/local-preview/scripts/install_local_preview.py \
+  --repository owner/project-a --root '<persistent-deployment-root>' \
+  --port 5533 --controller-only
+```
+
+该入口验证仓库与端口绑定，持部署锁原子替换控制器，记录 `controller/version.json` 中的 SHA-256，并将上一版保存在 `controller/history/`；保留当前 release、数据和现有 LaunchAgent，不创建第二个服务。兼容没有 `preview.json` 的旧安装，首次升级将按明确传入的仓库和端口登记；参数必须与已有服务一致。
+
+`--controller-only` 不会热更新已经运行的 HTTP 服务。涉及 serve 路由或后端能力变更时，必须另行协调服务升级与重启；不能用它声称新后端已上线。此次测试依赖与失败日志修复仅影响新启动的验证进程，不需要重启服务。
 
 ## 来源与验证
 
