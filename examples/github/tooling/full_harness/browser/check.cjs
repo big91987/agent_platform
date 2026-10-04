@@ -14,6 +14,9 @@ async function main() {
     : JSON.parse(fs.readFileSync(process.argv[4], "utf8"));
   if (!Array.isArray(plan) || plan.length > 80)
     throw new Error("Expected at most 80 browser steps");
+  // Direct Runner calls do not have the MCP wrapper's directory preparation.
+  // AX/download evidence can be written before Playwright takes a screenshot.
+  if (!probe) fs.mkdirSync(output, { recursive: true });
   const types = {
     ".html": "text/html; charset=utf-8",
     ".js": "text/javascript",

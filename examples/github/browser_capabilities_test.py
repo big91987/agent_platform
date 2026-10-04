@@ -82,6 +82,36 @@ class BrowserCapabilitiesTest(unittest.TestCase):
             "script": file.relative_to(self.workspace).as_posix(),
         }
 
+    def test_direct_runner_creates_ax_output_before_any_screenshot(self):
+        plan = self.directory / "browser-plan.json"
+        plan.write_text(
+            json.dumps([{"action": "accessibility", "contains": "版本 0.1.0 rc2"}])
+        )
+        output = self.directory / "runner-checks/feature"
+        self.assertFalse(output.exists())
+        for attempt in range(2):
+            result = subprocess.run(
+                [
+                    "node",
+                    str(
+                        ROOT / "examples/github/tooling/full_harness/browser/check.cjs"
+                    ),
+                    str(self.workspace / "app"),
+                    str(output),
+                    str(plan),
+                ],
+                text=True,
+                capture_output=True,
+                timeout=40,
+            )
+            self.assertEqual(
+                result.returncode, 0, f"attempt {attempt}: {result.stderr}"
+            )
+            self.assertTrue(json.loads((output / "browser.json").read_text())["passed"])
+            self.assertTrue(
+                json.loads((output / "accessibility-1.json").read_text())["nodes"]
+            )
+
     def test_native_zoom_reflows_and_ax_tree_is_recorded(self):
         script = self.script(
             "() => { if(innerWidth !== 720 || devicePixelRatio !== 2 || visualViewport.scale !== 1) throw Error('not native zoom'); return {width:innerWidth, host:typeof process, node:typeof require}; }"

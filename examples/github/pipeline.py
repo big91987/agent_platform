@@ -444,20 +444,24 @@ def publish(settings, task, number, directory):
     # The unattended Runner must not depend on the desktop login keychain.
     os.environ["GH_TOKEN"] = delivery_token(settings)
     # Re-run the same reusable development gate outside the model, before publishing.
-    run(
-        [
-            settings["python"],
-            str(Path(__file__).with_name("verify.py")),
-            "--config",
-            settings["config_path"],
-            "--workspace",
-            str(workspace),
-            "--issue",
-            str(number),
-            "--evidence-name",
-            "runner-checks",
-        ]
-    )
+    try:
+        run(
+            [
+                settings["python"],
+                str(Path(__file__).with_name("verify.py")),
+                "--config",
+                settings["config_path"],
+                "--workspace",
+                str(workspace),
+                "--issue",
+                str(number),
+                "--evidence-name",
+                "runner-checks",
+            ]
+        )
+    except subprocess.CalledProcessError as error:
+        detail = ((error.stdout or "") + (error.stderr or ""))[-6000:]
+        raise RuntimeError("Delivery verification failed:\n" + detail) from None
     names = run(
         ["git", "status", "--porcelain", "--untracked-files=all"], workspace
     ).splitlines()

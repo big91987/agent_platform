@@ -14,7 +14,7 @@
   },
   "local_files": {
     "full_harness/browser.py": "dacb1ff7e4ad40d2d80c1af27fdcdf3cae08b2caaa8c6c6019cbc7cd85c4f10a",
-    "full_harness/browser/check.cjs": "4030be2539d902ea9e9ccd354c88c7f580075966ea07a4ffb85a13ee03f6ff51",
+    "full_harness/browser/check.cjs": "94a96701e702d62f7b89ca90f40192b1108a234b669e212af9e7b80eac1193f6",
     "full_harness/browser/zoom-extension/manifest.json": "de1aaea8ca586d4656dcccdb37c2544f5176f974324a29bd85a285d143381db9",
     "full_harness/browser/zoom-extension/background.js": "20a65ec47869c2b7abdf8d5a5dec245d890cf2520e7f06fc3f0524704c29ae18",
     "full_harness/common.py": "0b60284f89b7f41e64c16b9a0f08f0e6530f0bf1afbbfc7050040379fd19e492",
