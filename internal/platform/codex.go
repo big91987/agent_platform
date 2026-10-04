@@ -94,7 +94,7 @@ func nativeConfig(a Agent) ([]byte, error) {
 			return nil, fmt.Errorf("invalid native TOML: %w", e)
 		}
 	}
-	for _, k := range []string{"approval_policy", "sandbox_mode", "sqlite_home", "skills", "profiles", "active_profile"} {
+	for _, k := range []string{"approval_policy", "sandbox_mode", "sqlite_home", "skills", "profiles", "active_profile", "sandbox_workspace_write", "permissions"} {
 		if _, ok := cfg[k]; ok {
 			return nil, fmt.Errorf("native option %s is managed by the platform", k)
 		}
@@ -105,10 +105,8 @@ func nativeConfig(a Agent) ([]byte, error) {
 	if a.Sandbox != "" && a.Sandbox != "workspace-write" && a.Sandbox != "read-only" {
 		return nil, errors.New("sandbox must be workspace-write or read-only")
 	}
-	cfg["approval_policy"] = "never"
-	if needsToolConfirmation(a) {
-		cfg["approval_policy"] = map[string]any{"granular": map[string]bool{"sandbox_approval": false, "rules": false, "skill_approval": false, "request_permissions": false, "mcp_elicitations": true}}
-	}
+	cfg["approval_policy"] = nativeApprovalPolicy(a)
+	cfg["sandbox_workspace_write"] = map[string]any{"network_access": a.NetworkAccess}
 	cfg["sandbox_mode"] = "workspace-write"
 	if a.Sandbox != "" {
 		cfg["sandbox_mode"] = a.Sandbox

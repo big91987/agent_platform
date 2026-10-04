@@ -85,6 +85,23 @@ func (h *Server) approveTool(w http.ResponseWriter, r *http.Request, c Caller) {
 	if !ok {
 		return
 	}
+	// Native sandbox elevation is an administrator decision, even when the task belongs to a regular user.
+	var raw string
+	if err := h.store.DB.QueryRow(`SELECT request FROM tool_approvals WHERE id=? AND conversation_id=?`, r.PathValue("approval"), conv.ID).Scan(&raw); err != nil {
+		fail(w, ErrNotFound)
+		return
+	}
+	var request struct {
+		Privileged bool `json:"platform_permission_request"`
+	}
+	if err := json.Unmarshal([]byte(raw), &request); err != nil {
+		fail(w, err)
+		return
+	}
+	if request.Privileged && !c.Admin {
+		fail(w, ErrForbidden)
+		return
+	}
 	var input struct {
 		Decision string `json:"decision"`
 	}

@@ -191,6 +191,19 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 				return fmt.Errorf("Codex app-server: %s", redact(string(p.Error)))
 			}
 			if len(p.ID) > 0 && p.Method != "" {
+				if isPermissionRequest(p.Method) {
+					result, e := x.nativePermissionApproval(approvalCtx, c, m, p.Method, p.Params, thread, turnID, redact)
+					if e != nil {
+						return e
+					}
+					if e = send(map[string]any{"id": p.ID, "result": result}); e != nil {
+						return e
+					}
+					if e = emit(map[string]any{"type": "platform.approval.resolved", "method": p.Method}); e != nil {
+						return e
+					}
+					continue
+				}
 				if p.Method != "mcpServer/elicitation/request" {
 					return fmt.Errorf("unsupported native request: %s", p.Method)
 				}
@@ -246,7 +259,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 					if e = toml.Unmarshal(raw, &config); e != nil {
 						return e
 					}
-					options := map[string]any{"cwd": workspace, "approvalPolicy": config["approval_policy"], "sandbox": config["sandbox_mode"], "approvalsReviewer": "user"}
+					options := map[string]any{"cwd": workspace, "approvalPolicy": nativeApprovalPolicy(c.Snapshot), "sandbox": nativeSandboxMode(c), "approvalsReviewer": "user"}
 					guidance, _ := config["developer_instructions"].(string)
 					if c.ReadOnly {
 						options["sandbox"] = "read-only"
@@ -280,7 +293,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 					if err = emit(map[string]any{"type": "thread.started", "thread_id": thread}); err != nil {
 						return err
 					}
-					if err = request(3, "turn/start", map[string]any{"threadId": thread, "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
+					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeApprovalPolicy(c.Snapshot), "approvalsReviewer": "user", "sandboxPolicy": turnSandbox(c), "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
 						return err
 					}
 				}

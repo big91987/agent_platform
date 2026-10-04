@@ -185,3 +185,19 @@ test('refresh restores paginated tool and thinking history even without SSE', as
  assert.equal(vm.runInContext('state.events.length',context),302);
  assert.ok(context.calls.some(p=>p.endsWith('after=302')),'incremental refresh uses persisted-history cursor');
 });
+
+test('native elevation shows requested permissions and only enables administrators',async()=>{
+ const data={conversation:{id:'c1',agent_name:'助手',status:'running'},messages:[],artifacts:[],approvals:[{id:'p',decision:'',request:{platform_permission_request:true,method:'item/permissions/requestApproval',reason:'Read public sources',permissions:{network:{enabled:true}}}}]};
+ const {context,node}=conversationPage(data);
+ await vm.runInContext("loadConversation('c1')",context);
+ assert.match(node('#tool-approvals').innerHTML,/等待管理员批准提权/);
+ assert.match(node('#tool-approvals').innerHTML,/network/);
+ assert.match(node('#tool-approvals').innerHTML,/data-decision="accept" disabled/);
+ vm.runInContext('state.me.admin=true',context);
+ await vm.runInContext("loadConversation('c1')",context);
+ assert.doesNotMatch(node('#tool-approvals').innerHTML,/data-decision="accept" disabled/);
+ assert.equal(node('#apply-agent-permissions').disabled,true);
+ data.conversation.status='idle';
+ await vm.runInContext("loadConversation('c1')",context);
+ assert.equal(node('#apply-agent-permissions').disabled,false);
+});

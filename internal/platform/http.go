@@ -73,6 +73,8 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("GET /api/conversations", h.protect(false, h.conversations))
 	h.mux.HandleFunc("GET /api/conversations/{id}", h.protect(false, h.conversation))
 	h.mux.HandleFunc("POST /api/conversations/{id}/approvals/{approval}", h.protect(false, h.approveTool))
+	h.mux.HandleFunc("PATCH /api/conversations/{id}/execution-permissions", h.protect(true, h.conversationPermissions))
+	h.mux.HandleFunc("POST /api/conversations/{id}/apply-agent-permissions", h.protect(true, h.applyAgentPermissions))
 	h.mux.HandleFunc("PATCH /api/conversations/{id}/workspace-access", h.protect(false, h.workspaceAccess))
 	h.mux.HandleFunc("POST /api/conversations/{id}/steer", h.protect(false, h.steer))
 	h.mux.HandleFunc("POST /api/conversations/{id}/stop", h.protect(false, h.action))
@@ -347,7 +349,7 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	respond(w, 200, map[string]any{"conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals})
+	respond(w, 200, map[string]any{"conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]bool{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation}})
 }
 func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, ok := h.authorize(w, r, c)

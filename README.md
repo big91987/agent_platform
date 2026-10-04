@@ -81,6 +81,16 @@ Agent 每个选中工具可设置“自动审批”（默认）或“每次确�
 
 旧账号、会话、文件与原生 Session 保留；升级将旧来源范围转换为用户的 Agent 授权，来源级凭据停止使用。为调用账号生成新 Token 后更新调用系统配置。详见 [访问设计](docs/02-architecture/access.md)、[GitHub 示例](examples/github/README.md) 与 [真实验证](docs/03-delivery/access-verification.md)。
 
+## 联网与运行中提权
+
+管理员在 Agent 配置中分别设置 **允许联网**（`network_access`）和 **权限不足时允许申请管理员审批**（`allow_elevation`），两项默认关闭。联网开关只改变网络权限，不扩大文件写入范围；自动推进业务流程不等于自动批准提权。
+
+启用提权申请后，Codex 原生的命令执行、文件操作和权限申请会显示在对话中。管理员核对原因、完整命令或请求权限后批准或拒绝，同一原生 Session 继续执行。普通调用用户可以看到请求，但不能批准。命令授权仅限本次调用；权限授权仅限本轮，不写入永久放行规则。停止执行、连接中断或平台重启会取消待处理审批。已交接的只读会话不能通过提权取得写权限。
+
+新会话采用创建时的权限。已有会话在空闲时，由管理员打开 **侧栏 → 会话信息 → 应用 Agent 当前联网与提权设置**。该操作仅同步这两项权限，保留原生 Session、历史、模型、指令、工具和工作目录；下一轮生效。对应接口为 `POST /api/conversations/{id}/apply-agent-permissions`，仅管理员可用，执行中返回 409。
+
+仅调整一段会话时，管理员也可调用 `PATCH /api/conversations/{id}/execution-permissions`，明确传入 `network_access` 和 `allow_elevation`。同样仅允许轮次之间更新；不会修改 Agent 默认值，也不会影响其他会话。
+
 ## 原生配置和恢复
 
 - 每段会话固定创建时的 Agent 配置、工作目录路径，并持有独立 CODEX_HOME。可直接使用调用方准备的外部工作目录。外部目录不应用模板，Agent 指令使用原生 developer_instructions，仓库 AGENTS.md 保持原样。后续轮次使用保存的原生 thread ID 恢复；所有会话统一通过 app-server 双向协议恢复，逐段推送真实文字增量；也能继续此前由 `codex exec` 创建的原生 Session。

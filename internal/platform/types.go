@@ -13,6 +13,8 @@ var ErrForbidden = errors.New("access denied")
 var ErrConflict = errors.New("request conflicts with existing state")
 
 type Agent struct {
+	NetworkAccess   bool                          `json:"network_access"`
+	AllowElevation  bool                          `json:"allow_elevation"`
 	ToolServers     []ToolBinding                 `json:"tool_servers,omitempty"`
 	ResolvedTools   map[string]ResolvedToolServer `json:"resolved_tools,omitempty"`
 	ID              string                        `json:"id"`
