@@ -252,9 +252,9 @@ def stage_prompt(
             "不要因旧工作流的静默交接约定而返回空回复，也不重复整份确认摘要。\n"
         )
     if stage == "requirements":
-        context += "需求明确后产出 PRD、自查与决策记录；按本轮阶段确认策略交接设计。\n"
+        context += "先判断需求工作是否适用；有新增需求时形成必要基线与自查，已有目标和验收充分时按阶段适用性规则直接交接设计。\n"
     elif stage == "design":
-        context += "产出可运行原型、HLD、数据契约与设计索引，完成实际验证后按本轮阶段确认策略交接研发。\n"
+        context += "先判断新增设计工作是否适用；按实际影响完成必要设计和验证，无新增设计时按阶段适用性规则直接交接研发。\n"
     elif stage == "development":
         context += (
             "实现已确认设计，运行功能与格式/lint检查，修复发现的问题。真实浏览器使用已挂载的 check 工具。"
@@ -267,7 +267,7 @@ def stage_prompt(
         )
     elif stage == "qa":
         context += (
-            "你是独立 QA/Verifier。按已确认的 PRD 和设计检查开发交付，不把开发自测报告当作验证结果。"
+            "你是独立 QA/Verifier。按 Issue、已接受决定和适用的需求/设计依据检查开发交付，不把开发自测报告当作验证结果。"
             "放行门槛必须能追溯到已批准条款；未承诺的专项兼容性检查列为未测范围，不自行升级为阻塞，也不把未测写成通过。"
             "用已挂载的 check 工具操作真实浏览器，覆盖核心旅程、新功能、异常路径、桌面和手机。"
             "如果产品有登录功能，实际验证登录成功、错误凭据、退出及未登录访问边界；"
@@ -293,7 +293,7 @@ def stage_prompt(
         context += approval_policy(
             stage, autonomous=autonomous, integrating=integrating
         )
-        context += "本策略由 Runner 根据任务创建时保存的配置提供；覆盖 Skill/仓库中普通阶段确认的默认要求，保留方法、产物和验证要求。\n"
+        context += "本策略由 Runner 根据任务创建时保存的配置提供；覆盖 Skill/仓库中普通阶段确认及一律生成产物的默认要求；保留实际适用的工作方法和验证要求。\n"
     context += "\n原始 Issue：" + issue.get("html_url", "")
     context += "\n原始需求：\n" + issue["title"] + "\n" + (issue.get("body") or "")
     if handoff:
