@@ -85,6 +85,7 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("GET /api/conversations/{id}/events", h.protect(false, h.events))
 	h.mux.HandleFunc("GET /api/conversations/{id}/artifacts", h.protect(false, h.artifacts))
 	h.mux.HandleFunc("GET /api/conversations/{id}/file", h.protect(false, h.file))
+	h.workflowRoutes()
 	h.mux.HandleFunc("GET /", h.static)
 	return h
 }

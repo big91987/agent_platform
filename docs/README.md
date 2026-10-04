@@ -3,6 +3,7 @@
 ## 产品与架构
 
 - [产品需求](01-product/prd.md)
+- [平台内 Workflow 需求](01-product/workflows.md) · [G1 评审](01-product/workflows-review.md)
 - [决策记录](01-product/decision-ledger.md)
 - [本机平台架构](02-architecture/architecture.md)
 - [账号与访问](02-architecture/access.md)
@@ -13,6 +14,7 @@
 - [方案目录与维护方式](02-architecture/workflows/README.md)
 - [CI/CD Runner 直接调用 Agent](02-architecture/workflows/runner-direct.md)
 - [GitHub CI + Agent Platform](02-architecture/workflows/github-agent-platform.md)
+- [平台内 Workflow 架构](02-architecture/workflows/platform-native.md) · [交付计划](03-delivery/workflows-plan.md) · [验证记录](03-delivery/workflows-verification.md)
 - [方案比较与选型](02-architecture/workflows/comparison.md)
 
 ## 接入与验证

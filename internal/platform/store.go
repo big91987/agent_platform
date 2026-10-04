@@ -82,6 +82,10 @@ func OpenStore(dir string) (*Store, error) {
 			return nil, e
 		}
 	}
+	if e = s.initWorkflows(); e != nil {
+		s.Close()
+		return nil, e
+	}
 	if e = s.initApprovals(); e != nil {
 		s.Close()
 		return nil, e
