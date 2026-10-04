@@ -1,12 +1,13 @@
 'use strict';
 let workflowEditor = null;
-function leaveWorkflowEditor(){workflowEditor=null;}
+function leaveWorkflowEditor(){workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
 window.addEventListener('beforeunload',event=>{if(workflowEditor?.dirty){event.preventDefault();event.returnValue='';}});
 
 async function workflowsView(){
  const items=await api('/api/workflows');
  $('#content').innerHTML=heading('工作流','把 Agent、外部动作与人工反馈连接起来。',state.me.admin?'<div class="wf-actions"><button id="wf-import">导入</button><button id="wf-new" class="primary">＋ 创建工作流</button></div>':'')+
  `<div class="agent-grid">${items.map(w=>`<article class="card"><div class="agent-head"><span class="agent-icon">⌘</span><div><h2>${esc(w.name)}</h2><span class="muted small">版本 ${w.revision} · ${w.enabled?'已启用':'已停用'}</span></div></div><p class="muted">${w.nodes.length} 个节点 · ${w.edges.length} 条路径</p><div class="agent-foot"><a class="wf-link" data-nav href="/workflows/${esc(w.id)}">${state.me.admin?'打开编排':'查看流程'} ↗</a></div></article>`).join('')||'<div class="empty"><strong>将协作过程变成可复用的流程</strong>创建工作流，从节点开始编排。</div>'}</div>`;
+ $('#content').insertAdjacentHTML('beforeend',await workflowRunsList());
  if(state.me.admin){$('#wf-new').onclick=()=>go('/workflows/new');$('#wf-import').onclick=()=>importWorkflow();}
 }
 function importWorkflow(){
@@ -35,10 +36,11 @@ async function openWorkflowEditor(graph){
  const editor=workflowEditor={graph,selected:graph.value.entry,dirty:!graph.value.id,readOnly:!state.me.admin,users,connectSource:null};
  const w=graph.value;
  $('#content').classList.add('wf-content');
- $('#content').innerHTML=`<div class="wf-heading"><div><a href="/workflows" data-nav class="muted small">← 工作流</a><h1 id="wf-title">${esc(w.name)}</h1><span class="muted small" id="wf-save-state"></span></div><div class="wf-actions"><button id="wf-export">导出</button>${editor.readOnly?'':'<button id="wf-import">导入副本</button><button id="wf-settings">流程设置</button><button id="wf-save" class="primary">保存</button>'}</div></div>
+ $('#content').innerHTML=`<div class="wf-heading"><div><a href="/workflows" data-nav class="muted small">← 工作流</a><h1 id="wf-title">${esc(w.name)}</h1><span class="muted small" id="wf-save-state"></span></div><div class="wf-actions"><button id="wf-start" class="primary">运行</button><button id="wf-export">导出</button>${editor.readOnly?'':'<button id="wf-import">导入副本</button><button id="wf-settings">流程设置</button><button id="wf-save" class="primary">保存</button>'}</div></div>
  <div class="wf-layout"><aside class="wf-palette"><span class="eyebrow">添加节点</span>${['agent','approval','end'].map(kind=>`<button draggable="${!editor.readOnly}" data-kind="${kind}" ${editor.readOnly?'disabled':''}><span>${{agent:'◇',approval:'◎',end:'◉'}[kind]}</span>${WorkflowGraph.kinds[kind]}</button>`).join('')}<button disabled title="Connector 执行接入尚在开发">↗ Connector</button><p class="hint">拖到画布，或点击添加。<br>从节点右侧圆点拖向目标左侧圆点连线。</p><button id="wf-overview">回到入口</button><div class="wf-legend"><span>◇ Agent</span><span>◎ 等待确认</span><span>◉ 流程结束</span></div></aside>
  <div class="wf-workarea"><div id="wf-hint" class="wf-hint" role="status">选择节点配置 · 支持回退连线</div><div id="wf-viewport" tabindex="0" aria-label="工作流画布"><div id="wf-stage"><svg id="wf-lines" aria-label="节点连接"><defs><marker id="wf-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#8293b1"/></marker></defs><g id="wf-edge-group"></g><path id="wf-draft-line"/></svg><div id="wf-nodes"></div></div></div><div class="wf-canvas-footer">拖动节点调整布局 · 路由名称决定下一步 <span id="wf-count"></span></div></div>
  <aside id="wf-inspector" class="wf-inspector"></aside></div>`;
+ $('#wf-start').onclick=()=>{if(editor.dirty){toast('请先保存编排改动');return}startWorkflowDialog(editor.graph.value).catch(e=>toast(e.message))};
  $('#wf-export').onclick=()=>exportWorkflow(editor);
  if(!editor.readOnly){
   $('#wf-import').onclick=()=>{if(!editor.dirty||confirm('放弃当前未保存的改动并导入副本？'))importWorkflow()};

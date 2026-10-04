@@ -7,6 +7,7 @@ for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-to
 done
 node --check web/workflow-model.js
 node --check web/workflows.js
+node --check web/workflow-runs.js
 node --test web/workflow-model_test.js
 node --check web/app.js
 node --check web/markdown.js

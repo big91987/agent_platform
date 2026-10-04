@@ -250,6 +250,9 @@ func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
 }
 func hashText(text string) string { b := sha256.Sum256([]byte(text)); return hex.EncodeToString(b[:]) }
 func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
+	return s.submit(c, in, nil)
+}
+func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string) error) (Receipt, error) {
 	var out Receipt
 	if !c.Admin && c.UserID != "" {
 		if in.UserID != "" && in.UserID != c.UserID {
@@ -323,6 +326,9 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 				return out, fmt.Errorf("workspace is fixed for this conversation: %w", ErrConflict)
 			}
 		}
+		if e = workflowInputAllowed(tx, conv.ID); e != nil {
+			return out, e
+		}
 		if conv.Status == "closed" {
 			return out, ErrConflict
 		}
@@ -377,13 +383,19 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 				a.AllowElevation = false
 			}
 		}
+		conversationID := newID()
+		if prepare != nil {
+			if e = prepare(tx, &a, conversationID); e != nil {
+				return out, e
+			}
+		}
 		snapshot, e := json.Marshal(a)
 		if e != nil {
 			return out, e
 		}
 		cfg = string(snapshot)
 		stamp := now()
-		conv = Conversation{ID: newID(), AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
+		conv = Conversation{ID: conversationID, AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
 		_, e = tx.Exec(`INSERT INTO conversations(id,agent_id,source,user_id,title,status,workspace_path,snapshot,created,updated)VALUES(?,?,?,?,?,?,?,?,?,?)`, conv.ID, a.ID, c.Source, in.UserID, conv.Title, conv.Status, workspace, cfg, stamp, stamp)
 		if e != nil {
 			return out, e
@@ -439,7 +451,7 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 		return conv, m, e
 	}
 	defer tx.Rollback()
-	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
 	args := []any{}
 	for _, path := range busyWorkspaces {
 		if path != "" {
@@ -513,6 +525,9 @@ func (s *Store) Continue(id string) error {
 		return e
 	}
 	defer tx.Rollback()
+	if e = workflowInputAllowed(tx, id); e != nil {
+		return e
+	}
 	c, e := scanConv(tx.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, id))
 	if e != nil {
 		return e

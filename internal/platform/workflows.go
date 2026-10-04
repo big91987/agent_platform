@@ -156,7 +156,10 @@ func validateWorkflow(w Workflow) error {
 
 func (s *Store) initWorkflows() error {
 	_, e := s.DB.Exec(`CREATE TABLE IF NOT EXISTS workflows(id TEXT PRIMARY KEY,revision INTEGER NOT NULL,definition TEXT NOT NULL)`)
-	return e
+	if e != nil {
+		return e
+	}
+	return s.initWorkflowRuns()
 }
 func workflowAllowed(c Caller, w Workflow) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(w.AuthorizedUsers, c.UserID)
