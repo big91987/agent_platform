@@ -100,6 +100,7 @@ python3 examples/github/setup.py --config '<private-runner-json>'
 | 本目录文件 | 目标仓库路径 |
 |---|---|
 | `pipeline.yml` | `.github/workflows/agent-platform.yml` |
+| `issue-network.yml` | `.github/workflows/agent-network.yml` |
 | `pr-refresh.yml` | `.github/workflows/pr-refresh.yml` |
 | `templates/.github/ISSUE_TEMPLATE/agent-task.yml` | `.github/ISSUE_TEMPLATE/agent-task.yml` |
 
@@ -171,7 +172,21 @@ QA 在交付时整理 `docs/05-validation/tasks/<issue>/pull-request.md` 并附�
 
 ### 需要访问外部资料的任务
 
-在平台的 Agent 配置中为需要联网的阶段勾选“允许联网”。也可保留联网关闭、勾选“权限不足时允许申请管理员审批”，由原生 Agent 发起一次性提权请求，管理员在会话页面批准或拒绝。自主推进参数只管理业务决策，不授予网络或主机权限。已有会话需要在空闲时从会话信息侧栏应用 Agent 当前权限，再接续原会话；不要复制会话或手改原生配置绕过审批。
+本示例的研发 Agent 在注册时允许命令联网，并允许请求额外权限；通用平台中新建 Agent 的默认值不受影响。仓库配置 `pipeline.network_access` 默认 `true`，可改为 `false`；它决定新 Issue 的默认值。Agent 的“允许联网”是管理员授予的上限，Issue 不能越过它开启联网。
+
+已有安装可执行 `python3 examples/github/setup.py --config <private-runner-config.json> --network-defaults-only`，只更新已登记阶段 Agent 的联网与申请审批开关，不替换指令、Skill 或工具；已有会话用下面的 Issue 命令更新。
+
+将 `templates/.github/ISSUE_TEMPLATE/agent-task.yml` 放到产品仓库 `.github/ISSUE_TEMPLATE/full-task.yml`，将 `issue-network.yml` 放到 `.github/workflows/agent-network.yml`。新 Issue 的“联网权限”可选择沿用仓库默认、允许或禁止，解析后保存到任务注册表，各阶段和返工继承。未带该字段的一句话需求沿用仓库默认。后续修改 Issue 正文不会静默改变已登记权限。
+
+已有 Issue 由仓库 Owner 单独发一条评论：
+
+- `/network allow`：允许本任务联网。
+- `/network deny`：关闭本任务命令联网，同时关闭原生额外提权申请，避免通过沙箱外执行重新联网。
+- `/network default`：采用当前仓库默认值。
+
+Workflow 校验事件仓库、评论作者、触发者和重跑者，只更新此 Issue 的已有会话和后续阶段，并在 Issue 回贴接收、生效或等待状态。执行中的原生轮次先完成，再应用配置；超出 20 分钟会明确通知仍待应用，结束后可重跑本次权限 Workflow。命令不重新提交任务；已停止或等待补充的会话通过原页面继续。这里控制 Codex 命令的网络访问；外部 MCP 服务有独立权限，不受 Codex 文件沙箱控制。
+
+额外主机权限仍由原生 Agent 申请、平台管理员逐次审批。自主推进参数只管理业务决策，不授予额外主机权限。已有其他会话不因改 Agent 默认值而静默变更。
 
 ### 将提权申请与结果通知到 Issue
 

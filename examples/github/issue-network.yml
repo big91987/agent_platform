@@ -1,0 +1,30 @@
+name: Agent Platform Issue networking
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: agent-network-${{ github.repository }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  configure:
+    if: >-
+      github.actor == github.repository_owner && github.triggering_actor == github.repository_owner &&
+      !github.event.issue.pull_request &&
+      (github.event.comment.body == '/network allow' || github.event.comment.body == '/network deny' || github.event.comment.body == '/network default')
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 25
+    steps:
+      - name: Apply Owner networking selection to this Issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CONFIG }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_ROOT"
+          "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
+            "$AGENT_PLATFORM_ROOT/examples/github/issue_network.py" \
+            --config "${AGENT_PLATFORM_CONFIG:-$AGENT_PLATFORM_ROOT/.data/github-runner.json}"

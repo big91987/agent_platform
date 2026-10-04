@@ -286,3 +286,52 @@ func TestConversationPermissionChangeDoesNotBroadenAgentDefaults(t *testing.T) {
 		t.Fatal("unrelated new session inherited permission")
 	}
 }
+
+func TestCallerNetworkScope(t *testing.T) {
+	s := testStore(t)
+	a := testAgent(t, s)
+	a.NetworkAccess = true
+	a.AllowElevation = true
+	s.SaveAgent(a)
+	_, token := testUser(t, s, &a, "owner")
+	caller, _ := s.Authenticate(token)
+	no, yes := false, true
+	r, err := s.Submit(caller, Input{AgentID: a.ID, Message: "offline task", NetworkAccess: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := s.Conversation(r.ConversationID)
+	if c.Snapshot.NetworkAccess || c.Snapshot.AllowElevation {
+		t.Fatal("offline task must not regain network through elevation")
+	}
+	s.DB.Exec(`UPDATE conversations SET status='idle',thread_id='original' WHERE id=?`, c.ID)
+	scheduler := &Scheduler{store: s, active: map[string]context.CancelFunc{}}
+	h := NewServer(s, scheduler, nil, "test-password", "http://platform")
+	path := "/api/conversations/" + c.ID + "/network-access"
+	if w := requestJSON(t, h, "POST", path, token, map[string]bool{"enabled": true}); w.Code != 200 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	c, _ = s.Conversation(c.ID)
+	if !c.Snapshot.NetworkAccess || c.ThreadID != "original" {
+		t.Fatal("network change lost session")
+	}
+	_, otherToken := testUser(t, s, &a, "other")
+	if w := requestJSON(t, h, "POST", path, otherToken, map[string]bool{"enabled": false}); w.Code != 403 {
+		t.Fatal(w.Code)
+	}
+	a.NetworkAccess = false
+	s.SaveAgent(a)
+	if _, err = s.Submit(caller, Input{AgentID: a.ID, Message: "unauthorized", NetworkAccess: &yes}); !errors.Is(err, ErrForbidden) {
+		t.Fatal("expanded Agent grant", err)
+	}
+	if w := requestJSON(t, h, "POST", path, token, map[string]bool{"enabled": true}); w.Code != 403 {
+		t.Fatal(w.Code)
+	}
+	if w := requestJSON(t, h, "POST", path, token, map[string]bool{"enabled": false}); w.Code != 200 {
+		t.Fatal(w.Code)
+	}
+	s.DB.Exec(`UPDATE conversations SET status='running' WHERE id=?`, c.ID)
+	if w := requestJSON(t, h, "POST", path, token, map[string]bool{"enabled": false}); w.Code != 409 {
+		t.Fatal(w.Code)
+	}
+}

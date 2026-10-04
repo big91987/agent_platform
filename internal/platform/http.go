@@ -74,6 +74,7 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("GET /api/conversations/{id}", h.protect(false, h.conversation))
 	h.mux.HandleFunc("POST /api/conversations/{id}/approvals/{approval}", h.protect(false, h.approveTool))
 	h.mux.HandleFunc("PATCH /api/conversations/{id}/execution-permissions", h.protect(true, h.conversationPermissions))
+	h.mux.HandleFunc("POST /api/conversations/{id}/network-access", h.protect(false, h.conversationNetwork))
 	h.mux.HandleFunc("POST /api/conversations/{id}/apply-agent-permissions", h.protect(true, h.applyAgentPermissions))
 	h.mux.HandleFunc("PATCH /api/conversations/{id}/workspace-access", h.protect(false, h.workspaceAccess))
 	h.mux.HandleFunc("POST /api/conversations/{id}/steer", h.protect(false, h.steer))

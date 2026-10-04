@@ -18,6 +18,18 @@ body:
     attributes:
       label: 约束与验收
       description: 兼容要求、环境限制、必须跑通的用户路径和已确认决定。
+  - type: dropdown
+    id: network
+    attributes:
+      label: 联网权限
+      description: 控制本任务各阶段的命令联网权限；额外主机权限仍需单独审批。
+      options:
+        - 沿用仓库默认
+        - 允许
+        - 禁止
+      default: 0
+    validations:
+      required: true
   - type: checkboxes
     id: autonomous
     attributes:
@@ -28,4 +40,4 @@ body:
           required: false
   - type: markdown
     attributes:
-      value: 当前示例仅仓库 Owner 自动触发；其他人的需求由 Owner 手动启动 Workflow。在平台会话中继续澄清和接续任务。
+      value: 当前示例仅仓库 Owner 能触发执行和调整联网权限；已有任务可评论 /network allow、/network deny 或 /network default。产品需求与补充仍可用自然语言表达。

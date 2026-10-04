@@ -40,6 +40,7 @@ type Caller struct {
 	Agents   []string
 }
 type Input struct {
+	NetworkAccess  *bool  `json:"network_access,omitempty"`
 	AgentID        string `json:"agent_id"`
 	UserID         string `json:"user_id"`
 	ConversationID string `json:"conversation_id"`

@@ -483,6 +483,9 @@ class HandoffTest(unittest.TestCase):
             access_changes = []
 
             class Client:
+                def network_access(self, cid, enabled):
+                    assert enabled is True
+
                 def __init__(self, *args):
                     pass
 

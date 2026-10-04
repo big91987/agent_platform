@@ -130,6 +130,7 @@ class Client:
         conversation_id="",
         workspace_path="",
         user_id="",
+        network_access=None,
     ):
         """Create or continue a conversation; return its durable receipt.
 
@@ -155,7 +156,16 @@ class Client:
                 if value
             }
         )
+        if network_access is not None:
+            body["network_access"] = network_access
         return self._json("/api/invoke", body)
+
+    def network_access(self, conversation_id, enabled):
+        """Set idle conversation networking within the Agent's granted permissions."""
+        return self._json(
+            self._conversation_path(conversation_id) + "/network-access",
+            {"enabled": enabled},
+        )
 
     def conversations(self):
         return self._json("/api/conversations")

@@ -12,6 +12,11 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("--config", required=True, type=Path)
 parser.add_argument(
+    "--network-defaults-only",
+    action="store_true",
+    help="Allow networking and permission requests for registered pipeline Agents without replacing other settings",
+)
+parser.add_argument(
     "--tools-only",
     action="store_true",
     help="Refresh tools without replacing Agent instructions, Skills or native settings",
@@ -48,6 +53,7 @@ if args.browser_source:
     settings["browser_source"] = str(source)
 settings["tool_binary"] = str(root / "bin/pipeline-tool")
 settings.setdefault("agents", {})
+settings.setdefault("network_access", True)
 password = os.environ.get("PLATFORM_ADMIN_PASSWORD") or getpass.getpass(
     "Platform admin password: "
 )
@@ -67,6 +73,19 @@ def api(path, value=None, method=None):
 
 
 api("/api/login", {"username": "admin", "password": password})
+if args.network_defaults_only:
+    for agent in api("/api/agents"):
+        if agent["id"] in settings["agents"].values():
+            agent.pop("resolved_tools", None)
+            agent["network_access"] = True
+            agent["allow_elevation"] = True
+            api("/api/agents/" + agent["id"], agent, "PUT")
+    configpath.write_text(json.dumps(c, indent=2))
+    configpath.chmod(0o600)
+    print(
+        "Pipeline Agents allow networking and per-operation permission requests; existing conversations unchanged"
+    )
+    raise SystemExit(0)
 registry = Path(settings["registry"])
 Path(settings["workspaces"]).mkdir(parents=True, exist_ok=True)
 registry.mkdir(parents=True, exist_ok=True)
@@ -170,6 +189,8 @@ stages = {
 }
 for stage, names in stages.items():
     a = dict(base)
+    a["network_access"] = True
+    a["allow_elevation"] = True
     a.pop("resolved_tools", None)
     a["name"] = (
         name_prefix

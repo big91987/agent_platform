@@ -297,6 +297,9 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	}
 	var conv Conversation
 	if in.ConversationID != "" {
+		if in.NetworkAccess != nil {
+			return out, errors.New("change existing conversation network through network-access endpoint")
+		}
 		conv, e = scanConv(tx.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, in.ConversationID))
 		if e != nil {
 			return out, e
@@ -360,6 +363,15 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		a, e = resolveToolServers(tx, a)
 		if e != nil {
 			return out, e
+		}
+		if in.NetworkAccess != nil {
+			if *in.NetworkAccess && !a.NetworkAccess {
+				return out, ErrForbidden
+			}
+			a.NetworkAccess = *in.NetworkAccess
+			if !a.NetworkAccess {
+				a.AllowElevation = false
+			}
 		}
 		snapshot, e := json.Marshal(a)
 		if e != nil {

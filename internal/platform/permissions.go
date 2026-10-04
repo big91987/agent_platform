@@ -159,3 +159,49 @@ func (h *Server) conversationPermissions(w http.ResponseWriter, r *http.Request,
 	}
 	respond(w, 200, map[string]bool{"ok": true})
 }
+
+// A caller may select a subset of the administrator's current Agent grant.
+// Never change a running native turn's permissions underneath its execution.
+func (s *Scheduler) SetConversationNetwork(id string, enabled bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, active := s.active[id]; active {
+		return ErrConflict
+	}
+	c, err := s.store.Conversation(id)
+	if err != nil {
+		return err
+	}
+	a, err := s.store.Agent(c.AgentID)
+	if err != nil {
+		return err
+	}
+	if enabled && (!a.Enabled || !a.NetworkAccess) {
+		return ErrForbidden
+	}
+	c.Snapshot.NetworkAccess = enabled
+	c.Snapshot.AllowElevation = enabled && a.AllowElevation
+	return s.saveConversationPermissions(c)
+}
+func (h *Server) conversationNetwork(w http.ResponseWriter, r *http.Request, caller Caller) {
+	c, ok := h.authorize(w, r, caller)
+	if !ok {
+		return
+	}
+	var input struct {
+		Enabled *bool `json:"enabled"`
+	}
+	if err := decode(w, r, &input); err != nil {
+		fail(w, err)
+		return
+	}
+	if input.Enabled == nil {
+		fail(w, errors.New("enabled is required"))
+		return
+	}
+	if err := h.scheduler.SetConversationNetwork(c.ID, *input.Enabled); err != nil {
+		fail(w, err)
+		return
+	}
+	respond(w, 200, map[string]bool{"ok": true})
+}

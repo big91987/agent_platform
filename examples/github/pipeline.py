@@ -16,6 +16,7 @@ from urllib.parse import quote
 import pr_refresh
 from agent_platform_client import Client
 from approval_policy import approval_policy, read_autonomous
+from network_policy import issue_network
 from requirements import github
 from tooling import tooling_source
 
@@ -581,8 +582,13 @@ def main():
                 "branch": branch,
                 "stages": {},
                 "autonomous": read_autonomous(issue.get("body") or ""),
+                "network_access": issue_network(
+                    issue.get("body") or "", settings.get("network_access", True)
+                ),
             }
             save(path, task)
+        task.setdefault("network_access", settings.get("network_access", True))
+        save(path, task)
         workspace = Path(task["workspace"])
         directory = task_directory(settings, workspace)
         handoff = None
@@ -806,11 +812,15 @@ def main():
                 else {
                     "agent_id": settings["agents"][args.stage],
                     "workspace_path": str(workspace),
+                    "network_access": task["network_access"],
                 }
             )
             if invocation_round:
                 prompt += "\n这是本任务新一轮执行。读取当前交接与最新文档，处理反馈并重新验证，不沿用之前完成或交接成功的结论。需求方向变化才请用户决定，不重复批准未变化的决定。\n"
             if fresh_verification:
+                client.network_access(
+                    receipt["conversation_id"], task["network_access"]
+                )
                 client.workspace_access(receipt["conversation_id"], read_only=False)
             if (
                 fresh_verification

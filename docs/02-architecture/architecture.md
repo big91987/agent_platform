@@ -45,6 +45,8 @@ flowchart LR
 ## 对外契约
 
 - POST /api/invoke，POST /api/webhooks/{agent_id}：message、可选 user_id、可选 conversation_id、可选 request_id、可选 workspace_path（创建时固定的本机目录）。返回 conversation_id、message_id、status、conversation_url。
+- 创建会话可选 `network_access`：省略继承 Agent；显式 true 不得超出 Agent 管理员已授予的联网权限；显式 false 关闭命令联网及原生提权申请。该限制不控制外部 MCP 服务的网络。
+- POST /api/conversations/{id}/network-access：`enabled` 布尔值；会话所有者可在 Agent 当前授权范围内调整空闲会话的联网设置。禁止跨用户、超出 Agent 授权及执行中修改，保留原生 Session 与其他快照字段。禁止后重新允许时，提权申请开关恢复为 Agent 当前配置，实际批准仍由管理员处理。
 - GET /api/conversations 与 GET /api/conversations/{id}：用户 Token 仅访问该用户自己的会话；已登录操作者可以查看平台记录。
 - POST /api/conversations/{id}/messages、/stop、/continue、/close：同样校验归属。
 - GET /api/conversations/{id}/events：SSE 按持久事件 ID 续读，断线不丢历史；也可查询会话快照。

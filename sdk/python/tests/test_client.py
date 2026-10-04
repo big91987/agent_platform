@@ -51,6 +51,15 @@ class ClientTest(unittest.TestCase):
     def respond(self, data, status=200):
         self.response = (status, "application/json", json.dumps(data).encode())
 
+    def test_network_scope_preserves_explicit_false(self):
+        self.client.invoke(
+            "offline", agent_id="a", request_id="network", network_access=False
+        )
+        self.assertIs(json.loads(self.calls[-1][3])["network_access"], False)
+        self.client.network_access("abc", True)
+        self.assertEqual(self.calls[-1][1], "/api/conversations/abc/network-access")
+        self.assertEqual(json.loads(self.calls[-1][3]), {"enabled": True})
+
     def test_submit_preserves_caller_request_key_and_native_receipt(self):
         receipt = {
             "conversation_id": "c1",
