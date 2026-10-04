@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from product_scope import extra_files
 from tooling import tooling_source
 
 
@@ -83,7 +84,11 @@ def verify(config, workspace, number, evidence_name="delivery-checks"):
             ]
         )
     # Product Python, when present, uses the existing repository quality contract.
-    if list((root / "app").rglob("*.py")) or (root / "cli").exists():
+    if (
+        list((root / "app").rglob("*.py"))
+        or (root / "cli").exists()
+        or any(Path(name).suffix == ".py" for name in extra_files(config))
+    ):
         commands.append(
             [
                 config["python"],

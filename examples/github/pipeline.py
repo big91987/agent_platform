@@ -802,7 +802,7 @@ def main():
                         + "\n".join(task["integration"]["conflicts"])
                         + "\n框架在交给QA前暂存并完成合并提交。\n"
                     )
-            if args.stage == "development":
+            if args.stage in ("development", "qa", "review"):
                 quality = shlex.join(
                     [
                         settings["python"],
@@ -814,12 +814,12 @@ def main():
                     ]
                 )
                 prompt += (
-                    "\n共享质量命令（在当前工作目录执行）：\n格式化与自动修复："
+                    "\n可信宿主质量入口（在当前工作目录执行）：\n"
                     + quality
-                    + " --fix\n最终复验："
-                    + quality
-                    + "\n"
+                    + "\n本入口包含维护者配置的浏览器、Python 后端及测试检查。工作区旧版 full_harness/quality.py 不是当前门禁入口；不要为通过旧扫描器而删除、裁剪或归档历史证据。发现宿主入口缺陷时报告维护者，不修改共享工具。\n"
                 )
+                if args.stage == "development":
+                    prompt += "格式化与自动修复：" + quality + " --fix\n"
             prompt += (
                 "\n维护者配置的产品交付路径："
                 + ", ".join(product_paths(settings))

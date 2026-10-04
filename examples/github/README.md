@@ -322,3 +322,5 @@ GH_REPO=owner/project-a PYTHONPATH=sdk/python:examples/github \
 新增文件范围同时参与 QA 指纹、PR 发布和代码审查范围；内容或配置变化使旧 QA 失效。Runner 和开发 Stop Hook 都运行 `tests/*_test.py` 的 Python 回归（包括部署与后端），以及已有 Node 和浏览器检查。发布验证不能改动已通过 QA 的代码。默认配置的旧 QA 指纹兼容；增加范围后，通过 workflow_dispatch 的 `after=verify` 重新执行 QA，再由交接触发 report，不编辑旧检查点、不直接重跑旧 report 来复用旧结论。
 
 升级时更新可信宿主源码（包括 `product_scope.py`、`pipeline.py`、`pr_refresh.py`、`verify.py`），记录采用的版本和仓库配置。新仓库安装相同版本并配置自己的额外文件即可获得同样的行为；无需修改产品 Workflow YAML。回退此配置同样需要重新 QA，不能用于忽略已交付的后端。
+
+QA、研发和 Review 使用 Runner 注入的可信宿主 `verify.py` 命令；存在额外 Python 产品文件时同样运行宿主 Python 质量检查。不要使用任务仓库历史复制的 `full_harness/quality.py` 来代替当前入口，也不要为了旧版全目录扫描的体积上限清理历史证据。升级不覆盖任务工作区内的受保护旧文件；通过统一入口使用新工具。
