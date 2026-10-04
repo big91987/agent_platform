@@ -207,3 +207,7 @@ PYTHONPATH=sdk/python python3 examples/github/permission_notifications.py --conf
 默认每 5 秒检查正在运行、等待审批或状态变化的关联会话；空闲且未变化的会话不加载历史。申请时回贴原因、权限类型、一次/单轮有效范围和平台链接；批准、拒绝、取消后各反馈一次。快速完成的审批直接通知结果。首次启用不补发已经结束的历史审批，但会通知仍在等待的申请。完整命令、文件路径、原始审批 JSON 和凭据不写入 Issue。
 
 本机通知状态及日志保存在任务注册目录的 `permission-notifications.json` / `.log`。平台或 GitHub 暂时失败会重试；一个会话失败不阻断其他会话的通知。审批 ID 和 Issue 隐藏标记用于去重，进程重启后不重复发送；审批只在平台由管理员完成，Issue 中回复“同意”不会授予权限。
+
+### 维护者自己的框架 PR
+
+未登记产品任务的 PR 也受 `pipeline/refresh` 保护。请按 [框架维护验证](README.md#框架维护-pr-的合并前验证) 配置宿主检查并使用 `--maintenance-pr`，不会调用产品研发 Agent。旧安装先更新宿主源码，再同步 `pr-refresh.yml`；仅复制 YAML 不会安装验证器。不要将“扫描工作流成功”理解成该 PR 已通过集成验证。

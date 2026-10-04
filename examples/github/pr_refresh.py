@@ -15,7 +15,7 @@ def dispatch(settings, number, after):
     )
 
 
-def ready_issues(settings, prs):
+def registered_prs(settings, prs):
     from pipeline import task_directory
 
     ready = {
@@ -26,7 +26,7 @@ def ready_issues(settings, prs):
         and p["base"]["ref"] == "main"
         and (p["head"].get("repo") or {}).get("full_name") == settings["repository"]
     }
-    result = []
+    result = {}
     for path in (Path(settings["registry"]) / "issues").glob("*.json"):
         task = json.loads(path.read_text())
         receipt = task_directory(settings, Path(task["workspace"])) / "delivery.json"
@@ -34,8 +34,44 @@ def ready_issues(settings, prs):
             continue
         pr = ready.get(json.loads(receipt.read_text())["pr_url"])
         if pr and pr["head"]["ref"] == task["branch"]:
-            result.append(int(path.stem))
-    return sorted(result)
+            result[pr["number"]] = int(path.stem)
+    return result
+
+
+def ready_issues(settings, prs):
+    return sorted(registered_prs(settings, prs).values())
+
+
+def refresh(settings, prs):
+    import maintenance
+
+    registered = registered_prs(settings, prs)
+    for number in sorted(registered.values()):
+        dispatch(settings, number, "integrate")
+        print(f"Requested refresh for Issue #{number}", flush=True)
+    unregistered = [
+        pr
+        for pr in prs
+        if maintenance.eligible(settings, pr) and pr["number"] not in registered
+    ]
+    if not unregistered:
+        return
+    base = github(f"repos/{settings['repository']}/commits/main")["sha"]
+    for pr in unregistered:
+        passed = maintenance.verified(settings, pr, base)
+        status(
+            settings,
+            pr["head"]["sha"],
+            "success" if passed else "failure",
+            "Maintainer checks passed against main " + base[:12]
+            if passed
+            else "Maintainer verification required; run pr_refresh.py --maintenance-pr "
+            + str(pr["number"]),
+        )
+        print(
+            f"PR #{pr['number']}: {'maintainer checks current' if passed else 'needs maintainer verification; no Agent dispatched'}",
+            flush=True,
+        )
 
 
 def matches_review(task, pr_head, main_head, inspected_head):
@@ -368,17 +404,35 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
+    parser.add_argument(
+        "--maintenance-pr",
+        type=int,
+        help="Run maintainer-owned engineering checks; never dispatch an Agent",
+    )
+    parser.add_argument(
+        "--workspace", type=Path, help="Clean checkout of the exact PR head"
+    )
     args = parser.parse_args()
     settings = json.loads(Path(args.config).read_text())["pipeline"]
     if settings["repository"] != os.environ["GH_REPO"]:
         raise ValueError("Unregistered repository")
     os.environ["GH_TOKEN"] = delivery_token(settings)
+    if args.maintenance_pr is not None:
+        import maintenance
+
+        if args.workspace is None:
+            parser.error("--maintenance-pr requires --workspace")
+        pr = github(f"repos/{settings['repository']}/pulls/{args.maintenance_pr}")
+        if registered_prs(settings, [pr]):
+            raise ValueError(
+                "Registered product PRs must use Agent integration QA/review"
+            )
+        maintenance.verify(settings, args.maintenance_pr, args.workspace)
+        return
     prs = github(
         f"repos/{settings['repository']}/pulls?state=open&per_page=100", paginate=True
     )
-    for number in ready_issues(settings, prs):
-        dispatch(settings, number, "integrate")
-        print(f"Requested refresh for Issue #{number}", flush=True)
+    refresh(settings, prs)
 
 
 if __name__ == "__main__":
