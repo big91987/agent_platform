@@ -333,3 +333,5 @@ python3 examples/github/setup.py --config '<private-runner-json>' --stage-policy
 已创建会话保存了 Agent 快照，升级不会修改正在执行的会话或已经发送的提示词；不要靠改数据库/回执让在途任务假装用了新规则。新会话和后续首次进入的阶段使用升级后的规则。在途任务需要改变指令时，使用平台正常会话输入由用户明确补充，不重放已完成交接。
 
 这项改动只允许相邻阶段的摘要交接，不允许 `requirements → development` 的跨阶段 dispatch。以后若新增“从哪开始”选项，需要一并定义任务登记和既有基线校验，不能只改下拉菜单。
+
+验证与在途任务限制见 [阶段适用性验证](../../docs/validation/2026-10-05-stage-applicability.md)。
