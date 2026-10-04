@@ -143,3 +143,9 @@ python3 examples/github/setup.py --config '<private-runner-json>'
 ## 验证工具不足时
 
 参见 [补充浏览器验证](BROWSER_CHECKS.md)：原生缩放、可访问性树及 Agent 任务级页面断言，含旧安装升级方式。
+
+## 已关闭任务的迟到交接
+
+PR 合并可能自动关闭 Issue，而 Agent 的当轮工作尚未结束。已登记任务的后续 Run 发现 Issue 已关闭时，会在 Actions Summary 明确记录跳过，不再启动 Agent 或发布 PR，也不修改此前的 QA／集成检查状态。等待 Agent 后再次检查 Issue，避免等待期间关闭任务造成同样错误。未登记的已关闭 Issue 仍不允许启动新任务。
+
+Run 正常结束只表示迟到请求已处理，并不代表新的 QA 放行。合并前的必需检查和部署版本校验仍需独立执行，不能用此跳过结果作为部署依据。

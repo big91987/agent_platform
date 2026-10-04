@@ -1,5 +1,7 @@
 """Boundary tests for the external GitHub integration, not platform business rules."""
 
+import contextlib
+import io
 import json
 import os
 import tempfile
@@ -19,6 +21,92 @@ from verify import regression_plan
 
 
 class HandoffTest(unittest.TestCase):
+    def test_closed_registered_issue_skips_late_report_without_publishing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            config = root / "config.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "base_url": "http://localhost",
+                        "token": "test",
+                        "pipeline": {
+                            "repository": "owner/product",
+                            "registry": str(root / "registry"),
+                        },
+                    }
+                )
+            )
+            taskfile = root / "registry/issues/97.json"
+            pipeline.save(
+                taskfile,
+                {"workspace": str(root / "work"), "active_stage": "qa", "stages": {}},
+            )
+            before = taskfile.read_bytes()
+            summary = root / "summary.md"
+            out = io.StringIO()
+
+            def remote(path, *args, **kwargs):
+                if path != "repos/owner/product/issues/97" or args or kwargs:
+                    self.fail("Closed task must not write to GitHub")
+                return {"state": "closed", "number": 97}
+
+            with (
+                patch(
+                    "sys.argv",
+                    ["pipeline", "--config", str(config), "--stage", "report"],
+                ),
+                patch.dict(
+                    os.environ,
+                    {
+                        "GH_REPO": "owner/product",
+                        "ISSUE_NUMBER": "97",
+                        "GITHUB_STEP_SUMMARY": str(summary),
+                        "PR_NUMBER": "",
+                    },
+                ),
+                patch.object(pipeline, "github", side_effect=remote),
+                patch.object(
+                    pipeline,
+                    "run",
+                    side_effect=AssertionError("Closed task must not run commands"),
+                ),
+                contextlib.redirect_stdout(out),
+            ):
+                pipeline.main()
+            self.assertEqual(taskfile.read_bytes(), before)
+            self.assertIn("Issue #97", summary.read_text())
+            self.assertIn("not a QA pass", out.getvalue())
+
+    def test_closed_unregistered_issue_still_rejects_new_work(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Path(temp) / "config.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "base_url": "http://localhost",
+                        "token": "test",
+                        "pipeline": {
+                            "repository": "owner/product",
+                            "registry": str(Path(temp) / "registry"),
+                        },
+                    }
+                )
+            )
+            with (
+                patch(
+                    "sys.argv",
+                    ["pipeline", "--config", str(config), "--stage", "requirements"],
+                ),
+                patch.dict(
+                    os.environ,
+                    {"GH_REPO": "owner/product", "ISSUE_NUMBER": "97", "PR_NUMBER": ""},
+                ),
+                patch.object(pipeline, "github", return_value={"state": "closed"}),
+                self.assertRaisesRegex(ValueError, "open product Issue"),
+            ):
+                pipeline.main()
+
     def test_receiver_recovers_missing_run_handle_without_changing_frozen_content(self):
         with tempfile.TemporaryDirectory() as temp:
             file = Path(temp) / "result.json"

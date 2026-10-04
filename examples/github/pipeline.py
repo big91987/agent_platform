@@ -463,6 +463,24 @@ def publish(settings, task, number, directory):
     print("Delivery PR: " + pr["html_url"], flush=True)
 
 
+def skip_closed_issue(issue, number):
+    if issue["state"] == "open":
+        return False
+    if issue["state"] != "closed" or "pull_request" in issue:
+        raise ValueError("Expected an open product Issue")
+    message = (
+        f"Issue #{number} is closed. Skipped late pipeline work; "
+        "no Agent invocation or publication. This is not a QA pass. "
+        "Existing evidence and verification status are unchanged."
+    )
+    print("::notice::" + message, flush=True)
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with Path(summary).open("a") as file:
+            file.write("## Pipeline skipped\n\n" + message + "\n")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
@@ -487,13 +505,17 @@ def main():
         raise ValueError("Invalid Issue number")
     client = Client(config["base_url"], config["token"])
     issue = github(f"repos/{repo}/issues/{number}")
-    if "pull_request" in issue or issue["state"] != "open":
+    if "pull_request" in issue:
         raise ValueError("Expected an open product Issue")
     path = Path(settings["registry"]) / "issues" / f"{number}.json"
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         task = json.loads(path.read_text()) if path.exists() else None
+        if task is None and issue["state"] != "open":
+            raise ValueError("Expected an open product Issue")
+        if skip_closed_issue(issue, number):
+            return
         if task is None:
             if args.stage != "requirements":
                 raise ValueError(
@@ -573,6 +595,9 @@ def main():
             result = client.wait(prior["conversation_id"], timeout=600)
             fcntl.flock(lock, fcntl.LOCK_EX)
             task = json.loads(path.read_text())
+            # A human may merge/close the Issue while this Run waits for QA.
+            if skip_closed_issue(github(f"repos/{repo}/issues/{number}"), number):
+                return
             if result["conversation"]["status"] != "idle":
                 raise ValueError(
                     "Previous Agent has not finished; inspect its conversation"
