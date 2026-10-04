@@ -51,6 +51,69 @@ class RecoveryTest(unittest.TestCase):
     def reload(self):
         self.task = json.loads(self.task_path.read_text())
 
+    def remote_update(self):
+        self.git(self.workspace, "push", "origin", "task/1")
+        web = self.root / "web"
+        self.git(self.root, "clone", "-b", "task/1", str(self.remote), str(web))
+        self.identity(web)
+        self.git(web, "merge", "--no-edit", "origin/main")
+        self.git(web, "push", "origin", "task/1")
+        self.pr["head"]["sha"] = self.git(web, "rev-parse", "HEAD")
+
+    def test_github_update_branch_fast_forwards_clean_workspace_and_starts_new_qa(self):
+        self.remote_update()
+        self.assertEqual(self.start(), "qa")
+        self.assertEqual(
+            self.git(self.workspace, "rev-parse", "HEAD"), self.pr["head"]["sha"]
+        )
+        self.assertEqual(
+            self.task["integration"]["expected_head"], self.pr["head"]["sha"]
+        )
+        self.reload()
+        self.assertEqual(self.start(), "qa")
+
+    def test_retry_after_fast_forward_before_saved_round(self):
+        self.remote_update()
+        pipeline.save(self.task_path, self.task)
+        with patch(
+            "pipeline.save", side_effect=RuntimeError("interrupted before save")
+        ):
+            with self.assertRaises(RuntimeError):
+                self.start()
+        self.reload()
+        self.assertEqual(self.start(), "qa")
+        self.assertEqual(
+            self.git(self.workspace, "rev-parse", "HEAD"), self.pr["head"]["sha"]
+        )
+
+    def test_remote_head_changed_during_sync_does_not_move_local_branch(self):
+        self.remote_update()
+        with patch(
+            "pr_refresh.current_pr", side_effect=[self.pr, {"head": {"sha": "newer"}}]
+        ):
+            with self.assertRaisesRegex(ValueError, "PR changed during sync"):
+                self.start()
+        self.assertEqual(self.git(self.workspace, "rev-parse", "HEAD"), self.head)
+
+    def test_remote_update_preserves_dirty_workspace_and_reports_failure(self):
+        self.remote_update()
+        (self.workspace / "other.txt").write_text("local edit")
+        with self.assertRaises(ValueError), patch("pr_refresh.status") as status:
+            try:
+                self.start()
+            finally:
+                self.assertEqual(status.call_args.args[2], "failure")
+        self.assertEqual((self.workspace / "other.txt").read_text(), "local edit")
+        self.assertEqual(self.git(self.workspace, "rev-parse", "HEAD"), self.head)
+
+    def test_remote_update_preserves_divergent_local_commit(self):
+        self.remote_update()
+        self.commit(self.workspace, {"local.txt": "local commit"})
+        head = self.git(self.workspace, "rev-parse", "HEAD")
+        with self.assertRaises(ValueError):
+            self.start()
+        self.assertEqual(self.git(self.workspace, "rev-parse", "HEAD"), head)
+
     def test_retries_after_merge_commit_before_registry_save(self):
         prepare = pr_merge.prepare_merge
 

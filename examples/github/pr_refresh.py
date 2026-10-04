@@ -141,13 +141,76 @@ def _changed_paths(workspace):
 
 def start(settings, task, task_path, client, run_id):
     """Prepare a saved refresh round; the caller holds the registered issue lock."""
-    from pipeline import delivery_token, run, save
-    from pr_merge import MERGE_MESSAGE, prepare_merge
+    from pipeline import delivery_token
 
     if not run_id.isdigit():
         raise ValueError("Refresh requires a workflow run ID")
     os.environ["GH_TOKEN"] = delivery_token(settings)
     pr = current_pr(settings, task)
+    try:
+        return _start(settings, task, task_path, client, run_id, pr)
+    except Exception:
+        status(
+            settings,
+            pr["head"]["sha"],
+            "failure",
+            "Refresh failed; inspect the integrate Action logs and retry",
+        )
+        raise
+
+
+def _sync_remote_head(settings, task, pr, workspace):
+    """Accept only an exact remote fast-forward; preserve all local work."""
+    from pipeline import run
+
+    if run(["git", "status", "--porcelain", "--untracked-files=all"], workspace):
+        raise ValueError(
+            "PR advanced but workspace has local changes; preserve and reconcile them first"
+        )
+    for name in (
+        "MERGE_HEAD",
+        "CHERRY_PICK_HEAD",
+        "REVERT_HEAD",
+        "rebase-merge",
+        "rebase-apply",
+        "sequencer",
+    ):
+        path = Path(run(["git", "rev-parse", "--git-path", name], workspace))
+        if (path if path.is_absolute() else workspace / path).exists():
+            raise ValueError("Finish the existing Git operation before syncing the PR")
+    run(["git", "fetch", "origin", "refs/heads/" + task["branch"]], workspace)
+    expected = pr["head"]["sha"]
+    if run(["git", "rev-parse", "FETCH_HEAD"], workspace) != expected:
+        raise ValueError(
+            "Remote PR changed during fetch; retry against its latest head"
+        )
+    if run(["git", "merge-base", "HEAD", expected], workspace) != run(
+        ["git", "rev-parse", "HEAD"], workspace
+    ):
+        raise ValueError(
+            "Workspace diverged from PR; local commits require maintainer reconciliation"
+        )
+    if current_pr(settings, task)["head"]["sha"] != expected:
+        raise ValueError("PR changed during sync; retry against its latest head")
+    run(
+        [
+            "git",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "merge",
+            "--ff-only",
+            "--no-edit",
+            "--no-overwrite-ignore",
+            expected,
+        ],
+        workspace,
+    )
+
+
+def _start(settings, task, task_path, client, run_id, pr):
+    from pipeline import run, save
+    from pr_merge import MERGE_MESSAGE, prepare_merge
+
     workspace = Path(task["workspace"])
     previous = task.get("integration", {})
     if previous.get("state") == "review":
@@ -187,9 +250,7 @@ def start(settings, task, task_path, client, run_id):
         if run(["git", "branch", "--show-current"], workspace) != task["branch"]:
             raise ValueError("Workspace left the registered PR branch")
         if run(["git", "rev-parse", "HEAD"], workspace) != pr["head"]["sha"]:
-            raise ValueError(
-                "Workspace and PR differ; refusing to overwrite local work"
-            )
+            _sync_remote_head(settings, task, pr, workspace)
         if _merge_in_progress(workspace):
             raise ValueError("An unregistered merge is already in progress")
         if any(not name.startswith("docs/") for name in _changed_paths(workspace)):

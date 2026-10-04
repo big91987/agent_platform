@@ -324,3 +324,7 @@ GH_REPO=owner/project-a PYTHONPATH=sdk/python:examples/github \
 升级时更新可信宿主源码（包括 `product_scope.py`、`pipeline.py`、`pr_refresh.py`、`verify.py`），记录采用的版本和仓库配置。新仓库安装相同版本并配置自己的额外文件即可获得同样的行为；无需修改产品 Workflow YAML。回退此配置同样需要重新 QA，不能用于忽略已交付的后端。
 
 QA、研发和 Review 使用 Runner 注入的可信宿主 `verify.py` 命令；存在额外 Python 产品文件时同样运行宿主 Python 质量检查。不要使用任务仓库历史复制的 `full_harness/quality.py` 来代替当前入口，也不要为了旧版全目录扫描的体积上限清理历史证据。升级不覆盖任务工作区内的受保护旧文件；通过统一入口使用新工具。
+
+PR 在 GitHub 页面执行 Update branch 或收到外部新提交后，Ready PR refresh 会获取并核对该远端 head。只有登记分支、会话全部空闲、工作区无未提交/未跟踪文件、没有进行中的 Git 操作，并且本地 HEAD 是远端 head 的祖先时，才执行 `merge --ff-only`；随后创建新的集成 QA 轮次，不沿用旧检查。脏工作区、分叉或强推造成的非快进变化需要维护者先保留并协调本地工作，不执行 reset、stash 或强推。同步过程中远端变化会拒绝并允许重试。
+
+初始化或同步失败会在当前 PR 提交上回报失败的 `pipeline/refresh`，不再一直显示 Expected。查看 Agent Platform pipeline 的 integrate 日志，修复原因后使用该 Run 的 Re-run failed jobs；或在 Actions 的 Refresh ready PRs 手动运行。前者恢复原次任务，后者通过同一登记入口重新检查；不需要取消必需检查或强合。
