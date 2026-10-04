@@ -764,8 +764,7 @@ def main():
                     run(["git", "rev-parse", "HEAD"], workspace),
                 )
             return
-        if args.stage != "review":
-            prepare_registration(settings, task, args.stage, number)
+        prepare_registration(settings, task, args.stage, number)
         receipt = task["stages"].get(args.stage)
         invocation_round = (
             (
@@ -813,11 +812,7 @@ def main():
                         str(number),
                     ]
                 )
-                prompt += (
-                    "\n可信宿主质量入口（在当前工作目录执行）：\n"
-                    + quality
-                    + "\n本入口包含维护者配置的浏览器、Python 后端及测试检查。工作区旧版 full_harness/quality.py 不是当前门禁入口；不要为通过旧扫描器而删除、裁剪或归档历史证据。发现宿主入口缺陷时报告维护者，不修改共享工具。\n"
-                )
+                prompt += "\n质量检查请调用当前阶段已注册的 verify 工具（无参数），由受控宿主执行；不要在 Agent 沙箱终端重复启动浏览器、拼接 verify.py 参数或为同一检查申请提权。若缺少 verify 工具，明确报告工具配置缺失，由维护者升级工具配置。\n本入口包含维护者配置的浏览器、Python 后端及测试检查。工作区旧版 full_harness/quality.py 不是当前门禁入口；不要为通过旧扫描器而删除、裁剪或归档历史证据。发现宿主入口缺陷时报告维护者，不修改共享工具。\n"
                 if args.stage == "development":
                     prompt += "格式化与自动修复：" + quality + " --fix\n"
             prompt += (

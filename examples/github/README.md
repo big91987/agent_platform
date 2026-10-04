@@ -265,9 +265,22 @@ the persistent product clone, not the default tool installation.
 `check` supports real hover/pointer movement, touch contexts and taps, geometry
 snapshots, and storage write observations. `verify` runs the owner quality gate on
 the host and returns the result before handoff, avoiding Agent shell port restrictions.
+Fresh installation and `setup.py --config <runner-config> --tools-only` attach
+`check` and `verify` to design, development, QA **and independent review**. Both
+checks default to automatic tool approval; upgrades preserve an existing explicit
+`confirm` policy and custom Agent instructions/model settings. Review has no
+handoff tools and cannot dispatch or approve a merge through these tools. The
+Runner registers the review workspace before execution, just as for QA. Use the
+registered zero-argument `verify` tool for host quality checks; do not assemble a
+shell invocation or invent an evidence-name argument.
+
 Existing conversations retain their tool bindings; updated tools remain available
 through the same `check` connection, while newly attached `verify` is available in
-new conversations. A failed verification overwrites the current checks receipt with
+new conversations. In particular, upgrading an Agent does not hot-add tools to
+an already-running review or silently approve its pending native command. Complete
+that existing approval through its normal UI, or explicitly plan a conversation
+configuration migration; do not edit stored snapshots/native config by hand or
+claim that installing tools resumed the old review. A failed verification overwrites the current checks receipt with
 its actual failure instead of leaving a previous success behind.
 
 Deploy the matching `pipeline.yml` before relying on delayed-result continuation.

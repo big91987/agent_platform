@@ -110,59 +110,64 @@ for stage in ["requirements", "design", "development", "qa"]:
         },
     )
     api("/api/tool-servers/" + sid + "/discover", {})
-    if stage in ("design", "development", "qa"):
-        bid = prefix + "browser-" + stage
-        api(
-            "/api/tool-servers",
-            {
-                "id": bid,
-                "name": stage + " 真实浏览器",
-                "enabled": True,
-                "connection": {
-                    "command": settings["python"],
-                    "args": [
-                        str(root / "examples/github/browser_tool.py"),
-                        "--config",
-                        str(configpath),
-                        "--stage",
-                        stage,
-                    ],
-                },
+for stage in ("design", "development", "qa", "review"):
+    bid = prefix + "browser-" + stage
+    api(
+        "/api/tool-servers",
+        {
+            "id": bid,
+            "name": stage + " 真实浏览器",
+            "enabled": True,
+            "connection": {
+                "command": settings["python"],
+                "args": [
+                    str(root / "examples/github/browser_tool.py"),
+                    "--config",
+                    str(configpath),
+                    "--stage",
+                    stage,
+                ],
             },
-        )
+        },
+    )
 # Discovery requires only shared config, never a task or existing conversation.
 c["pipeline"] = settings
 configpath.write_text(json.dumps(c, indent=2))
 configpath.chmod(0o600)
-for stage in ["design", "development", "qa"]:
+for stage in ["design", "development", "qa", "review"]:
     api("/api/tool-servers/" + prefix + "browser-" + stage + "/discover", {})
 agents = api("/api/agents")
 if args.tools_only:
-    for stage in ("requirements", "design", "development", "qa"):
+    for stage in ("requirements", "design", "development", "qa", "review"):
         agent = next(a for a in agents if a["id"] == settings["agents"][stage])
         agent.pop("resolved_tools", None)
-        registration = next(
-            r
-            for r in agent["tool_servers"]
-            if r["server_id"] == prefix + "pipeline-" + stage
-        )
-        for name, mode in (
-            ("submit_handoff", "auto"),
-            ("supplement_handoff", "auto"),
-            ("replace_handoff", "confirm"),
-        ):
-            if name not in registration["tools"]:
-                registration["tools"].append(name)
-            registration.setdefault("approvals", {}).setdefault(name, mode)
-        if stage in ("design", "development", "qa"):
-            browser = next(
+        agent.setdefault("tool_servers", [])
+        if stage != "review":
+            registration = next(
                 r
                 for r in agent["tool_servers"]
-                if r["server_id"] == prefix + "browser-" + stage
+                if r["server_id"] == prefix + "pipeline-" + stage
             )
-            if "verify" not in browser["tools"]:
-                browser["tools"].append("verify")
-            browser.setdefault("approvals", {}).setdefault("verify", "auto")
+            for name, mode in (
+                ("submit_handoff", "auto"),
+                ("supplement_handoff", "auto"),
+                ("replace_handoff", "confirm"),
+            ):
+                if name not in registration["tools"]:
+                    registration["tools"].append(name)
+                registration.setdefault("approvals", {}).setdefault(name, mode)
+        if stage in ("design", "development", "qa", "review"):
+            browser_id = prefix + "browser-" + stage
+            browser = next(
+                (r for r in agent["tool_servers"] if r["server_id"] == browser_id), None
+            )
+            if browser is None:
+                browser = {"server_id": browser_id, "tools": [], "approvals": {}}
+                agent["tool_servers"].append(browser)
+            for name in ("check", "verify"):
+                if name not in browser["tools"]:
+                    browser["tools"].append(name)
+                browser.setdefault("approvals", {}).setdefault(name, "auto")
         api("/api/agents/" + agent["id"], agent, "PUT")
         print(stage, "tools refreshed")
     raise SystemExit(0)
@@ -216,12 +221,12 @@ for stage, names in stages.items():
     ]
     if stage == "review":
         a["tool_servers"] = []
-    if stage in ("design", "development", "qa"):
+    if stage in ("design", "development", "qa", "review"):
         a["tool_servers"].append(
             {
                 "server_id": prefix + "browser-" + stage,
                 "tools": ["check", "verify"],
-                "approvals": {"check": "auto"},
+                "approvals": {"check": "auto", "verify": "auto"},
             }
         )
     a["instructions"] = (

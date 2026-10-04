@@ -14,7 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument(
-        "--stage", choices=("design", "development", "qa"), required=True
+        "--stage", choices=("design", "development", "qa", "review"), required=True
     )
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())["pipeline"]

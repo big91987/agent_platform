@@ -44,15 +44,20 @@ class SetupTest(unittest.TestCase):
                     self.fail("unexpected request: " + path)
                 return io.BytesIO(json.dumps(value).encode())
 
-            def register(path):
+            def register(path, *options):
                 with (
-                    patch.object(sys, "argv", [str(SCRIPT), "--config", str(path)]),
+                    patch.object(
+                        sys, "argv", [str(SCRIPT), "--config", str(path), *options]
+                    ),
                     patch.dict(os.environ, {"PLATFORM_ADMIN_PASSWORD": "test"}),
                     patch("urllib.request.build_opener") as opener,
                     contextlib.redirect_stdout(io.StringIO()),
                 ):
                     opener.return_value.open.side_effect = request
-                    runpy.run_path(str(SCRIPT), run_name="__main__")
+                    try:
+                        runpy.run_path(str(SCRIPT), run_name="__main__")
+                    except SystemExit as e:
+                        self.assertEqual(e.code, 0)
                 return json.loads(path.read_text())["pipeline"]
 
             expected = {}
@@ -92,9 +97,42 @@ class SetupTest(unittest.TestCase):
                         str(root / key / "registry"),
                         servers[prefix + "pipeline-" + stage]["connection"]["args"],
                     )
-                self.assertEqual(agents[first["agents"]["review"]]["tool_servers"], [])
+                review = agents[first["agents"]["review"]]
+                self.assertEqual(
+                    review["tool_servers"],
+                    [
+                        {
+                            "server_id": prefix + "browser-review",
+                            "tools": ["check", "verify"],
+                            "approvals": {"check": "auto", "verify": "auto"},
+                        }
+                    ],
+                )
+                self.assertIn(
+                    "review", servers[prefix + "browser-review"]["connection"]["args"]
+                )
+                # Upgrade the former empty Review binding without overwriting customization.
+                review.pop("tool_servers")
+                review["instructions"] = "owner custom review policy"
+                qa = agents[first["agents"]["qa"]]
+                qa["tool_servers"][1]["approvals"]["verify"] = "confirm"
+                register(path, "--tools-only")
+                self.assertEqual(review["instructions"], "owner custom review policy")
+                upgraded = agents[first["agents"]["review"]]
+                self.assertEqual(
+                    upgraded["tool_servers"][0]["tools"], ["check", "verify"]
+                )
+                self.assertEqual(
+                    agents[first["agents"]["qa"]]["tool_servers"][1]["approvals"][
+                        "verify"
+                    ],
+                    "confirm",
+                )
+                stable = copy.deepcopy(agents)
+                register(path, "--tools-only")
+                self.assertEqual(stable, agents)
             self.assertEqual(len(agents), 15)
-            self.assertEqual(len(servers), 21)
+            self.assertEqual(len(servers), 24)
             self.assertEqual(
                 len({i for mapping in expected.values() for i in mapping.values()}), 15
             )

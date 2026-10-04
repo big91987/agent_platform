@@ -68,3 +68,28 @@ PR #103 was marked ready and updated on GitHub: remote head `4e50635f011aa1e4899
 Revision `19f4510` fetches and verifies the exact current remote head and permits only a clean fast-forward of the registered branch. Dirty work, divergent local history, existing Git operations and a moving remote are rejected without reset/stash/force push. Preparation failures report an explicit failed check. Real Git regressions cover the original remote-main merge, preservation of dirty/divergent work, remote races and retry after fast-forward before state save. Full verification passed: GitHub 107, SDK 7, deployment 11 tests and frontend/browser/Ruff/Go checks.
 
 [Original failed Run 37205361857, attempt 2](https://github.com/big91987/reading_list/actions/runs/37205361857/attempts/2) resumed through GitHub's failed-job retry. The registered local HEAD safely advanced to the exact PR head and persisted a new integration QA round with no conflicts. This verifies recovery into independent QA; the final combined QA/review check is still pending at this recording. The required check was not removed, no pass was fabricated, and neither product nor source PR was merged.
+
+
+## Independent Review host tools (2026-10-04)
+
+- Root cause: setup registered browser tools only for design/development/QA;
+  the MCP stage parser excluded Review and the Runner skipped Review workspace
+  registration. Its prompt instead suggested shell verification, causing a native
+  Chromium sandbox denial. The first approved invocation also used an unsupported
+  `code-review-checks` evidence name and exited with argument error.
+- Fix: register/discover/bind the same `check`/`verify` tools for Review on both
+  installation and `--tools-only` upgrade, accept the Review stage, register its
+  workspace, and direct quality checks to zero-argument `verify`. Review continues
+  to have no handoff tools. Keep explicit existing approval policies and custom
+  instructions. Handle old API responses that omit empty `tool_servers`.
+- Regression: missing Review binding failed before the fix; 108 GitHub example
+  tests passed, including a real Review MCP browser success and intentional
+  assertion failure. Separate old-install upgrade regression passed after fixing
+  the omitted field. These are framework regressions, not the post-merge E2E.
+- Applied through the documented `setup.py --tools-only` entry. Admin API confirmed
+  `browser-review` discovery of `check` and `verify`, both attached with `auto`,
+  matching the QA browser binding. No platform restart or product code change.
+- Existing review conversation `40e79038d1519aea81e5c64a0d03e425` retains its old
+  tool snapshot. At verification time its second native approval remained pending.
+  The installation does not retrofit that in-flight session or resolve approvals.
+  PR #103 was not merged, its gate was not bypassed, and post-merge E2E has not run.

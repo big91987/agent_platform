@@ -37,7 +37,7 @@ class BrowserCapabilitiesTest(unittest.TestCase):
             settings, {"workspace": str(self.workspace)}, "development", 1
         )
 
-    def check(self, steps):
+    def check(self, steps, stage="development"):
         plan = self.directory / "browser-plan.json"
         plan.write_text(json.dumps(steps))
         result = subprocess.run(
@@ -47,7 +47,7 @@ class BrowserCapabilitiesTest(unittest.TestCase):
                 "--config",
                 str(self.config),
                 "--stage",
-                "development",
+                stage,
             ],
             cwd=self.workspace,
             input=json.dumps(
@@ -81,6 +81,18 @@ class BrowserCapabilitiesTest(unittest.TestCase):
             "action": "page_script",
             "script": file.relative_to(self.workspace).as_posix(),
         }
+
+    def test_review_registered_browser_executes_and_reports_failure(self):
+        settings = json.loads(self.config.read_text())["pipeline"]
+        prepare_registration(settings, {"workspace": str(self.workspace)}, "review", 1)
+        reply, text = self.check(
+            [{"action": "visible", "text": "版本 0.1.0 rc2"}], "review"
+        )
+        self.assertFalse(reply.get("isError"), text)
+        reply, text = self.check(
+            [{"action": "visible", "text": "missing review text"}], "review"
+        )
+        self.assertTrue(reply.get("isError"), text)
 
     def test_direct_runner_creates_ax_output_before_any_screenshot(self):
         plan = self.directory / "browser-plan.json"
