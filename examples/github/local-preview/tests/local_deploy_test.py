@@ -1,4 +1,6 @@
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import signal
@@ -59,6 +61,48 @@ class DeploymentTest(unittest.TestCase):
 
     def plan(self, sha):
         return self.d.prepare(self.runtime, self.repo, sha)
+
+    def test_validation_uses_full_commit_but_only_app_is_published(self):
+        (self.repo / "docs/fixtures").mkdir(parents=True)
+        (self.repo / "docs/fixtures/value.json").write_text('{"value":42}')
+        (self.repo / "tests").mkdir()
+        (self.repo / "tests/fixture.test.cjs").write_text(
+            "const {test}=require('node:test'); const fs=require('node:fs'); "
+            "const assert=require('node:assert/strict'); "
+            "test('committed fixture',()=>assert.equal(JSON.parse(fs.readFileSync('docs/fixtures/value.json')).value,42));"
+        )
+        sha = self.commit()
+        (self.repo / "docs/fixtures/value.json").write_text('{"value":99}')
+        plan = self.plan(sha)
+        release = self.runtime / "releases" / sha
+        self.assertTrue((release / "app.js").is_file())
+        self.assertFalse((release / "docs").exists())
+        self.assertFalse((release / "tests").exists())
+        self.assertEqual(plan["sha"], sha)
+
+    def test_failed_check_logs_actual_error_and_preserves_live_data(self):
+        first = self.commit()
+        self.d.activate(self.runtime, self.plan(first), health=lambda: True)
+        (self.runtime / "data").mkdir()
+        (self.runtime / "data/keep").write_text("retained")
+        (self.repo / "tests").mkdir()
+        (self.repo / "tests/fail.test.cjs").write_text(
+            "throw Error('specific deployment assertion');"
+        )
+        sha = self.commit()
+        output = io.StringIO()
+        with (
+            contextlib.redirect_stdout(output),
+            self.assertRaises(subprocess.CalledProcessError),
+        ):
+            self.plan(sha)
+        self.assertIn("specific deployment assertion", output.getvalue())
+        logs = list((self.runtime / "logs/validation").glob(sha + "-*.log"))
+        self.assertEqual(len(logs), 1)
+        self.assertIn("specific deployment assertion", logs[0].read_text())
+        self.assertEqual(self.d.current(self.runtime), first)
+        self.assertEqual((self.runtime / "data/keep").read_text(), "retained")
+        self.assertFalse((self.runtime / "releases" / sha).exists())
 
     def test_obsolete_and_already_deployed_requests_exit_without_approval(self):
         first = self.commit()
