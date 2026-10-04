@@ -20,7 +20,10 @@ def apply_once(client, task, enabled):
         data = client.conversation(cid)
         if data["conversation"]["status"] == "closed":
             continue
-        if data.get("execution_permissions", {}).get("network_access") == enabled:
+        permissions = data.get("execution_permissions", {})
+        if permissions.get("network_access") == enabled and (
+            enabled or not permissions.get("allow_elevation", False)
+        ):
             continue
         if data["conversation"]["status"] in ("running", "stopping"):
             pending.append(cid)
@@ -59,6 +62,28 @@ def main():
         else choice == "allow"
     )
     client = Client(config["base_url"], config["token"])
+    marker = f"<!-- platform-network:{event_id}"
+    if not path.exists():
+        comment_once(
+            repo,
+            number,
+            marker + ":unregistered -->",
+            "本 Issue 尚未登记为 Pipeline 任务，权限未改变。请先启动需求阶段，再重跑这次权限更新。",
+        )
+        raise ValueError("Issue has no registered task")
+    if enabled:
+        available = {a["id"]: a for a in client.agents()}
+        if any(
+            not available.get(aid, {}).get("network_access", False)
+            for aid in settings["agents"].values()
+        ):
+            comment_once(
+                repo,
+                number,
+                marker + ":forbidden -->",
+                "本次联网设置未应用：平台管理员尚未允许某个阶段 Agent 联网。请在平台 Agent 配置中开启允许联网，再重跑本次 Workflow；Issue 命令不能越过管理员授权。",
+            )
+            raise PermissionError("Agent networking grant is missing")
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         task = json.loads(path.read_text())
@@ -68,7 +93,6 @@ def main():
         task["network_comment_id"] = event_id
         save(path, task)
     label = "允许联网" if enabled else "禁止联网（同时关闭额外提权申请，避免绕过禁网）"
-    marker = f"<!-- platform-network:{event_id}"
     comment_once(
         repo,
         number,
@@ -83,13 +107,33 @@ def main():
             task = json.loads(path.read_text())
             if task.get("network_comment_id") != event_id:
                 return
-            pending = apply_once(client, task, enabled)
+            try:
+                pending = apply_once(client, task, enabled)
+            except (APIError, OSError):
+                comment_once(
+                    repo,
+                    number,
+                    marker + ":failed -->",
+                    "任务联网设置已保存，但部分会话尚未更新成功。请查看本次权限 Workflow 的错误；修复平台连接或授权后重跑，不需要新建会话。",
+                )
+                raise
         if not pending:
+            receipt = task.get("stages", {}).get(task.get("active_stage"), {})
+            link = ""
+            if receipt.get("conversation_id"):
+                link = (
+                    "\n\n[在原会话继续]("
+                    + config["base_url"].rstrip("/")
+                    + "/conversations/"
+                    + receipt["conversation_id"]
+                    + ")"
+                )
             comment_once(
                 repo,
                 number,
                 marker + ":applied -->",
-                f"**{label}已生效。**已更新本 Issue 的已有会话和后续阶段设置；原 Session、工作区和历史保留。若 Agent 此前已结束并等待补充，可从原会话继续；本命令不重复下发任务。",
+                f"**{label}已生效。**已更新本 Issue 的已有会话和后续阶段设置；原 Session、工作区和历史保留。若 Agent 此前已结束并等待补充，可从原会话继续；本命令不重复下发任务。"
+                + link,
             )
             return
         if time.monotonic() >= deadline:

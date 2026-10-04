@@ -20,6 +20,15 @@ class ApplyNetworkTest(unittest.TestCase):
         client.network_access.assert_called_once_with("existing", True)
         client.invoke.assert_not_called()
 
+    def test_deny_also_closes_existing_elevation_path(self):
+        client = Mock()
+        client.conversation.return_value = {
+            "conversation": {"status": "idle"},
+            "execution_permissions": {"network_access": False, "allow_elevation": True},
+        }
+        apply_once(client, {"stages": {"qa": {"conversation_id": "c"}}}, False)
+        client.network_access.assert_called_once_with("c", False)
+
     def test_claim_race_retries_but_forbidden_is_not_hidden(self):
         client = Mock()
         task = {"stages": {"qa": {"conversation_id": "c"}}}
