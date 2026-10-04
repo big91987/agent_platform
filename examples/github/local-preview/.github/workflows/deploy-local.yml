@@ -13,13 +13,14 @@ permissions:
   contents: read
 concurrency:
   group: local-preview-${{ github.repository }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   prepare:
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 10
     outputs:
+      deploy: ${{ steps.plan.outputs.deploy }}
       review: ${{ steps.plan.outputs.review }}
     steps:
       - name: Prepare exact main version and assess data impact
@@ -38,7 +39,7 @@ jobs:
             --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" "${args[@]}"
   deploy:
     needs: prepare
-    if: needs.prepare.outputs.review == 'false'
+    if: needs.prepare.outputs.deploy == 'true' && needs.prepare.outputs.review == 'false'
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 5
     steps:
@@ -47,11 +48,11 @@ jobs:
           DEPLOY_ROOT: ${{ vars.LOCAL_DEPLOY_ROOT }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
-          python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
+          exec python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
             --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json"
   deploy-reviewed:
     needs: prepare
-    if: needs.prepare.outputs.review == 'true'
+    if: needs.prepare.outputs.deploy == 'true' && needs.prepare.outputs.review == 'true'
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 5
     environment:
@@ -63,5 +64,5 @@ jobs:
           DEPLOY_ROOT: ${{ vars.LOCAL_DEPLOY_ROOT }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
-          python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
+          exec python3 "$DEPLOY_ROOT/controller/local_deploy.py" activate \
             --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" --approved

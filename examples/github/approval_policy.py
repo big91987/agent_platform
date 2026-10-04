@@ -139,7 +139,7 @@ def approval_policy(stage, autonomous=False, integrating=False) -> str:
         lines.append("研发交接只启动独立 QA，不直接创建 PR。")
     if stage == "qa":
         lines.append(
-            "所有 QA 交接 artifacts 必须包含 qa.md；成功交给 report，由交付流程处理 PR，不能直接合入主线。"
+            "所有 QA 交接 artifacts 必须包含 qa.md；成功交给 report，由交付流程处理 PR，不能直接合入主线。创建新 PR 前，根据已接受的需求、实际代码差异和本轮验证证据，编写 docs/05-validation/tasks/<issue>/pull-request.md 并加入 artifacts。第一行使用 # 加具体功能标题，不得只写实现 Issue 编号；正文必须包含二级标题：背景、实现内容、验证结果、风险与限制、界面效果。背景说明用户问题，功能说明实际行为和关键规则；验证区分通过、失败和未测，并附真实证据；UI 变化附可访问的截图/预览链接，无 UI 变化写不适用及原因。链接使用当前仓库和任务分支的 GitHub URL，不使用本机绝对路径；不要把计划功能写成已实现，不虚构测试通过，不要求用户再次审批文案。已有 PR 保留原文，不因这个新文档要求阻塞旧任务。"
         )
 
     if policy.automatic_rework:

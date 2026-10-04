@@ -20,6 +20,99 @@ from pipeline import (
 from verify import regression_plan
 
 
+class PublicationTest(unittest.TestCase):
+    description = """# 筛选按钮显示书籍数量
+
+## 背景
+用户需要直接看到完整书单的阅读进度。
+
+## 实现内容
+全部、未读、已读按钮显示计数，新增和删除后立即更新。
+
+## 验证结果
+核心浏览器旅程通过；200% 缩放未测，不声称已通过。
+
+## 风险与限制
+只增加计数，不新增存储结构。
+
+## 界面效果
+按钮显示例如“全部 3、未读 2、已读 1”。
+"""
+
+    def publish(self, root, *, existing=False):
+        task = {"workspace": str(root), "branch": "codex/issue-74"}
+        settings = {
+            "repository": "owner/product",
+            "python": "python3",
+            "config_path": "config",
+        }
+        created = []
+        commands = []
+
+        def remote(path, body=None):
+            if body is None:
+                return (
+                    [{"html_url": "https://github.com/owner/product/pull/75"}]
+                    if existing
+                    else []
+                )
+            created.append(body)
+            return {"html_url": "https://github.com/owner/product/pull/75"}
+
+        def command(argv, cwd=None):
+            commands.append(argv)
+            return (
+                task["branch"]
+                if argv[:3] == ["git", "branch", "--show-current"]
+                else ""
+            )
+
+        with (
+            patch.object(pipeline, "require_verified_product"),
+            patch.object(pipeline, "delivery_token", return_value="test"),
+            patch.object(pipeline, "run", side_effect=command),
+            patch.object(pipeline, "github", side_effect=remote),
+            patch.object(pipeline, "comment_once"),
+            patch.dict(os.environ),
+        ):
+            pipeline.publish(settings, task, 74, root / "receipts")
+        return created, commands
+
+    def test_new_pr_uses_actual_delivery_description_and_preserves_limitations(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            file = root / "docs/05-validation/tasks/74/pull-request.md"
+            file.parent.mkdir(parents=True)
+            file.write_text(self.description)
+            (file.parent / "qa.md").write_text("Independent QA evidence")
+            created, _ = self.publish(root)
+            self.assertEqual(created[0]["title"], "筛选按钮显示书籍数量")
+            self.assertIn("新增和删除后立即更新", created[0]["body"])
+            self.assertIn("200% 缩放未测", created[0]["body"])
+            self.assertIn("Closes #74", created[0]["body"])
+            self.assertIn("https://github.com/owner/product/blob/", created[0]["body"])
+
+    def test_incomplete_description_blocks_new_pr(self):
+        for content in (
+            None,
+            "# 实现 Issue #74\n只有编号",
+            "# 书籍计数\n## 背景\n需求背景",
+        ):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                file = root / "docs/05-validation/tasks/74/pull-request.md"
+                file.parent.mkdir(parents=True)
+                if content is not None:
+                    file.write_text(content)
+                with self.assertRaisesRegex(ValueError, "PR description"):
+                    self.publish(root)
+
+    def test_existing_pr_is_not_rewritten_or_blocked_by_new_description_contract(self):
+        with tempfile.TemporaryDirectory() as temp:
+            created, _ = self.publish(Path(temp), existing=True)
+            self.assertEqual(created, [])
+
+
 class HandoffTest(unittest.TestCase):
     def test_closed_registered_issue_skips_late_report_without_publishing(self):
         with tempfile.TemporaryDirectory() as temp:

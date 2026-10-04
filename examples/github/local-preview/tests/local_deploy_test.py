@@ -1,7 +1,11 @@
 import importlib.util
 import json
+import os
+import signal
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -55,6 +59,129 @@ class DeploymentTest(unittest.TestCase):
 
     def plan(self, sha):
         return self.d.prepare(self.runtime, self.repo, sha)
+
+    def test_obsolete_and_already_deployed_requests_exit_without_approval(self):
+        first = self.commit()
+        self.d.activate(self.runtime, self.plan(first), health=lambda: True)
+        (self.repo / "app/styles.css").write_text("body {color: blue}")
+        second = self.commit()
+        self.git("remote", "add", "origin", str(self.repo))
+        (self.runtime / "repository").symlink_to(self.repo)
+        output = self.root / "output"
+        planfile = self.root / "plan.json"
+        for sha in (first, second):
+            if sha == second:
+                self.d.activate(self.runtime, self.plan(second), health=lambda: True)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(MODULE),
+                    "prepare",
+                    "--root",
+                    str(self.runtime),
+                    "--sha",
+                    sha,
+                    "--plan",
+                    str(planfile),
+                    "--review",
+                ],
+                env={**os.environ, "GITHUB_OUTPUT": str(output)},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("deploy=false", output.read_text())
+            self.assertFalse(planfile.exists())
+        self.assertEqual(self.d.current(self.runtime), second)
+
+    def test_approved_old_plan_skips_after_main_advances(self):
+        first = self.commit()
+        self.d.activate(self.runtime, self.plan(first), health=lambda: True)
+        (self.repo / "app/styles.css").write_text("body {color: red}")
+        second = self.commit()
+        planfile = self.root / "plan.json"
+        planfile.write_text(json.dumps(self.plan(second)))
+        (self.repo / "app/styles.css").write_text("body {color: blue}")
+        self.commit()
+        self.git("remote", "add", "origin", str(self.repo))
+        (self.runtime / "repository").symlink_to(self.repo)
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(MODULE),
+                "activate",
+                "--root",
+                str(self.runtime),
+                "--plan",
+                str(planfile),
+                "--approved",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("supersedes", result.stdout)
+        self.assertEqual(self.d.current(self.runtime), first)
+
+    def test_cancellation_during_switch_restores_previous_release(self):
+        first = self.commit()
+        self.d.activate(self.runtime, self.plan(first), health=lambda: True)
+        (self.repo / "app/styles.css").write_text("body {color: blue}")
+        plan = self.plan(self.commit())
+        planfile = self.root / "plan.json"
+        planfile.write_text(json.dumps(plan))
+        marker = self.root / "health-started"
+        script = """
+import importlib.util, json, sys, time
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('deploy', sys.argv[1])
+d = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(d)
+def health():
+    Path(sys.argv[4]).touch()
+    time.sleep(30)
+    return True
+d.activate(Path(sys.argv[2]), json.loads(Path(sys.argv[3]).read_text()), health=health)
+"""
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            with self.subTest(signal=sig):
+                marker.unlink(missing_ok=True)
+                proc = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-c",
+                        script,
+                        str(MODULE),
+                        str(self.runtime),
+                        str(planfile),
+                        str(marker),
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                try:
+                    deadline = time.monotonic() + 5
+                    while (
+                        not marker.exists()
+                        and proc.poll() is None
+                        and time.monotonic() < deadline
+                    ):
+                        time.sleep(0.02)
+                    self.assertTrue(
+                        marker.exists(), "activation never reached health check"
+                    )
+                    proc.send_signal(sig)
+                    proc.wait(timeout=3)
+                    self.assertNotEqual(proc.returncode, 0)
+                    self.assertEqual(self.d.current(self.runtime), first)
+                    self.assertEqual(
+                        json.loads((self.runtime / "deployed.json").read_text())["sha"],
+                        first,
+                    )
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+                        proc.wait()
 
     def test_safe_release_switch_keeps_data_and_previous_version(self):
         first = self.commit()

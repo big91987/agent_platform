@@ -6,10 +6,12 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 import pr_refresh
 from agent_platform_client import Client
@@ -376,6 +378,44 @@ def require_verified_product(task, workspace):
             )
 
 
+def pull_request_content(workspace, number, repository, branch):
+    path = workspace / f"docs/05-validation/tasks/{number}/pull-request.md"
+    if not path.resolve().is_relative_to(workspace.resolve()) or not path.is_file():
+        raise ValueError("Missing PR description: ask QA to prepare " + str(path))
+    text = path.read_text().strip()
+    title, _, body = text.partition("\n")
+    title = title.removeprefix("# ").strip()
+    if (
+        not text.startswith("# ")
+        or not title
+        or len(title) > 120
+        or re.fullmatch(r"(?:实现|Implement)\s*Issue\s*#?\d+", title, re.IGNORECASE)
+    ):
+        raise ValueError(
+            "PR description needs a concrete feature title, not an Issue number"
+        )
+    sections = dict(re.findall(r"^## ([^\n]+)\n(.*?)(?=^## |\Z)", body, re.M | re.S))
+    for section in ("背景", "实现内容", "验证结果", "风险与限制", "界面效果"):
+        if not sections.get(section, "").strip():
+            raise ValueError("PR description missing section: " + section)
+    base = f"https://github.com/{repository}/blob/{quote(branch, safe='')}/"
+    references = []
+    for label, name in (
+        ("需求", f"docs/04-implementation/tasks/{number}/prd.md"),
+        ("研发验证", f"docs/05-validation/tasks/{number}/validation.md"),
+        ("独立 QA", f"docs/05-validation/tasks/{number}/qa.md"),
+    ):
+        if (workspace / name).is_file():
+            references.append(f"- [{label}]({base}{name})")
+    return {
+        "title": title,
+        "body": body.strip()
+        + f"\n\nCloses #{number}\n"
+        + ("\n### 验证与需求资料\n\n" + "\n".join(references) if references else "")
+        + "\n\n草稿交付不代表集成 QA 或代码审查已经完成；以当前提交的检查结果为准，最终由人决定合并。\n",
+    }
+
+
 def publish(settings, task, number, directory):
     workspace = Path(task["workspace"])
     if run(["git", "branch", "--show-current"], workspace) != task["branch"]:
@@ -390,6 +430,16 @@ def publish(settings, task, number, directory):
             raise ValueError(
                 "PR changed during verification; refusing to publish stale work"
             )
+    prs = github(
+        f"repos/{settings['repository']}/pulls?head={settings['repository'].split('/')[0]}:{task['branch']}&state=all"
+    )
+    content = (
+        None
+        if prs
+        else pull_request_content(
+            workspace, number, settings["repository"], task["branch"]
+        )
+    )
     # The unattended Runner must not depend on the desktop login keychain.
     os.environ["GH_TOKEN"] = delivery_token(settings)
     # Re-run the same reusable development gate outside the model, before publishing.
@@ -431,20 +481,16 @@ def publish(settings, task, number, directory):
             workspace,
         )
     run(["git", "push", "-u", "origin", task["branch"]], workspace)
-    prs = github(
-        f"repos/{settings['repository']}/pulls?head={settings['repository'].split('/')[0]}:{task['branch']}&state=all"
-    )
     if prs:
         pr = prs[0]
     else:
         pr = github(
             f"repos/{settings['repository']}/pulls",
             {
-                "title": f"实现 Issue #{number}",
+                **content,
                 "head": task["branch"],
                 "base": "main",
                 "draft": True,
-                "body": f"Closes #{number}\n\n由需求、设计、研发和独立 QA 完成。QA 报告见本任务验证目录。代码审查是单独流程，由独立 Agent 出具意见，人工决定处理和合并；PR 不自动合并。\n\n已重新运行产品 JavaScript 语法、差异空白和真实浏览器的既有及新增旅程检查。Runner 复验日志位于 docs/05-validation/tasks/{number}/runner-checks/，Agent 验证及限制见同任务 validation.md。",
             },
         )
     save(

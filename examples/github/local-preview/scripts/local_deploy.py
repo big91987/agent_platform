@@ -12,6 +12,7 @@ import mimetypes
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tarfile
 import tempfile
@@ -195,8 +196,23 @@ def point(root, name, sha):
     link.replace(root / name)
 
 
+@contextlib.contextmanager
+def cancellation_signals():
+    def cancel(signum, frame):
+        raise KeyboardInterrupt("Deployment cancelled")
+
+    previous = {
+        sig: signal.signal(sig, cancel) for sig in (signal.SIGINT, signal.SIGTERM)
+    }
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def activate(root, plan, approved=False, health=None):
-    with locked(root):
+    with cancellation_signals(), locked(root):
         sha = plan["sha"]
         if not re.fullmatch(r"[0-9a-f]{40}", sha):
             raise ValueError("invalid release SHA")
@@ -211,23 +227,38 @@ def activate(root, plan, approved=False, health=None):
             raise ValueError("stale plan: current release changed; prepare again")
         if old:
             save(root / "published" / (old + ".json"), {"sha": old})
-        point(root, "current", sha)
+        deployed = root / "deployed.json"
+        old_record = json.loads(deployed.read_text()) if deployed.exists() else None
+        previous = root / "previous"
+        old_previous = previous.resolve().name if previous.is_symlink() else None
         try:
+            point(root, "current", sha)
             if health is not None and not health():
                 raise RuntimeError("deployment health check failed")
+            if old:
+                point(root, "previous", old)
+            save(root / "published" / (sha + ".json"), {"sha": sha})
+            save(
+                deployed, {"sha": sha, "previous_sha": old, "deployed_at": time.time()}
+            )
         except BaseException:
+            # SIGINT/SIGTERM during the switch follows the same rollback as a
+            # failed health check. Ignore a second cancellation during cleanup.
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
             if old:
                 point(root, "current", old)
             else:
                 (root / "current").unlink(missing_ok=True)
+            if old_previous:
+                point(root, "previous", old_previous)
+            else:
+                previous.unlink(missing_ok=True)
+            if old_record is not None:
+                save(deployed, old_record)
+            else:
+                deployed.unlink(missing_ok=True)
             raise
-        if old:
-            point(root, "previous", old)
-        save(root / "published" / (sha + ".json"), {"sha": sha})
-        save(
-            root / "deployed.json",
-            {"sha": sha, "previous_sha": old, "deployed_at": time.time()},
-        )
 
 
 def preview_settings(root):
@@ -351,17 +382,33 @@ def main():
         port = preview_settings(root).get("port", 5533)
         git(repo, "fetch", "origin", "main")
         latest = git(repo, "rev-parse", "refs/remotes/origin/main")
+        plan = None if args.command == "prepare" else json.loads(args.plan.read_text())
+        target = args.sha if plan is None else plan["sha"]
+        if target != latest or current(root) == target:
+            message = (
+                "Skipped: a newer main version supersedes this deployment."
+                if target != latest
+                else "Skipped: this version is already deployed."
+            )
+            print("::notice::" + message)
+            if os.environ.get("GITHUB_OUTPUT"):
+                with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                    output.write("deploy=false\n")
+            if os.environ.get("GITHUB_STEP_SUMMARY"):
+                with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+                    summary.write(
+                        f"## Deployment skipped\n\n{message}\nTarget: `{target}`\nLatest: `{latest}`\n"
+                    )
+            return
         if args.command == "prepare":
-            if args.sha != latest:
-                raise ValueError(
-                    "superseded: request must deploy the current main commit"
-                )
             plan = prepare(root, repo, args.sha, args.review)
             save(args.plan, plan)
             if os.environ.get("GITHUB_OUTPUT"):
                 with open(os.environ["GITHUB_OUTPUT"], "a") as output:
                     output.write(
-                        "review=" + str(plan["requires_approval"]).lower() + "\n"
+                        "deploy=true\nreview="
+                        + str(plan["requires_approval"]).lower()
+                        + "\n"
                     )
             if os.environ.get("GITHUB_STEP_SUMMARY"):
                 with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
@@ -375,11 +422,6 @@ def main():
                     )
             print(json.dumps(plan, ensure_ascii=False))
         else:
-            plan = json.loads(args.plan.read_text())
-            if plan["sha"] != latest:
-                raise ValueError(
-                    "superseded: main changed while awaiting deployment; prepare a new run"
-                )
             activate(
                 root,
                 plan,
