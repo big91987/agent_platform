@@ -193,3 +193,51 @@ func TestDispatchMissingHandleRemainsRetryable(t *testing.T) {
 		t.Fatal(out, err, count)
 	}
 }
+
+func TestPlanningStagesCanHandoffSummaryWithoutDocuments(t *testing.T) {
+	t.Setenv("PIPELINE_TEST_TOKEN", "test-token")
+	for _, pair := range [][2]string{{"requirements", "design"}, {"design", "development"}} {
+		t.Run(pair[0], func(t *testing.T) {
+			dir := t.TempDir()
+			count := 0
+			remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				count++
+				var body struct {
+					Inputs map[string]string `json:"inputs"`
+				}
+				json.NewDecoder(r.Body).Decode(&body)
+				if body.Inputs["target_stage"] != pair[1] {
+					t.Error("wrong handoff target")
+				}
+				w.Write([]byte(`{"workflow_run_id":123}`))
+			}))
+			defer remote.Close()
+			c := config{Workspace: dir, ResultFile: filepath.Join(dir, "handoff.json"), DispatchURL: remote.URL, TokenEnv: "PIPELINE_TEST_TOKEN", Ref: "main", SourceStage: pair[0], Inputs: map[string]string{"after": pair[0]}}
+			in := handoff{Summary: "现有 Issue 已明确范围与验收，沿用既有设计；本阶段无新增决策，交下游修复验证。", Artifacts: []string{}, TargetStage: pair[1]}
+			first, err := submit(context.Background(), c, in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := submit(context.Background(), c, in)
+			if err != nil || count != 1 || len(second.Documents) != 0 || first.SHA256 != second.SHA256 || second.Handoff.Summary != in.Summary {
+				t.Fatalf("summary lost or replayed: %+v %v", second, err)
+			}
+			in.TargetStage = "qa"
+			if _, err := submit(context.Background(), c, in); err == nil {
+				t.Fatal("must not skip forward stages")
+			}
+		})
+	}
+}
+
+func TestDeliveryStagesStillRequireEvidence(t *testing.T) {
+	for _, stage := range []string{"development", "qa", "unknown", ""} {
+		t.Run(stage, func(t *testing.T) {
+			dir := t.TempDir()
+			c := config{Workspace: dir, ResultFile: filepath.Join(dir, "receipt.json"), DispatchURL: "https://example.invalid", Ref: "main", Inputs: map[string]string{"after": stage}}
+			if _, err := submit(context.Background(), c, handoff{Summary: "no work", Artifacts: []string{}}); err == nil {
+				t.Fatal("missing evidence accepted")
+			}
+		})
+	}
+}

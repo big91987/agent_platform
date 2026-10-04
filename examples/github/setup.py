@@ -7,6 +7,8 @@ import re
 import urllib.request
 from pathlib import Path
 
+from approval_policy import update_stage_instructions
+
 parser = argparse.ArgumentParser(
     description="Register this external pipeline's MCP tools and stage Agents"
 )
@@ -15,6 +17,11 @@ parser.add_argument(
     "--network-defaults-only",
     action="store_true",
     help="Allow networking and permission requests for registered pipeline Agents without replacing other settings",
+)
+parser.add_argument(
+    "--stage-policy-only",
+    action="store_true",
+    help="Update stage applicability guidance only; preserve Agent configuration and existing conversations",
 )
 parser.add_argument(
     "--tools-only",
@@ -31,6 +38,13 @@ parser.add_argument(
     help="Owner-selected workflow branch/tag for result observer rollout; defaults to main",
 )
 args = parser.parse_args()
+if args.stage_policy_only and (
+    args.tools_only
+    or args.network_defaults_only
+    or args.browser_source
+    or args.observer_ref
+):
+    parser.error("--stage-policy-only cannot be combined with other update options")
 root = Path(__file__).resolve().parents[2]
 configpath = args.config.resolve()
 c = json.loads(configpath.read_text())
@@ -51,7 +65,8 @@ if args.browser_source:
             "browser-source must contain the trusted Harness browser runtime"
         )
     settings["browser_source"] = str(source)
-settings["tool_binary"] = str(root / "bin/pipeline-tool")
+if not args.stage_policy_only:
+    settings["tool_binary"] = str(root / "bin/pipeline-tool")
 settings.setdefault("agents", {})
 settings.setdefault("network_access", True)
 password = os.environ.get("PLATFORM_ADMIN_PASSWORD") or getpass.getpass(
@@ -73,6 +88,20 @@ def api(path, value=None, method=None):
 
 
 api("/api/login", {"username": "admin", "password": password})
+if args.stage_policy_only:
+    agents = {agent["id"]: agent for agent in api("/api/agents")}
+    selected = [
+        (stage, agents[settings["agents"][stage]])
+        for stage in ("requirements", "design", "development", "qa")
+    ]
+    for stage, agent in selected:
+        instructions = update_stage_instructions(agent.get("instructions", ""), stage)
+        if instructions != agent.get("instructions", ""):
+            agent.pop("resolved_tools", None)
+            agent["instructions"] = instructions
+            api("/api/agents/" + agent["id"], agent, "PUT")
+        print(stage, "stage policy updated; existing conversations unchanged")
+    raise SystemExit(0)
 if args.network_defaults_only:
     for agent in api("/api/agents"):
         if agent["id"] in settings["agents"].values():
@@ -229,11 +258,11 @@ for stage, names in stages.items():
     )
     if stage == "requirements":
         a["instructions"] += (
-            "产出 PRD 和可验证验收标准，完成自查并展示成果；按 Runner 的阶段确认策略通过工具交给设计阶段。"
+            "需要新增需求工作时形成必要需求基线和可验证验收标准；按 Runner 的阶段确认策略通过工具交给设计阶段。"
         )
     elif stage == "design":
         a["instructions"] += (
-            "交付原型、HLD、契约及索引，用 check 工具验证原型；展示产物和验证证据，按 Runner 的阶段确认策略通过工具交给研发。"
+            "需要新增设计工作时提供相关设计和必要契约；交互设计适用时用 check 工具验证原型；展示产物和验证证据，按 Runner 的阶段确认策略通过工具交给研发。"
         )
     elif stage == "development":
         a["instructions"] += (
@@ -260,6 +289,7 @@ for stage, names in stages.items():
             "交接后不要修改共享文件，先通过工具处理变更，不自行去下游会话发消息。"
             "交接 summary 如实记录回退依据、已有用户请求/确认或自主决策依据、修改要求和受影响结论，artifacts 附对应文档。"
         )
+    a["instructions"] = update_stage_instructions(a["instructions"], stage)
     a["native_config"] = ""
     a["trust_hooks"] = False
     if stage == "development":

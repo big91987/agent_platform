@@ -44,15 +44,20 @@ class SetupTest(unittest.TestCase):
                     self.fail("unexpected request: " + path)
                 return io.BytesIO(json.dumps(value).encode())
 
-            def register(path):
+            def register(path, *options):
                 with (
-                    patch.object(sys, "argv", [str(SCRIPT), "--config", str(path)]),
+                    patch.object(
+                        sys, "argv", [str(SCRIPT), "--config", str(path), *options]
+                    ),
                     patch.dict(os.environ, {"PLATFORM_ADMIN_PASSWORD": "test"}),
                     patch("urllib.request.build_opener") as opener,
                     contextlib.redirect_stdout(io.StringIO()),
                 ):
                     opener.return_value.open.side_effect = request
-                    runpy.run_path(str(SCRIPT), run_name="__main__")
+                    try:
+                        runpy.run_path(str(SCRIPT), run_name="__main__")
+                    except SystemExit as error:
+                        self.assertEqual(error.code, 0)
                 return json.loads(path.read_text())["pipeline"]
 
             expected = {}
@@ -81,6 +86,23 @@ class SetupTest(unittest.TestCase):
                 self.assertEqual(first["agents"], again["agents"])
                 self.assertEqual(stable, agents)
                 expected[key] = first["agents"]
+                # An instruction-only upgrade must preserve per-Agent settings.
+                before_upgrade = copy.deepcopy(agents)
+                before_servers = copy.deepcopy(servers)
+                register(path, "--stage-policy-only")
+                for stage, aid in first["agents"].items():
+                    before = before_upgrade[aid]
+                    after = agents[aid]
+                    self.assertEqual(
+                        {k: v for k, v in before.items() if k != "instructions"},
+                        {k: v for k, v in after.items() if k != "instructions"},
+                    )
+                    if stage in ("requirements", "design"):
+                        self.assertIn("artifacts=[]", after["instructions"])
+                self.assertEqual(before_servers, servers)
+                stable = copy.deepcopy(agents)
+                register(path, "--stage-policy-only")
+                self.assertEqual(stable, agents)
                 prefix = namespace + "-" if namespace else ""
                 for stage in ("requirements", "design", "development", "qa"):
                     agent = agents[first["agents"][stage]]

@@ -69,3 +69,8 @@ The receiving Runner can validate the exact payload using
 the same canonical digest implementation as the producer. This mode performs no
 network calls. It does not replace checking that current workspace documents
 still match the accepted snapshot before starting the next stage.
+
+
+### 无新增需求或设计工作
+
+`requirements` / `design` 的正常相邻阶段交接可以使用空 `artifacts` 数组；`summary` 必须记录本阶段不适用的依据、沿用约束及下游工作，仍进入不可变回执、哈希校验和重复调用去重。已有真实文档可继续附上。此兼容扩展不改变路由，不豁免研发/QA 的交付证据；其他阶段仍拒绝空附件。阶段适用性属于外部 pipeline 的提示词策略，工具不会通过关键词猜测任务类型或伪造用户批准。

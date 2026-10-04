@@ -76,14 +76,77 @@ def _resolve_policy(stage, autonomous=False, integrating=False):
     )
 
 
+_POLICY_START = "<!-- pipeline-stage-applicability -->"
+_POLICY_END = "<!-- /pipeline-stage-applicability -->"
+
+
+def stage_applicability(stage):
+    """Shared task and registered-Agent guidance; routing remains unchanged."""
+    if stage not in ("requirements", "design", "development", "qa"):
+        return ""
+    common = (
+        "阶段适用性：先根据 Issue、已接受决定、上游摘要和现有实现判断本阶段需要做什么，"
+        "本段优先于本 Agent/Skill 中按阶段一律产出文档或形式审批的默认要求。"
+        "不以任务标题或‘脚本修复’标签直接判断无设计影响；检查目标、范围、验收、接口、数据、权限、部署和恢复影响。"
+    )
+    if stage in ("requirements", "design"):
+        target = "design" if stage == "requirements" else "development"
+        common += (
+            "已有材料已足够且本阶段无新增决策/产物时，在 summary 写清不适用理由、依据、明确的目标与验收约束、"
+            "沿用的决定和下游工作，直接调用 submit_handoff，target_stage="
+            + target
+            + "。"
+            "可引用已有真实文档；没有文档时允许 artifacts=[]，不可为凑附件新建空 PRD、原型、HLD 或不适用报告。"
+            "这个无新增工作分支不需要再次询问是否进入下一阶段，严格模式也不为纯转交增加形式确认；"
+            "不能伪称用户批准或本阶段新增工作已完成。"
+            "若有新需求取舍、架构/接口/数据/权限/部署行为变化，则只完成相关的澄清或设计，"
+            "按风险提供必要产物，按 Runner 阶段确认策略处理实际新增决定。"
+            "原型只在需要验证交互时制作；没有 UI 设计工作就不要求原型。"
+        )
+    else:
+        common += (
+            "上游可通过摘要确认本阶段不适用；依据 Issue 与有效交接约束继续实现/验证，"
+            "不得仅因缺少 PRD、原型或 HLD 拒绝已明确任务，也不要求上游补形式文档。"
+            "必须执行变更影响范围内的测试与既有门禁；无 UI 变化不新增原型或无关界面专项，"
+            "但不能删减已承诺验收、已有回归、独立 QA 或代码审查。QA 仍须提供 qa.md 和真实验证证据。"
+        )
+    return common + (
+        "目标/验收不足或相互冲突不能标为不适用，应按确认策略澄清；P0 风险、权限审批、数据迁移审批不得借此跳过。"
+        "流程仍依次交接下一阶段，不跨节点、不伪造产物或通过状态。"
+    )
+
+
+def update_stage_instructions(instructions, stage):
+    policy = stage_applicability(stage)
+    if not policy:
+        return instructions
+    if _POLICY_START in instructions:
+        before, remaining = instructions.split(_POLICY_START, 1)
+        if _POLICY_END not in remaining:
+            raise ValueError(
+                "Incomplete stage applicability policy; inspect instructions"
+            )
+        _, after = remaining.split(_POLICY_END, 1)
+        instructions = before.rstrip() + after
+    return (
+        instructions.rstrip()
+        + "\n\n"
+        + _POLICY_START
+        + "\n"
+        + policy
+        + "\n"
+        + _POLICY_END
+    )
+
+
 def approval_policy(stage, autonomous=False, integrating=False) -> str:
     """Append the effective confirmation rules after the stage work requirements."""
     policy = _resolve_policy(stage, autonomous, integrating)
     readiness = {
-        "requirements": "需求目标与范围可判断，产出 PRD 和可验证验收标准，并完成一致性自查",
-        "design": "产出可运行原型、HLD、数据契约和设计索引，完成实际验证及与 PRD 的一致性自查",
+        "requirements": "目标、范围和可验证验收已明确；有新增需求工作时按规模补充必要需求文档并自查，否则沿用 Issue 和已有基线",
+        "design": "有新增设计工作时完成相关方案及验证，按影响提供必要契约或 HLD，交互设计需要时才做原型；否则沿用已有设计",
         "development": "完成已接受设计的实现，运行所需功能测试、格式/lint检查和真实浏览器验证，修复阻断问题并展示可运行成果",
-        "qa": "独立验证 PRD、设计和实际交付，完成所有必需验收、回归和真实浏览器检查，产出 qa.md、报告和必要截图",
+        "qa": "独立验证 Issue、有效需求/设计依据和实际交付，完成所有必需验收、回归和真实浏览器检查，产出 qa.md、报告和必要截图",
     }
     lines = [
         "\n阶段确认策略（以本段决定是否需要普通阶段确认；工作内容和验证要求继续适用）："
@@ -158,4 +221,5 @@ def approval_policy(stage, autonomous=False, integrating=False) -> str:
         "自主推进不豁免任何测试或验收：失败、未运行、缺证据均不得写为通过，也不能交付虚假完成状态。"
         "记录自主决策时标明依据，不得伪造‘用户已确认/批准’。最终 PR 合并和高风险部署始终保留人工授权。"
     )
+    lines.append(stage_applicability(stage))
     return "\n".join(lines) + "\n"

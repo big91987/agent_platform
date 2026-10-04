@@ -35,7 +35,7 @@ type config struct {
 }
 type handoff struct {
 	Summary     string   `json:"summary" jsonschema:"Deliverables, verification evidence, decisions and their authorization basis"`
-	Artifacts   []string `json:"artifacts" jsonschema:"Workspace-relative UTF-8 documents to snapshot"`
+	Artifacts   []string `json:"artifacts" jsonschema:"Workspace-relative UTF-8 documents to snapshot; requirements/design may use [] when summary records no new stage work and existing constraints"`
 	TargetStage string   `json:"target_stage,omitempty" jsonschema:"Target stage: the next stage or any earlier stage. Omit for the normal next stage except QA must specify it. Return summary must include the reason, required changes and authorization basis under the current stage approval policy."`
 }
 type result struct {
@@ -153,8 +153,11 @@ type controlInput struct {
 
 func submit(ctx context.Context, c config, in handoff) (result, error) {
 	var out result
-	if !filepath.IsAbs(c.Workspace) || !filepath.IsAbs(c.ResultFile) || c.DispatchURL == "" || c.Ref == "" || in.Summary == "" || len(in.Artifacts) == 0 {
+	if !filepath.IsAbs(c.Workspace) || !filepath.IsAbs(c.ResultFile) || c.DispatchURL == "" || c.Ref == "" || in.Summary == "" {
 		return out, errors.New("workspace, result_file, dispatch target, ref and handoff documents are required")
+	}
+	if len(in.Artifacts) == 0 && c.Inputs["after"] != "requirements" && c.Inputs["after"] != "design" {
+		return out, errors.New("handoff documents are required outside requirements/design")
 	}
 	if c.Inputs["after"] == "qa" && in.TargetStage == "" {
 		return out, errors.New("QA must explicitly set target_stage: requirements, design, development or report")
