@@ -22,29 +22,32 @@ type NodeResult struct {
 	Artifacts []string `json:"artifacts,omitempty"`
 }
 type WorkflowStep struct {
-	Seq            int         `json:"seq"`
-	NodeID         string      `json:"node_id"`
-	Status         string      `json:"status"`
-	ConversationID string      `json:"conversation_id,omitempty"`
-	Result         *NodeResult `json:"result,omitempty"`
-	Error          string      `json:"error,omitempty"`
-	Created        string      `json:"created_at"`
-	Updated        string      `json:"updated_at"`
+	ConnectorDispatched bool              `json:"connector_dispatched,omitempty"`
+	Receipt             *ConnectorReceipt `json:"connector_receipt,omitempty"`
+	Seq                 int               `json:"seq"`
+	NodeID              string            `json:"node_id"`
+	Status              string            `json:"status"`
+	ConversationID      string            `json:"conversation_id,omitempty"`
+	Result              *NodeResult       `json:"result,omitempty"`
+	Error               string            `json:"error,omitempty"`
+	Created             string            `json:"created_at"`
+	Updated             string            `json:"updated_at"`
 }
 type WorkflowRun struct {
-	ID            string         `json:"id"`
-	WorkflowID    string         `json:"workflow_id"`
-	Owner         string         `json:"owner"`
-	Username      string         `json:"-"`
-	Definition    Workflow       `json:"definition"`
-	Input         string         `json:"input"`
-	WorkspacePath string         `json:"workspace_path"`
-	Status        string         `json:"status"`
-	Seq           int            `json:"seq"`
-	Error         string         `json:"error,omitempty"`
-	Created       string         `json:"created_at"`
-	Updated       string         `json:"updated_at"`
-	Steps         []WorkflowStep `json:"steps"`
+	Connectors    map[string]Connector `json:"connectors,omitempty"`
+	ID            string               `json:"id"`
+	WorkflowID    string               `json:"workflow_id"`
+	Owner         string               `json:"owner"`
+	Username      string               `json:"-"`
+	Definition    Workflow             `json:"definition"`
+	Input         string               `json:"input"`
+	WorkspacePath string               `json:"workspace_path"`
+	Status        string               `json:"status"`
+	Seq           int                  `json:"seq"`
+	Error         string               `json:"error,omitempty"`
+	Created       string               `json:"created_at"`
+	Updated       string               `json:"updated_at"`
+	Steps         []WorkflowStep       `json:"steps"`
 }
 
 func (w Workflow) node(id string) WorkflowNode {
@@ -98,7 +101,30 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	if e = json.Unmarshal([]byte(raw), &r.Definition); e != nil {
 		return r, e
 	}
-	rows, e := tx.Query(`SELECT seq,node_id,status,conversation_id,result,error,created,updated FROM workflow_steps WHERE run_id=? ORDER BY seq`, id)
+	r.Connectors = map[string]Connector{}
+	configs, e := tx.Query(`SELECT connector_id,definition FROM workflow_run_connectors WHERE run_id=?`, id)
+	if e != nil {
+		return r, e
+	}
+	for configs.Next() {
+		var key, raw string
+		var v Connector
+		if e = configs.Scan(&key, &raw); e != nil {
+			configs.Close()
+			return r, e
+		}
+		if e = json.Unmarshal([]byte(raw), &v); e != nil {
+			configs.Close()
+			return r, e
+		}
+		r.Connectors[key] = v
+	}
+	e = configs.Err()
+	configs.Close()
+	if e != nil {
+		return r, e
+	}
+	rows, e := tx.Query(`SELECT s.seq,s.node_id,s.status,s.conversation_id,s.result,s.error,s.created,s.updated,COALESCE(a.receipt,''),a.request IS NOT NULL FROM workflow_steps s LEFT JOIN workflow_connector_actions a ON a.run_id=s.run_id AND a.seq=s.seq WHERE s.run_id=? ORDER BY s.seq`, id)
 	if e != nil {
 		return r, e
 	}
@@ -106,9 +132,14 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	r.Steps = []WorkflowStep{}
 	for rows.Next() {
 		var step WorkflowStep
-		var result string
-		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated); e != nil {
+		var result, receipt string
+		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated, &receipt, &step.ConnectorDispatched); e != nil {
 			return r, e
+		}
+		if receipt != "" {
+			if e = json.Unmarshal([]byte(receipt), &step.Receipt); e != nil {
+				return r, e
+			}
 		}
 		if result != "" {
 			if e = json.Unmarshal([]byte(result), &step.Result); e != nil {
@@ -224,9 +255,26 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if !w.Enabled {
 		return zero, errors.New("workflow is disabled")
 	}
+	connectors := map[string]Connector{}
 	for _, n := range w.Nodes {
 		if n.Kind == "connector" {
-			return zero, errors.New("connector execution is not available yet")
+			v, err := loadConnector(tx, n.ConnectorID)
+			if err != nil {
+				return zero, err
+			}
+			if !connectorAllowed(c, v) {
+				return zero, ErrForbidden
+			}
+			if !v.Enabled {
+				return zero, errors.New("connector is disabled")
+			}
+			if err = connectorWorkspace(v, path); err != nil {
+				return zero, err
+			}
+			if err = validateConnectorNode(v, n, w); err != nil {
+				return zero, err
+			}
+			connectors[v.ID] = v
 		}
 		if n.Kind == "agent" {
 			var cfg string
@@ -261,6 +309,12 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if e != nil {
 		return zero, e
 	}
+	for key, v := range connectors {
+		raw, _ := json.Marshal(v)
+		if _, e = tx.Exec(`INSERT INTO workflow_run_connectors(run_id,connector_id,definition) VALUES(?,?,?)`, id, key, string(raw)); e != nil {
+			return zero, e
+		}
+	}
 	r := WorkflowRun{ID: id, Definition: w, Seq: 1}
 	if e = insertWorkflowStep(tx, r, entry); e != nil {
 		return zero, e
@@ -291,6 +345,7 @@ func (s *Store) CompleteWorkflowNode(c Caller, id string, seq int, result NodeRe
 	return s.completeWorkflowNode(c, id, seq, "", result)
 }
 func (s *Store) completeWorkflowNode(c Caller, id string, seq int, token string, result NodeResult) error {
+
 	raw, e := json.Marshal(result)
 	if e != nil {
 		return e

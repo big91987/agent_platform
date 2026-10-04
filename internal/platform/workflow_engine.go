@@ -16,18 +16,28 @@ const workflowTokenEnv = "WORKFLOW_NODE_TOKEN"
 const workflowToolServer = "workflow_node"
 
 type WorkflowEngine struct {
-	store     *Store
-	scheduler *Scheduler
-	base      string
-	mu        sync.Mutex
+	store         *Store
+	scheduler     *Scheduler
+	base          string
+	mu            sync.Mutex
+	connectorJobs map[string]workflowConnectorJob
+	connectorWG   sync.WaitGroup
 }
 
 func NewWorkflowEngine(s *Store, scheduler *Scheduler, base string) *WorkflowEngine {
-	return &WorkflowEngine{store: s, scheduler: scheduler, base: strings.TrimRight(base, "/")}
+	return &WorkflowEngine{store: s, scheduler: scheduler, base: strings.TrimRight(base, "/"), connectorJobs: map[string]workflowConnectorJob{}}
 }
 func (e *WorkflowEngine) Run(ctx context.Context) {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
+	defer func() {
+		e.mu.Lock()
+		for _, job := range e.connectorJobs {
+			job.cancel()
+		}
+		e.mu.Unlock()
+		e.connectorWG.Wait()
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -52,7 +62,7 @@ func (e *WorkflowEngine) Tick(ctx context.Context) {
 		if r.Status != "running" && r.Status != "waiting" && r.Status != "stopping" {
 			continue
 		}
-		if err = e.tickRun(r); err != nil && !errors.Is(err, ErrConflict) {
+		if err = e.tickRun(ctx, r); err != nil && !errors.Is(err, ErrConflict) {
 			log.Printf("workflow %s: %v", r.ID, err)
 			e.fail(r, err)
 		}
@@ -88,6 +98,7 @@ func (e *WorkflowEngine) activeRuns() ([]WorkflowRun, error) {
 	return runs, nil
 }
 func (e *WorkflowEngine) fail(r WorkflowRun, err error) {
+	e.stopConnector(r.ID)
 	if len(r.Steps) > 0 && e.scheduler != nil {
 		id := r.Steps[len(r.Steps)-1].ConversationID
 		if id != "" && !e.quiet(id) {
@@ -132,9 +143,12 @@ func (e *WorkflowEngine) quiet(id string) bool {
 	c, err := e.store.Conversation(id)
 	return err == nil && c.Status != "running" && c.Status != "stopping"
 }
-func (e *WorkflowEngine) tickRun(r WorkflowRun) error {
+func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 	step := r.Steps[len(r.Steps)-1]
 	if r.Status == "stopping" {
+		if !e.stopConnector(r.ID) {
+			return nil
+		}
 		if step.ConversationID != "" {
 			if e.scheduler != nil {
 				conv, err := e.store.Conversation(step.ConversationID)
@@ -173,6 +187,18 @@ func (e *WorkflowEngine) tickRun(r WorkflowRun) error {
 	}
 	if _, err = e.store.Workflow(caller, r.WorkflowID); err != nil {
 		return fmt.Errorf("workflow authorization changed: %w", err)
+	}
+	node := r.Definition.node(step.NodeID)
+	if node.Kind == "connector" {
+		if _, err = e.connectorAccess(caller, r, node); err != nil {
+			return err
+		}
+		if step.Status == "pending" {
+			return e.startConnector(ctx, caller, r, step, node)
+		}
+		if step.Result == nil && e.connectorQuiet(r.ID) {
+			return errors.New("connector stopped without a confirmed result; inspect its receipt and use explicit recovery")
+		}
 	}
 	if step.Status == "pending" {
 		node := r.Definition.node(step.NodeID)
@@ -226,7 +252,7 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 	previous := []map[string]any{}
 	for _, old := range r.Steps {
 		if old.Result != nil || old.Error != "" {
-			previous = append(previous, map[string]any{"node": old.NodeID, "seq": old.Seq, "result": old.Result, "feedback": old.Error})
+			previous = append(previous, map[string]any{"node": old.NodeID, "seq": old.Seq, "result": old.Result, "feedback": old.Error, "connector_receipt": old.Receipt})
 		}
 	}
 	contextData, _ := json.MarshalIndent(map[string]any{"task": r.Input, "node": node.Name, "instructions": node.Prompt, "routes": r.Definition.routes(node.ID), "previous_results": previous}, "", "  ")
@@ -298,7 +324,7 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if r.Seq != seq || r.Status != "stopped" || strings.TrimSpace(reason) == "" {
 		return ErrConflict
 	}
-	if !e.quiet(r.Steps[len(r.Steps)-1].ConversationID) {
+	if !e.connectorQuiet(r.ID) || !e.quiet(r.Steps[len(r.Steps)-1].ConversationID) {
 		return ErrConflict
 	}
 	if r.Definition.node(target).ID == "" || r.Seq >= r.Definition.MaxSteps {
@@ -347,6 +373,11 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 		return err
 	}
 	step := r.Steps[len(r.Steps)-1]
+	if r.Definition.node(step.NodeID).Kind == "connector" {
+		if err = e.connectorResumeAllowed(r, step, message); err != nil {
+			return err
+		}
+	}
 	if !e.quiet(step.ConversationID) {
 		return ErrConflict
 	}

@@ -72,6 +72,11 @@ func reconcileNativeProcesses(root string) error {
 	if err != nil {
 		return err
 	}
+	more, err := filepath.Glob(filepath.Join(root, "workflow-processes", "*", "process.json"))
+	if err != nil {
+		return err
+	}
+	paths = append(paths, more...)
 	for _, path := range paths {
 		raw, err := os.ReadFile(path)
 		if err != nil {

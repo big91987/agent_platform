@@ -28,14 +28,15 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Kind        string  `json:"kind"`
-	AgentID     string  `json:"agent_id,omitempty"`
-	ConnectorID string  `json:"connector_id,omitempty"`
-	Prompt      string  `json:"prompt,omitempty"`
-	X           float64 `json:"x"`
-	Y           float64 `json:"y"`
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	Kind           string         `json:"kind"`
+	AgentID        string         `json:"agent_id,omitempty"`
+	ConnectorID    string         `json:"connector_id,omitempty"`
+	ConnectorInput ConnectorInput `json:"connector_input,omitempty"`
+	Prompt         string         `json:"prompt,omitempty"`
+	X              float64        `json:"x"`
+	Y              float64        `json:"y"`
 }
 type WorkflowEdge struct {
 	Source string `json:"source"`
@@ -159,7 +160,10 @@ func (s *Store) initWorkflows() error {
 	if e != nil {
 		return e
 	}
-	return s.initWorkflowRuns()
+	if e = s.initWorkflowRuns(); e != nil {
+		return e
+	}
+	return s.initConnectors()
 }
 func workflowAllowed(c Caller, w Workflow) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(w.AuthorizedUsers, c.UserID)
@@ -238,6 +242,15 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 		}
 	}
 	for _, n := range w.Nodes {
+		if n.Kind == "connector" {
+			v, err := loadConnector(tx, n.ConnectorID)
+			if err != nil {
+				return w, err
+			}
+			if err = validateConnectorNode(v, n, w); err != nil {
+				return w, fmt.Errorf("node %s: %w", n.ID, err)
+			}
+		}
 		if n.Kind == "agent" {
 			var count int
 			if e = tx.QueryRow(`SELECT count(*) FROM agents WHERE id=?`, n.AgentID).Scan(&count); e != nil {

@@ -9,6 +9,7 @@ import (
 )
 
 func (h *Server) workflowRunRoutes() {
+	h.connectorRoutes()
 	h.mux.HandleFunc("GET /api/workflow-runs", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.WorkflowRuns(c)
 		if e != nil {
