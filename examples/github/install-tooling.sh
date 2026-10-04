@@ -4,6 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 bash scripts/setup-runner.sh
+.data/runner-venv/bin/python -m pip install -r examples/github/requirements.txt
 go build -o bin/pipeline-tool ./examples/pipeline-tool
 npm ci --ignore-scripts --prefix examples/github/quality
 PYTHONPATH="$root/examples/github/tooling" .data/runner-venv/bin/python - <<'PY'

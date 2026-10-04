@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [ready_for_review, synchronize]
+    types: [opened, reopened, ready_for_review, synchronize]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 5
     steps:
-      - name: Request refresh of registered ready PRs
+      - name: Check PR routing and request product refresh
         env:
           GH_REPO: ${{ github.repository }}
           AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_ROOT }}

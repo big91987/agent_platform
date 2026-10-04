@@ -278,3 +278,33 @@ After a Runner wait expires, `after=observe` continues receiving the original
 conversation/message and posts its final reply to the same Issue. It never calls
 `invoke`, never approves a stage, and never recreates a native Session. Replaced
 inputs and previous iterations are ignored; comments are deduplicated by input ID.
+
+### 框架维护 PR 的合并前验证
+
+产品研发 Agent 不负责修改框架、工作流或部署器。未在任务交付记录中登记的同仓库 Ready PR，刷新扫描会明确上报 `pipeline/refresh` 失败并提示维护者验证，不再静默跳过；这不代表检查已运行失败，也不会启动产品 Agent。
+
+由维护者审查工程改动、同步最新 main，并在可信宿主的私有 Runner 配置中设置 `pipeline.maintenance`：
+
+```json
+{
+  "paths": [".github/workflows/deploy-local.yml", "scripts/local_deploy.py", "tests/local_deploy_test.py", "docs/local-deployment.md"],
+  "checks": [["python3", "-m", "unittest", "discover", "-s", "tests", "-p", "local_deploy_test.py", "-v"]],
+  "timeout_seconds": 600
+}
+```
+
+路径是区分大小写的仓库相对 glob；优先列出具体文件，不要用 `**` 允许所有产品代码。检查是 argv 数组，不经过 shell，必须针对实际改动选择；上例仅为部署器单元/进程回归，不等于真实部署验收。涉及 Workflow 时还需配置 YAML/脚本检查，并验证真实 Actions 入口。可用 `["<platform-root>/.data/runner-venv/bin/python", "<platform-root>/examples/github/workflow_check.py", ".github/workflows/pr-refresh.yml"]` 检查 YAML 和 bash/sh 语法；其他 shell 明确报不支持。`install-tooling.sh` 安装锁定的 PyYAML 依赖。配置应保存在产品工作区外，不由产品 Agent 或待验 PR 修改。配置缺失时保持阻塞，不提供自动豁免。
+
+使用干净、位于 PR 精确 head 的 checkout，由维护者执行：
+
+```sh
+GH_REPO=owner/project-a PYTHONPATH=sdk/python:examples/github \
+  python3 examples/github/pr_refresh.py --config '<private-runner-json>' \
+  --maintenance-pr <pr-number> --workspace '<clean-pr-checkout>'
+```
+
+命令先检查最新 main 已包含在 PR head 中、实际变更全部属于允许范围，再执行配置的所有检查；最后重新核对 PR、main 和工作区未变化才回报成功。失败可修复后重跑。不会合并代码、不会执行 Agent、不会替代维护者对测试充分性的审查；已登记产品 PR 不能走此入口代替 QA/Review。
+
+本地执行日志和 head/main/检查配置凭证写入私有 `registry/maintenance/`，不提交仓库。主线、PR head 或检查配置变更后凭证失效；下一次扫描要求重新验证。分支规则保留 `pipeline/refresh` 并启用要求分支保持最新，防止主线更新与异步扫描之间的空窗。
+
+升级：先更新可信宿主的这些源码（包含 `maintenance.py`），再同步 `pr-refresh.yml` 到目标仓库、配置维护范围与检查，最后手动运行 Refresh ready PRs 验证路由。旧配置无需迁移：已登记产品继续原有流程，未登记 PR 默认明确阻塞。不要伪造登记记录、人工补成功状态或以管理员强合作为标准流程。当前框架收敛期间，维护者验证由框架开发者负责，不增加工程维护 Agent。

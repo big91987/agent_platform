@@ -163,3 +163,32 @@ class CompletionTest(unittest.TestCase):
                 self.assertTrue(
                     all("merge" not in call.args[0] for call in api.call_args_list)
                 )
+
+
+class MaintenanceRoutingTest(unittest.TestCase):
+    def test_unregistered_pr_gets_actionable_failure_without_agent_dispatch(self):
+        import pr_refresh
+
+        with tempfile.TemporaryDirectory() as tmp:
+            settings = {"registry": tmp, "repository": "owner/repo"}
+            pr = {
+                "number": 99,
+                "html_url": "https://github.com/owner/repo/pull/99",
+                "state": "open",
+                "draft": False,
+                "base": {"ref": "main"},
+                "head": {
+                    "sha": "head",
+                    "ref": "maintenance",
+                    "repo": {"full_name": "owner/repo"},
+                },
+            }
+            with (
+                patch.object(pr_refresh, "github", return_value={"sha": "base"}),
+                patch.object(pr_refresh, "status") as report,
+                patch.object(pr_refresh, "dispatch") as dispatch,
+            ):
+                pr_refresh.refresh(settings, [pr])
+                dispatch.assert_not_called()
+                self.assertEqual(report.call_args.args[1:3], ("head", "failure"))
+                self.assertIn("maintainer", report.call_args.args[3].lower())

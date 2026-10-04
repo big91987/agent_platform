@@ -47,7 +47,7 @@ def relative_file(root, name):
     return path
 
 
-def files(root):
+def files(root, include=None):
     result = {}
     for p in Path(root).rglob("*"):
         rel = p.relative_to(root)
@@ -56,6 +56,10 @@ def files(root):
         if p.is_symlink():
             raise ValueError("Symlinks need a project import policy: " + str(rel))
         if not p.is_file():
+            continue
+        # Checkpoint/quality callers only need their own file set. Unrelated
+        # screenshots and logs must not consume that set's import budget.
+        if include is not None and not include(rel.as_posix()):
             continue
         if (
             p.name == ".env"
@@ -89,9 +93,11 @@ def controls(root):
         n: hashlib.sha256(
             b + str((Path(root) / n).stat().st_mode & 0o111).encode()
         ).hexdigest()
-        for n, b in files(root).items()
-        if n.startswith(CONTROL)
-        or n in {"AGENTS.md", "harness-project.json", "harness-upstream.json"}
+        for n, b in files(
+            root,
+            include=lambda n: n.startswith(CONTROL)
+            or n in {"AGENTS.md", "harness-project.json", "harness-upstream.json"},
+        ).items()
     }
 
 

@@ -29,4 +29,11 @@
 
 研发示例的阶段 Agent 默认允许命令联网，额外主机权限仍逐次审批；通用平台默认值不变。仓库默认值、新 Issue 表单选择与已有 Issue 的 Owner 评论更新入口已实现，任务注册表保存选择供后续阶段和返工继承。平台 API 校验会话归属、Agent 授权上限，禁止执行中变更；不重建原生 Session。显式禁网也关闭原生提权申请，外部 MCP 服务仍有独立授权边界。
 
-完整 `scripts/verify.sh` 通过，包括 Go race / vet / build、SDK、GitHub 示例及浏览器回归。新增验证覆盖表单默认与覆盖、伪造/含糊字段、非 Owner 评论、跨用户和越权调用、执行中冲突与延后应用。后台于无活动轮次时部署，已用真实已有会话验证网络设置 API。产品仓库的表单和评论 Workflow 须合入默认分支后才启用，不能把接口测试当作 GitHub 评论触发端到端验收。
+完整 `scripts/verify.sh` 通过，包括 Go race / vet / build、SDK、GitHub 示例及浏览器回归。新增验证覆盖表单默认与覆盖、伪造/含糊字段、非 Owner 评论、跨用户和越权调用、执行中冲突与延后应用。后台于无活动轮次时部署，已用真实已有会话验证网络设置 API。产品仓库的表单和评论 Workflow 已通过配置 PR #101 合入默认分支。真实 Owner 评论 `/network allow` 触发权限 Workflow；首次发现普通调用账号的 Agent 摘要不含权限配置，客户端预检误判为拒绝，已移除不可靠预检，由平台权限更新接口执行授权校验。原 Workflow 第 2 次执行成功，Issue 收到接收与生效回帖，任务注册表保存评论 ID，原研发会话继续执行。新增临时任务注册表回归复现普通账号响应形状，覆盖持久化更新和结果通知。
+
+- 配置 PR：https://github.com/big91987/reading_list/pull/101
+- 真实评论：https://github.com/big91987/reading_list/issues/100#issuecomment-5977860468
+- 成功运行：https://github.com/big91987/reading_list/actions/runs/37187106020
+- 生效通知：https://github.com/big91987/reading_list/issues/100#issuecomment-5977873851
+
+真实 GitHub 入口验证覆盖允许联网；禁止联网、非 Owner 拒绝、执行中延后应用由专项回归覆盖，未在活跃产品任务上切断联网做破坏性验证。

@@ -71,19 +71,6 @@ def main():
             "本 Issue 尚未登记为 Pipeline 任务，权限未改变。请先启动需求阶段，再重跑这次权限更新。",
         )
         raise ValueError("Issue has no registered task")
-    if enabled:
-        available = {a["id"]: a for a in client.agents()}
-        if any(
-            not available.get(aid, {}).get("network_access", False)
-            for aid in settings["agents"].values()
-        ):
-            comment_once(
-                repo,
-                number,
-                marker + ":forbidden -->",
-                "本次联网设置未应用：平台管理员尚未允许某个阶段 Agent 联网。请在平台 Agent 配置中开启允许联网，再重跑本次 Workflow；Issue 命令不能越过管理员授权。",
-            )
-            raise PermissionError("Agent networking grant is missing")
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         task = json.loads(path.read_text())

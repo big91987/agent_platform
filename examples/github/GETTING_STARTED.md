@@ -207,3 +207,13 @@ PYTHONPATH=sdk/python python3 examples/github/permission_notifications.py --conf
 默认每 5 秒检查正在运行、等待审批或状态变化的关联会话；空闲且未变化的会话不加载历史。申请时回贴原因、权限类型、一次/单轮有效范围和平台链接；批准、拒绝、取消后各反馈一次。快速完成的审批直接通知结果。首次启用不补发已经结束的历史审批，但会通知仍在等待的申请。完整命令、文件路径、原始审批 JSON 和凭据不写入 Issue。
 
 本机通知状态及日志保存在任务注册目录的 `permission-notifications.json` / `.log`。平台或 GitHub 暂时失败会重试；一个会话失败不阻断其他会话的通知。审批 ID 和 Issue 隐藏标记用于去重，进程重启后不重复发送；审批只在平台由管理员完成，Issue 中回复“同意”不会授予权限。
+
+### 维护者自己的框架 PR
+
+未登记产品任务的 PR 也受 `pipeline/refresh` 保护。请按 [框架维护验证](README.md#框架维护-pr-的合并前验证) 配置宿主检查并使用 `--maintenance-pr`，不会调用产品研发 Agent。旧安装先更新宿主源码，再同步 `pr-refresh.yml`；仅复制 YAML 不会安装验证器。不要将“扫描工作流成功”理解成该 PR 已通过集成验证。
+
+### 大量验证证据后的阶段交接
+
+控制文件指纹和 Python 质量扫描只读取各自相关文件，工作区中累计的截图、AX 记录等不计入这些扫描的导入预算；完整项目导入仍保留原有大小限制。修复位于随附 `tooling/full_harness/common.py` 和 `quality.py`，本地改动校验值见 `tooling/SOURCE.json`。
+
+使用默认 bundled 工具的旧安装更新平台版本后，可从 Actions 重跑原失败 Job；原任务、交接哈希和回退轮次继续使用，不删除证据、不手改状态。如果显式配置了 `browser_source`，须同步该受信版本或通过 `setup.py --tools-only --browser-source '<platform-root>/examples/github/tooling'` 升级；既有会话的工具快照仍应核对其实际引用路径，不能假设挂载自动迁移。

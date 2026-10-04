@@ -15,8 +15,9 @@ from full_harness.common import CONTROL, files
 def python_files(root):
     return sorted(
         name
-        for name in files(root)
-        if name.endswith(".py") and not name.startswith(CONTROL)
+        for name in files(
+            root, include=lambda n: n.endswith(".py") and not n.startswith(CONTROL)
+        )
     )
 
 
