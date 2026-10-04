@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -182,5 +184,40 @@ func TestWorkflowRunHTTPRequiresOwnerAndLatestStep(t *testing.T) {
 	fresh, _ := s.WorkflowRun(c, r.ID)
 	if fresh.Seq != 2 || fresh.Definition.ID != w.ID {
 		t.Fatal(fresh)
+	}
+}
+
+func TestWorkflowWorkspaceIsReservedUntilRunCompletes(t *testing.T) {
+	s := testStore(t)
+	c, w, r := runFixture(t, s)
+	child := filepath.Join(r.WorkspacePath, "child")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(t.TempDir(), "alias")
+	if err := os.Symlink(r.WorkspacePath, link); err != nil {
+		t.Fatal(err)
+	}
+	check := func() {
+		t.Helper()
+		for _, path := range []string{r.WorkspacePath, child, link} {
+			_, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "another task", WorkspacePath: path})
+			if !errors.Is(err, ErrConflict) {
+				t.Fatalf("overlapping workspace accepted %s: %v", path, err)
+			}
+		}
+	}
+	check()
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	if err := engine.Stop(c, r.ID, r.Seq); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	check() // Stopped runs remain resumable and still own their files.
+	if err := engine.Return(c, r.ID, r.Seq, "done", "用户结束此任务"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "next task", WorkspacePath: r.WorkspacePath}); err != nil {
+		t.Fatal(err)
 	}
 }

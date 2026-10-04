@@ -108,3 +108,9 @@ T2 已实现图版本冻结、持久 Run／执行序号、Agent 会话原子创�
 GitHub 正文含 Run ID＋执行序号关联标记。恢复只查询标记对应的真实资源；未找到时保留未知结果，不自动重新 POST。命令已分发后不允许“继续”重放；用户检查实际效果，再通过停止／回退创建新执行。回退不撤销外部资源。回执始终保留，包括用户停止或权限收回后的实际结果。
 
 GitHub 使用固定 api.github.com 及 REST API；不接受任意凭据目标 URL。协议依据：[Issues](https://docs.github.com/en/rest/issues/issues)、[Pull requests](https://docs.github.com/en/rest/pulls/pulls)。当前限 GitHub.com；Enterprise、任意 HTTP、长驻服务和远程命令不在首版范围。
+
+### 工作区占用与研发模板安装
+
+启动 Run 时规范化真实工作区路径，并在事务中拒绝与未结束 Run 重叠的目录。停止／失败仍可恢复，不能让另一个 Run 接管其文件；完成后释放。此限制不等同于操作系统文件锁，平台外进程与普通独立会话仍需由操作者保证隔离。
+
+研发阶段只在 `examples/platform-workflows` 的图和指令中定义。正式安装器通过 API 注册 Skill 路径、阶段 Agent、固定 Connector 和浏览器 MCP；清单记录归属，重复执行不重复创建，升级拒绝覆盖平台外编辑。图／Connector 定义冻结不代表磁盘脚本冻结，正式交付需使用不可变的源码／Skill 版本目录并保留在途 Run 的旧版本。

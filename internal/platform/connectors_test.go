@@ -176,6 +176,10 @@ func TestConnectorFailureRouteAndCancellationKeepActualOutcome(t *testing.T) {
 	if r.Seq != 2 || r.Steps[0].Result.Route != "failed" || *r.Steps[0].Receipt.ExitCode == 0 {
 		t.Fatal(r)
 	}
+	if err = s.CompleteWorkflowNode(c, r.ID, r.Seq, NodeResult{Route: "next", Summary: "Failure reviewed"}); err != nil {
+		t.Fatal(err)
+	}
+	waitConnectorRun(t, e, r.ID, "completed")
 	config.Executable = "/bin/sleep"
 	config.Args = []string{"30"}
 	config.TimeoutSeconds = 60

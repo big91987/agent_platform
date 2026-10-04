@@ -15,6 +15,7 @@
 - [CI/CD Runner 直接调用 Agent](02-architecture/workflows/runner-direct.md)
 - [GitHub CI + Agent Platform](02-architecture/workflows/github-agent-platform.md)
 - [平台内 Workflow 架构](02-architecture/workflows/platform-native.md) · [交付计划](03-delivery/workflows-plan.md) · [验证记录](03-delivery/workflows-verification.md)
+- [平台内研发交付模板：安装与升级](../examples/platform-workflows/README.md)
 - [方案比较与选型](02-architecture/workflows/comparison.md)
 
 ## 接入与验证

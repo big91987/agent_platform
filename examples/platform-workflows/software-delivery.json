@@ -1,0 +1,252 @@
+{
+  "name": "研发交付 · 自动推荐",
+  "enabled": true,
+  "entry": "prepare",
+  "start_nodes": [],
+  "authorized_users": [],
+  "max_steps": 40,
+  "nodes": [
+    {
+      "id": "prepare",
+      "name": "准备任务分支",
+      "kind": "connector",
+      "connector_id": "prepare",
+      "x": 40,
+      "y": 60
+    },
+    {
+      "id": "issue",
+      "name": "记录需求",
+      "kind": "connector",
+      "connector_id": "issue",
+      "connector_input": {
+        "title": "{{input}}"
+      },
+      "x": 300,
+      "y": 60
+    },
+    {
+      "id": "requirements",
+      "name": "需求与验收标准",
+      "kind": "agent",
+      "agent_id": "requirements",
+      "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 40,
+      "y": 240
+    },
+    {
+      "id": "design",
+      "name": "设计方案",
+      "kind": "agent",
+      "agent_id": "design",
+      "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 300,
+      "y": 240
+    },
+    {
+      "id": "development",
+      "name": "研发实现",
+      "kind": "agent",
+      "agent_id": "development",
+      "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 560,
+      "y": 240
+    },
+    {
+      "id": "qa",
+      "name": "独立 QA",
+      "kind": "agent",
+      "agent_id": "qa",
+      "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 40,
+      "y": 460
+    },
+    {
+      "id": "report",
+      "name": "整理交付说明",
+      "kind": "agent",
+      "agent_id": "report",
+      "prompt": "执行 整理交付说明 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 300,
+      "y": 460
+    },
+    {
+      "id": "tests",
+      "name": "运行项目测试",
+      "kind": "connector",
+      "connector_id": "tests",
+      "x": 820,
+      "y": 240
+    },
+    {
+      "id": "decision",
+      "name": "人工选择下一步",
+      "kind": "approval",
+      "prompt": "查看前序 Agent 的问题与建议，给出说明并选择下一步。",
+      "x": 820,
+      "y": 680
+    },
+    {
+      "id": "publish",
+      "name": "提交并推送任务分支",
+      "kind": "connector",
+      "connector_id": "publish",
+      "x": 560,
+      "y": 460
+    },
+    {
+      "id": "pr",
+      "name": "创建草稿 PR",
+      "kind": "connector",
+      "connector_id": "pr",
+      "connector_input": {
+        "title": "{{input}}",
+        "head": "workflow/{{run_id}}",
+        "base": "main",
+        "body_file": "docs/workflow/pr.md",
+        "issue_node": "issue"
+      },
+      "x": 820,
+      "y": 460
+    },
+    {
+      "id": "done",
+      "name": "交付完成 · 待人工合并",
+      "kind": "end",
+      "x": 1080,
+      "y": 460
+    }
+  ],
+  "edges": [
+    {
+      "source": "prepare",
+      "route": "next",
+      "target": "issue"
+    },
+    {
+      "source": "issue",
+      "route": "next",
+      "target": "requirements"
+    },
+    {
+      "source": "requirements",
+      "route": "next",
+      "target": "design"
+    },
+    {
+      "source": "design",
+      "route": "next",
+      "target": "development"
+    },
+    {
+      "source": "development",
+      "route": "next",
+      "target": "tests"
+    },
+    {
+      "source": "tests",
+      "route": "next",
+      "target": "qa"
+    },
+    {
+      "source": "qa",
+      "route": "next",
+      "target": "report"
+    },
+    {
+      "source": "report",
+      "route": "next",
+      "target": "publish"
+    },
+    {
+      "source": "publish",
+      "route": "next",
+      "target": "pr"
+    },
+    {
+      "source": "pr",
+      "route": "next",
+      "target": "done"
+    },
+    {
+      "source": "tests",
+      "route": "failed",
+      "target": "development"
+    },
+    {
+      "source": "requirements",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "design",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "development",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "qa",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "design",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "development",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "development",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "qa",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "qa",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "qa",
+      "route": "development",
+      "target": "development"
+    },
+    {
+      "source": "report",
+      "route": "qa",
+      "target": "qa"
+    },
+    {
+      "source": "decision",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "decision",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "decision",
+      "route": "development",
+      "target": "development"
+    },
+    {
+      "source": "decision",
+      "route": "qa",
+      "target": "qa"
+    }
+  ]
+}

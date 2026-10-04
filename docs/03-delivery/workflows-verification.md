@@ -97,3 +97,17 @@ Run：`5ff2da857f2bbe8a6b9dee66bf6922e0`，同样冻结版本 3。
 回归：`go test ./...`、`go test -race ./... -timeout 120s`、`go vet ./...`、15 项 Node 行为测试通过。先写失败的 Connector 行为测试再实现；覆盖配置快照、授权隔离、工作区边界、停用、真实命令非零路由／进程停止、凭据脱敏、未知命令不自动重放、GitHub 回执丢失后只读核对。GitHub 丢响应测试使用隔离 Transport，仅证明协议恢复逻辑；尚未模拟真实网络中断。真实命令测试执行本机程序，不生成假成功回执。静态页面资源测试发现新增 Connector JS 未嵌入，已补入明确 embed 集后通过。
 
 限制：本节不是完整研发闭环；尚未通过 Connector 创建草稿 PR、未验证从一句话需求到代码／QA 修复再交付的模板，未实测 GitHub 写入中断后的正式恢复。节点参数已改为直接表单；网页保存正文文件与 Issue 节点引用到图版本 2、刷新后保留；已完成 Run 仍保留冻结版本 1。没有把单元测试通过描述为整套 Pipeline 通过。
+
+## T3 研发模板安装与首条交付旅程（进行中）
+
+维护源为 `examples/platform-workflows/`。正式安装器使用管理 API 注册 5 个阶段 Agent、5 个 Connector、stdio 浏览器工具和 12 节点图；资产路径外置，未改数据库或旧测试仓库。采用已锁定的 Harness 浏览器依赖，安装与真实 Chromium 启动探针通过。
+
+- 同一安装清单再次执行：对象 ID 和图版本不变，没有重复创建。初次重入发现 Go API 空默认字段造成伪升级，已修复结构比较，并通过同一入口复验。
+- 本地 Git 回归三项通过：脏目录拒绝、真实提交推送／重复发布无空提交、错误分支与凭据文件拒绝。
+- 从网页提交一句话需求“做一个本地待办网页，可以新增、完成、删除和筛选待办，刷新后保留数据。”；Run `53d0ed8b44d1b6eae020996ad84d1d55`，图 `123cf05ae9959c092ea0ea15f99abb6d` 版本 1。
+- 准备 Connector 真实创建隔离分支，Issue Connector 创建 [测试 Issue #2](https://github.com/big91987/agent-platform-workflow-demo/issues/2)。需求会话 `42ffa386394c78e8fbc61fca56a31e0b` 和设计会话 `91207b9ac848189f78b8604897f90ad7` 自主记录推荐及 G1/G2 自查，正常工具交接，无重复人工批准。研发会话 `9198b1ad9a2571160ca2dfde0f6e4099` 已启动。
+- 工具与 Thinking 在对应 Agent 名下按时间显示，已完成调用默认折叠。当前研发、独立 QA、代码推送与草稿 PR 尚在验证，不声明完整交付通过。
+
+工作区隔离补充：测试先复现两个未结束 Run 共用目录被接受，再在启动事务中拒绝同目录、子目录和符号链接别名；停止状态仍占用，正式结束后可再用。针对 Workflow 测试及完整 Go race 回归通过。原 Connector 取消测试先按正式审批路径结束前一任务，再开始后一任务。此变更尚未替换在途验收服务；当前真实 Run 运行于 `153803f` 引擎。
+
+标准入口 `bash scripts/verify.sh` 在本轮修正后完整退出 0：前端 17 项（含真实浏览器回归 2 项）、Python SDK 7 项、GitHub 示例 96 项、本地部署 11 项、新模板 Git 操作 3 项，ruff／gofmt／go vet、全仓 Go race 与二进制构建通过。原始日志保存在 `.data/workflow-evidence/verify-software-delivery-final.log`。macOS 链接器 LC_DYSYMTAB 警告未导致失败。以上回归不替代仍在进行的真实 T3 交付旅程。
