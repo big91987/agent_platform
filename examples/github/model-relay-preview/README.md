@@ -18,7 +18,7 @@ python3 examples/github/model-relay-preview/install_workflow.py --project <model
 # 后续从新版维护源升级时加 --upgrade；手工改过目标文件会明确拒绝覆盖。
 ```
 
-在仓库 Actions variables 配置安装器打印的 `MODEL_RELAY_PREVIEW_ROOT` 和 `MODEL_RELAY_PREVIEW_URL`。创建 `local-preview` Environment 并限制 `main`。私有仓库套餐可能不支持 Required reviewer；因此本 Workflow 不依赖该规则，`push main` 只准备，不执行部署。只有仓库 Owner 在 Actions 页面明确手动选择 `main` 并勾选 `deploy`，才会执行切换。还需按 GitHub 官方流程安装、注册受信的同机自托管 Runner；它允许仓库 Workflow 在主机执行代码，应获得主机所有者明确授权。Runner 需具有 `self-hosted`、`macOS`、`ARM64`、`he-full` 标签和上述构建工具，并能读取仓库。不能让普通 PR 分支取得部署权限。
+在仓库 Actions variables 配置安装器打印的 `MODEL_RELAY_PREVIEW_ROOT` 和 `MODEL_RELAY_PREVIEW_URL`。创建 `local-preview` Environment 并限制 `main`。私有仓库套餐可能不支持 Required reviewer；因此本 Workflow 不依赖该规则，`push main` 只准备，不执行部署。只有仓库 Owner 在 Actions 页面明确手动选择 `main` 并勾选 `deploy`，才会执行切换。目标仓库还需能访问受信的同机自托管 Runner；已有可访问且满足标签的 Runner 可直接复用。若现有 Runner 只注册在另一个个人仓库，应先确认空闲、原仓库不再依赖它并取得所有者授权，再按 GitHub 官方流程从旧仓库注销、注册到目标仓库；标签相同不等于跨仓库共享。Runner 允许仓库 Workflow 在主机执行代码。Runner 需具有 `self-hosted`、`macOS`、`ARM64`、`he-full` 标签和上述构建工具，并能读取仓库。不能让普通 PR 分支取得部署权限。
 
 合并后 `push main` 自动准备：只接受当前远端 main 的完整 SHA，在隔离工作树运行项目固定 `make verify` 并保存私有日志。准备通过后仍服务旧版。用户在仓库 Actions → Deploy Model Relay locally → Run workflow 选择 `main`、勾选 `deploy`，新运行重新验证当前 main 后执行切换。部署时再次检查 main 未变化、计划与二进制摘要不变；若有新提交，旧计划拒绝切换。重复运行已部署 SHA 不生成新版本。未勾选 `deploy` 的手动运行也只准备。
 

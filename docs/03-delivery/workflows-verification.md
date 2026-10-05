@@ -357,7 +357,9 @@ seq 14 QA 因原生模型 serverOverloaded 失败；从实际运行页填写继�
 
 维护源新增 `examples/github/model-relay-preview/`：独立 GitHub Actions 在 main 更新后按精确 SHA 准备 Go 服务，运行项目完整 `make verify`；Owner 手动触发部署后，由安装在主机私有目录的可信控制器备份、切换、核对健康版本并在失败时恢复。项目 Workflow 通过版本摘要安装器写入测试仓草稿 PR 分支；平台引擎不内置 Go/SQLite 部署逻辑，不自动合并 PR。控制器隔离测试已验证过期 main 拒绝、重复准备、目标文件漂移拒绝以及失败激活后旧数据与版本恢复。另用真实 Model Relay 提交 `851c949` 在隔离 bare main 和独立工作树运行控制器 prepare，项目完整 `make verify` 退出 0（含 Go/race、实际 Go 服务桌面/窄屏浏览器旅程）；私有原始回执保留在本机隔离验收目录。该阶段只证明准备，尚未经过真实 GitHub Actions 及用户合并。
 
-续验：Model Relay 私有仓库创建 Required reviewer 规则时 GitHub 返回 422（当前套餐不支持）。维护源将部署门禁改为 `push main` 只自动准备、Owner 在 Actions 手动选择 main 并勾选 `deploy` 才激活；`local-preview` Environment 已限制 main，旧的空 Environment 已删除。宿主安装器从维护源安装了可信控制器，源码与安装副本 SHA256 一致；仓库两项 Actions variables 已配置。仓库目前没有自托管 Runner，不能声称 Actions Pipeline 已执行。
+续验：Model Relay 私有仓库创建 Required reviewer 规则时 GitHub 返回 422（当前套餐不支持）。维护源将部署门禁改为 `push main` 只自动准备、Owner 在 Actions 手动选择 main 并勾选 `deploy` 才激活；`local-preview` Environment 已限制 main，旧的空 Environment 已删除。宿主安装器从维护源安装了可信控制器，源码与安装副本 SHA256 一致；仓库两项 Actions variables 已配置。此时仓库尚无可用自托管 Runner，不能声称 Actions Pipeline 已执行。
+
+Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务的 `he_skeleton` 测试 Runner 正式注销，再将同一 Runner 安装目录注册为 `model-relay-local`。GitHub 官方 API 在目标仓库显示 1 台 `online`、`busy=false`，标签 `self-hosted/macOS/ARM64/he-full`；原仓库的离线注册已移除，未改动仍在线的 `reading_list` Runner。此举只消除了 Actions 的 Runner 前置阻塞；产品 PR #2 仍 Draft/Open 且未合并，main 更新触发的准备、手动部署、部署记录与固定 URL 仍 **Not Run**，方案二平替仍 **No-Go**。
 
 隔离真实服务验证：精确 main 提交 `173670387c9cce44d2780d9d42b74241e993afec` 经控制器 `prepare` 跑完项目 `make verify` 后，由真实 LaunchAgent `activate`；`/admin/` 返回 200，`/healthz` 返回同一提交 SHA，LaunchAgent 重启后版本不变。随后只在隔离 bare 仓库提交 `5c5bf941b1b834f55e427dae0d187dec88da37dc` 注入预览端口启动失败；它通过 `make verify`，正式 `activate` 因健康检查超时失败。控制器保存正式 backup、隔离失败数据，用产品 `restore` 恢复并重启旧版本；`deployed.json` 和 `/healthz` 仍为 `1736703`，旧 LaunchAgent 运行。隔离 LaunchAgent 测完已停止并删除，5545 已释放。这证明控制器在受控失败下可恢复，**不是** GitHub Actions、用户合并或稳定发布的通过证据；方案二平替仍 **No-Go**。
 
