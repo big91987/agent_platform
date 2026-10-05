@@ -329,3 +329,24 @@ func TestIssueBindingRejectsPullRequestAndInvalidParameter(t *testing.T) {
 		t.Fatal(req, err)
 	}
 }
+
+func TestConnectorTitlesUseTaskFirstLineAndPreserveBody(t *testing.T) {
+	t.Setenv("TITLE_TEST_TOKEN", "test-only")
+	dir := t.TempDir()
+	for _, kind := range []string{"github.issue", "github.issue_create", "github.pull_request"} {
+		t.Run(kind, func(t *testing.T) {
+			input := "修复健康检查\r\n\r\n完整要求必须保留在正文。"
+			run := WorkflowRun{ID: "run", Input: input, WorkspacePath: dir, Definition: Workflow{Nodes: []WorkflowNode{{ID: "call", ConnectorInput: ConnectorInput{Title: "{{input}}", Head: "branch", Base: "main"}}}}}
+			request, err := prepareConnectorRequest(Connector{Kind: kind, WorkspaceRoot: dir, Repository: "owner/repo", TokenEnv: "TITLE_TEST_TOKEN"}, run, WorkflowStep{NodeID: "call", Seq: 1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if request.Payload["title"] != "修复健康检查" {
+				t.Fatalf("unexpected title: %q", request.Payload["title"])
+			}
+			if !strings.HasPrefix(request.Payload["body"].(string), input) {
+				t.Fatal("task body was lost")
+			}
+		})
+	}
+}

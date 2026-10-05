@@ -60,10 +60,13 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 			return out, err
 		}
 	}
-	title := connectorExpand(p.Title, r)
+	title := strings.TrimSpace(connectorExpand(p.Title, r))
 	if title == "" {
-		title = strings.Split(r.Input, "\n")[0]
+		title = strings.TrimSpace(r.Input)
 	}
+	// A task can be multi-paragraph even when used in an explicit template.
+	// Keep GitHub titles on one line; the complete task stays in the body.
+	title = strings.TrimSpace(strings.SplitN(title, "\n", 2)[0])
 	if len([]rune(title)) > 200 {
 		title = string([]rune(title)[:200])
 	}
