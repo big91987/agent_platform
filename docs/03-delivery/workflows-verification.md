@@ -439,3 +439,17 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 源验证：`scripts/verify.sh` 在共享标题修复后的代码通过，含 Go vet/race/build、浏览器、Python SDK、25 项工作流模板／安装回归。标题回归先在旧实现失败后通过；可选代理的新装／继承回归通过。所有通用修复在同一维护源及标准安装升级路径；旧服务实例未改动。源 PR 保持 [Draft #5](https://github.com/big91987/agent_platform/pull/5)，不视为已合并发行。
 
 边界：此结论覆盖本轮约定的研发入口至草稿 PR；本轮两个产物未合并、未部署，原有部署历史证据不等于新版本部署验证。当前事件入口仅接受个人仓库 Owner；组织多人授权、企业微信／钉钉未实现。第二个真实仓库尚未执行本轮同等外部旅程，仓库可配置与新装／升级边界由安装器测试验证。真实供应商缺 URL／凭据，Not Run；远端写入响应丢失只做隔离恢复测试，不冒充实际 GitHub 断线演练。旧版 HTTP 红灯为修复后隔离重建补证，原始沙箱失败没有改写。旧定时续验保持 PAUSED。
+
+
+## Skill 产物契约与 Trellis 续验（2026-10-06，进行中）
+
+当前结论：**Not Run / 未完成端到端验收**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。
+
+- 临时修复：[PR #11](https://github.com/big91987/model-relay/pull/11) 原 head `943d053` 与 main `6f1ec16` 在 task/delivery/qa/pr 四份任务文档冲突，产品代码无文本冲突。人工临时集成提交 `f26590c0589ede73edf38604ba5a415e50f68e15` 保留 Issue #8 文档原文到历史目录、原位置保留 Issue #9 文档；两侧四份文档逐字节核对。完整 `make verify` exit 0，含健康方法、版本展示、Go race/HTTP/CLI 与两个视口真实 Go 服务浏览器旅程。GitHub 确认 CLEAN/MERGEABLE；按既有测试仓授权合入 main，merge SHA `73681a7df4c5cbe5914056ac13348154d58726e0`。这是人工临时方案，**不是 Pipeline 自动冲突恢复通过**；未手动部署。
+- 正式维护源 `df527c3`：按 Run 隔离公共任务文档，阶段指令不再定义固定内容模板；发布使用实际 QA 产物，保留旧冻结 Connector 的固定路径兼容；Trellis 0.6.15 官方初始化进入 prepare，研发挂载 before-dev/check/spec-bootstrap/update-spec。`scripts/verify.sh` 全量 exit 0（含 27 项 workflow 示例测试及 Go race），脱敏扫描通过。
+- 独立真实 CLI 检查：Trellis 0.6.15 新装、保留已有 AGENTS、重复 prepare 均通过。这不是 Agent 实际使用 Skill 的证据。
+- 开发实例升级：通过正式 API 确认零 running/waiting 后备份；原 manifest 升级并重复安装通过，16 条历史 Run 的状态和 seq 一致。独立主实例未操作。备份和完整日志在忽略的本机验证目录。
+- 新验收任务：[Issue #12](https://github.com/big91987/model-relay/issues/12)，GitHub 真实 `issues` 事件触发 [Actions 37365376422](https://github.com/big91987/model-relay/actions/runs/37365376422)。待核对实际 Skill/reference 读取、Trellis 规范准备与检查、独立文档路径、原文档保留、测试/QA/PR 与合入结果。不得将已安装或隔离测试当作该真实旅程通过。
+
+
+Issue #12 首次真实接单：Run `836b817833886b3188f263800b0f092f`，prepare seq 1 已返回独立 document_root、官方 Trellis 0.6.15 初始化成功，Issue seq 2 关联原 #12；intake seq 3 在模型执行前失败：`native Skill scope did not match configuration`。未创建新 Run。定位为原生执行器将 Skill 禁用配置写成目录，Codex 实际按发现的 SKILL.md 文件路径匹配，生成的项目本地 Skills 因此仍启用。隔离的真实 app-server skills/list 复现：目录配置下 12 个仍启用，文件配置下全部关闭；加入同名显式挂载后可仅启用指定源 Skill。修复保留规范化身份比较，但配置使用发现路径；回归先复现相同失败再通过，Go vet、全量 race 测试和构建通过。待升级后恢复原 Run 继续真实验收，当前仍未通过。

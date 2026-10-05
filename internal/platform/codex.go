@@ -383,7 +383,14 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 			return "", "", e
 		}
 		seen[p] = true
-		cfg = append(cfg, []byte(fmt.Sprintf("\n[[skills.config]]\npath = %s\nenabled = %t\n", quote(p), expected[p]))...)
+		// Native config matches the discovered SKILL.md filename. Normalization
+		// is only for comparing administrator-selected identities; resolving the
+		// path here would leave project/symlink Skills enabled unexpectedly.
+		configPath := s.Path
+		if filepath.Base(configPath) != "SKILL.md" {
+			configPath = filepath.Join(configPath, "SKILL.md")
+		}
+		cfg = append(cfg, []byte(fmt.Sprintf("\n[[skills.config]]\npath = %s\nenabled = %t\n", quote(configPath), expected[p]))...)
 	}
 	for p := range expected {
 		if !seen[p] {

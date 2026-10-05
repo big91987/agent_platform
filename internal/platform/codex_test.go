@@ -183,3 +183,37 @@ for line in sys.stdin:
 		t.Fatal("missing external workspace silently became empty")
 	}
 }
+
+// The native API identifies configuration entries by the discovered SKILL.md
+// path, including a project's symlink spelling, not its normalized directory.
+func TestNativeSkillScopeUsesDiscoveredFilePath(t *testing.T) {
+	root, workspace := t.TempDir(), t.TempDir()
+	workspace, _ = filepath.EvalSymlinks(workspace)
+	auth := filepath.Join(root, "auth")
+	os.MkdirAll(auth, 0700)
+	os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600)
+	os.WriteFile(filepath.Join(auth, "config.toml"), []byte(`model="test-model"`), 0600)
+	skill := filepath.Join(workspace, "project-skill")
+	os.MkdirAll(skill, 0700)
+	os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: project-skill\ndescription: test\n---\nTest"), 0600)
+	discovered := filepath.Join(workspace, "linked-skill")
+	os.Symlink(skill, discovered)
+	x := Codex{Root: root, AuthHome: auth, Binary: filepath.Join(root, "executor")}
+	script := `#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+for line in sys.stdin:
+ p=json.loads(line)
+ if p.get('method')=='initialize': print(json.dumps({'id':p['id'],'result':{}}),flush=True)
+ if p.get('method')=='skills/list':
+  path=str(Path.cwd()/'linked-skill'/'SKILL.md')
+  cfg=Path(os.environ['CODEX_HOME'],'config.toml').read_text()
+  disabled=('path = '+json.dumps(path)+'\nenabled = false') in cfg
+  print(json.dumps({'id':p['id'],'result':{'data':[{'skills':[{'name':'project-skill','path':path,'enabled':not disabled}],'errors':[]}]}}),flush=True)
+`
+	os.WriteFile(x.Binary, []byte(script), 0700)
+	_, _, err := x.prepare(context.Background(), Conversation{ID: "scope", WorkspacePath: workspace, Snapshot: Agent{Executor: "codex"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
