@@ -463,3 +463,6 @@ Issue #12 首次真实接单：Run `836b817833886b3188f263800b0f092f`，prepare 
 新安装补验：在临时空白平台通过正式 API 创建基础 Agent，再使用原安装器全新安装与重复安装，五项研发 Skill、prepare 的 Trellis 版本参数、publish 的任务目录协议和 PR 正文 Run 路径均核对通过；未启动 Agent、未产生 GitHub 写操作，临时实例已退出。原始回执 `.data/workflow-evidence/fresh-skill-contract-install.json`。
 
 Issue #12 的 requirements seq 4、design seq 5 已实际完成。独立产物为 `product-definition.md`、`g1-review.md`、`password-visibility-architecture.md`、`g2-review.md`，都位于本 Run 根目录；需求及架构 Skill/reference 读取有真实工具记录，10 份原任务文档哈希继续一致。设计依据 Skill 做小型增量裁剪，并单独记录安全专家模块的本地应用。Run 已进入 development seq 6（会话 `edfdc6d47f8bf9181d654aaa19e14d87`）；Trellis 实际实施检查、宿主完整测试、独立 QA 与新 PR 仍待核验，当前目标未完成。
+
+
+Trellis 升级边界补验：发现原准备 helper 只检查 CLI 版本而未检查项目 `.trellis/.version`，且将 Git Connector 的 `GH_TOKEN` 继承给项目上下文脚本。新增两项失败回归后，维护源校验项目资产版本并在 Trellis 子进程环境移除该令牌；旧版本显式拒绝，文档给出官方 dry-run/create-new 升级路径以保留本地修改。30 项 workflow 示例测试通过；真实官方 CLI 新装、重复准备、原 AGENTS 保留和旧资产拒绝通过。此改动仅影响后续准备调用，不重跑当前 Run 已完成的 prepare，不用手工初始化替代现有记录。

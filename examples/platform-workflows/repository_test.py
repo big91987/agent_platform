@@ -1,10 +1,12 @@
 """Real local Git repositories exercise publish boundaries; no remote API mock."""
 
 import importlib.util
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location(
     "repository", Path(__file__).with_name("repository.py")
@@ -176,6 +178,35 @@ class RepositoryTest(unittest.TestCase):
         self.assertEqual(
             repo.git(self.workspace, "diff", "--cached", "--name-only"), ""
         )
+
+    def test_existing_trellis_version_is_checked_before_project_scripts(self):
+        trellis = self.workspace / ".trellis"
+        (trellis / "scripts").mkdir(parents=True)
+        script = trellis / "scripts/get_context.py"
+        script.write_text("raise RuntimeError('outdated script must not run')\n")
+        (trellis / ".version").write_text("0.5.0")
+        cli = self.root / "trellis"
+        cli.write_text("#!/usr/bin/env python3\nprint('0.6.15')\n")
+        cli.chmod(0o700)
+        with self.assertRaisesRegex(ValueError, "project.*version"):
+            repo.prepare_trellis(self.workspace, str(cli), "0.6.15")
+        self.assertEqual((trellis / ".version").read_text(), "0.5.0")
+
+    def test_trellis_project_context_does_not_receive_git_write_token(self):
+        trellis = self.workspace / ".trellis"
+        (trellis / "scripts").mkdir(parents=True)
+        (trellis / ".version").write_text("0.6.15")
+        (trellis / "scripts/get_context.py").write_text(
+            "import os\nassert 'GH_TOKEN' not in os.environ\n"
+        )
+        cli = self.root / "trellis"
+        cli.write_text("#!/usr/bin/env python3\nprint('0.6.15')\n")
+        cli.chmod(0o700)
+        with patch.dict(os.environ, {"GH_TOKEN": "unit-test-only"}):
+            result = repo.prepare_trellis(self.workspace, str(cli), "0.6.15")
+            self.assertEqual(os.environ["GH_TOKEN"], "unit-test-only")
+        self.assertFalse(result["initialized"])
+        self.assertEqual(result["version"], "0.6.15")
 
     def test_remote_identity_normalizes_only_github_ssh_and_https(self):
         self.assertEqual(

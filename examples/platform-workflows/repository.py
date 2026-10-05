@@ -88,8 +88,10 @@ def prepare(workspace, run, base, scoped_docs=False):
 
 
 def prepare_trellis(workspace, executable, version):
+    environment = dict(os.environ)
+    environment.pop("GH_TOKEN", None)
     actual = subprocess.check_output(
-        [executable, "--version"], text=True, timeout=15
+        [executable, "--version"], text=True, timeout=15, env=environment
     ).strip()
     if actual != version:
         raise ValueError(
@@ -113,6 +115,7 @@ def prepare_trellis(workspace, executable, version):
                 "workflow",
             ],
             cwd=workspace,
+            env=environment,
             check=True,
             capture_output=True,
             text=True,
@@ -143,9 +146,16 @@ def prepare_trellis(workspace, executable, version):
             config.read_text()
             + "\n# Git publishing belongs to the platform Connector.\nsession_auto_commit: false\ncodex:\n  dispatch_mode: inline\n"
         )
+    version_file = trellis / ".version"
+    if not version_file.is_file() or version_file.read_text().strip() != version:
+        raise ValueError(
+            "Trellis project asset version differs; inspect trellis update --dry-run, "
+            "upgrade with the pinned CLI and preserve local changes before retrying"
+        )
     subprocess.run(
         [sys.executable, str(trellis / "scripts/get_context.py"), "--mode", "packages"],
         cwd=workspace,
+        env=environment,
         check=True,
         capture_output=True,
         text=True,
