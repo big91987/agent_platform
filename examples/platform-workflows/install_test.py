@@ -14,6 +14,25 @@ install = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(install)
 
 
+class ProxyUpgradeTest(unittest.TestCase):
+    def test_fresh_direct_install_needs_no_proxy_environment(self):
+        self.assertEqual(install.proxy_env_refs({}, {}), {})
+        self.assertEqual(
+            install.proxy_env_refs({}, {"HTTPS_PROXY": "http://proxy"}),
+            {"HTTPS_PROXY": "HTTPS_PROXY"},
+        )
+
+    def test_upgrade_preserves_configured_references_without_cli_environment(self):
+        old = {"HTTPS_PROXY": "PLATFORM_PROXY", "GH_TOKEN": "PRIVATE_TOKEN"}
+        self.assertEqual(
+            install.proxy_env_refs(old, {}), {"HTTPS_PROXY": "PLATFORM_PROXY"}
+        )
+        self.assertEqual(
+            install.proxy_env_refs(old, {"HTTPS_PROXY": "http://new"}),
+            {"HTTPS_PROXY": "HTTPS_PROXY"},
+        )
+
+
 class VerificationCommandTest(unittest.TestCase):
     def test_go_project_can_select_its_own_verification_entry(self):
         self.assertEqual(

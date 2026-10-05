@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前结果：**No-Go（GitHub Issue 接单缺失）**。此前的 Go 仅有平台发起研发、GitHub 出站回写及测试仓部署证据，错误地外推为“方案二平替”。用户要求保留 GitHub Issue 作为接单入口；该入站链路和原 Issue 回复接续尚未实现／实测。已有切片证据保留，不能代替 WF-17。源仓库 PR 仍待评审合并；真实供应商联调等未测项仍为 Not Run。
+当前结果：**No-Go（GitHub Issue 入站后的完整研发交付仍在验收）**。原先将平台发起研发与部署切片外推为“方案二平替”的 Go 已撤回。现在 SDK/API、自动 Issue 接单、原 Issue 绑定和评论恢复已有真实证据；两类任务仍须完成项目测试、独立 QA 和草稿 PR。源仓库 PR 仍待评审合并；真实供应商联调等未测项仍为 Not Run。
 
 | 验证范围 | 状态 | 证据 |
 |---|---|---|
@@ -402,3 +402,17 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 | 其他仓库标准接入 | 现有安装器可配置 repository、workspace_root、base 和测试命令；尚不能安装 Issue 入站链路 | 部分实现，WF-17 Not Run |
 
 本节基于维护源代码和用户契约核对，未创建新测试 Issue、Run 或 Agent；不声称已经跑过新入口。不以增加部署测试或重复平台手工启动补齐本项。
+
+
+## WF-17 真实入站续验（2026-10-06，在途）
+
+维护源 `58216c8` 提供通用 Workflow API 与 SDK 0.2.0；`b2c88b8` 修复真实入站发现的 Git 网络配置、安装继承和 Hook 评论回环。开发实例保留原数据库与历史 Run；所有写入均经 API、原 manifest 安装器及 GitHub Actions，未改数据库。源 PR 保持 Draft/Open，未合并。
+
+- 标准安装：测试仓 [PR #7](https://github.com/big91987/model-relay/pull/7) 合入 main，merge SHA `9b6994ed80de2bdba79ff267419150dccaac1360`。只分发薄 Actions 入口与源摘要，复用既有 Runner。维护源升级在两条 Run 正式停止后进行，重复安装无新增对象／配置改动。
+- 真实 bug：[Issue #8](https://github.com/big91987/model-relay/issues/8) 的 `issues.opened` [Actions 37336260987](https://github.com/big91987/model-relay/actions/runs/37336260987) 自动接单，Run `1382a96a9e697c58ba68fe3c3c26f34b`。首次 clone 网络超时，正式配置升级后重跑同一事件成功；重复入口仍返回该 Run。准备节点首次 fetch 超时作为执行 1 保留，经正式停止／回退，执行 2 成功；原 Issue 回执为 #8，未创建替代 Issue。入口按明确 bug 跳过需求／设计，执行 5 进入研发。
+- 真实需求：[Issue #9](https://github.com/big91987/model-relay/issues/9) 的 `issues.opened` [Actions 37338122454](https://github.com/big91987/model-relay/actions/runs/37338122454) 自动接单，Run `509e5c927cb88a6bbcefa274656ac6d2`。原 Issue 收到真实澄清，未先开发；评论 `5998327275` 回答展示位置、取值和失败行为。
+- 停止／评论恢复：需求 Run 停止时上述评论通过 [Actions 37338660137](https://github.com/big91987/model-relay/actions/runs/37338660137) 得到 409 和原 Issue 失败通知。恢复同一 Run／会话后重跑原事件，消息 `8758` 接收到原评论；没有新 Run 或替代评论。重复提交继续核验。
+- 回环缺陷：平台 Hook 标记为 `agent-platform-hook:`，入口原先只识别 `agent-platform:`，真实输出曾误入用户队列，阻止交接。共享适配器现识别两种标记，红灯回归后通过；已有误入记录保留，后续真实开发节点通知不再生成输入。阶段指令明确 Issue 由平台同步，Agent 只在当前会话提出澄清，避免自行调用缺凭据的 GitHub 接口。
+- UI：从工作流独立 Runs 列表点击 bug Run，可见原失败、显式回退、原 Issue 链接、自动 development 路由及 Agent 会话入口。API 文档显示 Workflow SDK 和启动／查询／反馈／控制接口。
+
+完整 `scripts/verify.sh` 已通过；随后代理清除边界的相关 23 项 Python 测试、ruff 与 diff 检查通过。以上只证明列出的入口与恢复行为；两个任务的最终测试／QA／PR 尚在执行，不计通过。真实供应商调用未纳入这两个无供应商依赖任务。

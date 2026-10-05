@@ -16,6 +16,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
+def proxy_env_refs(previous, environment):
+    names = ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
+    return {
+        **{key: previous[key] for key in names if key in previous},
+        **{key: key for key in names if key in environment},
+    }
+
+
 def verification_command(value):
     command = json.loads(value)
     if (
@@ -489,9 +497,13 @@ def main():
                 if role != "tests"
                 else test_command,
             )
-            spec["env_refs"] = {
-                key: key for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
-            }
+            spec["env_refs"] = proxy_env_refs(
+                installation.data["objects"]
+                .get("connector-" + role, {})
+                .get("spec", {})
+                .get("env_refs", {}),
+                os.environ,
+            )
             if role != "tests":
                 spec["env_refs"]["GH_TOKEN"] = args.token_env
         connectors[role] = installation.apply("connectors", "connector-" + role, spec)[
