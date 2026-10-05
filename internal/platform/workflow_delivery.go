@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -128,6 +129,7 @@ func (h *Server) workflowDelivery(ctx context.Context, c Caller, id string) (Wor
 	if len(deployments) == 100 {
 		return WorkflowDelivery{}, errors.New("deployment history exceeds one page; inspect GitHub Actions")
 	}
+	sort.Slice(deployments, func(i, j int) bool { return deployments[i].ID > deployments[j].ID })
 	for _, deployment := range deployments {
 		if !validGitSHA(deployment.SHA) || deployment.ID < 1 {
 			return WorkflowDelivery{}, errors.New("GitHub deployment has invalid identity")

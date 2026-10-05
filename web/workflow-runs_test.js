@@ -43,6 +43,9 @@ test('run delivery shows only verified deployment links and warns when PR head c
  assert.match(after,/查看已合并 PR/);
  assert.match(after,/打开效果地址/);
  assert.match(after,/127\.0\.0\.1:5545/);
+ ctx.delivery.deployments.push({...ctx.delivery.deployments[0],version:'d'.repeat(40)});
+ const history=vm.runInContext('workflowDeliveryHTML(delivery)',ctx);
+ assert.equal((history.match(/打开效果地址/g)||[]).length,1,'historical successes must not link the current fixed address as an old version');
  ctx.delivery.deployments[0].url='javascript:alert(1)';
  assert.doesNotMatch(vm.runInContext('workflowDeliveryHTML(delivery)',ctx),/href="javascript:/);
 });

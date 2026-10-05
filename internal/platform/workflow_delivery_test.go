@@ -76,10 +76,10 @@ func TestWorkflowDeliveryReadsMergedDeploymentWithoutWriting(t *testing.T) {
 			}
 			body = `{"data":{"repository":{"pullRequest":{"merged":true,"mergeCommit":{"oid":"` + strings.Repeat("c", 40) + `"}}}}}`
 		case strings.HasSuffix(req.URL.Path, "/deployments"):
-			body = `[{"id":42,"sha":"` + strings.Repeat("d", 40) + `","ref":"main","environment":"local-preview"},{"id":43,"sha":"` + strings.Repeat("e", 40) + `","ref":"other","environment":"local-preview"}]`
+			body = `[{"id":42,"sha":"` + strings.Repeat("d", 40) + `","ref":"main","environment":"local-preview"},{"id":43,"sha":"` + strings.Repeat("e", 40) + `","ref":"other","environment":"local-preview"},{"id":44,"sha":"` + strings.Repeat("f", 40) + `","ref":"main","environment":"local-preview"}]`
 		case strings.Contains(req.URL.Path, "/compare/"):
 			body = `{"status":"ahead","base_commit":{"sha":"` + strings.Repeat("c", 40) + `"},"merge_base_commit":{"sha":"` + strings.Repeat("c", 40) + `"}}`
-		case strings.HasSuffix(req.URL.Path, "/deployments/42/statuses"):
+		case strings.HasSuffix(req.URL.Path, "/deployments/42/statuses"), strings.HasSuffix(req.URL.Path, "/deployments/44/statuses"):
 			body = `[{"state":"success","environment_url":"http://127.0.0.1:5545/admin/","log_url":"https://github.com/demo/repo/actions/runs/1"}]`
 		default:
 			t.Fatalf("unexpected GitHub path: %s", req.URL.Path)
@@ -92,7 +92,7 @@ func TestWorkflowDeliveryReadsMergedDeploymentWithoutWriting(t *testing.T) {
 	}
 	merged = true
 	after, err := h.workflowDelivery(context.Background(), c, run.ID)
-	if err != nil || !after.Merged || after.MainSHA != strings.Repeat("c", 40) || len(after.Deployments) != 1 || after.Deployments[0].Version != strings.Repeat("d", 40) || after.Deployments[0].State != "success" || after.Deployments[0].URL != "http://127.0.0.1:5545/admin/" || len(requests) != 6 {
+	if err != nil || !after.Merged || after.MainSHA != strings.Repeat("c", 40) || len(after.Deployments) != 2 || after.Deployments[0].Version != strings.Repeat("f", 40) || after.Deployments[1].Version != strings.Repeat("d", 40) || after.Deployments[0].State != "success" || after.Deployments[0].URL != "http://127.0.0.1:5545/admin/" || len(requests) != 8 {
 		t.Fatalf("merged deployment facts: %+v, requests=%v, err=%v", after, requests, err)
 	}
 }

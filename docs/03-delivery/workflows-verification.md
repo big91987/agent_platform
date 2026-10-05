@@ -2,14 +2,14 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前结果：方案二平替的完整用户旅程 **No-Go**，原因是人工合并后的部署与效果地址尚未通过；见文末纠偏。T1 编辑器、T2 Agent／人工反馈循环、命令与 GitHub Connector、截至草稿 PR 的正常交付及 QA 返工分别已有真实切片证据。不得把这些切片合并称为完整替代验收通过，也不得引用原 GitHub CI 方案的测试结果证明本方案通过。
+当前结果：本轮约定的“方案二平替”端到端旅程 **Go**：一句话任务分派、真实研发／测试／独立 QA 与返工、草稿 PR、测试仓合并后自动准备、Owner 手动部署、失败修复与更新、平台 Run 页回链到可打开的效果地址均有真实证据；见文末完成复验。源仓库 PR 仍待评审合并。真实供应商联调、文件上传／下载等未纳入本轮的能力分别保持 Not Run，不外推为全平台发布或生产验收。
 
 | 验证范围 | 状态 | 证据 |
 |---|---|---|
 | 图编辑、保存、授权、版本快照（WF-01/09/10） | 部分通过 | 定义 API、权限与网页编辑通过；T2 用版本变更测试验证运行冻结旧图 |
 | 真实 Agent 接力、人工确认与回退（WF-02～05/12） | 通过已列旅程 | T2 人工回退；T3 正常研发交付及 QA 缺陷返工，同一 Run 完成修复复验 |
-| GitHub Connector 与新仓库闭环（WF-06） | 正常路径通过 | T3 真实命令、Issue、评论、草稿 PR 和研发模板已通过；GitHub 丢响应恢复仍待实测 |
-| 停止、重复交接、重启及升级（WF-07～11） | 部分通过 | 原生停止／恢复与人工等待重启通过；幂等和旧回执用真实 SQLite／MCP 测试；完整升级与外部未知结果待 T4 |
+| GitHub Connector 与新仓库闭环（WF-06） | 通过已列旅程 | T3 真实命令、Issue、评论、草稿 PR 与研发模板；E1～E6 外部丢响应先核验后恢复；测试仓 PR 合并及 Actions 见文末 |
+| 停止、重复交接、重启及升级（WF-07～11） | 通过已列旅程 | 正式停止／恢复、幂等、迟到结果隔离、外部核验与恢复、旧安装升级及真实服务重启；物理断网未测 |
 
 隔离原则：独立 worktree、独立数据目录和服务端口；不更改旧平台现场；测试仓库单独创建。敏感运行数据和截图保留本地忽略目录，公共证据只记录脱敏步骤、版本、结果和外部测试资源链接。
 
@@ -342,7 +342,7 @@ seq 14 QA 因原生模型 serverOverloaded 失败；从实际运行页填写继�
 
 ## 方案二平替的端到端验收纠偏（2026-10-05）
 
-用户确认验收目标是完整研发旅程：从一句话任务自动进入合适阶段，经过真实开发、测试和独立 QA，交付供用户验证的 PR；用户确认后自行合并，合并触发项目部署，最后能打开稳定地址查看实际版本。上方“完整旅程终验”的 Pass 只证明截至草稿 PR 的编排切片及其特殊路由，**不证明方案二平替通过**。此前对用户称“这轮平台能力验收已通过”扩大了结论，现更正为 **No-Go**。
+用户确认验收目标是完整研发旅程：从一句话任务自动进入合适阶段，经过真实开发、测试和独立 QA，交付供审查的 PR；合并到 main 后自动准备，再由 Owner 明确手动部署，最后打开稳定地址查看实际版本。此节记录首次部署前的 **No-Go** 纠偏；上方截至草稿 PR 的证据当时不足以证明方案二平替。后续完成结果见文末。
 
 | 必要环节 | 当前事实 | 平替验收 |
 |---|---|---|
@@ -368,3 +368,23 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 认证修复的真实续验：通过正式安装器升级可信控制器（旧副本备份在私有临时目录，安装副本与维护源 SHA256 一致），再由版本摘要安装器升级测试仓 Workflow；[产品修复 PR #3](https://github.com/big91987/model-relay/pull/3) 经已授权的测试仓路径合并，main 为 `8d3998103b89dfe0f04ce89211943bf80c3d62db`。[自动准备 Run 37304881191](https://github.com/big91987/model-relay/actions/runs/37304881191) 在真实 Runner 上成功，`prepare` 运行 2m49s，部署作业按设计 skipped；私有目录 ready SHA 与 main 一致，尚未部署。[Owner 手动 Run 37305305137](https://github.com/big91987/model-relay/actions/runs/37305305137) 的准备步骤再次成功，但 `deploy` 的切换前 main 复核仍调用未经认证的 `git fetch`，明确失败；5545 未发布。第二轮维护源补充切换作业同样使用独立的短期只读令牌，并在服务 init/backup/restore 前清除；失败回归先复现，修复后通过。仍需标准升级和真实 Actions 复验；不得把自动准备成功称为端到端部署通过。
 
 平台交付回链补验：源提交 `88b5a8f` 增加单次 Run 的只读 GitHub 交付查询。仅对该 Run 已保存的草稿 PR 回执及仍有权限的当前 Connector 查询 PR；合并后才按准确 merge SHA 查询 GitHub Deployments 和状态，效果 URL 只在部署状态 `success` 时展示。若 PR head 在原 Run 后变化，页面提醒原 QA 不覆盖新提交。后端测试覆盖未创建 PR、跨用户拒绝、草稿更新及合并后的准确部署关联；前端测试覆盖未合并时不显示效果地址与不安全 URL 过滤，全仓 `scripts/verify.sh` 退出 0。升级前逐个工作流 Runs 页面核对 0 条在途、1 条按计划停止，M1 唯一 Run 已完成；私有备份后仅升级 8792，8788 未更改。升级后从真实浏览器进入 M1 Run，页面展示 PR #2、GitHub Actions 入口、`PR open · Draft，尚未合并；没有部署版本` 以及 `PR 在本次 Run 的 QA 后更新`；只读 GitHub 查询与页面一致。合并／部署状态因未发生仍未验收，不能用该空状态页充当成功发布证据。
+
+
+### 完整旅程完成复验（2026-10-05）
+
+测试仓库的合并、部署由用户在本轮明确授权验收方执行；平台维护源 PR #5 仍 Draft/Open，未合入 main。Model Relay 原 [PR #2](https://github.com/big91987/model-relay/pull/2) 经全量 `make verify` 复跑后以精确 head 合并，merge commit `1bfb3f9e24175e3ac8122beed2010427bafed57c`。前两次正式 Actions 故障分别是 Runner 读取私有仓库缺少非交互认证、切换前 main 复核未携带作业只读令牌；失败 Run [37303366337](https://github.com/big91987/model-relay/actions/runs/37303366337) 与 [37305305137](https://github.com/big91987/model-relay/actions/runs/37305305137) 均保留。修复先进入平台维护源的受信控制器、测试与安装升级路径，再经测试仓 [PR #3](https://github.com/big91987/model-relay/pull/3)／[PR #4](https://github.com/big91987/model-relay/pull/4) 正式升级 Workflow；[自动准备 37306472116](https://github.com/big91987/model-relay/actions/runs/37306472116) 成功且 deploy 跳过，[手动部署 37306893618](https://github.com/big91987/model-relay/actions/runs/37306893618) 成功。GitHub Deployment `6858456190` 为 `local-preview/success`，SHA `cabe0748fd74af74895117cf567e5a1ca19c5a5a`，服务 `/healthz` 曾返回同一 SHA，管理页 HTTP 200。
+
+为验证已有发布后的更新路径，测试仓文档中“仍是草稿、未部署”的过期状态通过 [PR #5](https://github.com/big91987/model-relay/pull/5) 修正；该 head 的完整 `make verify` 通过，包含 Go race/真实 HTTP 与 1280px、390px 的实际 Go 服务浏览器旅程。精确 head `8cc3bbec3ecca82e31bb912442bfa0df94de20f6` 合并为 main `40b3618080242dd909f46163544bdbbf4c95a61f`。[自动准备 37309982431](https://github.com/big91987/model-relay/actions/runs/37309982431) 成功，部署按门禁跳过；Owner [手动部署 37310396660](https://github.com/big91987/model-relay/actions/runs/37310396660) 的 prepare/deploy 均成功。GitHub Deployment `6859068654` 最新状态 `success`，`environment_url` 为 `http://127.0.0.1:5545/admin/`；真实 `/healthz` 返回 `status=ok` 和该 main SHA，管理页 HTTP 200。正式 LaunchAgent 重启后健康版本不变。更新是测试仓真实 PR/main/Actions/部署动作，文档修改未冒充产品功能新增或供应商联调。
+
+平台 Run 的交付回链在现行 GitHub REST 版本中暴露 `merge_commit_sha` 缺失，原实现因此报错；且原 PR 合并后另有修复提交，部署 SHA 是其后代，不应要求与原合并 SHA 相等。维护源通过 GitHub GraphQL `mergeCommit.oid` 读取合并提交，再以官方 compare API 核对部署 SHA 包含该提交并且部署 ref 是目标分支；错误和超长历史均 fail closed。先有红灯回归，修复后全仓 `scripts/verify.sh` 通过。升级前从各工作流 Runs 页面核对无在途执行、仅一条按计划停止的 Run；备份历史数据和旧二进制、校验备份数据库完整性后只重启 8792，8788 仍为原进程。真实页面 [M1 Run](http://127.0.0.1:8792/workflow-runs/c1089fdc410a9dcce0725c30ad190df4) 展示已合并 PR、原合并 SHA、先失败后两次成功的 Deployment 及当前版本 `40b3618` 的效果入口；点击确实打开管理页。历史成功记录不再把当前固定 URL 误标为旧版本地址。
+
+| 约定的平替旅程 | 最终结论与证据边界 |
+|---|---|
+| 一句话按类型分派；新功能、bug、配置修复、必要澄清和指定起点 | Pass：本记录前文的真实 Run、冻结序列及升级后页面入口；未重复创建产品 Issue/Run/Agent |
+| 真实研发、固定项目测试、独立 QA、QA／人工回退及迟到结果隔离 | Pass：M1 共 21 次节点执行，宿主 `make verify` 成功、QA 先 No-Go 后复验 Go；其它专用 Run 覆盖纠正与恢复；原失败仍可追溯 |
+| GitHub 草稿 PR、人工决定合并、main 自动准备 | Pass：平台 Run → PR #2 → 精确 head 合并；真实 Actions push main 只准备；测试仓合并由用户明确授权验收方操作 |
+| 手动部署、首次发布、后续更新、固定地址及重启 | Pass：两次真实 Deployment success、两次 `/healthz` 版本核对、管理页打开及 LaunchAgent 重启；平台 Run 页链接当前成功版本 |
+| 外部失败恢复 | Pass 于列出的故障模型：两次真实 Actions 失败后从通用维护源修复并按正式升级路径重跑；受控服务启动失败使用项目 backup/restore 恢复旧数据与版本。未做正式已发布实例的破坏性故障注入 |
+| 真实供应商 URL／凭据／响应 | Not Run：未提供，不能把受控上游旅程说成供应商兼容性验收 |
+
+本轮约定的“方案二平替”用户旅程结论 **Go**；这是本机测试仓库和当前部署版本的验收结论，不表示源 PR 已合并、真实供应商已联调或全平台其它待办已发布。
