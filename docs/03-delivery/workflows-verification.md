@@ -453,3 +453,8 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 
 
 Issue #12 首次真实接单：Run `836b817833886b3188f263800b0f092f`，prepare seq 1 已返回独立 document_root、官方 Trellis 0.6.15 初始化成功，Issue seq 2 关联原 #12；intake seq 3 在模型执行前失败：`native Skill scope did not match configuration`。未创建新 Run。定位为原生执行器将 Skill 禁用配置写成目录，Codex 实际按发现的 SKILL.md 文件路径匹配，生成的项目本地 Skills 因此仍启用。隔离的真实 app-server skills/list 复现：目录配置下 12 个仍启用，文件配置下全部关闭；加入同名显式挂载后可仅启用指定源 Skill。修复保留规范化身份比较，但配置使用发现路径；回归先复现相同失败再通过，Go vet、全量 race 测试和构建通过。待升级后恢复原 Run 继续真实验收，当前仍未通过。
+
+
+原生范围修复版本 `a75def0` 已安全升级开发实例，并通过正式 resume API 接续同一 Run、同一 intake 会话；intake 已真实完成，seq 4 requirements 正在执行。原失败输入仍保留为 failed，恢复输入 completed，未重建 Issue/Run。需求节点真实 command_execution 记录已读取挂载需求 Skill 与 requirements-levels/product-definition-contract 等 references，并准备按 Skill 分别写 PRD/G1；此时尚无研发、Trellis before-dev/check 或 QA 通过结论。
+
+补充回归 `test_two_task_branches_merge_without_document_conflicts`：真实本地 bare Git，两条任务分支从同一 main 起步，分别按不同 Run 根目录发布实际 QA 文件和 PR 正文，再依次合入 main；两份证据保持原文且无冲突。6 项 repository 测试通过。该测试覆盖原固定文档热点的 Git 行为，不替代新 Issue 的 Agent 端到端验收，也不宣称产品源码永远无冲突。

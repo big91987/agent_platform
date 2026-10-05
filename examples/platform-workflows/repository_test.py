@@ -104,6 +104,46 @@ class RepositoryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "this task"):
             repo.publish(self.workspace, self.run, True)
 
+    def test_two_task_branches_merge_without_document_conflicts(self):
+        branches = []
+        for identity in ("a" * 32, "b" * 32):
+            repo.git(self.workspace, "checkout", "main")
+            run = {**self.run, "run_id": identity}
+            prepared = repo.prepare(self.workspace, run, "main", True)
+            directory = self.workspace / prepared["document_root"]
+            directory.mkdir(parents=True)
+            report = directory / "acceptance-matrix.md"
+            report.write_text("Evidence for " + identity)
+            (directory / "pr.md").write_text("Delivery for " + identity)
+            run["previous_results"] = [
+                {
+                    "node_id": "qa",
+                    "status": "completed",
+                    "result": {
+                        "route": "next",
+                        "artifacts": [str(report.relative_to(self.workspace))],
+                    },
+                }
+            ]
+            repo.publish(self.workspace, run, True)
+            branches.append(prepared["branch"])
+        repo.git(self.workspace, "checkout", "main")
+        for branch in branches:
+            repo.git(self.workspace, "merge", "--no-edit", branch)
+        for identity in ("a" * 32, "b" * 32):
+            self.assertEqual(
+                (
+                    self.workspace
+                    / "docs/workflow/runs"
+                    / identity
+                    / "acceptance-matrix.md"
+                ).read_text(),
+                "Evidence for " + identity,
+            )
+        self.assertEqual(
+            repo.git(self.workspace, "diff", "--name-only", "--diff-filter=U"), ""
+        )
+
     def test_publication_rejects_missing_or_newer_failed_qa(self):
         repo.prepare(self.workspace, self.run, "main", True)
         with self.assertRaisesRegex(ValueError, "QA handoff"):
