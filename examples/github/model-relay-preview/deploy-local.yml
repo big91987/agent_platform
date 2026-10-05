@@ -48,6 +48,7 @@ jobs:
       - name: Activate reviewed version and check health
         env:
           DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          MODEL_RELAY_REPO_TOKEN: ${{ github.token }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$DEPLOY_ROOT"

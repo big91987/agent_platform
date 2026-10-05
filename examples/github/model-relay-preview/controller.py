@@ -272,6 +272,7 @@ def switch_current(root, sha):
 
 
 def activate(root, plan_path):
+    token = os.environ.pop("MODEL_RELAY_REPO_TOKEN", None)
     config = settings(root)
     with locked(root):
         plan = read_json(plan_path)
@@ -290,7 +291,7 @@ def activate(root, plan_path):
             "port": config["port"],
         }:
             raise ValueError("deployment plan or release changed; prepare again")
-        if latest_main(root) != sha:
+        if latest_main(root, token) != sha:
             raise ValueError("newer main exists; old deployment plan rejected")
         if old:
             recorded = read_json(root / "deployed.json")

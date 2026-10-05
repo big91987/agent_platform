@@ -18,7 +18,9 @@ def command(*args, cwd=None):
 
 
 SCRIPT = """#!/usr/bin/env python3
-import pathlib, sys
+import pathlib, sys, os
+if os.environ.get('MODEL_RELAY_REPO_TOKEN'):
+    sys.exit(31)
 args = sys.argv
 if args[1] == 'backup':
     pathlib.Path(args[args.index('--output') + 1]).write_text((pathlib.Path(args[args.index('--data-dir') + 1]) / 'state').read_text())
@@ -89,7 +91,7 @@ class DeploymentControllerTest(unittest.TestCase):
         with patch.object(controller, "stamp_binary"):
             controller.prepare(self.root, sha, plan or self.plan, None)
 
-    def test_prepare_authenticates_fetch_with_job_token(self):
+    def fake_git_requiring_job_token(self):
         fakebin = self.base / "fakebin"
         fakebin.mkdir()
         fake_git = fakebin / "git"
@@ -105,6 +107,10 @@ class DeploymentControllerTest(unittest.TestCase):
             "os.execv('/usr/bin/git', ['/usr/bin/git', *sys.argv[1:]])\n"
         )
         fake_git.chmod(0o700)
+        return fakebin
+
+    def test_prepare_authenticates_fetch_with_job_token(self):
+        fakebin = self.fake_git_requiring_job_token()
         with patch.dict(
             os.environ,
             {
@@ -114,6 +120,24 @@ class DeploymentControllerTest(unittest.TestCase):
         ):
             self.prepare(self.old)
         self.assertEqual(json.loads(self.plan.read_text())["sha"], self.old)
+
+    def test_activate_authenticates_recheck_without_exposing_token_to_service(self):
+        self.prepare(self.old)
+        fakebin = self.fake_git_requiring_job_token()
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MODEL_RELAY_REPO_TOKEN": "test-token",
+                    "PATH": str(fakebin) + os.pathsep + os.environ["PATH"],
+                },
+            ),
+            patch.object(controller, "service_plist_valid", return_value=True),
+            patch.object(controller, "launchctl"),
+            patch.object(controller, "await_health"),
+        ):
+            controller.activate(self.root, self.plan)
+        self.assertEqual(controller.current_sha(self.root), self.old)
 
     def test_prepare_does_not_expose_job_token_to_project_verification(self):
         makefile = self.work / "Makefile"
