@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前结果：**No-Go（GitHub Issue 入站后的完整研发交付仍在验收）**。原先将平台发起研发与部署切片外推为“方案二平替”的 Go 已撤回。现在 SDK/API、自动 Issue 接单、原 Issue 绑定和评论恢复已有真实证据；两类任务仍须完成项目测试、独立 QA 和草稿 PR。源仓库 PR 仍待评审合并；真实供应商联调等未测项仍为 Not Run。
+当前结果：**Pass（本轮 GitHub Issue → 研发 → 草稿 PR 端到端验收）**。通用 SDK/API、自动接单、原 Issue 绑定与评论接续、bug 短路径、新需求分派、真实项目测试、独立 QA 及返工、停止／恢复／重启和去重均有下方真实证据。此前遗漏 Issue 入站而外推的整体 Go 结论不沿用；本轮按用户要求不新增部署和 code review 验收。源仓库 PR 仍 Draft/Open、未合并；真实供应商及其它聊天渠道未测／未接入。
 
 | 验证范围 | 状态 | 证据 |
 |---|---|---|
@@ -389,7 +389,7 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 
 此前将上述平台发起的研发与部署切片记为“方案二平替” **Go**，此结论因遗漏 GitHub Issue 接单入口而撤回。上述逐项真实证据仍成立，整体结论以本文开头和下方 WF-17 纠偏为准。
 
-## GitHub Issue 入口纠偏（2026-10-05，WF-17）
+## GitHub Issue 入口纠偏（2026-10-05，WF-17，引入前基线）
 
 核对旧方案 `examples/github/pipeline.yml`：其 `issues.opened` 事件由受信 Runner 调用平台；当前 `examples/platform-workflows/software-delivery.json` 则是先由平台创建 Run，再经 `github.issue_create` 创建新 Issue。两者用户入口和关联方向不同，不能称为研发流程平替。
 
@@ -404,7 +404,7 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 本节基于维护源代码和用户契约核对，未创建新测试 Issue、Run 或 Agent；不声称已经跑过新入口。不以增加部署测试或重复平台手工启动补齐本项。
 
 
-## WF-17 真实入站续验（2026-10-06，在途）
+## WF-17 真实入站续验（2026-10-06，过程记录）
 
 维护源 `58216c8` 提供通用 Workflow API 与 SDK 0.2.0；`b2c88b8` 修复真实入站发现的 Git 网络配置、安装继承和 Hook 评论回环。开发实例保留原数据库与历史 Run；所有写入均经 API、原 manifest 安装器及 GitHub Actions，未改数据库。源 PR 保持 Draft/Open，未合并。
 
@@ -416,3 +416,26 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 - UI：从工作流独立 Runs 列表点击 bug Run，可见原失败、显式回退、原 Issue 链接、自动 development 路由及 Agent 会话入口。API 文档显示 Workflow SDK 和启动／查询／反馈／控制接口。
 
 完整 `scripts/verify.sh` 已通过；随后代理清除边界的相关 23 项 Python 测试、ruff 与 diff 检查通过。以上只证明列出的入口与恢复行为；两个任务的最终测试／QA／PR 尚在执行，不计通过。真实供应商调用未纳入这两个无供应商依赖任务。
+
+
+### WF-17 最终验收（2026-10-06）
+
+| 真实业务旅程 | 正式执行结果 | 外部交付与版本 |
+|---|---|---|
+| bug 自动接单、跳过需求／设计、研发、测试、QA 回退、补证复验 | Run `1382a96a9e697c58ba68fe3c3c26f34b` completed，共 14 次节点执行；seq 6/9 完整 `make verify` 均 exit 0；QA 第一次阻断，第二次 Go | [原 Issue #8](https://github.com/big91987/model-relay/issues/8) → [草稿 PR #10](https://github.com/big91987/model-relay/pull/10)，head `8ba11842072b74e03a48562328db1b8f0d6f167e`；35 文件摘要 `edb4224576eb1ef488c33d9e8ab354bdba90a8a39668bb75f0c548a616f7dd48` |
+| 新需求自动接单、必要澄清、原 Issue 回复、需求／设计／研发／测试／独立 QA | Run `509e5c927cb88a6bbcefa274656ac6d2` completed，共 12 次节点执行；seq 7 完整 `make verify` exit 0；QA Go；真实 Go 服务浏览器在 1280px/390px 验证版本读取、刷新、失败／重入、非阻塞和文本布局 | [原 Issue #9](https://github.com/big91987/model-relay/issues/9) → [草稿 PR #11](https://github.com/big91987/model-relay/pull/11)，head `943d053d82efb1ba3c3a3b9f7b413b1c89bd095b`；33 文件摘要 `f96017d3daf52e8372e1ef106397bfb31224e049010bb53a6cd033d69f27d414` |
+
+验收方在发布后独立运行两个 checkout 的 `go run ./tests/evidence`，摘要均与对应 QA／宿主测试一致，工作树干净；GitHub API 核对 PR 均为 Draft/Open，head 与 publish／PR Connector 回执一致，正文分别 `Closes #8`／`Closes #9`。原 Issue 的完成 Hook 均已真实送达。浏览器从工作流 Runs 页依次进入已完成 Run，看到原 Issue、节点回执、QA、会话及 PR 链接；API、UI、外部事实分别核对。
+
+恢复与隔离的最终证据：
+
+- 已失败入口重试始终关联原 Issue 和 Run；两个 Issue 仅产生两个 CI 所有的 Run。真实 clone/fetch 失败与正式回退记录保留。
+- 停止期间评论明确 409，并回写失败通知；恢复后重跑同一 Actions 接收一次。交接后用旧 seq=3 提交新输入明确 409；用原事件键重试已接收评论，仍返回原 intake 会话的消息 `8758`。两个 Run 完成并重启后再复验，同样返回 `8758`，没有投递到后续阶段。
+- Hook 回环修复经真实 [Actions 37338544207](https://github.com/big91987/model-relay/actions/runs/37338544207) 显示 `Platform output ignored`；原误入输入保留为失败历史，后续节点输出未再进入输入队列。
+- 标题缺陷在真实 PR #10 暴露：显式 `{{input}}` 模板把多段需求放进标题。共享 Connector 修复后回归覆盖三种 GitHub 创建类型，完整正文保留。已存在的 #10 通过 GitHub 编辑接口修正；#11 由修复后的正式平台自动创建为单行标题，没有手工修标题。
+- 所有在途 Run 正式停止后备份并升级到维护源 `a3b91b8d95bc32f906e1a1584c6ca1301f66f239`，二进制 SHA-256 `1914f451e608987e2dd4237e0ad3b83a2c3fa4aeadb6ab4986c79c21a9a38323`。重启前后 16 条历史 Run 的 ID／状态完全一致，最后一个 report 原会话恢复后正常交付。原 manifest 升级重入无变更，未创建额外 Agent／Connector／Workflow。
+- 完成态 [原 Issue #8 Actions 37336260987](https://github.com/big91987/model-relay/actions/runs/37336260987) 再次重跑成功，仍返回原完成 Run。最终两个 Run 都 completed，没有 queued/running 消息；CI 使用独立非管理员 caller。
+
+源验证：`scripts/verify.sh` 在共享标题修复后的代码通过，含 Go vet/race/build、浏览器、Python SDK、25 项工作流模板／安装回归。标题回归先在旧实现失败后通过；可选代理的新装／继承回归通过。所有通用修复在同一维护源及标准安装升级路径；旧服务实例未改动。源 PR 保持 [Draft #5](https://github.com/big91987/agent_platform/pull/5)，不视为已合并发行。
+
+边界：此结论覆盖本轮约定的研发入口至草稿 PR；本轮两个产物未合并、未部署，原有部署历史证据不等于新版本部署验证。当前事件入口仅接受个人仓库 Owner；组织多人授权、企业微信／钉钉未实现。第二个真实仓库尚未执行本轮同等外部旅程，仓库可配置与新装／升级边界由安装器测试验证。真实供应商缺 URL／凭据，Not Run；远端写入响应丢失只做隔离恢复测试，不冒充实际 GitHub 断线演练。旧版 HTTP 红灯为修复后隔离重建补证，原始沙箱失败没有改写。旧定时续验保持 PAUSED。
