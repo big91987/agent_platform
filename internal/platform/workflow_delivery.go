@@ -2,10 +2,10 @@ package platform
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -59,14 +59,16 @@ func (h *Server) workflowDelivery(ctx context.Context, c Caller, id string) (Wor
 	}
 	path := "/repos/" + frozen.Repository
 	var pr struct {
-		HTMLURL        string `json:"html_url"`
-		State          string `json:"state"`
-		Draft          bool   `json:"draft"`
-		Merged         bool   `json:"merged"`
-		MergeCommitSHA string `json:"merge_commit_sha"`
-		Head           struct {
+		HTMLURL string `json:"html_url"`
+		State   string `json:"state"`
+		Draft   bool   `json:"draft"`
+		Merged  bool   `json:"merged"`
+		Head    struct {
 			SHA string `json:"sha"`
 		} `json:"head"`
+		Base struct {
+			Ref string `json:"ref"`
+		} `json:"base"`
 	}
 	if err := githubRequest(ctx, current, http.MethodGet, path+"/pulls/"+strconv.Itoa(receipt.Number), nil, &pr); err != nil {
 		return WorkflowDelivery{}, err
@@ -88,16 +90,38 @@ func (h *Server) workflowDelivery(ctx context.Context, c Caller, id string) (Wor
 	if !pr.Merged {
 		return result, nil
 	}
-	if !validGitSHA(pr.MergeCommitSHA) {
-		return WorkflowDelivery{}, errors.New("merged PR has no valid merge commit SHA")
+	parts := strings.SplitN(frozen.Repository, "/", 2)
+	var merge struct {
+		Data struct {
+			Repository *struct {
+				PullRequest *struct {
+					Merged      bool `json:"merged"`
+					MergeCommit *struct {
+						OID string `json:"oid"`
+					} `json:"mergeCommit"`
+				} `json:"pullRequest"`
+			} `json:"repository"`
+		} `json:"data"`
+		Errors []json.RawMessage `json:"errors"`
 	}
-	result.MainSHA = pr.MergeCommitSHA
+	lookup := map[string]any{
+		"query":     `query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { merged mergeCommit { oid } } } }`,
+		"variables": map[string]any{"owner": parts[0], "name": parts[1], "number": receipt.Number},
+	}
+	if err := githubRequest(ctx, current, http.MethodPost, "/graphql", lookup, &merge); err != nil {
+		return WorkflowDelivery{}, err
+	}
+	if len(merge.Errors) > 0 || merge.Data.Repository == nil || merge.Data.Repository.PullRequest == nil || !merge.Data.Repository.PullRequest.Merged || merge.Data.Repository.PullRequest.MergeCommit == nil || !validGitSHA(merge.Data.Repository.PullRequest.MergeCommit.OID) {
+		return WorkflowDelivery{}, errors.New("GitHub merged PR has no confirmed merge commit")
+	}
+	result.MainSHA = merge.Data.Repository.PullRequest.MergeCommit.OID
 	var deployments []struct {
 		ID          int64  `json:"id"`
 		SHA         string `json:"sha"`
+		Ref         string `json:"ref"`
 		Environment string `json:"environment"`
 	}
-	query := path + "/deployments?sha=" + url.QueryEscape(result.MainSHA) + "&per_page=100"
+	query := path + "/deployments?per_page=100"
 	if err := githubRequest(ctx, current, http.MethodGet, query, nil, &deployments); err != nil {
 		return WorkflowDelivery{}, err
 	}
@@ -105,8 +129,29 @@ func (h *Server) workflowDelivery(ctx context.Context, c Caller, id string) (Wor
 		return WorkflowDelivery{}, errors.New("deployment history exceeds one page; inspect GitHub Actions")
 	}
 	for _, deployment := range deployments {
-		if deployment.SHA != result.MainSHA || deployment.ID < 1 {
-			return WorkflowDelivery{}, errors.New("GitHub deployment does not match merged main commit")
+		if !validGitSHA(deployment.SHA) || deployment.ID < 1 {
+			return WorkflowDelivery{}, errors.New("GitHub deployment has invalid identity")
+		}
+		if deployment.Ref != pr.Base.Ref || pr.Base.Ref == "" {
+			continue
+		}
+		if deployment.SHA != result.MainSHA {
+			var comparison struct {
+				Status     string `json:"status"`
+				BaseCommit struct {
+					SHA string `json:"sha"`
+				} `json:"base_commit"`
+				MergeBaseCommit struct {
+					SHA string `json:"sha"`
+				} `json:"merge_base_commit"`
+			}
+			comparePath := path + "/compare/" + result.MainSHA + "..." + deployment.SHA
+			if err := githubRequest(ctx, current, http.MethodGet, comparePath, nil, &comparison); err != nil {
+				return WorkflowDelivery{}, err
+			}
+			if comparison.Status != "ahead" || comparison.BaseCommit.SHA != result.MainSHA || comparison.MergeBaseCommit.SHA != result.MainSHA {
+				continue
+			}
 		}
 		item := WorkflowDeployment{Environment: deployment.Environment, Version: deployment.SHA, State: "pending"}
 		var statuses []struct {

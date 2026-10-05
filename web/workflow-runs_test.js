@@ -40,6 +40,7 @@ test('run delivery shows only verified deployment links and warns when PR head c
  ctx.delivery={...base,state:'closed',draft:false,merged:true,main_sha:'c'.repeat(40),deployments:[{environment:'local-preview',state:'success',version:'c'.repeat(40),url:'http://127.0.0.1:5545/admin/',log_url:'https://github.com/demo/repo/actions/runs/1'}]};
  const after=vm.runInContext('workflowDeliveryHTML(delivery)',ctx);
  assert.match(after,/已合并提交/);
+ assert.match(after,/查看已合并 PR/);
  assert.match(after,/打开效果地址/);
  assert.match(after,/127\.0\.0\.1:5545/);
  ctx.delivery.deployments[0].url='javascript:alert(1)';

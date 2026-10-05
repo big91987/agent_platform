@@ -52,8 +52,8 @@ func TestWorkflowDeliveryReadsMergedDeploymentWithoutWriting(t *testing.T) {
 	requests := []string{}
 	merged := false
 	githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
-		if req.Method != http.MethodGet || req.Header.Get("Authorization") != "Bearer test-token" {
-			t.Fatalf("unexpected GitHub request: %s", req.Method)
+		if req.Header.Get("Authorization") != "Bearer test-token" || req.Method != http.MethodGet && (req.URL.Path != "/graphql" || req.Method != http.MethodPost) {
+			t.Fatalf("unexpected GitHub request: %s %s", req.Method, req.URL.Path)
 		}
 		requests = append(requests, req.URL.Path)
 		body := ""
@@ -61,10 +61,24 @@ func TestWorkflowDeliveryReadsMergedDeploymentWithoutWriting(t *testing.T) {
 		case strings.HasSuffix(req.URL.Path, "/pulls/7"):
 			body = `{"html_url":"https://github.com/demo/repo/pull/7","state":"open","draft":true,"merged":false,"head":{"sha":"` + strings.Repeat("b", 40) + `"}}`
 			if merged {
-				body = `{"html_url":"https://github.com/demo/repo/pull/7","state":"closed","draft":false,"merged":true,"merge_commit_sha":"` + strings.Repeat("c", 40) + `","head":{"sha":"` + strings.Repeat("b", 40) + `"}}`
+				body = `{"html_url":"https://github.com/demo/repo/pull/7","state":"closed","draft":false,"merged":true,"head":{"sha":"` + strings.Repeat("b", 40) + `"},"base":{"ref":"main"}}`
 			}
+		case req.URL.Path == "/graphql":
+			var input struct {
+				Variables struct {
+					Owner  string `json:"owner"`
+					Name   string `json:"name"`
+					Number int    `json:"number"`
+				} `json:"variables"`
+			}
+			if err := json.NewDecoder(req.Body).Decode(&input); err != nil || input.Variables.Owner != "demo" || input.Variables.Name != "repo" || input.Variables.Number != 7 {
+				t.Fatalf("wrong merge commit lookup: %+v, %v", input, err)
+			}
+			body = `{"data":{"repository":{"pullRequest":{"merged":true,"mergeCommit":{"oid":"` + strings.Repeat("c", 40) + `"}}}}}`
 		case strings.HasSuffix(req.URL.Path, "/deployments"):
-			body = `[{"id":42,"sha":"` + strings.Repeat("c", 40) + `","environment":"local-preview"}]`
+			body = `[{"id":42,"sha":"` + strings.Repeat("d", 40) + `","ref":"main","environment":"local-preview"},{"id":43,"sha":"` + strings.Repeat("e", 40) + `","ref":"other","environment":"local-preview"}]`
+		case strings.Contains(req.URL.Path, "/compare/"):
+			body = `{"status":"ahead","base_commit":{"sha":"` + strings.Repeat("c", 40) + `"},"merge_base_commit":{"sha":"` + strings.Repeat("c", 40) + `"}}`
 		case strings.HasSuffix(req.URL.Path, "/deployments/42/statuses"):
 			body = `[{"state":"success","environment_url":"http://127.0.0.1:5545/admin/","log_url":"https://github.com/demo/repo/actions/runs/1"}]`
 		default:
@@ -78,7 +92,7 @@ func TestWorkflowDeliveryReadsMergedDeploymentWithoutWriting(t *testing.T) {
 	}
 	merged = true
 	after, err := h.workflowDelivery(context.Background(), c, run.ID)
-	if err != nil || !after.Merged || after.MainSHA != strings.Repeat("c", 40) || len(after.Deployments) != 1 || after.Deployments[0].State != "success" || after.Deployments[0].URL != "http://127.0.0.1:5545/admin/" || len(requests) != 4 {
+	if err != nil || !after.Merged || after.MainSHA != strings.Repeat("c", 40) || len(after.Deployments) != 1 || after.Deployments[0].Version != strings.Repeat("d", 40) || after.Deployments[0].State != "success" || after.Deployments[0].URL != "http://127.0.0.1:5545/admin/" || len(requests) != 6 {
 		t.Fatalf("merged deployment facts: %+v, requests=%v, err=%v", after, requests, err)
 	}
 }

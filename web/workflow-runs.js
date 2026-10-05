@@ -33,11 +33,11 @@ function workflowExternalLink(url,label){
  return `<a class="wf-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`;
 }
 function workflowDeliveryHTML(d){
- const pr=workflowExternalLink(d.pull_request_url,'查看草稿 PR / 审查合并');
+ const pr=workflowExternalLink(d.pull_request_url,d.merged?'查看已合并 PR':'查看草稿 PR / 审查合并');
  const actions=workflowExternalLink(d.actions_url,'查看 GitHub Actions');
  const changed=d.run_head_sha&&d.current_head_sha&&d.run_head_sha!==d.current_head_sha?'<p class="callout">PR 在本次 Run 的 QA 后更新；原 QA 结论不覆盖当前 PR 提交。</p>':'';
  if(!d.merged)return `<p>${pr} · ${actions}</p><p class="hint">PR ${esc(d.state)}${d.draft?' · Draft':''}，尚未合并；没有部署版本。</p>${changed}`;
- const deployments=d.deployments.length?d.deployments.map(item=>`<div class="wf-hook-row"><strong>${esc(item.environment)} · ${esc(item.state)}</strong><small>版本 ${esc(item.version)}</small>${item.state==='success'&&item.url?`<p>${workflowExternalLink(item.url,'打开效果地址')}</p>`:''}${item.log_url?`<p>${workflowExternalLink(item.log_url,'查看部署记录')}</p>`:''}</div>`).join(''):'<p class="hint">尚无与合并提交对应的部署记录；到 GitHub Actions 查看准备或失败状态。</p>';
+ const deployments=d.deployments.length?d.deployments.map(item=>`<div class="wf-hook-row"><strong>${esc(item.environment)} · ${esc(item.state)}</strong><small>版本 ${esc(item.version)}</small>${item.state==='success'&&item.url?`<p>${workflowExternalLink(item.url,'打开效果地址')}</p>`:''}${item.log_url?`<p>${workflowExternalLink(item.log_url,'查看部署记录')}</p>`:''}</div>`).join(''):'<p class="hint">尚无包含此次合并提交的部署记录；到 GitHub Actions 查看准备或失败状态。</p>';
  return `<p>${pr} · ${actions}</p><p>已合并提交：<code>${esc(d.main_sha)}</code></p>${changed}${deployments}`;
 }
 function renderWorkflowDelivery(){
