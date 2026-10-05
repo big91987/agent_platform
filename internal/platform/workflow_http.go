@@ -12,7 +12,7 @@ func (h *Server) workflowRunRoutes() {
 	h.connectorRoutes()
 	h.workflowHookRoutes()
 	h.mux.HandleFunc("GET /api/workflow-runs", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
-		v, e := h.store.WorkflowRunsFor(c, r.URL.Query().Get("workflow_id"))
+		v, e := h.store.WorkflowRunsPage(c, r.URL.Query().Get("workflow_id"), r.URL.Query().Get("before"))
 		if e != nil {
 			fail(w, e)
 			return

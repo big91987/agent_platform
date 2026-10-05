@@ -111,6 +111,36 @@ class UpgradeRunSafetyTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "live"):
                 install.check_upgrade_runs(API(), self.installation(tmp))
 
+    def test_upgrade_checks_active_run_beyond_recent_page(self):
+        import tempfile
+
+        class API:
+            def call(self, method, path, body=None):
+                if "before=" in path:
+                    return [
+                        {
+                            "id": "old-live",
+                            "status": "running",
+                            "definition": {"nodes": [{"agent_id": "dev"}]},
+                        }
+                    ]
+                return [
+                    {"id": str(i), "status": "completed", "definition": {"nodes": []}}
+                    for i in range(200)
+                ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "old-live"):
+                install.check_upgrade_runs(API(), self.installation(tmp))
+
+    def test_old_platform_ignoring_cursor_fails_closed(self):
+        class API:
+            def call(self, method, path, body=None):
+                return [{"id": str(i)} for i in range(200)]
+
+        with self.assertRaisesRegex(ValueError, "pagination did not advance"):
+            list(install.workflow_runs(API()))
+
     def test_retirement_preserves_tool_for_resumable_run(self):
         import tempfile
 

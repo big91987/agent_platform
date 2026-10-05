@@ -284,3 +284,11 @@ bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，
 | 原生 Agent → 共享工具 → 完成节点 | 专用 Run `f88e4d4aa8367eeaf343afddb6d2f55c`、`7663d5a7588b6cf5792b185879219ade` 均 completed；真实 mcpToolCall 调用同一 registered_browser-validation.check，分别断言各自页面 acceptance-a／acceptance-b 可见；两份 browser.json passed=true、errors 为空。原生配置中 cwd／workspace-root 分别绑定实际工作区，证据目录摘要不同。证据同目录 `native-proof.json`、两份 Run 和原生 events 记录 |
 
 这些是明确标注的隔离安装／工具验收夹具，不代替 Model Relay 完整产品旅程，也不证明供应商联调。修复后 11 项模板／安装／仓库 Python 回归、ruff 和 diff 检查通过；Go／网页未修改，沿用同提交组件的完整回归结果。8792 升级仍等待当前产品 Run 完成。
+
+### 完整历史分页核查
+
+安装器逐页读取正式运行 API，使用 before=上一页末尾运行 ID；查询按创建时间和 ID 稳定排序，避免分页期间新增运行挤掉旧记录。升级保护与旧工具引用检查共用该读取路径；旧平台忽略游标而重复返回时明确拒绝继续，保留配置。先前达到 200 条即拒绝的保守限制由此替代。
+
+回归先复现缺少分页方法及无法发现第二页活跃运行，再实现。覆盖跨页新增、工作流与所有者隔离、HTTP 游标传递、旧平台忽略游标；13 项模板 Python 测试及 scripts/verify.sh 全部通过（`.data/workflow-evidence/verify-run-pagination.log`）。
+
+独立运行实例经公开 HTTP 入口创建历史夹具：共 204 条运行，最新 200 条均 completed；安装器在第二页找到旧活跃 Run `b3111c10c2a155a9ee38870647eb05a5` 并拒绝升级，游标无重复。使用正式 decision 结束该夹具，无数据库修改。初次夹具试用相同工作区被独占规则正常拒绝，随后为每次运行使用独立目录。证据 `.data/shared-tools-e2e/pagination-proof.json`。这是正式 HTTP／安装器核查路径，不冒充用户页面或完整产品交付验收。

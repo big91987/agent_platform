@@ -170,7 +170,10 @@ func (s *Store) WorkflowRuns(c Caller) ([]WorkflowRun, error) {
 	return s.WorkflowRunsFor(c, "")
 }
 func (s *Store) WorkflowRunsFor(c Caller, workflowID string) ([]WorkflowRun, error) {
-	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE (owner=? OR ?) AND (?='' OR workflow_id=?) ORDER BY created DESC LIMIT 200`, c.UserID, c.Admin, workflowID, workflowID)
+	return s.WorkflowRunsPage(c, workflowID, "")
+}
+func (s *Store) WorkflowRunsPage(c Caller, workflowID, before string) ([]WorkflowRun, error) {
+	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE (owner=? OR ?) AND (?='' OR workflow_id=?) AND (?='' OR (created,id)<(SELECT created,id FROM workflow_runs WHERE id=?)) ORDER BY created DESC,id DESC LIMIT 200`, c.UserID, c.Admin, workflowID, workflowID, before, before)
 	if e != nil {
 		return nil, e
 	}
