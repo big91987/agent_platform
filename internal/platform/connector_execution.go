@@ -55,7 +55,7 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 	body := r.Input
 	var err error
 	if p.BodyFile != "" {
-		body, err = connectorBody(r.WorkspacePath, p.BodyFile)
+		body, err = connectorBody(r.WorkspacePath, strings.ReplaceAll(p.BodyFile, "{{run_id}}", r.ID))
 		if err != nil {
 			return out, err
 		}

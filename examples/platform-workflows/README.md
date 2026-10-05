@@ -191,3 +191,12 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
 Actions 完成只表示事件已交给平台；研发进度在原 Issue 和 Run。必要澄清可在原 Issue 评论回复。节点交接、停止或结束时无法接收的评论返回明确失败通知；先通过 Run 页面继续或回退，再在 Actions 手动输入原 Issue 和 `comment_id` 重试，不另建任务。对已接收评论的重试返回原回执；修改旧评论不产生新指令，需要新增评论。首次接单/评论的快照与锁由适配器保存在私有 state_root，未知响应通过稳定事件键找回原 Run。恢复时保留这些状态文件及平台数据库，不能删除它们来绕过去重。
 
 SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow_message`、`workflow_command` 与 `wait_workflow` 均复用公开 API；企业微信、钉钉以后实现各自的身份与事件适配即可，当前未实现这两类渠道。平台参数为有界字符串映射，固定命令通过 stdin 获取，不进行 shell 插值。
+
+
+## 任务文档与 Trellis（新版安装契约）
+
+文档内容、必需产物和适用裁剪遵循各阶段挂载的 Skill。模板只指定任务公共文档根目录 `docs/workflow/runs/<run_id>/`；在其中保留 Skill 的目录层次与文件职责。已有项目级文档和 `.trellis/spec/` 仍在原位维护。交接使用真实 artifacts/inputs 路径，下游不得猜测固定文件名。PR 正文输出到当前根目录的 `pr.md`，发布检查本轮 QA 实际交接文件，不强制 `qa.md`。旧 Run 的固定路径只作为旧协议兼容，不自动移动旧证据。
+
+安装前在受信 Runner 安装 `npm install -g @mindfoldhq/trellis@0.6.15`，或通过 `--trellis-executable` 指定该版本 CLI。安装器记录绝对可执行路径与版本，prepare 会复核；升级仍用原 manifest。首次任务通过官方 `trellis init --codex --yes --skip-existing --user workflow` 初始化，不覆盖已有项目文件。生成的本机适配器和个人运行状态被忽略；公共脚本、规范与配置可正常审查。研发使用挂载的 `trellis-spec-bootstrap` 填写真实项目规范，随后 `trellis-before-dev`、实现、`trellis-check`，必要时 `trellis-update-spec`。空白模板或只挂载 Skill 不构成通过证据。平台负责阶段交接和 Git 发布，Trellis 会话自动提交关闭。
+
+已有 `.trellis` 安装沿用；不完整安装显式失败，通过 Trellis 正式修复后重试。新目录契约通过 Connector 的 `--task-docs` 开启，旧冻结 Connector 参数不变，发布仍兼容旧路径。请在没有在途任务时升级；用新 Issue 验证，不用旧任务已有的 QA 结论冒充新版验证。

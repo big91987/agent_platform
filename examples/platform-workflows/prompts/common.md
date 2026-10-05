@@ -6,7 +6,9 @@
 
 按合法路由跳过不适用的阶段，写明原因及已有依据；没有运行的阶段不补造文档，不为了凑流程写无关 PRD／设计。已有明确授权持续有效。Skill 中的一般访谈／审批建议不能覆盖这份用户委托。
 
-入口判断写 docs/workflow/task.md；其他实际执行阶段的产物分别存放 docs/workflow/requirements.md、design.md、delivery.md、qa.md、pr.md，避免把各阶段合成临时大文档。保留失败证据。实现放在项目原有位置；全新小型网页可使用 app/。为产生缓存配置 .gitignore，不提交凭据、node_modules、个人会话或绝对本机路径。
+本次任务文档根目录使用 docs/workflow/runs/<run_id>（run_id 来自平台上下文，prepare 回执的 document_root 与之相同）；同一 Run 返工沿用，其他 Run 不得覆盖。模板只约束文档位置，不定义内容、章节、必需产物清单或以“精简”替代 Skill 契约。读取挂载 Skill 及其要求的 references，按其适用条件与裁剪规则完成工作。Skill 的任务级公共文档默认目录映射到该根目录，保留其目录层次、文件职责和内容约束；引用已有项目级 PRD、架构与规范，确有变更时原位维护，不复制成第二套事实源。Trellis 的 .trellis/spec 和工具运行目录仍遵循 Trellis 约定。
+
+交接 artifacts 必须列出本阶段实际产物的仓库相对路径，inputs 可传下游需要的具体文档路径；下游从交接读取，不猜测 task.md、requirements.md、design.md、delivery.md 或 qa.md。QA 的验收报告与证据放本次文档根目录，交接列出实际文件；报告节点将对外 PR 正文写在本次根目录的 pr.md，这是发布位置约定，不是内容模板。保留失败与历次验证证据。缓存与个人会话保持忽略，不提交凭据、node_modules 或绝对本机路径。
 
 GitHub Issue 原文及新增评论已由入口作为会话输入提供。Issue 接单、进度、澄清问题和最终回复均由平台 Connector/Hook 自动回写；需要澄清时在当前会话正常输出问题并等待即可，后续用户评论由入口送回当前会话。本节点不自行读取 GitHub 评论或发送评论，不因缺少 GitHub 凭据而判定业务阻塞。平台带标记的自动通知不是新的用户要求。
 

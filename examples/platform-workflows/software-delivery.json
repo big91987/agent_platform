@@ -105,7 +105,7 @@
         "title": "{{input}}",
         "head": "workflow/{{run_id}}",
         "base": "main",
-        "body_file": "docs/workflow/pr.md",
+        "body_file": "docs/workflow/runs/{{run_id}}/pr.md",
         "issue_node": "issue"
       },
       "x": 360,

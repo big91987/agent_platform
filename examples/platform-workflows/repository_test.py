@@ -68,6 +68,61 @@ class RepositoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             repo.publish(self.workspace, self.run)
 
+    def test_task_artifacts_use_skill_filenames_and_do_not_overwrite_other_runs(self):
+        receipt = repo.prepare(self.workspace, self.run, "main", True)
+        directory = self.workspace / receipt["document_root"]
+        directory.mkdir(parents=True)
+        other = self.workspace / "docs/workflow/runs" / ("b" * 32)
+        other.mkdir()
+        (other / "acceptance-matrix.md").write_text("Other task evidence")
+        artifact = directory / "verification" / "acceptance-matrix.md"
+        artifact.parent.mkdir()
+        artifact.write_text("Actual Skill report")
+        (directory / "pr.md").write_text("PR delivery")
+        self.run["previous_results"] = [
+            {
+                "node_id": "qa",
+                "status": "completed",
+                "result": {
+                    "route": "next",
+                    "artifacts": [str(artifact.relative_to(self.workspace))],
+                },
+            }
+        ]
+        repo.publish(self.workspace, self.run, True)
+        self.assertEqual(
+            (other / "acceptance-matrix.md").read_text(), "Other task evidence"
+        )
+        self.assertFalse((directory / "qa.md").exists())
+        self.assertEqual(
+            repo.prepare(self.workspace, self.run, "main", True)["document_root"],
+            receipt["document_root"],
+        )
+        self.run["previous_results"][0]["result"]["artifacts"] = [
+            str((other / "acceptance-matrix.md").relative_to(self.workspace))
+        ]
+        with self.assertRaisesRegex(ValueError, "this task"):
+            repo.publish(self.workspace, self.run, True)
+
+    def test_publication_rejects_missing_or_newer_failed_qa(self):
+        repo.prepare(self.workspace, self.run, "main", True)
+        with self.assertRaisesRegex(ValueError, "QA handoff"):
+            repo.publish(self.workspace, self.run, True)
+        self.run["previous_results"] = [
+            {
+                "node_id": "qa",
+                "status": "completed",
+                "result": {"route": "next", "artifacts": ["old.md"]},
+            },
+            {
+                "node_id": "qa",
+                "status": "completed",
+                "result": {"route": "development"},
+            },
+        ]
+        with self.assertRaisesRegex(ValueError, "QA handoff"):
+            repo.publish(self.workspace, self.run, True)
+
     def test_dirty_initial_workspace_and_secret_are_rejected(self):
         (self.workspace / "leftover.txt").write_text("preserve me")
         with self.assertRaises(ValueError):

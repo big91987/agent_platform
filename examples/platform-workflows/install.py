@@ -7,6 +7,8 @@ import json
 import os
 import re
 import shlex
+import shutil
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -309,7 +311,18 @@ def main():
     )
     parser.add_argument("--upgrade", action="store_true")
     parser.add_argument("--prepare-browser", action="store_true")
+    parser.add_argument("--trellis-executable", default=shutil.which("trellis"))
     args = parser.parse_args()
+    if not args.trellis_executable:
+        parser.error("Trellis CLI is required; install @mindfoldhq/trellis@0.6.15")
+    trellis_path = str(Path(args.trellis_executable).resolve(strict=True))
+    trellis_version = subprocess.check_output(
+        [trellis_path, "--version"], text=True, timeout=15
+    ).strip()
+    if trellis_version != "0.6.15":
+        parser.error(
+            "This installer is verified with Trellis 0.6.15; use the documented version"
+        )
     try:
         test_command = verification_command(args.test_command_json)
     except ValueError as error:
@@ -325,14 +338,24 @@ def main():
     if evidence.is_relative_to(root):
         parser.error("evidence must be outside task workspaces")
     skills = {
-        "requirements": args.skill_root / "defining-platform-products-cn",
-        "design": args.skill_root / "platform-architecture-cn",
-        "development": args.skill_root / "managing-engineering-delivery-cn",
-        "qa": args.qa_skill,
+        "requirements": [args.skill_root / "defining-platform-products-cn"],
+        "design": [args.skill_root / "platform-architecture-cn"],
+        "development": [
+            args.skill_root / name
+            for name in (
+                "managing-engineering-delivery-cn",
+                "trellis-before-dev",
+                "trellis-check",
+                "trellis-spec-bootstrap",
+                "trellis-update-spec",
+            )
+        ],
+        "qa": [args.qa_skill],
     }
-    for path in skills.values():
-        if not (path / "SKILL.md").is_file():
-            parser.error("missing Skill asset: " + str(path))
+    for paths in skills.values():
+        for path in paths:
+            if not (path / "SKILL.md").is_file():
+                parser.error("missing Skill asset: " + str(path))
     if args.prepare_browser:
         sys.path.insert(0, str(HERE.parent / "github/tooling"))
         from full_harness.browser import prepare
@@ -436,7 +459,7 @@ def main():
             "instructions": (
                 common + "\n" + (HERE / f"prompts/{role}.md").read_text()
             ).replace("{{verification_command}}", command_label),
-            "skills": [str(skills[role].resolve())] if role in skills else [],
+            "skills": [str(path.resolve()) for path in skills.get(role, [])],
             "env": {
                 **installation.data["objects"]
                 .get(role, {})
@@ -493,10 +516,18 @@ def main():
                     args.repository,
                     "--base",
                     args.base,
+                    "--task-docs",
                 ]
                 if role != "tests"
                 else test_command,
             )
+            if role == "prepare":
+                spec["args"] += [
+                    "--trellis-executable",
+                    trellis_path,
+                    "--trellis-version",
+                    trellis_version,
+                ]
             spec["env_refs"] = proxy_env_refs(
                 installation.data["objects"]
                 .get("connector-" + role, {})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -348,5 +349,37 @@ func TestConnectorTitlesUseTaskFirstLineAndPreserveBody(t *testing.T) {
 				t.Fatal("task body was lost")
 			}
 		})
+	}
+}
+
+func TestConnectorBodyFileUsesRunDirectoryAndRejectsEscapingSymlink(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TEST_DOC_TOKEN", "test-token")
+	c := Connector{Kind: "github.pull_request", WorkspaceRoot: dir, Repository: "owner/repo", TokenEnv: "TEST_DOC_TOKEN"}
+	r := WorkflowRun{ID: "run-a", WorkspacePath: dir, Input: "Task", Definition: Workflow{Nodes: []WorkflowNode{{ID: "pr", ConnectorInput: ConnectorInput{Head: "feature", Base: "main", BodyFile: "docs/{{run_id}}/pr.md"}}}}}
+	docs := filepath.Join(dir, "docs", r.ID)
+	if err := os.MkdirAll(docs, 0700); err != nil {
+		t.Fatal(err)
+	}
+	body := filepath.Join(docs, "pr.md")
+	if err := os.WriteFile(body, []byte("Skill-authored delivery"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	request, err := prepareConnectorRequest(c, r, WorkflowStep{NodeID: "pr", Seq: 1})
+	if err != nil || !strings.Contains(fmt.Sprint(request.Payload["body"]), "Skill-authored delivery") {
+		t.Fatalf("%+v %v", request, err)
+	}
+	if err := os.Remove(body); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "private.md")
+	if err := os.WriteFile(outside, []byte("outside"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, body); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prepareConnectorRequest(c, r, WorkflowStep{NodeID: "pr", Seq: 1}); err == nil {
+		t.Fatal("escaped body accepted")
 	}
 }

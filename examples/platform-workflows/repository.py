@@ -52,7 +52,12 @@ def branch_for(run):
     return "workflow/" + run["run_id"]
 
 
-def prepare(workspace, run, base):
+def task_docs(run):
+    branch_for(run)  # Validate the stable Run identity before constructing paths.
+    return "docs/workflow/runs/" + run["run_id"]
+
+
+def prepare(workspace, run, base, scoped_docs=False):
     branch = branch_for(run)
     current = git(workspace, "branch", "--show-current")
     if current == branch:
@@ -60,6 +65,7 @@ def prepare(workspace, run, base):
             "branch": branch,
             "head": git(workspace, "rev-parse", "HEAD"),
             "continued": True,
+            **({"document_root": task_docs(run)} if scoped_docs else {}),
         }
     if git(workspace, "status", "--porcelain"):
         raise ValueError(
@@ -73,7 +79,83 @@ def prepare(workspace, run, base):
         "+refs/heads/" + base + ":refs/remotes/origin/" + base,
     )
     git(workspace, "checkout", "-b", branch, "origin/" + base)
-    return {"branch": branch, "base": base, "head": git(workspace, "rev-parse", "HEAD")}
+    return {
+        "branch": branch,
+        "base": base,
+        "head": git(workspace, "rev-parse", "HEAD"),
+        **({"document_root": task_docs(run)} if scoped_docs else {}),
+    }
+
+
+def prepare_trellis(workspace, executable, version):
+    actual = subprocess.check_output(
+        [executable, "--version"], text=True, timeout=15
+    ).strip()
+    if actual != version:
+        raise ValueError(
+            "Trellis version differs from installed Connector; upgrade through the installer"
+        )
+    trellis = workspace / ".trellis"
+    initialized = (trellis / "scripts/get_context.py").is_file()
+    if not initialized:
+        if trellis.exists():
+            raise ValueError(
+                "Incomplete existing Trellis installation; repair with Trellis before retrying"
+            )
+        subprocess.run(
+            [
+                executable,
+                "init",
+                "--codex",
+                "--yes",
+                "--skip-existing",
+                "--user",
+                "workflow",
+            ],
+            cwd=workspace,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        # Native platform Skill selection is authoritative. Generated host adapters,
+        # personal journals, and local Trellis task state are not shared artifacts.
+        ignore = workspace / ".gitignore"
+        original = ignore.read_text() if ignore.exists() else ""
+        patterns = [
+            "/.agents/",
+            "/.codex/",
+            "/.trellis/workspace/",
+            "/.trellis/tasks/",
+            "/.trellis/.runtime/",
+            "/.trellis/.developer",
+        ]
+        missing = [line for line in patterns if line not in original.splitlines()]
+        if missing:
+            ignore.write_text(
+                original.rstrip()
+                + "\n\n# Local Trellis execution state\n"
+                + "\n".join(missing)
+                + "\n"
+            )
+        config = trellis / "config.yaml"
+        config.write_text(
+            config.read_text()
+            + "\n# Git publishing belongs to the platform Connector.\nsession_auto_commit: false\ncodex:\n  dispatch_mode: inline\n"
+        )
+    subprocess.run(
+        [sys.executable, str(trellis / "scripts/get_context.py"), "--mode", "packages"],
+        cwd=workspace,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return {
+        "version": actual,
+        "initialized": not initialized,
+        "spec_root": ".trellis/spec",
+    }
 
 
 def check_publish_files(workspace):
@@ -117,15 +199,55 @@ def check_publish_files(workspace):
             raise ValueError("Potential private credential in " + name)
 
 
-def publish(workspace, run):
+def delivery_artifacts(workspace, run):
+    directory = (workspace / task_docs(run)).resolve()
+    if directory != workspace.resolve() / task_docs(run):
+        raise ValueError("Task document directory escapes workspace")
+    qa = next(
+        (
+            step
+            for step in reversed(run.get("previous_results", []))
+            if step.get("node_id") == "qa"
+        ),
+        None,
+    )
+    if (
+        not qa
+        or qa.get("status") != "completed"
+        or qa.get("result", {}).get("route") != "next"
+    ):
+        raise ValueError("Missing completed QA handoff for this delivery")
+    artifacts = qa["result"].get("artifacts", [])
+    if not artifacts:
+        raise ValueError("QA handoff has no evidence artifacts")
+    for name in [*artifacts, task_docs(run) + "/pr.md"]:
+        path = Path(name)
+        actual = (workspace / path).resolve()
+        if (
+            path.is_absolute()
+            or not actual.is_relative_to(directory)
+            or not actual.is_file()
+        ):
+            raise ValueError(
+                "Delivery artifact must be a file in this task's document directory: "
+                + name
+            )
+        if not actual.stat().st_size:
+            raise ValueError("Empty delivery artifact: " + name)
+
+
+def publish(workspace, run, scoped_docs=False):
     branch = branch_for(run)
     if git(workspace, "branch", "--show-current") != branch:
         raise ValueError(
             "Current branch does not belong to this Run; no commit or push performed"
         )
-    for name in ("docs/workflow/qa.md", "docs/workflow/pr.md"):
-        if not (workspace / name).is_file():
-            raise ValueError("Missing delivery artifact: " + name)
+    if scoped_docs:
+        delivery_artifacts(workspace, run)
+    else:  # Frozen installations keep their previous path contract until upgraded.
+        for name in ("docs/workflow/qa.md", "docs/workflow/pr.md"):
+            if not (workspace / name).is_file():
+                raise ValueError("Missing delivery artifact: " + name)
     check_publish_files(workspace)
     git(workspace, "add", "--all")
     if git(workspace, "diff", "--cached", "--name-only"):
@@ -144,6 +266,9 @@ def main():
     parser.add_argument("operation", choices=["prepare", "publish"])
     parser.add_argument("--repository", required=True)
     parser.add_argument("--base", default="main")
+    parser.add_argument("--task-docs", action="store_true")
+    parser.add_argument("--trellis-executable")
+    parser.add_argument("--trellis-version")
     args = parser.parse_args()
     run = json.load(sys.stdin)
     workspace = Path(run["workspace_path"]).resolve()
@@ -155,10 +280,14 @@ def main():
     ):
         raise ValueError("Workspace origin differs from configured repository")
     result = (
-        prepare(workspace, run, args.base)
+        prepare(workspace, run, args.base, args.task_docs)
         if args.operation == "prepare"
-        else publish(workspace, run)
+        else publish(workspace, run, args.task_docs)
     )
+    if args.operation == "prepare" and args.trellis_executable:
+        result["trellis"] = prepare_trellis(
+            workspace, args.trellis_executable, args.trellis_version
+        )
     print(json.dumps(result, ensure_ascii=False))
 
 
