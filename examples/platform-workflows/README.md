@@ -100,3 +100,28 @@ python3 examples/platform-workflows/verify_command.py \
 ```
 
 两个模式都要求 `PLATFORM_ADMIN_PASSWORD`。脚本需在平台所在主机运行，因为固定命令引用同机脚本及临时工作区。夹具运行真实 Python 子进程并写入操作记录；停止后核实进程已消失、记录未重复，显式返回产生新执行，并验证非零退出按失败边路由。强杀模式只终止脚本自己创建的服务。临时数据、运行历史和操作记录留作证据，位置写入报告；图及 Connector 停用后可人工清理。此检查不调用 Agent，也不冒充 GitHub 网络丢响应验收。
+
+GitHub 响应丢失验收为显式启用的 Go 集成测试。设置 `WORKFLOW_LIVE_TEST_REPOSITORY=<owner>/<isolated-test-repository>`、`WORKFLOW_LIVE_TEST_TOKEN`（通过安全环境提供）以及 `WORKFLOW_LIVE_TEST_EVIDENCE=<private-absolute-json-path>` 后执行：
+
+```sh
+go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -count=1 -v -timeout 180s
+```
+
+该测试启动独立平台 HTTP 服务及真实数据库，通过登录、创建 Connector／图／Run 和 resume API 验证。GitHub 请求使用真实服务和固定官方域名；专用客户端在实际 POST 成功后丢弃响应，模拟“外部已经创建、平台没有回执”。随后核验平台只查找原标记，不重复 POST，实际资源恰好一份。测试结束关闭自己创建的 Issue，保留链接供追溯；不合并代码。故障注入只存在于测试文件，不改变发布二进制。它验证真实外部写入与恢复协议，不代表物理断网或代理故障覆盖；没有设置仓库环境时明确跳过，不能把默认回归的 skip 当作通过。
+
+
+## 智能体编排：路由与事件通知
+
+- `edges[].mode=handoff` 是 Agent 根据当前上下文选择的交接，画布用虚线；`description` 给出选择依据。Agent 调用 `handoff(target, summary, inputs, artifacts)`，平台校验目标、权限及当前节点。
+- `mode=automatic` 是固定完成路由，用实线。Agent 完成时调用 `complete_node(summary, artifacts)`，不填目标；Connector 按真实成功/失败结果选配置路由。Agent 可有多个自主交接出口，但只有一个固定完成出口。
+- 普通澄清留在当前会话，不交接、不为每次提问增加图节点；必须审批的流程使用显式人工确认节点。自动推荐写在 Agent 策略中，不等于取消固定审批。
+- 老模板缺少 `mode` 时继续兼容；运行冻结定义快照。模板更新只影响新运行，不能假设在途任务自动切换定义。
+- `hooks` 将 `node.started`（Agent 会话已创建）、`agent.reply.completed`、`handoff.after`、`run.completed` 映射到已注册 Connector。首版支持 GitHub Issue 评论动作，GitLab 适配和阻塞型 before Hook 尚未实现。
+- 通知正文使用字段白名单：`event`、`run_id`、`node`、`node_name`、`seq`、`text`、`summary`、`target`、`artifacts`、`conversation_url`、`run_url`。不执行表达式，不从自由文本推断“已批准”。Issue 由 `input.issue_node` 引用创建节点的真实回执，或用 `issue_number` 显式指定。
+- 通知持久化去重，失败与执行状态分开显示。发送结果未知时只读查证原评论，不盲目重复发布。画布“通知 Hook”可以编辑，运行页可以查看链接、错误及重试/复核。
+
+用原安装命令加 `--upgrade` 同步模板、Agent 策略和评论 Connector，继续使用原 manifest。安装器会拒绝覆盖安装后在界面另行编辑过的对象；应先核对差异。服务升级使用正常源码构建和数据库迁移，不手改运行记录。
+
+### 通用协作验收
+
+同一安装命令增加 `--template collaboration-check --upgrade` 可安装独立验收图。运行时选隔离空目录，输入“写一份发布说明”，在会话回复版本号。此测试故意令编写节点首次漏掉验收章节；独立校验节点必须真实读取文件后交回，修正再交接，并通过固定完成线结束。检查 Issue 中启动、提问、交接和最终完成通知与平台链接。这里的缺失章节是明确的故障注入，不代表产品验收已通过。

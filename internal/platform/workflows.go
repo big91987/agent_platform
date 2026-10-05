@@ -15,6 +15,7 @@ import (
 // Workflow is a saved graph. A running instance will own its definition snapshot.
 // Node names and routes have no built-in business-stage semantics.
 type Workflow struct {
+	Hooks           []WorkflowHook `json:"hooks,omitempty"`
 	ID              string         `json:"id"`
 	Name            string         `json:"name"`
 	Revision        int64          `json:"revision"`
@@ -39,9 +40,11 @@ type WorkflowNode struct {
 	Y              float64        `json:"y"`
 }
 type WorkflowEdge struct {
-	Source string `json:"source"`
-	Route  string `json:"route"`
-	Target string `json:"target"`
+	Mode        string `json:"mode,omitempty"`
+	Description string `json:"description,omitempty"`
+	Source      string `json:"source"`
+	Route       string `json:"route"`
+	Target      string `json:"target"`
 }
 
 var workflowKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,63}$`)
@@ -100,6 +103,7 @@ func validateWorkflow(w Workflow) error {
 	}
 	forward, reverse := map[string][]string{}, map[string][]string{}
 	routes := map[[2]string]bool{}
+	automatic := map[string]int{}
 	for _, e := range w.Edges {
 		source, ok := nodes[e.Source]
 		if !ok {
@@ -113,6 +117,21 @@ func validateWorkflow(w Workflow) error {
 		}
 		if !workflowKey.MatchString(e.Route) {
 			return fmt.Errorf("invalid route: %s", e.Route)
+		}
+		if e.Mode != "" && e.Mode != "handoff" && e.Mode != "automatic" {
+			return fmt.Errorf("invalid edge mode: %s", e.Mode)
+		}
+		if len(e.Description) > 4000 {
+			return errors.New("edge description exceeds 4000 bytes")
+		}
+		if e.Mode == "handoff" && source.Kind != "agent" {
+			return errors.New("only Agent nodes can choose handoff edges")
+		}
+		if e.Mode == "automatic" && source.Kind == "agent" {
+			automatic[e.Source]++
+			if automatic[e.Source] > 1 {
+				return errors.New("Agent completion requires at most one fixed edge")
+			}
 		}
 		key := [2]string{e.Source, e.Route}
 		if routes[key] {
@@ -152,7 +171,7 @@ func validateWorkflow(w Workflow) error {
 			return fmt.Errorf("node %s has no path to an end", n.ID)
 		}
 	}
-	return nil
+	return validateWorkflowHooks(w)
 }
 
 func (s *Store) initWorkflows() error {
@@ -163,7 +182,10 @@ func (s *Store) initWorkflows() error {
 	if e = s.initWorkflowRuns(); e != nil {
 		return e
 	}
-	return s.initConnectors()
+	if e = s.initConnectors(); e != nil {
+		return e
+	}
+	return s.initWorkflowHooks()
 }
 func workflowAllowed(c Caller, w Workflow) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(w.AuthorizedUsers, c.UserID)
@@ -259,6 +281,15 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 			if count != 1 {
 				return w, fmt.Errorf("agent does not exist for node %s", n.ID)
 			}
+		}
+	}
+	for _, hook := range w.Hooks {
+		v, err := loadConnector(tx, hook.ConnectorID)
+		if err != nil {
+			return w, err
+		}
+		if err = validateHookAction(v, hook, w); err != nil {
+			return w, err
 		}
 	}
 	previous := w.Revision

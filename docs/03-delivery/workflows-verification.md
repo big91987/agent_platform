@@ -146,3 +146,41 @@ Run `53d0ed8b44d1b6eae020996ad84d1d55` 已 completed，共 11 次节点执行。
 - `scripts/verify.sh` 本轮完整退出 0，日志 `.data/workflow-evidence/verify-qa-rework.log`；仍有非致命 macOS 链接器警告。当前仅分支迭代，不把本轮检查称作最终发布通过。
 
 剩余：浏览器文件导入／导出、真实 GitHub 写入丢响应恢复、最终 AC 审查。浏览器控制工具本轮再次超时，明确列为该 UI 用例阻塞，不用 API 结果替换网页证据。
+
+
+## E1–E5 智能体编排、主动交接与通知（2026-10-05）
+
+本轮继续开发分支，更新隔离 8792 实例；未合 main，未操作 reading_list 的在途任务。公开 UI 名称改为“智能体编排”，持久化 API 的 workflow 标识保持兼容。
+
+### 真实交接与澄清
+
+首轮 Run `c15fc2073b9e8c6213606d73a40eaee5`、复验 Run `64af6cfedc8bce880ecc8a40eedd4c1a` 均从网页输入一句话任务启动。Agent 先询问版本号，测试执行者在原会话分别回复 0.2.0、0.2.1；等待期间没有交接。之后真实文件写入、注册 MCP handoff、独立读取校验、返工、修正、再次 handoff、complete_node 固定完成，全程同一 Run，共 6 次节点执行。
+
+该用例明确故意令编写节点首次漏掉验收章节，校验节点没有代写或伪造成功；其 inputs 传递缺失项，返工节点保留用户版本信息并补齐。两轮均 completed。可复用图在 `examples/platform-workflows/collaboration-check.json`，通过正式 `install.py --template collaboration-check` 安装。不是产品功能验收，也不是 Mock 执行器。
+
+- [首轮测试 Issue #9](https://github.com/big91987/agent-platform-workflow-demo/issues/9)。发现首版 Hook 投递顺序受配置遍历顺序影响，启动通知可能超前于上一节点交接；原历史保留。
+- [修复后测试 Issue #10](https://github.com/big91987/agent-platform-workflow-demo/issues/10)。按节点序号、启动／最终回复／交接／运行完成的顺序采集，持久化串行投递。真实 GitHub 查询确认 15 条评论与 15 条投递记录一一对应且顺序完全一致，无重复。
+- 本地私有证据：`.data/workflow-evidence/collaboration-run-first.json`、`collaboration-run-final.json`；包含正式 API 结果、交接输入及实际 GitHub 评论。
+
+### GitHub 写入结果未知恢复
+
+维护源 opt-in 测试 `workflow_github_live_test.go` 对真实 GitHub POST 的成功响应注入客户端传输丢失，发现 GitHub 列表可暂时返回写入前结果。修复为只读复核时禁止使用旧缓存、逐次新查询及有界等待；绝不再次 POST 来“恢复”。
+
+真实通过 Run `548466605f9dc5c6e4356b87a553e6b4`，资源为 [测试 Issue #8](https://github.com/big91987/agent-platform-workflow-demo/issues/8)。POST 数量为 1，找到原资源后继续，唯一资源数为 1，测试资源已关闭。证据 `.data/workflow-evidence/live-github-response-loss.json`。这是现实服务写入＋客户端故障注入，不声称进行了物理断网实验。
+
+### 网页、兼容与回归
+
+- 真实网页验证虚线自主交接、实线固定规则、节点聚焦、连线编辑、通知规则字段映射、保存后版本更新、JSON 文本导入导出。导入是新副本，没有覆盖原图。文件选择器和下载到磁盘仍未验收。
+- 两轮会话均展示 Agent 进度、真实工具和最终回复；交接后会话关闭，运行页保留链接，澄清前用户可以继续回复。
+- 首版 1280 宽度页面及最后 767 宽度响应式页面已观察。补充适应宽度与恢复原尺寸操作，窄屏将设置面板放到画布下方。工具指定 1440 视口未改变实际 767 视口，因此不把它记为 1440 通过。临时导入页发生浏览器句柄卡住，重新获取该页后已关闭；服务 HTTP 保持正常。
+- 空数据目录正式安装及重复安装通过：7 个 Agent（含默认 Agent）、6 个 Connector、1 张验收图、1 个工具服务，第二次数量不变；临时服务已关闭。证据 `.data/workflow-evidence/fresh-install.json`。
+- 缩放至约 55% 后实际拖动节点 20×10 CSS px，画布坐标按比例变化 37×18；通过表单恢复原坐标并保存。
+- 正常升级前确认无在途 Run，备份数据后替换开发二进制；既有 Run 的冻结定义和历史仍可读。标准安装器升级研发图、返工图、Agent 策略与评论 Connector。网页保存同值配置后再次升级成功，没有绕过漂移检查。
+- `scripts/verify.sh` 完整退出 0，证据 `.data/workflow-evidence/verify-orchestration-final.log`，包括前端行为、Python、Go vet/race 和构建。之后仅调整画布缩放与模板坐标，补做 JS 语法、5 项模型测试、构建及真实页面检查。macOS 链接器警告非致命。
+- 延迟事件采集的顺序重建、未结束回复不外发、重复采集不重复通知、通知失败不结束 Agent、跨用户访问拒绝，以及主动/固定交接边界均有行为回归。
+
+### 当前交付边界
+
+本轮完成可运行的主动交接与通知切片，不能称为全部平台能力最终发布验收。固定人工门禁仍使用显式确认节点；阻塞型 before Hook、任意边上的 Gate、结构化 request_user_input、GitLab 通知动作和并行多分支尚未实现。循环当前按最大执行节点次数限制，不是按环的墙钟时长。通知结果未知的查询路径复用已验证 GitHub 恢复，但没有对真实评论执行进程强杀实验。
+
+已有正常研发到草稿 PR 的证据见 T3，本轮新路由契约完整复验的是轻量协作闭环，没有重新声称跑过一份全新完整产品开发。主流程模板及本轮回归应结合这些明确限制评审。

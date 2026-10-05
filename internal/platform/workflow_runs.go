@@ -17,9 +17,10 @@ type WorkflowStart struct {
 	RequestID     string `json:"request_id,omitempty"`
 }
 type NodeResult struct {
-	Route     string   `json:"route"`
-	Summary   string   `json:"summary"`
-	Artifacts []string `json:"artifacts,omitempty"`
+	Inputs    map[string]string `json:"inputs,omitempty"`
+	Route     string            `json:"route,omitempty"`
+	Summary   string            `json:"summary"`
+	Artifacts []string          `json:"artifacts,omitempty"`
 }
 type WorkflowStep struct {
 	ConnectorDispatched bool              `json:"connector_dispatched,omitempty"`
@@ -293,6 +294,22 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 			}
 		}
 	}
+	for _, hook := range w.Hooks {
+		v, err := loadConnector(tx, hook.ConnectorID)
+		if err != nil {
+			return zero, err
+		}
+		if !connectorAllowed(c, v) || !v.Enabled {
+			return zero, ErrForbidden
+		}
+		if err = connectorWorkspace(v, path); err != nil {
+			return zero, err
+		}
+		if err = validateHookAction(v, hook, w); err != nil {
+			return zero, err
+		}
+		connectors[v.ID] = v
+	}
 	entry := w.Entry
 	if in.StartNode != "" && in.StartNode != entry {
 		if !slices.Contains(w.StartNodes, in.StartNode) {
@@ -366,6 +383,9 @@ func (s *Store) CompleteWorkflowNode(c Caller, id string, seq int, result NodeRe
 	return s.completeWorkflowNode(c, id, seq, "", result)
 }
 func (s *Store) completeWorkflowNode(c Caller, id string, seq int, token string, result NodeResult) error {
+	return s.submitWorkflowResult(c, id, seq, token, result, false)
+}
+func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string, result NodeResult, handoff bool) error {
 
 	raw, e := json.Marshal(result)
 	if e != nil {
@@ -401,6 +421,30 @@ func (s *Store) completeWorkflowNode(c Caller, id string, seq int, token string,
 		}
 	} else if node.Kind != "approval" {
 		return errors.New("Agent nodes require their scoped completion tool")
+	}
+	if token != "" {
+		if result.Route == "" && !handoff {
+			for _, edge := range r.Definition.Edges {
+				if edge.Source == node.ID && edge.Mode == "automatic" {
+					result.Route = edge.Route
+				}
+			}
+		}
+		for _, edge := range r.Definition.Edges {
+			if edge.Source != node.ID || edge.Route != result.Route {
+				continue
+			}
+			if handoff && r.Definition.edgeMode(edge) != "handoff" {
+				return errors.New("handoff cannot select a fixed edge")
+			}
+			if !handoff && edge.Mode == "handoff" {
+				return errors.New("use handoff for Agent-selected edges")
+			}
+		}
+		raw, e = json.Marshal(result)
+		if e != nil {
+			return e
+		}
 	}
 	if r.Definition.target(step.NodeID, result.Route) == "" {
 		return errors.New("route is not an outgoing edge of this node")

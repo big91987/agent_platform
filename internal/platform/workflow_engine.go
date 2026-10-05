@@ -22,10 +22,12 @@ type WorkflowEngine struct {
 	mu            sync.Mutex
 	connectorJobs map[string]workflowConnectorJob
 	connectorWG   sync.WaitGroup
+	hookJobs      map[string]bool
+	hookLast      time.Time
 }
 
 func NewWorkflowEngine(s *Store, scheduler *Scheduler, base string) *WorkflowEngine {
-	return &WorkflowEngine{store: s, scheduler: scheduler, base: strings.TrimRight(base, "/"), connectorJobs: map[string]workflowConnectorJob{}}
+	return &WorkflowEngine{store: s, scheduler: scheduler, base: strings.TrimRight(base, "/"), connectorJobs: map[string]workflowConnectorJob{}, hookJobs: map[string]bool{}}
 }
 func (e *WorkflowEngine) Run(ctx context.Context) {
 	ticker := time.NewTicker(250 * time.Millisecond)
@@ -50,6 +52,15 @@ func (e *WorkflowEngine) Run(ctx context.Context) {
 func (e *WorkflowEngine) Tick(ctx context.Context) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if time.Since(e.hookLast) > time.Second {
+		e.hookLast = time.Now()
+		if err := e.collectWorkflowHooks(); err != nil {
+			log.Printf("collect workflow hooks: %v", err)
+		}
+		if err := e.dispatchWorkflowHooks(ctx); err != nil {
+			log.Printf("dispatch workflow hooks: %v", err)
+		}
+	}
 	runs, err := e.activeRuns()
 	if err != nil {
 		log.Printf("workflow poll: %v", err)
@@ -255,8 +266,8 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 			previous = append(previous, map[string]any{"node": old.NodeID, "seq": old.Seq, "result": old.Result, "feedback": old.Error, "connector_receipt": old.Receipt})
 		}
 	}
-	contextData, _ := json.MarshalIndent(map[string]any{"task": r.Input, "node": node.Name, "instructions": node.Prompt, "routes": r.Definition.routes(node.ID), "previous_results": previous}, "", "  ")
-	message := "你正在执行平台工作流中的一个节点。根据下面任务上下文与用户继续工作。需要澄清时正常提问，等待用户回复；完成本节点后调用 registered_workflow_node 的 complete_node 工具，提交一个合法 route、真实摘要和产物路径。工具接受后结束本轮，不再修改工作区。自然语言回复不会推进流程。不要自行创建下一节点或重启整个流程。\n\n" + string(contextData)
+	contextData, _ := json.MarshalIndent(map[string]any{"task": r.Input, "node": node.Name, "instructions": node.Prompt, "routes": r.Definition.routes(node.ID), "outgoing_edges": workflowOutgoing(r.Definition, node.ID), "previous_results": previous}, "", "  ")
+	message := "你正在执行智能体编排中的一个节点。根据任务上下文与用户继续工作，意图和分支由你根据节点 SOP 判断，不使用额外意图模型。需要澄清时正常提问，等待用户回复，不交接。outgoing_edges 中 mode=handoff 表示你可以自主选择的目标；使用 registered_workflow_node 的 handoff 工具提交 target、真实 summary、可选 inputs 和 artifacts。mode=automatic 表示固定完成线：确认整个节点任务完成后调用 complete_node，省略 route，由平台沿固定线推进。一次执行只能交接或完成一次。工具接受后结束本轮，不再修改工作区。自然语言回复不会推进流程。不要自行创建下一节点或重启整个流程。\n\n" + string(contextData)
 	token := newID() + newID()
 	_, err := e.store.submit(c, Input{AgentID: node.AgentID, UserID: r.Owner, Message: r.Input, WorkspacePath: r.WorkspacePath, RequestID: "workflow:" + r.ID + ":" + fmt.Sprint(step.Seq)}, func(tx *sql.Tx, a *Agent, conversationID string) error {
 		var state, nodeState string
@@ -273,7 +284,7 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 		if a.ResolvedTools == nil {
 			a.ResolvedTools = map[string]ResolvedToolServer{}
 		}
-		a.ResolvedTools[workflowToolServer] = ResolvedToolServer{Connection: MCPConnection{URL: e.base + "/api/workflow-node/mcp", BearerTokenEnvVar: workflowTokenEnv}, Tools: []string{"complete_node"}, Approvals: map[string]string{"complete_node": "auto"}}
+		a.ResolvedTools[workflowToolServer] = ResolvedToolServer{Connection: MCPConnection{URL: e.base + "/api/workflow-node/mcp", BearerTokenEnvVar: workflowTokenEnv}, Tools: []string{"complete_node", "handoff"}, Approvals: map[string]string{"complete_node": "auto", "handoff": "auto"}}
 		if a.Env == nil {
 			a.Env = map[string]*string{}
 		}
@@ -436,4 +447,15 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 		}
 	}
 	return nil
+}
+
+func workflowOutgoing(w Workflow, id string) []WorkflowEdge {
+	out := []WorkflowEdge{}
+	for _, edge := range w.Edges {
+		if edge.Source == id {
+			edge.Mode = w.edgeMode(edge)
+			out = append(out, edge)
+		}
+	}
+	return out
 }

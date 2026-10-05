@@ -248,10 +248,6 @@ func connectorBody(workspace, name string) (string, error) {
 	return string(b), nil
 }
 func validateConnectorNode(v Connector, n WorkflowNode, w Workflow) error {
-	p := n.ConnectorInput
-	if len(p.Title) > 256 || len(p.BodyFile) > 4096 || len(p.Head) > 256 || len(p.Base) > 256 || p.IssueNumber < 0 {
-		return errors.New("invalid connector parameters")
-	}
 	if w.target(n.ID, "next") == "" {
 		return errors.New("connector requires a next route")
 	}
@@ -259,6 +255,13 @@ func validateConnectorNode(v Connector, n WorkflowNode, w Workflow) error {
 		if route != "next" && !(v.Kind == "command" && route == "failed") {
 			return errors.New("connector routes: next; command also supports failed")
 		}
+	}
+	return validateConnectorInput(v, n, w)
+}
+func validateConnectorInput(v Connector, n WorkflowNode, w Workflow) error {
+	p := n.ConnectorInput
+	if len(p.Title) > 256 || len(p.BodyFile) > 4096 || len(p.Head) > 256 || len(p.Base) > 256 || p.IssueNumber < 0 {
+		return errors.New("invalid connector parameters")
 	}
 	if v.Kind == "command" {
 		if p != (ConnectorInput{}) {

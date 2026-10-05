@@ -36,7 +36,7 @@ func TestWorkflowMCPAuthenticatesAndCompletesOnlyItsNode(t *testing.T) {
 	}
 	defer session.Close()
 	list, e := session.ListTools(ctx, nil)
-	if e != nil || len(list.Tools) != 1 || list.Tools[0].Name != "complete_node" {
+	if e != nil || len(list.Tools) != 2 || list.Tools[0].Name != "complete_node" {
 		t.Fatal(list, e)
 	}
 	result, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: map[string]any{"route": "approved", "summary": "完成"}})

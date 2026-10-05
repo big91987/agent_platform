@@ -147,7 +147,7 @@ def main():
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument(
         "--template",
-        choices=["software-delivery", "qa-rework"],
+        choices=["software-delivery", "qa-rework", "collaboration-check"],
         default="software-delivery",
     )
     parser.add_argument("--upgrade", action="store_true")
@@ -228,6 +228,32 @@ def main():
     api.call("POST", "/api/tool-servers/" + browser["id"] + "/discover", {})
     common = (HERE / "prompts/common.md").read_text()
     agents = {}
+    if args.template == "collaboration-check":
+        agents["collaboration"] = installation.apply(
+            "agents",
+            "collaboration",
+            {
+                "name": args.prefix + " · 协作验收",
+                "executor": base["executor"],
+                "model": base["model"],
+                "enabled": True,
+                "authorized_users": [],
+                "sandbox": "workspace-write",
+                "inherit_env": False,
+                "instructions": "专用编排验收：只完成当前节点指令。使用真实文件及平台注册工具，不模拟交接。需要用户回答时提问并结束本轮，不交接。其他时候自主继续。无需读取其他仓库。",
+                "skills": [],
+                "env": {
+                    key: os.environ[key]
+                    for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
+                    if key in os.environ
+                },
+                "network_access": False,
+                "allow_elevation": False,
+                "trust_hooks": False,
+                "native_config": "",
+                "seed_dir": "",
+            },
+        )["id"]
     for role in ("requirements", "design", "development", "qa", "report"):
         spec = {
             "name": args.prefix + " · " + role,
@@ -260,7 +286,7 @@ def main():
             ]
         agents[role] = installation.apply("agents", role, spec)["id"]
     connectors = {}
-    for role in ("prepare", "issue", "tests", "publish", "pr"):
+    for role in ("prepare", "issue", "tests", "publish", "pr", "comment"):
         spec = {
             "name": args.prefix + " · " + role,
             "enabled": True,
@@ -268,10 +294,12 @@ def main():
             "workspace_root": str(root),
             "timeout_seconds": 300,
         }
-        if role in ("issue", "pr"):
+        if role in ("issue", "pr", "comment"):
             spec.update(
                 kind="github.issue_create"
                 if role == "issue"
+                else "github.issue_comment"
+                if role == "comment"
                 else "github.pull_request",
                 repository=args.repository,
                 token_env=args.token_env,
@@ -309,6 +337,8 @@ def main():
             node["agent_id"] = agents[node["agent_id"]]
         if node["kind"] == "connector":
             node["connector_id"] = connectors[node["connector_id"]]
+    for hook in graph.get("hooks", []):
+        hook["connector_id"] = connectors[hook["connector_id"]]
     workflow = installation.apply(
         "workflows",
         "workflow" if args.template == "software-delivery" else args.template,

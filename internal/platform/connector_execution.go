@@ -135,6 +135,9 @@ func githubRequest(ctx context.Context, v Connector, method, path string, payloa
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")
 	req.Header.Set("Content-Type", "application/json")
+	if method == "GET" {
+		req.Header.Set("Cache-Control", "no-cache")
+	}
 	resp, err := githubClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("GitHub request did not return a confirmed result: %s", connectorRedact(v, err.Error()))
@@ -171,21 +174,40 @@ func githubReceipt(v Connector, obj githubObject, recovered bool) ConnectorRecei
 func executeGitHub(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
 	// Query the marker before a write. Recovery is deliberately read-only: an
 	// absent marker never proves that an interrupted POST failed to take effect.
-	for page := 1; page <= 100; page++ {
-		var objects []githubObject
-		if err := githubRequest(ctx, v, "GET", request.Lookup+"&page="+strconv.Itoa(page), nil, &objects); err != nil {
-			return ConnectorReceipt{}, err
-		}
-		for _, obj := range objects {
-			if strings.Contains(obj.Body, request.Marker) {
-				return githubReceipt(v, obj, true), nil
+	attempts := 1
+	if lookupOnly {
+		attempts = 4
+	}
+	for attempt := 0; attempt < attempts; attempt++ {
+		if attempt > 0 {
+			timer := time.NewTimer(time.Duration(1<<uint(attempt-1)) * time.Second)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ConnectorReceipt{}, ctx.Err()
+			case <-timer.C:
 			}
 		}
-		if len(objects) < 100 {
-			break
+		lookup := request.Lookup
+		if lookupOnly {
+			lookup += "&_platform_reconcile=" + newID()
 		}
-		if page == 100 {
-			return ConnectorReceipt{}, errors.New("GitHub receipt search exceeded its bound; inspect the repository before retrying")
+		for page := 1; page <= 100; page++ {
+			var objects []githubObject
+			if err := githubRequest(ctx, v, "GET", lookup+"&page="+strconv.Itoa(page), nil, &objects); err != nil {
+				return ConnectorReceipt{}, err
+			}
+			for _, obj := range objects {
+				if strings.Contains(obj.Body, request.Marker) {
+					return githubReceipt(v, obj, true), nil
+				}
+			}
+			if len(objects) < 100 {
+				break
+			}
+			if page == 100 {
+				return ConnectorReceipt{}, errors.New("GitHub receipt search exceeded its bound; inspect the repository before retrying")
+			}
 		}
 	}
 	if lookupOnly {

@@ -12,8 +12,8 @@
       "kind": "agent",
       "agent_id": "requirements",
       "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 40,
-      "y": 240
+      "x": 60,
+      "y": 70
     },
     {
       "id": "design",
@@ -21,8 +21,8 @@
       "kind": "agent",
       "agent_id": "design",
       "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 300,
-      "y": 240
+      "x": 360,
+      "y": 70
     },
     {
       "id": "development",
@@ -30,8 +30,8 @@
       "kind": "agent",
       "agent_id": "development",
       "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 560,
-      "y": 240
+      "x": 660,
+      "y": 70
     },
     {
       "id": "qa",
@@ -39,138 +39,152 @@
       "kind": "agent",
       "agent_id": "qa",
       "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 40,
-      "y": 460
+      "x": 60,
+      "y": 270
     },
     {
       "id": "tests",
       "name": "运行项目测试",
       "kind": "connector",
       "connector_id": "tests",
-      "x": 820,
-      "y": 240
+      "x": 360,
+      "y": 270
     },
     {
       "id": "decision",
       "name": "验收与人工回退",
       "kind": "approval",
       "prompt": "检查 QA 结论和回退修复证据；认可后选择 accept，需继续修改时选择对应阶段并说明原因。",
-      "x": 820,
-      "y": 680
+      "x": 660,
+      "y": 270
     },
     {
       "id": "done",
       "name": "验收记录完成",
       "kind": "end",
-      "x": 1080,
-      "y": 460
+      "x": 60,
+      "y": 470
     }
   ],
   "edges": [
     {
       "source": "requirements",
       "route": "next",
-      "target": "design"
+      "target": "design",
+      "mode": "handoff",
+      "description": "完成后交接"
     },
     {
       "source": "design",
       "route": "next",
-      "target": "development"
+      "target": "development",
+      "mode": "handoff",
+      "description": "完成后交接"
     },
     {
       "source": "development",
       "route": "next",
-      "target": "tests"
+      "target": "tests",
+      "mode": "handoff",
+      "description": "完成后交接"
     },
     {
       "source": "tests",
       "route": "next",
-      "target": "qa"
+      "target": "qa",
+      "mode": "automatic",
+      "description": "成功"
     },
     {
       "source": "tests",
       "route": "failed",
-      "target": "development"
-    },
-    {
-      "source": "requirements",
-      "route": "decision",
-      "target": "decision"
-    },
-    {
-      "source": "design",
-      "route": "decision",
-      "target": "decision"
-    },
-    {
-      "source": "development",
-      "route": "decision",
-      "target": "decision"
-    },
-    {
-      "source": "qa",
-      "route": "decision",
-      "target": "decision"
+      "target": "development",
+      "mode": "automatic",
+      "description": "失败返工"
     },
     {
       "source": "design",
       "route": "requirements",
-      "target": "requirements"
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "development",
       "route": "requirements",
-      "target": "requirements"
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "development",
       "route": "design",
-      "target": "design"
+      "target": "design",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "qa",
       "route": "requirements",
-      "target": "requirements"
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "qa",
       "route": "design",
-      "target": "design"
+      "target": "design",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "qa",
       "route": "development",
-      "target": "development"
+      "target": "development",
+      "mode": "handoff",
+      "description": "返回修订"
     },
     {
       "source": "decision",
       "route": "requirements",
-      "target": "requirements"
+      "target": "requirements",
+      "mode": "automatic",
+      "description": "返回修订"
     },
     {
       "source": "decision",
       "route": "design",
-      "target": "design"
+      "target": "design",
+      "mode": "automatic",
+      "description": "返回修订"
     },
     {
       "source": "decision",
       "route": "development",
-      "target": "development"
+      "target": "development",
+      "mode": "automatic",
+      "description": "返回修订"
     },
     {
       "source": "decision",
       "route": "qa",
-      "target": "qa"
+      "target": "qa",
+      "mode": "automatic",
+      "description": "返回修订"
     },
     {
       "source": "qa",
       "route": "next",
-      "target": "decision"
+      "target": "decision",
+      "mode": "handoff",
+      "description": "完成后交接"
     },
     {
       "source": "decision",
       "route": "accept",
-      "target": "done"
+      "target": "done",
+      "mode": "automatic",
+      "description": "验收认可"
     }
   ]
 }

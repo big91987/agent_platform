@@ -3,7 +3,7 @@
 globalThis.WorkflowGraph = class WorkflowGraph {
   static kinds = {agent:'Agent', approval:'人工确认', connector:'Connector', end:'结束'};
   constructor(value) {
-    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新工作流',revision:0,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
+    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
     this.value.authorized_users ||= [];
     this.value.start_nodes ||= [];
   }
@@ -30,12 +30,16 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     this.value.start_nodes=this.value.start_nodes.filter(n=>n!==id);
     if(this.value.entry===id)this.value.entry=this.value.nodes[0]?.id||'';
   }
-  connect(source,route,target) {
+  edgeMode(edge) { return edge.mode || (this.node(edge.source)?.kind==='agent'?'handoff':'automatic'); }
+  connect(source,route,target,mode,description='') {
     const n=this.node(source);if(!n||!this.node(target))throw new Error('连线节点不存在');
     if(n.kind==='end')throw new Error('结束节点不能继续连线');
     if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(route))throw new Error('路由使用字母开头的英文、数字、下划线或短横线');
     if(this.value.edges.some(e=>e.source===source&&e.route===route))throw new Error('这个节点已经有同名路由');
-    this.value.edges.push({source,route,target});
+    mode ||= n.kind==='agent'?'handoff':'automatic';
+    if(!['handoff','automatic'].includes(mode)||mode==='handoff'&&n.kind!=='agent')throw new Error('连线决策方式无效');
+    if(mode==='automatic'&&n.kind==='agent'&&this.value.edges.some(e=>e.source===source&&e.mode==='automatic'))throw new Error('Agent 只能有一条固定完成线');
+    this.value.edges.push({source,route,target,mode,description});
   }
   static import(text) {
     if(text.length>512*1024)throw new Error('文件超过 512 KB');
@@ -46,7 +50,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       if(!n||!Object.hasOwn(WorkflowGraph.kinds,n.kind)||!(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/).test(n.id)||ids.has(n.id)||!Number.isFinite(n.x)||!Number.isFinite(n.y))throw new Error('文件包含无效的节点');
       ids.add(n.id);
     }
-    for(const e of value.edges)if(!e||!ids.has(e.source)||!ids.has(e.target)||typeof e.route!=='string')throw new Error('文件包含无效的连线');
+    for(const e of value.edges)if(!e||!ids.has(e.source)||!ids.has(e.target)||typeof e.route!=='string'||e.mode&&!['handoff','automatic'].includes(e.mode))throw new Error('文件包含无效的连线');
     // Imported definitions are new copies; source identity and user grants do not transfer.
     const graph=new WorkflowGraph({...value,id:'',revision:0,authorized_users:[],updated_at:''});
     return graph;

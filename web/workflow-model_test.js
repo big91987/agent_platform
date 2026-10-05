@@ -36,3 +36,14 @@ test('adding nodes at the same palette position keeps the new node selectable',(
  const G=model(),g=new G();const a=g.add('approval',40,60),b=g.add('end',40,60);
  assert.ok(Math.abs(a.x-b.x)>=184 || Math.abs(a.y-b.y)>=96,'new node must not cover the existing node');
 });
+test('edge choices survive export/import and invalid fixed Agent branches are rejected',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
+ g.connect(a.id,'approved',b.id,'handoff','通过时交接');
+ g.connect(a.id,'finished',c.id,'automatic');
+ assert.equal(g.edgeMode(g.value.edges[0]),'handoff');
+ assert.equal(g.edgeMode(g.value.edges[1]),'automatic');
+ assert.throws(()=>g.connect(a.id,'another',b.id,'automatic'),/固定/);
+ const copy=G.import(JSON.stringify(g.value));assert.equal(copy.value.edges[0].description,'通过时交接');
+ assert.equal(copy.edgeMode(copy.value.edges[1]),'automatic');
+ assert.throws(()=>G.import(JSON.stringify({...g.value,edges:[{source:a.id,target:b.id,route:'next',mode:'guess'}]})),/连线/);
+});

@@ -10,6 +10,7 @@ import (
 
 func (h *Server) workflowRunRoutes() {
 	h.connectorRoutes()
+	h.workflowHookRoutes()
 	h.mux.HandleFunc("GET /api/workflow-runs", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.WorkflowRuns(c)
 		if e != nil {
@@ -99,7 +100,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 	// The bearer token identifies only one execution. The tool transaction checks
 	// that it is still current; user cookies or global admin tokens do not work.
 	service := mcp.NewServer(&mcp.Implementation{Name: "workflow-node", Version: "1.0.0"}, nil)
-	mcp.AddTool(service, &mcp.Tool{Name: "complete_node", Description: "Complete this workflow node using an allowed route, a factual summary and artifact paths. The platform waits for this turn to finish before advancing. After acceptance, end this turn and stop changing files."}, func(ctx context.Context, req *mcp.CallToolRequest, in NodeResult) (*mcp.CallToolResult, any, error) {
+	mcp.AddTool(service, &mcp.Tool{Name: "complete_node", Description: "Declare this node complete using a factual summary and artifact paths. Omit route to follow its fixed edge. Legacy graphs also accept their named routes; use handoff for autonomous choices. The platform waits for this turn to finish before advancing. After acceptance, end this turn and stop changing files."}, func(ctx context.Context, req *mcp.CallToolRequest, in NodeResult) (*mcp.CallToolResult, any, error) {
 		current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 		if e != nil {
 			return nil, nil, e
@@ -119,6 +120,30 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			return nil, nil, e
 		}
 		return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "route": in.Route, "message": "Result saved. End this turn; the platform advances after the Agent is quiet."}, nil
+	})
+	mcp.AddTool(service, &mcp.Tool{Name: "handoff", Description: "Choose an allowed Agent handoff target. Include reason, structured inputs and artifact paths. After acceptance end this turn; the platform waits for it to finish."}, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
+		current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
+		if e != nil {
+			return nil, nil, e
+		}
+		owner, e := h.store.workflowCaller(current)
+		if e != nil {
+			return nil, nil, e
+		}
+		if _, e = h.store.Workflow(owner, current.WorkflowID); e != nil {
+			return nil, nil, e
+		}
+		node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
+		if current.Seq != seq {
+			return nil, nil, ErrConflict
+		}
+		if !allowed(owner, node.AgentID) {
+			return nil, nil, ErrForbidden
+		}
+		if e = h.store.handoffWorkflowNode(id, seq, token, in); e != nil {
+			return nil, nil, e
+		}
+		return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "target": in.Target, "message": "Handoff saved. End this turn; dispatch follows after the Agent is quiet."}, nil
 	})
 	r.Body = http.MaxBytesReader(w, r.Body, 512*1024)
 	mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return service }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}).ServeHTTP(w, r)
