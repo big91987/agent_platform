@@ -4,8 +4,8 @@
 
 默认采用自动推荐：一般产品和技术选择自行给出推荐、写入对应文档并继续，不重复询问“是否批准进入下一阶段”。仅关键需求无法合理推断、用户明确要求确认或涉及权限扩大／不可逆高风险操作时，留在当前会话询问并等待。不能把能力不足冒充验收通过。
 
-阶段不适用时，写明原因及已有依据后通过正常路由交接，不为了凑流程写无关 PRD／设计。已有明确授权持续有效。Skill 中的一般访谈／审批建议不能覆盖这份用户委托。
+按合法路由跳过不适用的阶段，写明原因及已有依据；没有运行的阶段不补造文档，不为了凑流程写无关 PRD／设计。已有明确授权持续有效。Skill 中的一般访谈／审批建议不能覆盖这份用户委托。
 
-产物分别存放 docs/workflow/requirements.md、design.md、delivery.md、qa.md、pr.md，避免把各阶段合成临时大文档。保留失败证据。实现放在项目原有位置；全新小型网页可使用 app/。为产生缓存配置 .gitignore，不提交凭据、node_modules、个人会话或绝对本机路径。
+入口判断写 docs/workflow/task.md；其他实际执行阶段的产物分别存放 docs/workflow/requirements.md、design.md、delivery.md、qa.md、pr.md，避免把各阶段合成临时大文档。保留失败证据。实现放在项目原有位置；全新小型网页可使用 app/。为产生缓存配置 .gitignore，不提交凭据、node_modules、个人会话或绝对本机路径。
 
 Git 分支、提交、推送和草稿 PR 由明确的 Connector 节点负责；本节点不自行创建 Issue、切分支、推送、合并或启动 GitHub Workflow。正常自然语言输出进展和结论；本节点实际完成后使用平台 handoff 工具选择 outgoing_edges 中对应 route 的 target，提交摘要、交接输入和产物；只有固定完成线才使用 complete_node。需要等待用户时不要先交接。

@@ -184,3 +184,65 @@ Run `53d0ed8b44d1b6eae020996ad84d1d55` 已 completed，共 11 次节点执行。
 本轮完成可运行的主动交接与通知切片，不能称为全部平台能力最终发布验收。固定人工门禁仍使用显式确认节点；阻塞型 before Hook、任意边上的 Gate、结构化 request_user_input、GitLab 通知动作和并行多分支尚未实现。循环当前按最大执行节点次数限制，不是按环的墙钟时长。通知结果未知的查询路径复用已验证 GitHub 恢复，但没有对真实评论执行进程强杀实验。
 
 已有正常研发到草稿 PR 的证据见 T3，本轮新路由契约完整复验的是轻量协作闭环，没有重新声称跑过一份全新完整产品开发。主流程模板及本轮回归应结合这些明确限制评审。
+
+
+## 典型分支旅程覆盖补审（2026-10-05，实施前基线）
+
+对照 PRD WF-13～15，原先“核心闭环通过”的结论不能外推为全部研发旅程通过。
+
+| AC／场景 | 当前实现与证据 | 结论／缺口 |
+|---|---|---|
+| AC-13.1 明确 bug 真正跳过需求／设计 | common SOP 提及阶段不适用，但 software-delivery 的 start_nodes 为空，需求出口仅到设计；原 QA 返工证明的是已有任务回环 | **未覆盖**；需要模板短路径和专用 bug 新任务的真实网页验收 |
+| AC-13.2 脚本／配置修复的适量验证 | 已有 Connector 支持固定命令与成功／失败分支 | **未验收该旅程**；不能用普通产品开发测试替代部署脚本修复及恢复测试 |
+| AC-14.1 显式起点与 Agent 自主选择 | 内核有允许起点和 handoff 目标校验；现有轻量用例验证交接选择 | **部分能力具备**；研发模板的起点选择、准备步骤及关联完整性未闭环 |
+| AC-14.2 信息不足不能盲跳 | 两轮版本号澄清已验证等待和接续机制 | **机制已测、业务反例未测**；仍需模糊 bug、结构变更的真实路由判断用例 |
+| AC-15.1 交接后纠正目标 | T2 有人工指定回退与停止／恢复证据 | **部分覆盖**；交接后自然语言纠正、在途目标隔离和迟到交接组合场景尚无完整实测 |
+| QA 自动返工、人工拒绝回环、停止恢复 | 已列 T2、T3、T4 及 E1–E5 运行证据 | 已覆盖所列旅程，不能替代本表中的短路径与边界场景 |
+
+后续验收必须分别记录每项真实入口、路由选择依据、执行节点序列、产物、测试结果和失败恢复；不得仅补提示词后将这些条目标为通过。
+
+
+## E6／E7 典型分支旅程实测（2026-10-05）
+
+本节更新上方实施前缺口。维护源为 `examples/platform-workflows` 的图、SOP、安装器和对应核心通知源码；不在业务仓库或数据库里打补丁。当前开发分支迭代，未合并任何 main。
+
+| AC／场景 | 真实路径与证据 | 结果 |
+|---|---|---|
+| AC-13.1 明确 bug 跳过 PRD／设计 | 网页一句话发起 Run `82c5788827d042fec63f0518b7e00d72`，关联 [Issue #11](https://github.com/big91987/agent-platform-workflow-demo/issues/11)。prepare → issue → intake → development → tests → qa → report → publish → pr → done；没有执行 requirements 或 design | 通过，交付 [草稿 PR #14](https://github.com/big91987/agent-platform-workflow-demo/pull/14)，未合并 |
+| AC-13.2 脚本／配置修复 | 网页输入补齐 npm start、127.0.0.1、PORT 与占用错误，Run `dfb98adc8b98053d51170129e17a7bef`，关联 [Issue #13](https://github.com/big91987/agent-platform-workflow-demo/issues/13)。直接开发，固定宿主 tests，独立 QA | 通过，交付 [草稿 PR #16](https://github.com/big91987/agent-platform-workflow-demo/pull/16)，未合并 |
+| AC-14.1 显式起点和自主判断 | bug 用例由 intake 自主选 development；配置用例用户明确“从开发开始”，intake 核对资料后采用。两者都保留 prepare 和 issue，没有绕过测试／QA | 通过 |
+| AC-14.2 模糊需求／结构变化 | Run `beee6e43aed58ce27470989bab0d1798`，[Issue #12](https://github.com/big91987/agent-platform-workflow-demo/issues/12)。输入“待办这里有点不对，帮我修一下”，Agent 询问操作、实际和预期，等待期间不交接；回复云端账户同步、离线冲突并要求从设计开始后才选 design | 通过路由与等待行为；未实施云同步功能 |
+| AC-15.1 交接后纠正目标 | 同一 Run 的设计 seq 4 启动后，经网页停止、选择 requirements 并输入自然语言原因；旧设计取消，保留产物，新需求 seq 5 询问个人独立／多人共享这个缺口后等待 | 通过；验收后主动停止测试 Run |
+| 迟到操作隔离 | 旧 seq 4 停止请求返回 409；旧设计会话输入返回 409。使用该专用测试旧节点实际 MCP 凭据发起真实 handoff 到 development，返回冲突；前后当前 Run 完全一致 | 通过；凭据未输出或持久化。MCP 负例在新需求已停止时执行，不声称覆盖所有并发竞态 |
+
+### 明确 bug 的验证与失败恢复
+
+已在原版本复现未知筛选值被误当作未完成：全部 2 条，未知值只返回 1 条。研发先得到 3 条红灯回归，修复后 14 项 Node 测试通过、21 步浏览器检查通过；独立 QA 对旧源码复现 15 次失败、当前源码 0 次失败，独立执行 14 项测试与 24 步浏览器检查，浏览器错误数与存储写入数均为 0。QA 前后产品／测试摘要不变。
+
+首次推送遇到真实 GitHub HTTP 408；核对远端该任务分支不存在、本地提交完整后，在网页停止并显式返回 publish，复用同一提交 `c08d0304f7ce835d4ed9eac18a648d3a762c5636`，未重跑开发／QA。最终同一 Run 完成 11 次节点执行。此处核对真实远端状态后才重试写入，不伪造 Connector 回执。
+
+### 配置修复的执行责任边界
+
+首轮原生沙箱拒绝监听端口（EPERM），且新增启动测试未进入标准 npm test，任务停在开发。修复维护源 SOP 后通过安装器升级，在网页显式返回 development，保留旧失败。新版要求把必要测试纳入管理员已配置的固定 tests Connector，不临时扩大 Agent 权限。
+
+宿主 npm test 真正执行 13 项、13 通过、0 跳过、退出 0；覆盖 npm start、资源字节／MIME、PORT、非法端口、端口占用、释放后恢复和静态路径边界。独立 QA 检查实现与测试、核对原页面／数据／测试命令未变，自身沙箱复跑 11 通过、2 项 EPERM；报告区分宿主执行和独立复核，没有把环境阻塞写成独立启动成功。该证据验证启动配置修复，不代表真实生产部署或数据库迁移已验收。
+
+### 通知恢复修复
+
+bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，旧代码把所有错误记录为 unknown，后续只查询而无法发送。根因为错误处理没有区分 POST 前与 POST 后。新增回归先确认 `lookup failure status=unknown, want failed`，再修正为类型化发送前失败；仅能证明尚未 POST 时清除未使用请求以允许正式重试。POST 丢响应仍只查询。
+
+真实 GitHub opt-in 验证通过 [测试 Issue #15](https://github.com/big91987/agent-platform-workflow-demo/issues/15)：首次查询在传输前注入失败，正式通知 retry 接口后实际 POST 数为 1、GitHub 匹配评论数为 1，测试 Issue 已关闭。注入的是读请求失败，后续 GitHub 写入和回执是真实服务；没有假服务器。单元回归同时覆盖 POST 成功后丢响应的恢复不重复写入。
+
+旧 bug Run 的那一条 unknown 保留原样：后来查证没有匹配评论，但旧记录不能证明从未写入，因此没有手改记录或盲目补发。其余通知及最终完成通知已成功，完整交付说明可在 PR 中查看；不能声称该 Run 的通知全部通过。
+
+### 安装、升级与工程回归
+
+- 安装器新增 intake 角色及 `--base`；准备分支和 PR 使用同一配置基线。短路径仍从图入口开始，避免直接 start_nodes 绕过必要准备。测试使用已有专用验证分支作为基线，不需要合入测试仓 main。
+- 全新临时实例正式安装、再次安装均为 7 Agent／6 Connector／1 编排／1 工具服务，数量不变；自定义 base 同时进入 prepare 和 PR。临时实例已停止。原开发实例通过正式 `--upgrade` 更新到图版本 8，既有 Run 保留冻结版本 7。
+- `scripts/verify.sh` 完整退出 0：Go vet/race、JS 行为与浏览器、Python 测试、格式和构建通过；macOS 链接器既有警告非致命。
+- 确认无执行中 Run／会话后，以 SQLite backup 备份开发数据，使用正式二进制参数重启 8792，健康检查 200；8788 未动。随后网页刷新仍可看到全部历史，在原 report 节点恢复模型容量错误，没有重跑 QA。
+- 私有原始证据位于 `.data/workflow-evidence/short-path-bug-run.json`、`short-path-config-run.json`、`short-path-stale-controls.json`、`short-path-stale-handoff.json`、`short-path-fresh-install.json`、`hook-preflight-live.json` 和 `verify-short-path-final.log`。
+
+本次证明模板短路径、判断与用户纠正组合场景；不覆盖所有模型输入。此前列出的文件上传／下载、阻塞 before Hook、边上 Gate、结构化 request_user_input、GitLab、并行分支、按时间限制循环等缺口仍保留，不宣称全平台发布完成。
+
+配置修复最终交付：report 节点曾因模型服务 `serverOverloaded` 失败；升级后经网页“继续原节点”恢复同一会话，核对 QA 快照后只更新交付文档，未重跑开发或 QA。随后 publish → pr → done 完成，仍为同一 Run、共 11 次节点执行，提交 `c9e1d222b0bb483067460688bb690f0165a8d562`、[草稿 PR #16](https://github.com/big91987/agent-platform-workflow-demo/pull/16)。10 条通知均 succeeded，GitHub 核对 PR 为 OPEN/Draft、base 为专用测试分支。新配置与旧冻结运行兼容；没有合入 main 或触发生产部署。

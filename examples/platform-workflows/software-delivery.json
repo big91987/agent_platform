@@ -26,13 +26,22 @@
       "y": 70
     },
     {
+      "id": "intake",
+      "name": "判断任务与起点",
+      "kind": "agent",
+      "agent_id": "intake",
+      "prompt": "根据原始任务、用户指定起点和仓库事实选择必要阶段；范围明确的修复可直接交接开发，不需要补造 PRD 或设计。",
+      "x": 660,
+      "y": 70
+    },
+    {
       "id": "requirements",
       "name": "需求与验收标准",
       "kind": "agent",
       "agent_id": "requirements",
       "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 660,
-      "y": 70
+      "x": 60,
+      "y": 270
     },
     {
       "id": "design",
@@ -40,7 +49,7 @@
       "kind": "agent",
       "agent_id": "design",
       "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 60,
+      "x": 360,
       "y": 270
     },
     {
@@ -49,7 +58,7 @@
       "kind": "agent",
       "agent_id": "development",
       "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 360,
+      "x": 660,
       "y": 270
     },
     {
@@ -58,7 +67,7 @@
       "kind": "agent",
       "agent_id": "qa",
       "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 60,
+      "x": 360,
       "y": 470
     },
     {
@@ -67,7 +76,7 @@
       "kind": "agent",
       "agent_id": "report",
       "prompt": "执行 整理交付说明 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
-      "x": 360,
+      "x": 660,
       "y": 470
     },
     {
@@ -75,16 +84,16 @@
       "name": "运行项目测试",
       "kind": "connector",
       "connector_id": "tests",
-      "x": 660,
-      "y": 270
+      "x": 60,
+      "y": 470
     },
     {
       "id": "publish",
       "name": "提交并推送任务分支",
       "kind": "connector",
       "connector_id": "publish",
-      "x": 660,
-      "y": 470
+      "x": 60,
+      "y": 670
     },
     {
       "id": "pr",
@@ -98,14 +107,14 @@
         "body_file": "docs/workflow/pr.md",
         "issue_node": "issue"
       },
-      "x": 60,
+      "x": 360,
       "y": 670
     },
     {
       "id": "done",
       "name": "交付完成 · 待人工合并",
       "kind": "end",
-      "x": 360,
+      "x": 660,
       "y": 670
     }
   ],
@@ -120,9 +129,30 @@
     {
       "source": "issue",
       "route": "next",
-      "target": "requirements",
+      "target": "intake",
       "mode": "automatic",
       "description": "成功"
+    },
+    {
+      "source": "intake",
+      "route": "requirements",
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "新需求／范围待明确"
+    },
+    {
+      "source": "intake",
+      "route": "design",
+      "target": "design",
+      "mode": "handoff",
+      "description": "需求明确，需要设计"
+    },
+    {
+      "source": "intake",
+      "route": "development",
+      "target": "development",
+      "mode": "handoff",
+      "description": "明确修复，直接开发"
     },
     {
       "source": "requirements",

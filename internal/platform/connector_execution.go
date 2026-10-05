@@ -171,6 +171,14 @@ type githubObject struct {
 func githubReceipt(v Connector, obj githubObject, recovered bool) ConnectorReceipt {
 	return ConnectorReceipt{Kind: v.Kind, URL: obj.URL, Number: obj.Number, HeadSHA: obj.Head.SHA, Recovered: recovered}
 }
+
+// githubNotSentError proves this attempt failed before making a write. A saved
+// request from an interrupted attempt cannot make this guarantee.
+type githubNotSentError struct{ err error }
+
+func (e *githubNotSentError) Error() string { return e.err.Error() }
+func (e *githubNotSentError) Unwrap() error { return e.err }
+
 func executeGitHub(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
 	// Query the marker before a write. Recovery is deliberately read-only: an
 	// absent marker never proves that an interrupted POST failed to take effect.
@@ -195,6 +203,9 @@ func executeGitHub(ctx context.Context, v Connector, request connectorRequest, l
 		for page := 1; page <= 100; page++ {
 			var objects []githubObject
 			if err := githubRequest(ctx, v, "GET", lookup+"&page="+strconv.Itoa(page), nil, &objects); err != nil {
+				if !lookupOnly {
+					return ConnectorReceipt{}, &githubNotSentError{err}
+				}
 				return ConnectorReceipt{}, err
 			}
 			for _, obj := range objects {
@@ -206,7 +217,11 @@ func executeGitHub(ctx context.Context, v Connector, request connectorRequest, l
 				break
 			}
 			if page == 100 {
-				return ConnectorReceipt{}, errors.New("GitHub receipt search exceeded its bound; inspect the repository before retrying")
+				err := errors.New("GitHub receipt search exceeded its bound; inspect the repository before retrying")
+				if !lookupOnly {
+					return ConnectorReceipt{}, &githubNotSentError{err}
+				}
+				return ConnectorReceipt{}, err
 			}
 		}
 	}

@@ -137,6 +137,9 @@ def main():
     parser.add_argument("--username", default="admin")
     parser.add_argument("--password-env", default="PLATFORM_ADMIN_PASSWORD")
     parser.add_argument("--repository", required=True)
+    parser.add_argument(
+        "--base", default="main", help="Repository base branch for preparation and PRs"
+    )
     parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--skill-root", required=True, type=Path)
@@ -155,6 +158,8 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", args.prefix):
         parser.error("prefix must be lowercase ASCII, up to 40 characters")
+    if not args.base or args.base.startswith("-"):
+        parser.error("base must be a Git branch name")
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", args.repository):
         parser.error("repository must be owner/name")
     root = args.workspace_root.resolve(strict=True)
@@ -254,7 +259,10 @@ def main():
                 "seed_dir": "",
             },
         )["id"]
-    for role in ("requirements", "design", "development", "qa", "report"):
+    roles = ["requirements", "design", "development", "qa", "report"]
+    if args.template == "software-delivery":
+        roles.insert(0, "intake")
+    for role in roles:
         spec = {
             "name": args.prefix + " · " + role,
             "executor": base["executor"],
@@ -313,6 +321,8 @@ def main():
                     role,
                     "--repository",
                     args.repository,
+                    "--base",
+                    args.base,
                 ]
                 if role != "tests"
                 else ["npm", "test"],
@@ -336,7 +346,10 @@ def main():
         if node["kind"] == "agent":
             node["agent_id"] = agents[node["agent_id"]]
         if node["kind"] == "connector":
-            node["connector_id"] = connectors[node["connector_id"]]
+            role = node["connector_id"]
+            node["connector_id"] = connectors[role]
+            if role == "pr":
+                node["connector_input"]["base"] = args.base
     for hook in graph.get("hooks", []):
         hook["connector_id"] = connectors[hook["connector_id"]]
     workflow = installation.apply(

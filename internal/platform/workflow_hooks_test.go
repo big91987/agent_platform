@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -106,5 +109,99 @@ func TestHookRejectsUnknownFieldsAndSnapshotsActionPermission(t *testing.T) {
 	w.Hooks[0].Event = "handoff.before"
 	if err := validateWorkflow(w); err == nil {
 		t.Fatal("unimplemented blocking hook accepted")
+	}
+}
+
+// A failed read before POST is safe to retry; a lost POST response is not.
+func TestHookRetryDistinguishesPreflightFromWriteFailure(t *testing.T) {
+	for _, phase := range []string{"lookup", "write"} {
+		t.Run(phase, func(t *testing.T) {
+			s := testStore(t)
+			c, w, _ := runFixture(t, s)
+			a := testAgent(t, s)
+			w.Nodes[0].Kind, w.Nodes[0].AgentID = "agent", a.ID
+			t.Setenv("HOOK_TEST_TOKEN", "test-token")
+			dir := t.TempDir()
+			v, err := s.SaveConnector(c, Connector{Name: "notify", Kind: "github.issue_comment", Repository: "demo/repo", TokenEnv: "HOOK_TEST_TOKEN", WorkspaceRoot: dir, Enabled: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			w.Hooks = []WorkflowHook{{Event: "node.started", ConnectorID: v.ID, Input: ConnectorInput{IssueNumber: 1}, Body: "{{node_name}}"}}
+			w, err = s.SaveWorkflow(c, w)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "request", WorkspacePath: dir})
+			if err != nil {
+				t.Fatal(err)
+			}
+			original := githubClient
+			defer func() { githubClient = original }()
+			reads, posts := 0, 0
+			var saved map[string]any
+			githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
+				body := `[]`
+				if req.Method == "GET" {
+					reads++
+					if phase == "lookup" && reads == 1 {
+						return nil, errors.New("lookup timeout before POST")
+					}
+					if saved != nil {
+						raw, _ := json.Marshal([]map[string]any{saved})
+						body = string(raw)
+					}
+				} else {
+					posts++
+					var payload map[string]any
+					if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+						return nil, err
+					}
+					saved = map[string]any{"html_url": "https://github.com/demo/repo/issues/1#issuecomment-2", "body": payload["body"]}
+					if phase == "write" {
+						return nil, errors.New("POST response lost")
+					}
+					raw, _ := json.Marshal(saved)
+					body = string(raw)
+				}
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
+			})}
+			h := NewServer(s, nil, nil, "password", "http://localhost")
+			h.workflows.Tick(context.Background())
+			if err = h.workflows.collectWorkflowHooks(); err != nil {
+				t.Fatal(err)
+			}
+			if err = h.workflows.dispatchWorkflowHooks(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			h.workflows.connectorWG.Wait()
+			deliveries, err := s.WorkflowHookDeliveries(c, r.ID)
+			if err != nil || len(deliveries) != 1 {
+				t.Fatal(deliveries, err)
+			}
+			wantStatus := "failed"
+			if phase == "write" {
+				wantStatus = "unknown"
+			}
+			if deliveries[0].Status != wantStatus {
+				t.Fatalf("%s failure status=%s, want %s", phase, deliveries[0].Status, wantStatus)
+			}
+			cookie := workflowAdmin(t, h)
+			resp := workflowRequest(t, h, cookie, "POST", "/api/workflow-runs/"+r.ID+"/notifications/"+deliveries[0].ID+"/retry", nil)
+			if resp.Code != http.StatusAccepted {
+				t.Fatal(resp.Code, resp.Body.String())
+			}
+			if err = h.workflows.dispatchWorkflowHooks(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			h.workflows.connectorWG.Wait()
+			deliveries, err = s.WorkflowHookDeliveries(c, r.ID)
+			if err != nil || deliveries[0].Status != "succeeded" || posts != 1 {
+				t.Fatalf("retry duplicated or lost notification: %#v posts=%d err=%v", deliveries, posts, err)
+			}
+			after, _ := s.WorkflowRun(c, r.ID)
+			if after.Seq != 1 {
+				t.Fatal("notification retry advanced workflow", after.Seq)
+			}
+		})
 	}
 }

@@ -293,14 +293,19 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			defer cancel()
 			receipt, err := executeGitHub(callCtx, v, request, recoverOnly)
 			status, message := "succeeded", ""
+			clearRequest := false
 			if err != nil {
 				status, message = "unknown", err.Error()
+				var notSent *githubNotSentError
+				if errors.As(err, &notSent) {
+					status, clearRequest = "failed", true
+				}
 			}
 			raw, _ := json.Marshal(receipt)
 			e.mu.Lock()
 			defer e.mu.Unlock()
 			delete(e.hookJobs, key)
-			if _, saveErr := e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status=?,receipt=?,error=?,updated=? WHERE id=?`, status, string(raw), message, now(), id); saveErr != nil {
+			if _, saveErr := e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status=?,receipt=?,error=?,request=CASE WHEN ? THEN '' ELSE request END,updated=? WHERE id=?`, status, string(raw), message, clearRequest, now(), id); saveErr != nil {
 				log.Printf("save hook delivery: %v", saveErr)
 			}
 		}(p.id, jobKey, v, request, recoverOnly)

@@ -186,3 +186,115 @@ func TestWorkflowGitHubLiveLostResponse(t *testing.T) {
 	}
 	t.Logf("real Issue recovered once: %s; run=%s; POST count=%d", created.URL, run.ID, posts.Load())
 }
+
+// The first comment lookup fails before transport; retry sends one real comment.
+// This verifies the public notification retry endpoint against actual GitHub.
+func TestWorkflowGitHubLiveHookPreflightRetry(t *testing.T) {
+	repo := os.Getenv("WORKFLOW_LIVE_TEST_REPOSITORY")
+	if repo == "" {
+		t.Skip("set WORKFLOW_LIVE_TEST_REPOSITORY to an isolated test repository")
+	}
+	if os.Getenv("WORKFLOW_LIVE_TEST_TOKEN") == "" {
+		t.Fatal("WORKFLOW_LIVE_TEST_TOKEN is required")
+	}
+	v := Connector{Kind: "github.issue_comment", Repository: repo, TokenEnv: "WORKFLOW_LIVE_TEST_TOKEN"}
+	var issue githubObject
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if err := githubRequest(ctx, v, "POST", "/repos/"+repo+"/issues", map[string]any{"title": "[Harness acceptance] Notification preflight retry", "body": "Isolated notification recovery verification; no product changes. Closed after verification."}, &issue); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		cleanup, done := context.WithTimeout(context.Background(), 30*time.Second)
+		defer done()
+		if err := githubRequest(cleanup, v, "PATCH", "/repos/"+repo+"/issues/"+strconv.Itoa(issue.Number), map[string]any{"state": "closed"}, nil); err != nil {
+			t.Error(err)
+		}
+	}()
+	original := githubClient
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defer transport.CloseIdleConnections()
+	var reads, posts atomic.Int32
+	endpoint := "/repos/" + repo + "/issues/" + strconv.Itoa(issue.Number) + "/comments"
+	githubClient = &http.Client{Timeout: 30 * time.Second, CheckRedirect: original.CheckRedirect, Transport: connectorTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == endpoint {
+			if r.Method == "GET" && reads.Add(1) == 1 {
+				return nil, errors.New("live acceptance: lookup fails before any write")
+			}
+			if r.Method == "POST" {
+				posts.Add(1)
+			}
+		}
+		return transport.RoundTrip(r)
+	})}
+	defer func() { githubClient = original }()
+	s := testStore(t)
+	c, w, _ := runFixture(t, s)
+	a := testAgent(t, s)
+	w.Nodes[0].Kind, w.Nodes[0].AgentID = "agent", a.ID
+	v.Name, v.WorkspaceRoot, v.Enabled = "Live notification retry", t.TempDir(), true
+	v, err := s.SaveConnector(c, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Hooks = []WorkflowHook{{Event: "node.started", ConnectorID: v.ID, Input: ConnectorInput{IssueNumber: issue.Number}, Body: "[Harness acceptance] notification retry {{run_id}}"}}
+	w, err = s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewServer(s, nil, nil, "password", "http://localhost")
+	cookie := workflowAdmin(t, h)
+	start := workflowRequest(t, h, cookie, "POST", "/api/workflow-runs", WorkflowStart{WorkflowID: w.ID, Input: "Notification recovery only", WorkspacePath: v.WorkspaceRoot})
+	if start.Code != 201 {
+		t.Fatal(start.Code, start.Body.String())
+	}
+	var r WorkflowRun
+	if err = json.Unmarshal(start.Body.Bytes(), &r); err != nil {
+		t.Fatal(err)
+	}
+	h.workflows.Tick(ctx)
+	if err = h.workflows.collectWorkflowHooks(); err != nil {
+		t.Fatal(err)
+	}
+	if err = h.workflows.dispatchWorkflowHooks(ctx); err != nil {
+		t.Fatal(err)
+	}
+	h.workflows.connectorWG.Wait()
+	before, err := s.WorkflowHookDeliveries(c, r.ID)
+	if err != nil || len(before) != 1 || before[0].Status != "failed" || posts.Load() != 0 {
+		t.Fatalf("before retry: %#v posts=%d err=%v", before, posts.Load(), err)
+	}
+	retry := workflowRequest(t, h, cookie, "POST", "/api/workflow-runs/"+r.ID+"/notifications/"+before[0].ID+"/retry", nil)
+	if retry.Code != 202 {
+		t.Fatal(retry.Code, retry.Body.String())
+	}
+	if err = h.workflows.dispatchWorkflowHooks(ctx); err != nil {
+		t.Fatal(err)
+	}
+	h.workflows.connectorWG.Wait()
+	after, err := s.WorkflowHookDeliveries(c, r.ID)
+	if err != nil || after[0].Status != "succeeded" || posts.Load() != 1 {
+		t.Fatalf("after retry: %#v posts=%d err=%v", after, posts.Load(), err)
+	}
+	var comments []githubObject
+	if err = githubRequest(ctx, v, "GET", endpoint+"?per_page=100&_platform_reconcile="+newID(), nil, &comments); err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, comment := range comments {
+		if strings.Contains(comment.Body, "<!-- agent-platform-hook:"+before[0].ID+" -->") {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly one real comment, got %d", count)
+	}
+	evidence := map[string]any{"passed": true, "issue_url": issue.URL, "posts": posts.Load(), "matching_comments": count, "before": before, "after": after, "fault_boundary": "first read fails before transport; retry endpoint sends one actual GitHub comment"}
+	if output := os.Getenv("WORKFLOW_LIVE_TEST_EVIDENCE"); output != "" {
+		raw, _ := json.MarshalIndent(evidence, "", "  ")
+		if err = os.WriteFile(output, append(raw, '\n'), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Logf("real notification retry verified: %s; POST count=%d", issue.URL, posts.Load())
+}
