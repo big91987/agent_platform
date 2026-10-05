@@ -11,7 +11,7 @@
 - `repository.py`：固定的准备分支／提交推送命令。每个 Run 使用 `workflow/<run_id>` 分支；拒绝接管脏工作区、错误仓库、错误分支和明显凭据文件；不 reset、不强推、不合并。
 - `browser_tool.py`：复用 `../github/tooling/full_harness/browser` 的锁定浏览器运行时；只借用浏览器能力，不使用其 CI 控制器。检查 app 或设计原型，保存真实截图／检查结果；支持页面内受限检查脚本。
 
-当前示例适合带 `npm test` 入口的静态 Web 小项目，浏览器工具本地服务根为 `app/` 或 `docs/workflow/prototype/`。其他技术栈应修改图中管理员配置的测试命令与注册工具，不改平台引擎。浏览器可验证原生缩放和可访问树，不能把这些称为真实读屏器语音验收。Agent 需对未测项明确说明。
+默认验证命令为 `npm test`，可用 `--test-command-json '["make", "verify"]'` 为 Go 等项目配置自己的固定验证入口。命令按 argv 执行，不隐式使用 shell，阶段指令使用同一配置。浏览器工具本地服务根为 `app/` 或 `docs/workflow/prototype/`。其他技术栈应修改图中管理员配置的测试命令与注册工具，不改平台引擎。浏览器可验证原生缩放和可访问树，不能把这些称为真实读屏器语音验收。Agent 需对未测项明确说明。
 
 ## 安装
 
@@ -148,3 +148,5 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 ### 通知失败后的处理
 
 在运行页的通知记录中，`失败` 可单独重试，不重跑 Agent 或节点。发送前的查重查询失败会按此处理；`结果未知` 只查询外部回执，避免 POST 已成功后重复发评论。升级必须同时更新平台二进制和模板，已有 Run 的定义及记录保留。旧版本已记为结果未知、且无法证明发送阶段的通知不会自动重发，应结合 Issue 实际评论查证。
+
+Go 项目安装示例：在原安装参数中加入 `--test-command-json '["make", "verify"]'`。项目负责实现该入口，执行必要的 Go 检查、HTTP 集成测试及真实后端浏览器旅程。测试 Connector 仅获得显式配置的代理变量，不获得 GitHub Token。升级时保留同一命令参数。现有静态 browser.check 可验证原型；完整后端 UI 必须在项目自己的验证入口或真实网页上验证。

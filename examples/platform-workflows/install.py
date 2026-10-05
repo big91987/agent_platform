@@ -6,6 +6,7 @@ import http.cookiejar
 import json
 import os
 import re
+import shlex
 import sys
 import urllib.error
 import urllib.parse
@@ -13,6 +14,22 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+
+
+def verification_command(value):
+    command = json.loads(value)
+    if (
+        not isinstance(command, list)
+        or not command
+        or len(command) > 64
+        or any(not isinstance(arg, str) or not arg or "\0" in arg for arg in command)
+        or command[0].startswith("-")
+        or "=" in command[0]
+    ):
+        raise ValueError(
+            "test command must be a non-empty executable/arguments JSON array"
+        )
+    return command
 
 
 class API:
@@ -140,6 +157,11 @@ def main():
     parser.add_argument(
         "--base", default="main", help="Repository base branch for preparation and PRs"
     )
+    parser.add_argument(
+        "--test-command-json",
+        default='["npm", "test"]',
+        help='Fixed project verification argv; e.g. ["make", "verify"]',
+    )
     parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--skill-root", required=True, type=Path)
@@ -156,6 +178,10 @@ def main():
     parser.add_argument("--upgrade", action="store_true")
     parser.add_argument("--prepare-browser", action="store_true")
     args = parser.parse_args()
+    try:
+        test_command = verification_command(args.test_command_json)
+    except ValueError as error:
+        parser.error(str(error))
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", args.prefix):
         parser.error("prefix must be lowercase ASCII, up to 40 characters")
     if not args.base or args.base.startswith("-"):
@@ -232,6 +258,12 @@ def main():
     )
     api.call("POST", "/api/tool-servers/" + browser["id"] + "/discover", {})
     common = (HERE / "prompts/common.md").read_text()
+    command_label = shlex.join(test_command)
+    common += (
+        "\n本项目由管理员配置的固定验证入口为 `"
+        + command_label
+        + "`。阶段实现和 QA 以此命令的真实结果为依据。\n"
+    )
     agents = {}
     if args.template == "collaboration-check":
         agents["collaboration"] = installation.apply(
@@ -271,7 +303,9 @@ def main():
             "authorized_users": [],
             "sandbox": "workspace-write",
             "inherit_env": False,
-            "instructions": common + "\n" + (HERE / f"prompts/{role}.md").read_text(),
+            "instructions": (
+                common + "\n" + (HERE / f"prompts/{role}.md").read_text()
+            ).replace("{{verification_command}}", command_label),
             "skills": [str(skills[role].resolve())] if role in skills else [],
             "env": {
                 key: os.environ[key]
@@ -325,17 +359,15 @@ def main():
                     args.base,
                 ]
                 if role != "tests"
-                else ["npm", "test"],
+                else test_command,
             )
+            spec["env_refs"] = {
+                key: key
+                for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
+                if key in os.environ
+            }
             if role != "tests":
-                spec["env_refs"] = {
-                    "GH_TOKEN": args.token_env,
-                    **{
-                        key: key
-                        for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
-                        if key in os.environ
-                    },
-                }
+                spec["env_refs"]["GH_TOKEN"] = args.token_env
         connectors[role] = installation.apply("connectors", "connector-" + role, spec)[
             "id"
         ]

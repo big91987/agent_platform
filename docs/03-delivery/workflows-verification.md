@@ -246,3 +246,13 @@ bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，
 本次证明模板短路径、判断与用户纠正组合场景；不覆盖所有模型输入。此前列出的文件上传／下载、阻塞 before Hook、边上 Gate、结构化 request_user_input、GitLab、并行分支、按时间限制循环等缺口仍保留，不宣称全平台发布完成。
 
 配置修复最终交付：report 节点曾因模型服务 `serverOverloaded` 失败；升级后经网页“继续原节点”恢复同一会话，核对 QA 快照后只更新交付文档，未重跑开发或 QA。随后 publish → pr → done 完成，仍为同一 Run、共 11 次节点执行，提交 `c9e1d222b0bb483067460688bb690f0165a8d562`、[草稿 PR #16](https://github.com/big91987/agent-platform-workflow-demo/pull/16)。10 条通知均 succeeded，GitHub 核对 PR 为 OPEN/Draft、base 为专用测试分支。新配置与旧冻结运行兼容；没有合入 main 或触发生产部署。
+
+## Go 正式产品接入（2026-10-05）
+
+用户指定以独立正式产品 Model Relay 作为后续场景，后端全部 Go。产品维护源为 `big91987/model-relay`；人工路线图与阶段任务在该仓库，不纳入通用平台业务逻辑。现有演示仓库保留为历史验收证据，不再作为这个产品的代码来源。
+
+发现安装模板固定 npm test；维护源增加 `--test-command-json`，argv 直接交固定 Connector 执行，阶段策略同步使用同一验证入口。默认仍为 npm test，Go 项目配置 make verify。参数拒绝空命令、非字符串参数和 env 选项／赋值开头，不隐式执行 shell。测试 Connector 可继承显式代理，但不获得 GitHub Token。阶段指令明确静态浏览器工具不等于真实后端 UI 验收。
+
+先出现缺少 verification_command 的红灯，再实现并通过 8 项 Python 回归与 ruff 检查。正式安装及同参数重复安装均保留 6 个阶段 Agent、6 个 Connector 和同一张图；API 核对测试 argv 为 make verify，所有阶段指令无未展开占位符，测试环境无 GH_TOKEN。通过网页启动 Run `c1089fdc410a9dcce0725c30ad190df4`，准备分支和真实 [Issue #1](https://github.com/big91987/model-relay/issues/1) 已完成。此记录只证明产品接入和任务启动；Go 产品功能、实际 make verify 与独立 QA 的结果尚待该 Run 完成，不预先声称通过。
+
+补充结果：`scripts/verify.sh` 完整退出 0（`.data/workflow-evidence/verify-go-project-install.log`）。网页确认 intake 没有把已写路线图误当成完整 PRD，而是依据新产品和用户明确要求交给 requirements；当前 seq 4 需求节点执行中。未创建另一份重复 Issue／Run，未启动后续里程碑。
