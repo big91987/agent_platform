@@ -48,6 +48,14 @@ func (h *Server) workflowRunRoutes() {
 		}
 		respond(w, 200, v)
 	}))
+	h.mux.HandleFunc("GET /api/workflow-runs/{id}/delivery", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		v, err := h.workflowDelivery(r.Context(), c, r.PathValue("id"))
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, v)
+	}))
 	for _, action := range []string{"decision", "stop", "return", "resume"} {
 		h.mux.HandleFunc("POST /api/workflow-runs/{id}/"+action, h.protect(false, h.workflowRunCommand))
 	}

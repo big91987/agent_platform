@@ -27,3 +27,21 @@ test('workflow overview groups inaccessible history under its own Runs entry',as
  assert.match(content.innerHTML,new RegExp('/workflows/'+id+'/runs'));
  assert.doesNotMatch(content.innerHTML,/workflow-runs\//,'overview must group by workflow, not list all runs');
 });
+
+test('run delivery shows only verified deployment links and warns when PR head changed',()=>{
+ const ctx=vm.createContext({URL,esc:x=>x});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ const base={pull_request_url:'https://github.com/demo/repo/pull/7',actions_url:'https://github.com/demo/repo/actions',run_head_sha:'a'.repeat(40),current_head_sha:'b'.repeat(40),state:'open',draft:true,merged:false,deployments:[]};
+ ctx.delivery=base;
+ const before=vm.runInContext('workflowDeliveryHTML(delivery)',ctx);
+ assert.match(before,/尚未合并/);
+ assert.match(before,/原 QA 结论不覆盖当前 PR/);
+ assert.doesNotMatch(before,/打开效果地址/);
+ ctx.delivery={...base,state:'closed',draft:false,merged:true,main_sha:'c'.repeat(40),deployments:[{environment:'local-preview',state:'success',version:'c'.repeat(40),url:'http://127.0.0.1:5545/admin/',log_url:'https://github.com/demo/repo/actions/runs/1'}]};
+ const after=vm.runInContext('workflowDeliveryHTML(delivery)',ctx);
+ assert.match(after,/已合并提交/);
+ assert.match(after,/打开效果地址/);
+ assert.match(after,/127\.0\.0\.1:5545/);
+ ctx.delivery.deployments[0].url='javascript:alert(1)';
+ assert.doesNotMatch(vm.runInContext('workflowDeliveryHTML(delivery)',ctx),/href="javascript:/);
+});

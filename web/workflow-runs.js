@@ -23,10 +23,34 @@ async function workflowRunsView(id){
  $('#content').innerHTML=heading(name+' · 运行记录','点击一次运行查看节点进度，再进入对应 Agent 会话。',action)+await workflowRunsList(id,runs);
 }
 async function workflowRunView(id){
- workflowRunPage={id,signature:''};
+ workflowRunPage={id,signature:'',delivery:null,deliveryRequested:false};
  $('#content').innerHTML='<div id="wf-run-header"></div><div class="wf-run-layout"><section id="wf-run-history"></section><aside id="wf-run-controls" class="card"></aside></div>';
  await refreshWorkflowRun(id);
  workflowRunTimer=setInterval(()=>{if(workflowRunPage?.id===id&&!document.hidden)refreshWorkflowRun(id).catch(e=>toast(e.message))},1500);
+}
+function workflowExternalLink(url,label){
+ try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return esc(label)}catch{return esc(label)}
+ return `<a class="wf-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`;
+}
+function workflowDeliveryHTML(d){
+ const pr=workflowExternalLink(d.pull_request_url,'查看草稿 PR / 审查合并');
+ const actions=workflowExternalLink(d.actions_url,'查看 GitHub Actions');
+ const changed=d.run_head_sha&&d.current_head_sha&&d.run_head_sha!==d.current_head_sha?'<p class="callout">PR 在本次 Run 的 QA 后更新；原 QA 结论不覆盖当前 PR 提交。</p>':'';
+ if(!d.merged)return `<p>${pr} · ${actions}</p><p class="hint">PR ${esc(d.state)}${d.draft?' · Draft':''}，尚未合并；没有部署版本。</p>${changed}`;
+ const deployments=d.deployments.length?d.deployments.map(item=>`<div class="wf-hook-row"><strong>${esc(item.environment)} · ${esc(item.state)}</strong><small>版本 ${esc(item.version)}</small>${item.state==='success'&&item.url?`<p>${workflowExternalLink(item.url,'打开效果地址')}</p>`:''}${item.log_url?`<p>${workflowExternalLink(item.log_url,'查看部署记录')}</p>`:''}</div>`).join(''):'<p class="hint">尚无与合并提交对应的部署记录；到 GitHub Actions 查看准备或失败状态。</p>';
+ return `<p>${pr} · ${actions}</p><p>已合并提交：<code>${esc(d.main_sha)}</code></p>${changed}${deployments}`;
+}
+function renderWorkflowDelivery(){
+ const panel=$('#wf-delivery');if(!panel||!workflowRunPage)return;
+ const state=workflowRunPage.delivery;
+ panel.innerHTML=`<h3>合并与部署</h3><p class="hint">以下状态从 GitHub 只读查询，部署由仓库流程执行。</p><button id="wf-delivery-refresh" class="quiet">刷新部署状态</button>${state?.value?workflowDeliveryHTML(state.value):`<p class="hint">${esc(state?.error||'正在查询 GitHub…')}</p>`}`;
+ $('#wf-delivery-refresh').onclick=()=>loadWorkflowDelivery(workflowRunPage.id);
+}
+async function loadWorkflowDelivery(id){
+ if(workflowRunPage?.id!==id)return;
+ workflowRunPage.delivery={};renderWorkflowDelivery();
+ try{const value=await api('/api/workflow-runs/'+id+'/delivery');if(workflowRunPage?.id===id){workflowRunPage.delivery={value};renderWorkflowDelivery()}}
+ catch(error){if(workflowRunPage?.id===id){workflowRunPage.delivery={error:error.message};renderWorkflowDelivery()}}
 }
 async function refreshWorkflowRun(id){
  const r=await api('/api/workflow-runs/'+id);if(workflowRunPage?.id!==id)return;
@@ -36,6 +60,11 @@ async function refreshWorkflowRun(id){
  $('#wf-run-header').innerHTML=`<div class="wf-heading"><div><a data-nav href="/workflows/${esc(r.workflow_id)}/runs" class="muted small">← 运行记录</a><h1>${esc(r.definition.name)} <span class="wf-run-status status-${esc(r.status)}">${esc(workflowStatus[r.status]||r.status)}</span></h1><span class="muted small">版本 ${r.definition.revision} · 第 ${r.seq} 次节点执行</span></div></div><p class="wf-run-input">${esc(r.input)}</p>${r.error?`<div class="callout" role="alert">${esc(r.error)}</div>`:''}`;
  $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3>${esc(n?.name||s.node_id)}</h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStatus[s.status]||s.status)}</span></div>${s.result?`<p>${esc(s.result.summary)}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<details><summary>调用回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</summary><pre>${esc(JSON.stringify(s.connector_receipt,null,2))}</pre></details>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
  if(notices.length){$('#wf-run-history').insertAdjacentHTML('beforeend',`<section class="card wf-run-step"><h3>通知记录</h3><p class="hint">通知失败独立处理，不会重跑 Agent 或交接。结果未知时只查询外部回执。</p>${notices.map(n=>`<div class="wf-hook-row"><strong>${esc(workflowHookEvents[n.event]||n.event)} · ${esc(r.definition.nodes.find(v=>v.id===n.node)?.name||n.node)}</strong><small>${esc({pending:'待发送',sending:'发送中',succeeded:'已发送',failed:'准备失败',unknown:'结果未知，需核对'}[n.status]||n.status)}</small>${n.error?`<p class="hint">${esc(n.error)}</p>`:''}${n.receipt?.url?`<a class="wf-link" href="${esc(n.receipt.url)}" target="_blank" rel="noopener noreferrer">查看通知 ↗</a>`:''}${['failed','unknown'].includes(n.status)?`<button data-notice-retry="${esc(n.id)}">${n.status==='unknown'?'核对外部结果':'重试通知'}</button>`:''}</div>`).join('')}</section>`);document.querySelectorAll('[data-notice-retry]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/api/workflow-runs/'+id+'/notifications/'+b.dataset.noticeRetry+'/retry','POST',{});await refreshWorkflowRun(id)}catch(e){toast(e.message);b.disabled=false}})}
+ if(r.steps.some(s=>s.connector_receipt?.kind==='github.pull_request')){
+  $('#wf-run-history').insertAdjacentHTML('beforeend','<section id="wf-delivery" class="card wf-run-step"></section>');
+  renderWorkflowDelivery();
+  if(!workflowRunPage.deliveryRequested){workflowRunPage.deliveryRequested=true;loadWorkflowDelivery(id)}
+ }
  // Preserve an in-progress decision while a native status update arrives.
  const old=Object.fromEntries([...$('#wf-run-controls').querySelectorAll('input,textarea,select')].map(el=>[el.id,el.value]));
  let controls=`<h3>${esc(node.name)}</h3><p class="hint">${esc(node.prompt||'')}</p>`;
