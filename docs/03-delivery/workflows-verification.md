@@ -443,7 +443,7 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 
 ## Skill 产物契约与 Trellis 验收（2026-10-06）
 
-当前结论：**新 Issue 链路和文档隔离已验证，交付状态闭环仍需修复复验，目标未完成**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。以下保留执行过程及当时状态，最终结论和证据以本节末尾的完成审计为准。
+当前结论：**本轮模板／Skill／Trellis 目标通过，交付状态和历史日志收尾缺陷已真实复验关闭**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。以下保留执行过程及当时状态，最终结论和证据以本节末尾的完成审计为准。
 
 - 临时修复：[PR #11](https://github.com/big91987/model-relay/pull/11) 原 head `943d053` 与 main `6f1ec16` 在 task/delivery/qa/pr 四份任务文档冲突，产品代码无文本冲突。人工临时集成提交 `f26590c0589ede73edf38604ba5a415e50f68e15` 保留 Issue #8 文档原文到历史目录、原位置保留 Issue #9 文档；两侧四份文档逐字节核对。完整 `make verify` exit 0，含健康方法、版本展示、Go race/HTTP/CLI 与两个视口真实 Go 服务浏览器旅程。GitHub 确认 CLEAN/MERGEABLE；按既有测试仓授权合入 main，merge SHA `73681a7df4c5cbe5914056ac13348154d58726e0`。这是人工临时方案，**不是 Pipeline 自动冲突恢复通过**；未手动部署。
 - 正式维护源 `df527c3`：按 Run 隔离公共任务文档，阶段指令不再定义固定内容模板；发布使用实际 QA 产物，保留旧冻结 Connector 的固定路径兼容；Trellis 0.6.15 官方初始化进入 prepare，研发挂载 before-dev/check/spec-bootstrap/update-spec。`scripts/verify.sh` 全量 exit 0（含 27 项 workflow 示例测试及 Go race），脱敏扫描通过。
@@ -494,3 +494,25 @@ Issue #12 研发与宿主测试续验：development seq 6 已完成实际规范 
 
 
 完成审计追加发现：PR #13 已合并，但公共任务 T001 仍 In Review、M01 仍 Ready for Review，总览保留“待宿主测试”等当前状态。需求/实现/测试与 QA 证据成立，但交付管理 Skill 的公共事实闭环缺责任人；原 report 只汇总 PR，未挂载该 Skill。不能以 QA 链接覆盖任务文件事实源的过期状态，因此本轮目标重新保持未完成。维护源将研发交付 Skill 同时挂载 report，由其按 Skill 更新公共交付事实，模板只规定职责与位置，不自定内容或强制 Done。待原 manifest 升级和新的真实任务复验；旧历史不手改成成功。
+
+
+收尾缺陷续验版本 `bc25568`：report 已挂载研发交付管理 Skill，30 项模板/安装回归通过。零在途时备份原 manifest，正式升级并重复安装无变化，17 条历史 Run 保留。额外空白平台新装经正式 agents 列表 API 核对 report Skill，重复安装不变，无 Agent 任务或 GitHub 写入；证据 `.data/workflow-evidence/fresh-report-skill-install.json`。首次检查脚本误用不存在的单 Agent GET 路径返回 404，已改为受支持列表接口重新完成，不将该探针错误归为平台执行失败。
+
+新 [Issue #14](https://github.com/big91987/model-relay/issues/14) 的真实 [issues Actions 37371672475](https://github.com/big91987/model-relay/actions/runs/37371672475) 关联唯一 Run `cf691e39d382439f92a3ac12f5facfff`。prepare 复用 main `066f035` 中已有 Trellis 0.6.15（initialized=false），输出独立任务根目录；intake 按明确验证工程 bug 跳过需求/设计，development seq 4 已开始从根因修复历史日志副作用，当前尚无最终测试/QA/报告状态闭环/PR 结论。
+
+
+### 收尾修复最终验收
+
+[Issue #14](https://github.com/big91987/model-relay/issues/14) 的唯一 Run `cf691e39d382439f92a3ac12f5facfff` completed，共 10 次节点执行：prepare/原 Issue → intake 直接 development → 固定 tests → 独立 QA → report → publish/PR → done。源维护版本 `bc25568` 的 report 新挂载在真实原生元数据中启用 `managing-engineering-delivery-cn`，工具记录完整读取 Skill、public-delivery-contract 和 delivery-review-checklist。正式流水线自动交付 [PR #15](https://github.com/big91987/model-relay/pull/15)，head `17b21dd99a410f267632d6c3837bc420af25052a`。
+
+- 固定宿主 tests seq 5 的 `make verify` 退出 0；研发、QA、报告与验收方发布后独立执行 evidence 得到相同 36 文件摘要 `b33aa9f6f848a8cda1bf5af08ba9c2e540d0aa09f91090930ccafa6d4e636702`。QA 自己的监听受限执行仍保留 exit 2，不混作本地完整成功。
+- 历史日志副作用从项目验证程序根因修复：移除固定历史文件写入，仅输出 stdout 并传播输出错误；不改 Makefile、历史分类器或产品行为。研发和独立 QA 均先对旧实现得到覆盖历史/吞输出错误的红灯，再对修复版得到成功、分类拒绝、关闭 stdout 三种真实子进程绿灯；受控子命令夹具仅证明输出契约，不冒充网络验证。原健康/版本/Go race/浏览器仍由宿主完整门禁执行。QA 将原 `QA12-HISTORY-WRITE` 在本 Run 的缺陷表关闭，旧 Run 原文保留。
+- 在宿主正常执行后，验收方逐字节比较 main 基线下全部 106 个原 workflow 文件，全部不变；QA 前后哈希也一致。没有人工恢复旧日志，本次新增任务文档只在自己的 Run 根目录，必要的项目说明和 Trellis 规范原位更新。
+- 报告按 Skill 同步了 T001 Done、M01 Accepted、总览 Delivered，明确仅指工程修复/验收/公共说明，并记录报告时点；实际未发生的 Git 发布/合并/部署仍留给对应后续节点。原阶段 Blocked/Not Run 与失败回执保留在验证记录中；当前状态不再等待已完成的宿主测试或 QA。报告更新的任务、里程碑、总览、验证和 pr.md 有真实工具记录与发布差异，不是仅写承诺。
+- 验收方检查 PR 为 CLEAN/MERGEABLE、代码摘要不变、工作树干净、新增/修改文件脱敏无命中后，依既有测试仓授权合入 main：merge `d62cd51e8de2127548e1ac7469d349443d1bfe3d`；Issue #14 CLOSED。GitHub Git tree `ca34e9e19daadcbfa0d1dbf6479e35facc84ca4a` 在 PR head 与 merge 完全一致。
+- UI 从工作流自己的 Runs 列表进入该任务，实际展示 completed/10 次执行、短路径路由、测试/QA/报告会话及 PR #15 回执；正式 API 确认唯一 Issue #14 Run、共 18 条历史 Run 保留、没有 running/waiting。新装、原 manifest 升级和重复安装已有独立 API 证据，未以直接改数据库或补造回执完成。
+
+最终边界：本轮只接受用户要求的模板位置/Skill 内容契约、Trellis 真实使用及新 Issue 验证与收尾闭环。PR #11 的旧冲突仍是获准的临时人工修复，不计 Pipeline 自动冲突恢复；本轮两个新 PR 均无文档冲突合入。源 PR #5 保持 Draft/Open，未合并发行；没有触发手动部署或真实供应商调用，第二真实仓库/多人入口不在本轮通过范围。原宿主回执文本截断保留为诊断限制，不伪造后段日志；QA 本地网络限制不改写。旧定时任务未恢复。
+
+
+PR #15 合入后正式 [Actions 37374381315](https://github.com/big91987/model-relay/actions/runs/37374381315) success，精确 SHA `d62cd51e8de2127548e1ac7469d349443d1bfe3d`，prepare success／deploy skipped。受支持控制器的该 SHA 完整私有验证日志给出相同摘要 b33aa9f6…、27 前端测试通过、三个 TestHistoryCommandOutput 子场景通过、1280px/390px 真实 Go browser PASS。该证据属于合入后再次验证，不补造原 Run 被截断的输出。UI 交付回链显示相同合并 SHA 及“尚无包含此次合并提交的部署记录”。最终源跟踪文件脱敏扫描无命中；验收记录与通用改动纳入源 Draft PR #5，目标所要求的修复和复验完成。
