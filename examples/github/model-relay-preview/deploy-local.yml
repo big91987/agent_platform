@@ -1,9 +1,15 @@
 name: Deploy Model Relay locally
-run-name: Prepare main for local Model Relay · ${{ github.sha }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && 'Deploy' || 'Prepare' }} Model Relay · ${{ github.sha }}
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy the verified current main to the local preview"
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -31,11 +37,11 @@ jobs:
             --github-output "$GITHUB_OUTPUT"
   deploy:
     needs: prepare
-    if: needs.prepare.outputs.deploy == 'true'
+    if: github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.deploy && needs.prepare.outputs.deploy == 'true'
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 10
     environment:
-      name: local-data-review
+      name: local-preview
       url: ${{ vars.MODEL_RELAY_PREVIEW_URL }}
     steps:
       - name: Activate reviewed version and check health
