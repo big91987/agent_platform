@@ -458,3 +458,8 @@ Issue #12 首次真实接单：Run `836b817833886b3188f263800b0f092f`，prepare 
 原生范围修复版本 `a75def0` 已安全升级开发实例，并通过正式 resume API 接续同一 Run、同一 intake 会话；intake 已真实完成，seq 4 requirements 正在执行。原失败输入仍保留为 failed，恢复输入 completed，未重建 Issue/Run。需求节点真实 command_execution 记录已读取挂载需求 Skill 与 requirements-levels/product-definition-contract 等 references，并准备按 Skill 分别写 PRD/G1；此时尚无研发、Trellis before-dev/check 或 QA 通过结论。
 
 补充回归 `test_two_task_branches_merge_without_document_conflicts`：真实本地 bare Git，两条任务分支从同一 main 起步，分别按不同 Run 根目录发布实际 QA 文件和 PR 正文，再依次合入 main；两份证据保持原文且无冲突。6 项 repository 测试通过。该测试覆盖原固定文档热点的 Git 行为，不替代新 Issue 的 Agent 端到端验收，也不宣称产品源码永远无冲突。
+
+
+新安装补验：在临时空白平台通过正式 API 创建基础 Agent，再使用原安装器全新安装与重复安装，五项研发 Skill、prepare 的 Trellis 版本参数、publish 的任务目录协议和 PR 正文 Run 路径均核对通过；未启动 Agent、未产生 GitHub 写操作，临时实例已退出。原始回执 `.data/workflow-evidence/fresh-skill-contract-install.json`。
+
+Issue #12 的 requirements seq 4、design seq 5 已实际完成。独立产物为 `product-definition.md`、`g1-review.md`、`password-visibility-architecture.md`、`g2-review.md`，都位于本 Run 根目录；需求及架构 Skill/reference 读取有真实工具记录，10 份原任务文档哈希继续一致。设计依据 Skill 做小型增量裁剪，并单独记录安全专家模块的本地应用。Run 已进入 development seq 6（会话 `edfdc6d47f8bf9181d654aaa19e14d87`）；Trellis 实际实施检查、宿主完整测试、独立 QA 与新 PR 仍待核验，当前目标未完成。
