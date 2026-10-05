@@ -5,6 +5,7 @@
 ## 组成与边界
 
 - `software-delivery.json`：准备分支 → Issue → 需求 → 设计 → 研发 → 项目测试 → 独立 QA → 交付说明 → 提交推送 → 草稿 PR。测试失败回研发；QA 可回需求、设计或研发；关键问题进入人工选择节点。所有回路保留在同一个 Run 中。
+- `qa-rework.json`：从已有产物的独立 QA 开始，发现问题返回需求／设计／研发，修复后重新测试和 QA；不创建 Issue、分支或 PR，最后由验收人员选择结束或继续返工。
 - `prompts/`：阶段指令，复用 Harness Skill，按项目规模裁剪。普通选择记录推荐并继续；用户明确要求、关键歧义和高风险操作才等待确认。阶段不适用时说明依据再交接。
 - `install.py`：使用公开管理 API 注册 Agent、stdio MCP、Connector 和图；安装清单用于重入与升级，不操作数据库。
 - `repository.py`：固定的准备分支／提交推送命令。每个 Run 使用 `workflow/<run_id>` 分支；拒绝接管脏工作区、错误仓库、错误分支和明显凭据文件；不 reset、不强推、不合并。
@@ -68,3 +69,34 @@ ruff format --check examples/platform-workflows
 ```
 
 本地 Git 测试覆盖脏工作区、分支隔离、真实提交推送与重试；它们不代替真实平台旅程。平台完整证据在 [验证记录](../../docs/03-delivery/workflows-verification.md)。发布前需要从网页实际走通一句话需求、工具执行、QA 回退、修复、GitHub 草稿 PR，以及停止／重启后的恢复。
+
+## 已有产物的返工验收
+
+用上述安装参数和原安装清单追加 `--template qa-rework`，注册独立的返工图，保留原交付图。此模板复用原阶段 Agent、浏览器工具及测试 Connector；启动前选择已有需求、设计和实现的独立 checkout。不要选用另一个未结束 Run 占用的工作区。需升级配置时仍使用 `--upgrade`，不绕过漂移检查。
+
+从返回的图页面启动，输入验收范围。QA 根据实际证据选择回退目标；研发修复后通过项目测试返回独立 QA。末端人工节点用于检查返工证据，测试执行者可自行操作；它不表示正常交付模板需要额外的形式审批。故障注入只用于专用测试分支，保留原交付分支和失败证据。
+
+## 隔离实例的真实 API 验收
+
+```sh
+# 只对隔离验收实例运行，PLATFORM_ADMIN_PASSWORD 通过环境安全提供。
+python3 examples/platform-workflows/verify_access.py \
+  --platform-url <isolated-platform-url> \
+  --evidence <private-evidence-file.json>
+```
+
+该入口通过真实 HTTP 创建两个临时调用账户及一张人工节点测试图，验证跨用户访问拒绝、重复提交、工作区占用、版本冻结、审批与停用；结束后停用测试账户和图。证据记录结果和资源 ID，不记录密码。异常时保留工作区和 Run 供排查，不能盲目删掉在途任务。它证明 API 行为，不代替网页旅程。
+
+
+命令取消与强杀恢复另有独立入口：
+
+```sh
+# 在已启动的隔离实例上验证命令停止、拒绝隐式重放和显式重试。
+python3 examples/platform-workflows/verify_command.py \
+  --platform-url <isolated-platform-url> --evidence <private-evidence-file.json>
+# 或由脚本创建临时实例，强杀该实例后重启验证；不重启任何既有平台。
+python3 examples/platform-workflows/verify_command.py \
+  --server-binary <built-agent-platform-binary> --evidence <private-restart-evidence.json>
+```
+
+两个模式都要求 `PLATFORM_ADMIN_PASSWORD`。脚本需在平台所在主机运行，因为固定命令引用同机脚本及临时工作区。夹具运行真实 Python 子进程并写入操作记录；停止后核实进程已消失、记录未重复，显式返回产生新执行，并验证非零退出按失败边路由。强杀模式只终止脚本自己创建的服务。临时数据、运行历史和操作记录留作证据，位置写入报告；图及 Connector 停用后可人工清理。此检查不调用 Agent，也不冒充 GitHub 网络丢响应验收。

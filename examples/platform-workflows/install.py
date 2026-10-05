@@ -145,6 +145,11 @@ def main():
     parser.add_argument("--token-env", default="WORKFLOW_GITHUB_TOKEN")
     parser.add_argument("--prefix", default="software-delivery")
     parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument(
+        "--template",
+        choices=["software-delivery", "qa-rework"],
+        default="software-delivery",
+    )
     parser.add_argument("--upgrade", action="store_true")
     parser.add_argument("--prepare-browser", action="store_true")
     args = parser.parse_args()
@@ -297,14 +302,18 @@ def main():
             "id"
         ]
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
-    graph = json.loads((HERE / "software-delivery.json").read_text())
+    graph = json.loads((HERE / (args.template + ".json")).read_text())
     graph["name"] = args.prefix + " · " + graph["name"]
     for node in graph["nodes"]:
         if node["kind"] == "agent":
             node["agent_id"] = agents[node["agent_id"]]
         if node["kind"] == "connector":
             node["connector_id"] = connectors[node["connector_id"]]
-    workflow = installation.apply("workflows", "workflow", graph)
+    workflow = installation.apply(
+        "workflows",
+        "workflow" if args.template == "software-delivery" else args.template,
+        graph,
+    )
     print(api.url + "/workflows/" + workflow["id"])
 
 

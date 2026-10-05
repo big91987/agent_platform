@@ -2,13 +2,13 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前结果：T1 编辑器与 T2 平台内 Agent／人工反馈循环已通过真实切片；命令与 GitHub Issue／评论 Connector 已通过真实切片；完整仓库交付和发布验收尚未完成。不得引用原 GitHub CI 方案的测试结果证明本方案通过。
+当前结果：T1 编辑器与 T2 平台内 Agent／人工反馈循环已通过真实切片；命令与 GitHub Issue／评论 Connector 已通过真实切片；独立测试仓库完整正常交付已通过，QA 真实缺陷返工闭环也已通过，发布验收继续执行。不得引用原 GitHub CI 方案的测试结果证明本方案通过。
 
 | 验证范围 | 状态 | 证据 |
 |---|---|---|
 | 图编辑、保存、授权、版本快照（WF-01/09/10） | 部分通过 | 定义 API、权限与网页编辑通过；T2 用版本变更测试验证运行冻结旧图 |
-| 真实 Agent 接力、人工确认与回退（WF-02～05/12） | 切片通过 | 下述两个真实 Run；未代替 T3 研发模板与外部仓库闭环 |
-| GitHub Connector 与新仓库闭环（WF-06） | 部分通过 | T3 真实命令、Issue 创建和评论已通过；PR、研发模板与完整恢复待验证 |
+| 真实 Agent 接力、人工确认与回退（WF-02～05/12） | 通过已列旅程 | T2 人工回退；T3 正常研发交付及 QA 缺陷返工，同一 Run 完成修复复验 |
+| GitHub Connector 与新仓库闭环（WF-06） | 正常路径通过 | T3 真实命令、Issue、评论、草稿 PR 和研发模板已通过；GitHub 丢响应恢复仍待实测 |
 | 停止、重复交接、重启及升级（WF-07～11） | 部分通过 | 原生停止／恢复与人工等待重启通过；幂等和旧回执用真实 SQLite／MCP 测试；完整升级与外部未知结果待 T4 |
 
 隔离原则：独立 worktree、独立数据目录和服务端口；不更改旧平台现场；测试仓库单独创建。敏感运行数据和截图保留本地忽略目录，公共证据只记录脱敏步骤、版本、结果和外部测试资源链接。
@@ -44,7 +44,7 @@
 
 ## 独立测试仓库
 
-已通过 GitHub 正式入口创建并查询核实 [agent-platform-workflow-demo](https://github.com/big91987/agent-platform-workflow-demo)，可见性 PRIVATE，默认分支 main。当前仅初始化 README；尚未应用真实平台流程。后续 T3 使用该仓库，禁止把 reading_list 的旧成功记录算作新方案验证。
+已通过 GitHub 正式入口创建并查询核实 [agent-platform-workflow-demo](https://github.com/big91987/agent-platform-workflow-demo)，可见性 PRIVATE，默认分支 main。初始化阶段仅含 README；后续 T3 已使用该仓库完成真实交付，禁止把 reading_list 的旧成功记录算作新方案验证。
 
 ## T2 持久执行与真实反馈循环
 
@@ -111,3 +111,38 @@ Run：`5ff2da857f2bbe8a6b9dee66bf6922e0`，同样冻结版本 3。
 工作区隔离补充：测试先复现两个未结束 Run 共用目录被接受，再在启动事务中拒绝同目录、子目录和符号链接别名；停止状态仍占用，正式结束后可再用。针对 Workflow 测试及完整 Go race 回归通过。原 Connector 取消测试先按正式审批路径结束前一任务，再开始后一任务。此变更尚未替换在途验收服务；当前真实 Run 运行于 `153803f` 引擎。
 
 标准入口 `bash scripts/verify.sh` 在本轮修正后完整退出 0：前端 17 项（含真实浏览器回归 2 项）、Python SDK 7 项、GitHub 示例 96 项、本地部署 11 项、新模板 Git 操作 3 项，ruff／gofmt／go vet、全仓 Go race 与二进制构建通过。原始日志保存在 `.data/workflow-evidence/verify-software-delivery-final.log`。macOS 链接器 LC_DYSYMTAB 警告未导致失败。以上回归不替代仍在进行的真实 T3 交付旅程。
+
+
+## T3 正常交付完成与运行版本复核
+
+Run `53d0ed8b44d1b6eae020996ad84d1d55` 已 completed，共 11 次节点执行。需求、设计、研发、命令测试、独立 QA、交付说明、提交推送和 PR 创建均通过真实执行完成。独立 QA 会话 `4960f4e07f8629091bf509d17f0ddf8d` 重新运行 10 项 Node 测试及 6 次注册浏览器检查；最终由 Connector 创建 [草稿 PR #3](https://github.com/big91987/agent-platform-workflow-demo/pull/3)，对应 [Issue #2](https://github.com/big91987/agent-platform-workflow-demo/issues/2)。GitHub 查询核对 PR 为 OPEN/Draft，head 为 `6e5fd92f32013636e27dc8432767790bae8b4084`，与平台推送回执一致，未合并。
+
+补充网页操作验证新增、去除首尾空白、完成、筛选、刷新保留、关闭再打开、删除并刷新。此处是独立浏览器复核，不把 API 查询当作页面验收。服务更新到 `1ce18ea` 后再次读取四条已完成 Run，图、历史和回执保留；原在途运行结束后才更新二进制。工作区互斥修复已进入当前运行版本。
+
+## T3 真实缺陷返工（已完成）
+
+在已交付版本上新建专用 `test/qa-return-delete` 分支，提交 `68fa413` 故意移除删除按钮的事件绑定。它是明确标识的故障注入；没有改动原 PR 分支。使用维护源 `qa-rework.json` 和安装 API 注册返工图，正式 Run `85eb42ce941a5007d6c7e5da0b94637c` 从 QA 开始。
+
+首轮 QA 会话 `48c2d63ad386a77b5100d80b409a9b86` 在真实 Chromium 中重现“点击删除后仍存在，刷新也仍存在”，记录 P1 QA-DEL-001、两次失败回执和截图。10 项模型测试通过但未覆盖这个 UI 缺陷，因此 QA 明确 No-Go，通过真实 `complete_node(development)` 交接到研发会话 `aadef61d219f28502aeca0e5d6b997e9`。研发恢复删除绑定、先补红灯回归再修复；命令 Connector 独立执行 11 项测试通过。第二轮 QA 会话 `7795590c407c8151737de5f6571a1739` 重新执行 check-1-20～26 共 7 条浏览器旅程，全部 passed=true，原网页删除失败关闭。实际 app.js SHA256 为 `411930d9cd2140ee19e23c1c2c799468616c146dbf5d5c53193f94d64d8bc53e`，已直接核对文件及浏览器回执。旧失败证据保留。
+
+测试执行者核对原红灯、修复、命令与独立浏览器回执后，经正式 decision API 选择 accept；Run 最终 completed，6 次执行为 QA → development → tests → QA → decision → done，始终同一 Run。此确认仅结束验收记录，不合并任何代码。
+
+此返工 Run 通过正式 API 启动；本轮浏览器控制通道及文件选择器超时，因此不将其记作网页发起通过。正常交付与 T2 人工回退已由网页实际操作完成；文件上传／下载仍未验收。
+
+## T4 真实 HTTP 权限与幂等
+
+维护源入口 `examples/platform-workflows/verify_access.py` 在隔离实例运行，证据 `.data/workflow-evidence/live-api-access.json`。11 项检查通过：重复请求只保留同一 Run；同请求改内容冲突；工作区重复占用拒绝；另一用户读取／审批／停止／回退／恢复均拒绝；更新图后已有 Run 仍冻结版本 1；所有者批准完成；停用图禁止新启动。初轮 Run `485e0b419eeb6f6bb36e8a07de0c1bf8` 完成；清理逻辑更新后复验 Run `7027736faa0c825b589b39aa03933e2c` 同样通过，两个临时账户及图已停用。没有直接修改数据库或构造回执。
+
+这只证明真实 HTTP 层，未代替跨用户网页测试。外部副作用未知结果的真实中断恢复、文件上传／下载、完整发布审查仍未完成。所有改动继续在开发分支迭代，不合入 main；此前过早创建的源 PR 不作为交付完成证据。
+
+
+## T4 真实命令停止与服务强杀恢复
+
+可复用入口为 `examples/platform-workflows/verify_command.py`，分别使用正式 HTTP 的现有隔离实例模式及脚本自建临时服务模式。没有操作持久表或补造回执。
+
+- 停止模式 Run `32dc01fd126123123b21cfba777c1e74`：真实子进程写入一次记录后等待；正式停止入口杀掉该进程；resume 拒绝重放，操作数仍为 1。明确 return 到命令节点后才新增第二次执行，真实退出码 7 按 failed 路由到人工节点，再由测试执行者确认完成。
+- 强杀模式首轮 Run `4c7c580b6071b996595a0ca307d379df`，清理错误处理补充后复验 Run `739641be01c42ce23b1c96c5e6eb5eda` 同样通过：只对脚本新建临时实例执行 SIGKILL，再用相同数据目录启动。Run 从真实运行转为 failed，说明缺少确认结果；原进程已终止，记录仍只有一次。正式停止／显式返回后完成同样的失败边验证。原 QA 所在实例未重启。
+- 原始证据分别为 `.data/workflow-evidence/live-command-recovery.json`、`live-command-restart.json`，包含每次执行和操作数；临时实例已停止、验收资产已停用。
+- `scripts/verify.sh` 本轮完整退出 0，日志 `.data/workflow-evidence/verify-qa-rework.log`；仍有非致命 macOS 链接器警告。当前仅分支迭代，不把本轮检查称作最终发布通过。
+
+剩余：浏览器文件导入／导出、真实 GitHub 写入丢响应恢复、最终 AC 审查。浏览器控制工具本轮再次超时，明确列为该 UI 用例阻塞，不用 API 结果替换网页证据。

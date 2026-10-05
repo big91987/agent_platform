@@ -1,0 +1,176 @@
+{
+  "name": "QA 返工验收 · 已有工作区",
+  "enabled": true,
+  "entry": "qa",
+  "start_nodes": [],
+  "authorized_users": [],
+  "max_steps": 20,
+  "nodes": [
+    {
+      "id": "requirements",
+      "name": "需求与验收标准",
+      "kind": "agent",
+      "agent_id": "requirements",
+      "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 40,
+      "y": 240
+    },
+    {
+      "id": "design",
+      "name": "设计方案",
+      "kind": "agent",
+      "agent_id": "design",
+      "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 300,
+      "y": 240
+    },
+    {
+      "id": "development",
+      "name": "研发实现",
+      "kind": "agent",
+      "agent_id": "development",
+      "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 560,
+      "y": 240
+    },
+    {
+      "id": "qa",
+      "name": "独立 QA",
+      "kind": "agent",
+      "agent_id": "qa",
+      "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 40,
+      "y": 460
+    },
+    {
+      "id": "tests",
+      "name": "运行项目测试",
+      "kind": "connector",
+      "connector_id": "tests",
+      "x": 820,
+      "y": 240
+    },
+    {
+      "id": "decision",
+      "name": "验收与人工回退",
+      "kind": "approval",
+      "prompt": "检查 QA 结论和回退修复证据；认可后选择 accept，需继续修改时选择对应阶段并说明原因。",
+      "x": 820,
+      "y": 680
+    },
+    {
+      "id": "done",
+      "name": "验收记录完成",
+      "kind": "end",
+      "x": 1080,
+      "y": 460
+    }
+  ],
+  "edges": [
+    {
+      "source": "requirements",
+      "route": "next",
+      "target": "design"
+    },
+    {
+      "source": "design",
+      "route": "next",
+      "target": "development"
+    },
+    {
+      "source": "development",
+      "route": "next",
+      "target": "tests"
+    },
+    {
+      "source": "tests",
+      "route": "next",
+      "target": "qa"
+    },
+    {
+      "source": "tests",
+      "route": "failed",
+      "target": "development"
+    },
+    {
+      "source": "requirements",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "design",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "development",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "qa",
+      "route": "decision",
+      "target": "decision"
+    },
+    {
+      "source": "design",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "development",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "development",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "qa",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "qa",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "qa",
+      "route": "development",
+      "target": "development"
+    },
+    {
+      "source": "decision",
+      "route": "requirements",
+      "target": "requirements"
+    },
+    {
+      "source": "decision",
+      "route": "design",
+      "target": "design"
+    },
+    {
+      "source": "decision",
+      "route": "development",
+      "target": "development"
+    },
+    {
+      "source": "decision",
+      "route": "qa",
+      "target": "qa"
+    },
+    {
+      "source": "qa",
+      "route": "next",
+      "target": "decision"
+    },
+    {
+      "source": "decision",
+      "route": "accept",
+      "target": "done"
+    }
+  ]
+}
