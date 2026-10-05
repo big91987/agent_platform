@@ -312,3 +312,30 @@ seq 14 QA 因原生模型 serverOverloaded 失败；从实际运行页填写继�
 ### 窄窗口页面修复
 
 在实际 669px 宽浏览器面板发现整页被导航撑至约 847px，右侧聊天内容被裁掉。DOM 确认根因为 grid 子项侧栏的自动最小宽度；维护源给 sidebar 设置 min-width:0，导航自身横向滚动。隔离实例实际点验修复后 669px 会话页 document.scrollWidth=669，聊天卡宽 641；390px 运行详情和所属工作流 Runs 列表 document.scrollWidth 均为 390，链接路径正确。既有真实浏览器回归通过。未改 8792 的在途执行，正式实例随安全升级应用。
+
+
+## 开发实例升级与完整旅程终验（2026-10-05）
+
+维护源代码版本 `7040597d18365d5a3899d21d1debc6e736d97d47`，分支 `codex/platform-workflows`。独立审查发现历史 Run 所有者失去当前 Workflow 授权后新导航 403；已在维护源修复。回归先复现页面失败，随后 HTTP 用真实登录身份验证“当前图 403、本人 Run/列表 200、他人分组为空”，前端分组与页面测试通过。隔离真实浏览器验收：原授权用户发起并完成审批 Run，管理员撤销其当前图授权后，用户仍从编排总览的“历史运行”卡片进入专属 Runs → 单次 Run → 返回列表；无权打开当前图的链接不再出现。隔离验收服务已关闭，原始记录在 `.data/workflow-evidence/history-navigation-fixture.json`；截图在本地私有证据，不作为仓库资产。
+
+### M1 交付与原实例升级
+
+- 唯一 Model Relay M1 Run `c1089fdc410a9dcce0725c30ad190df4` 已完成，共 21 次节点执行。seq 16 的宿主固定 `make verify` 退出 0，32 文件摘要 `fbc07625a4d9819bba5aa809de5dfea636450cf42489d7d7c72ab66ccba06efe`；独立 QA seq 17 核对同一摘要并关闭 AC-04／15 补测缺口，结论仅限 M1/v0.1 受控验收 Go。seq 19 推送提交 `851c949f9cd1b284b48351e1cc8b5ca1f7b2dce8`；该提交重新计算同一 32 文件摘要，GitHub [草稿 PR #2](https://github.com/big91987/model-relay/pull/2) 为 OPEN/Draft、base main、head 与推送回执一致。原始 Run 在 `.data/workflow-evidence/model-relay-final-run.json`；真实供应商联调仍 Not Run。
+- 升级前正式 API 查询 14 个 Run、43 个会话；除专用 `beee6e43aed58ce27470989bab0d1798` 按计划 stopped，均无在途执行／会话。精确核对 8792 服务进程后停止；以文件系统 clone 备份原数据目录（含原生历史）、旧二进制及两个原 manifest，副本数据库 `integrity_check=ok`。使用相同端口、数据目录、管理员账户与 Connector 环境启动当前维护源二进制；健康 200，M1 仍 completed，历史 14 Run／43 会话可读。未操作 8788。
+- 经原 `install.py --upgrade` 和原项目 manifest 升级 Model Relay 与 software-delivery，保持各自仓库、工作区、测试命令及 base。两份清单所有原对象 ID 不变，design/development/qa 均绑定同一个 `browser-validation`；项目清单引用同一个共享 manifest。二次执行正式升级后 manifest 哈希、Agent、Workflow、Run 快照全部不变，私有证据 `.data/workflow-evidence/upgrade-repeat-proof.json`。正常新装、旧版升级、活跃 Run 拒绝升级、200 条后旧活跃 Run 检出及两个项目原生 Agent 各自调用共享工具的独立实测证据见上文“共享工具安装与原生链路补验”和“完整历史分页核查”。
+- 外部工具主页只突出显示当前 Agent 实际绑定的一个“浏览器验证”；两条旧项目注册在可展开的“未分配给当前 Agent 的连接”中。一条已停用；另一条因上述 stopped Run 的恢复边界仍启用，但当前 Agent 均不绑定它。旧定义和原生会话没有被删除或迁移。当前 Run 的图快照版本 7 保留；当前图版本 8 仍有 intake → requirements/design/development 及 QA → requirements/design/development 出口。共享工具注册本身没有按项目复制实现。
+
+### 页面入口和特殊路由复查
+
+| 场景 | 此轮页面／API／外部证据 | 结论 |
+|---|---|---|
+| 工作流专属 Runs | 实际浏览器从编排卡片进入 Model Relay `/workflows/fbdbfd95ea6c6992bf45bf697b0769e9/runs`，仅列本工作流 M1；再进单次 Run、独立 QA 会话、返回 Run／列表。software-delivery 卡片进入自己的 Runs，列 4 条本图运行；总览不再混列所有 Run。669px 页面无横向溢出；原生 QA 会话展示 13 张按时间排序的真实工具卡及最终回复。运行页展示 seq 16 测试退出码、seq 17 QA、seq 20 草稿 PR 链接与通知顺序。原实时流接收证据见此前 M1 执行中记录，此轮升级后核验的是历史恢复，不把静态历史说成新实时流 | Pass，UI＋API；工具原生新绑定的实际调用在独立实例通过 |
+| 明确 bug 直接开发 | 网页进入旧 Run `82c5788827d042fec63f0518b7e00d72`：prepare → issue → intake → development → tests → QA → publish（首次取消后同一 Run 恢复）→ PR → done，没有需求／设计节点。当前图版本 8 仍有 development 出口；[Issue #11](https://github.com/big91987/agent-platform-workflow-demo/issues/11)、[草稿 PR #14](https://github.com/big91987/agent-platform-workflow-demo/pull/14) 仍可查，PR OPEN/Draft | Pass；真实执行发生在图版本 7，此轮在新 UI 复查冻结历史 |
+| 显式开发起点／配置修复 | 页面进入 Run `dfb98adc8b98053d51170129e17a7bef`：用户自然语言“从开发开始”，intake → development，保留准备、Issue、宿主 npm test、独立 QA、同一 Run 的停止返回和 [草稿 PR #16](https://github.com/big91987/agent-platform-workflow-demo/pull/16)，PR OPEN/Draft。测试范围与端口占用恢复见上文 E6/E7 | Pass；图版本 7 原旅程，新 UI 复查 |
+| 模糊需求、设计与纠正目标 | 页面进入专用 Run `beee6e43aed58ce27470989bab0d1798`：原会话先澄清，收到“多人云同步、离线冲突”后 intake 选 design；用户纠正“应先回需求”，网页停止并回退，design seq 4 cancelled，requirements seq 5 询问共享规则。Run 按验收计划保持 stopped，不把未实现云同步当通过。旧 MCP handoff、旧会话输入与重复停止均 409，记录见上文 E6/E7 | 路由／等待／旧结果隔离 Pass；云同步实现不在本次任务 |
+| QA 与人工回退 | M1 seq 14 QA 将两项 AC 缺口交回 development seq 15，宿主完整复验 seq 16，QA seq 17 Go；另有专用真实 UI 缺陷 Run `85eb42ce941a5007d6c7e5da0b94637c` 经 QA → development → tests → QA → 人工 accept → done。人工拒绝回环与原会话续聊见上文 T2。新版 API 读取这些冻结序列保持一致 | Pass，原层级失败与复验回执保留 |
+| 停止／恢复／重启／幂等／外部失败 | T2 原网页停止和恢复同一会话；T4 正式 HTTP 幂等／版本冻结／权限，真实命令停止和强杀后原数据恢复；E6 GitHub HTTP 408 后先核对远端再从 publish 接续；E1–E5 真实 GitHub POST 成功响应丢失只读核对、不重复 POST；E6 通知发送前查询失败后正式 retry。此轮重启 8792 后，原 14 Run／43 会话及已停止 Run 状态不变；二次安装无新对象。外部资源的 OPEN/Draft 状态由 GitHub 另行查询 | 对列出的故障模型 Pass；物理断网及真实供应商调用未测 |
+
+源回归 `scripts/verify.sh` 在最终代码版本完整退出 0（`.data/workflow-evidence/verify-final-7040597.log`），包括 Node、真实浏览器、Python、Go vet/race 和构建；历史授权问题另保留修复前红灯与修复后隔离真人页复验。以上各项按 UI、正式 API、GitHub 外部事实分别表述；隔离夹具只证明对应边界，不代替产品 M1 的真实交付。
+
+**仍未完成的全平台项目**：文件选择／下载到磁盘、阻塞型 before Hook、任意边 Gate、结构化 request_user_input、GitLab、并行分支、循环墙钟限制；它们未纳入这轮已承诺的正常交付和特殊路由验收。供应商联调没有凭据与真实响应，维持 Not Run；不得把受控上游旅程写成供应商兼容性通过。
