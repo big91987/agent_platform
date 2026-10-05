@@ -181,15 +181,25 @@ def install_shared_browser(api, installation, manifest, evidence):
     return browser
 
 
-def check_upgrade_runs(api, installation):
-    agents = {
-        v["id"]
-        for k, v in installation.data["objects"].items()
-        if k.startswith("agent-")
+def installed_agent_ids(installation):
+    # Object keys are workflow roles, not collection-prefixed names.
+    return {
+        value["id"]
+        for value in installation.data["objects"].values()
+        if value["spec"].get("executor")
     }
+
+
+def check_upgrade_runs(api, installation):
+    agents = installed_agent_ids(installation)
     if not installation.upgrade or not agents:
         return
-    for run in api.call("GET", "/api/workflow-runs"):
+    runs = api.call("GET", "/api/workflow-runs")
+    if len(runs) >= 200:
+        raise ValueError(
+            "Run inventory reached the API limit; cannot prove upgrade is safe"
+        )
+    for run in runs:
         if run["status"] in ("running", "waiting", "stopping") and any(
             node.get("agent_id") in agents for node in run["definition"]["nodes"]
         ):
@@ -210,15 +220,13 @@ def retire_project_browser(api, installation):
             for binding in agent.get("tool_servers", []) or []
         ):
             return
-    for run in api.call("GET", "/api/workflow-runs"):
+    agents = installed_agent_ids(installation)
+    runs = api.call("GET", "/api/workflow-runs")
+    if len(runs) >= 200:
+        return  # Unknown older references must not be disabled.
+    for run in runs:
         if run["status"] != "completed" and any(
-            node.get("agent_id")
-            in {
-                v["id"]
-                for k, v in installation.data["objects"].items()
-                if k.startswith("agent-")
-            }
-            for node in run["definition"]["nodes"]
+            node.get("agent_id") in agents for node in run["definition"]["nodes"]
         ):
             return
     spec = {**saved["spec"], "enabled": False}

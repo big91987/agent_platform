@@ -270,3 +270,17 @@ bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，
 验证：共享注册回归先因缺少实现失败；工作区绑定及工作流／所有者筛选回归先编译失败，再全部通过。最终 scripts/verify.sh 退出 0（私有日志 `.data/workflow-evidence/verify-shared-browser-final.log`）。隔离真实平台通过安装器共享注册入口，两个项目清单引用唯一 MCP 注册并成功发现工具；真实 API 两个工作流各创建一条人工等待 Run，按工作流查询只返回自己的记录。CUA 实际点击卡片“运行记录”→独立列表→单次运行→返回列表，没有混入另一工作流。浏览器适配器在两个隔离工作区执行真实浏览器检查均通过，越界 cwd 均拒绝；这只是工具组件验证，不冒充完整 Agent Pipeline。
 
 应用边界：8792 的 Model Relay Run 仍在 development（seq 6），本次没有重启服务或升级其在途 Agent。新源码在独立实例通过验证，8792 新页面与两份既有项目注册的迁移尚未应用；完整项目安装／升级、共享工具经过原生 Agent 调用的端到端复验仍待安全升级时完成。产品 make verify、QA 和供应商联调状态沿用实际 Run，不因平台回归通过而预先通过。
+
+### 共享工具安装与原生链路补验
+
+在等待产品研发时发现安装保护缺陷：manifest 用 development／qa 等角色键记录 Agent，3717d9f 却按 agent- 前缀取 ID，造成活跃运行检查及旧工具引用检查漏判。先复现未拒绝升级和可恢复工具被尝试停用，再改为按已保存 spec.executor 识别 Agent。历史列表达到 API 的 200 条上限时，无法证明完整性，升级明确拒绝、旧工具保留；不把截断列表当完整证据。
+
+| 验证 | 结果与证据 |
+|---|---|
+| 原开发实例只读保护核查 | 原 manifest 正确识别 6 个 Agent，当前产品 Run 被检查函数拒绝，未写配置；证据 `.data/workflow-evidence/shared-browser-upgrade-guard.json`。未在该在途实例执行升级命令 |
+| 正式新装与重复安装 | 隔离实例通过原 install.py CLI 安装两个项目并重复安装，13 Agent／12 Connector／2 图／1 工具注册，第二轮对象 ID 不变；真实 GitHub 仓库检查通过，无 Issue／PR 写入。证据 `.data/shared-tools-e2e/install-proof.json` |
+| 旧版升级与重入 | 从源码 1a87da9 的独立验收副本正式安装，再以原 manifest 升级；所有对象 ID 保留，design／development／qa 引用 browser-validation，无引用旧工具停用；重复升级无配置变化。证据同目录 `upgrade-proof.json` |
+| 正式升级入口的活跃运行拒绝 | 专用人工等待 Run `79710f72445f8cebb90dee43a5d723cd` 引用已安装 Agent，执行 install.py --upgrade 退出 1 且全部配置前后一致；通过 decision 正式结束夹具。证据同目录 `upgrade-guard-cli-proof.json` |
+| 原生 Agent → 共享工具 → 完成节点 | 专用 Run `f88e4d4aa8367eeaf343afddb6d2f55c`、`7663d5a7588b6cf5792b185879219ade` 均 completed；真实 mcpToolCall 调用同一 registered_browser-validation.check，分别断言各自页面 acceptance-a／acceptance-b 可见；两份 browser.json passed=true、errors 为空。原生配置中 cwd／workspace-root 分别绑定实际工作区，证据目录摘要不同。证据同目录 `native-proof.json`、两份 Run 和原生 events 记录 |
+
+这些是明确标注的隔离安装／工具验收夹具，不代替 Model Relay 完整产品旅程，也不证明供应商联调。修复后 11 项模板／安装／仓库 Python 回归、ruff 和 diff 检查通过；Go／网页未修改，沿用同提交组件的完整回归结果。8792 升级仍等待当前产品 Run 完成。

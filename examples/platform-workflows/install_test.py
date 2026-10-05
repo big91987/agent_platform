@@ -77,5 +77,62 @@ class SharedBrowserTest(unittest.TestCase):
             self.assertIn("{{workspace}}", api.items[0]["connection"]["args"])
 
 
+class UpgradeRunSafetyTest(unittest.TestCase):
+    def installation(self, directory):
+        installation = install.Installation(
+            None, Path(directory) / "install.json", {}, True
+        )
+        installation.data["objects"] = {
+            "development": {"id": "dev", "spec": {"executor": "codex"}},
+            "qa": {"id": "qa", "spec": {"executor": "codex"}},
+            "browser": {
+                "id": "legacy-browser",
+                "spec": {"id": "legacy-browser", "name": "Legacy", "enabled": True},
+            },
+        }
+        return installation
+
+    def test_role_keyed_manifest_blocks_active_run_before_writes(self):
+        import tempfile
+
+        class API:
+            def call(self, method, path, body=None):
+                if method != "GET":
+                    raise AssertionError("upgrade wrote before checking active run")
+                return [
+                    {
+                        "id": "live",
+                        "status": "running",
+                        "definition": {"nodes": [{"agent_id": "dev"}]},
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "live"):
+                install.check_upgrade_runs(API(), self.installation(tmp))
+
+    def test_retirement_preserves_tool_for_resumable_run(self):
+        import tempfile
+
+        class API:
+            def call(self, method, path, body=None):
+                if method != "GET":
+                    raise AssertionError("resumable tool was changed")
+                if path == "/api/agents":
+                    return []
+                return [
+                    {
+                        "id": "paused",
+                        "status": "stopped",
+                        "definition": {"nodes": [{"agent_id": "qa"}]},
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            installation = self.installation(tmp)
+            installation.api = API()
+            install.retire_project_browser(installation.api, installation)
+
+
 if __name__ == "__main__":
     unittest.main()
