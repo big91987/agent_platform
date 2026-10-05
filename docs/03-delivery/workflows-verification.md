@@ -441,9 +441,9 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 边界：此结论覆盖本轮约定的研发入口至草稿 PR；本轮两个产物未合并、未部署，原有部署历史证据不等于新版本部署验证。当前事件入口仅接受个人仓库 Owner；组织多人授权、企业微信／钉钉未实现。第二个真实仓库尚未执行本轮同等外部旅程，仓库可配置与新装／升级边界由安装器测试验证。真实供应商缺 URL／凭据，Not Run；远端写入响应丢失只做隔离恢复测试，不冒充实际 GitHub 断线演练。旧版 HTTP 红灯为修复后隔离重建补证，原始沙箱失败没有改写。旧定时续验保持 PAUSED。
 
 
-## Skill 产物契约与 Trellis 续验（2026-10-06，进行中）
+## Skill 产物契约与 Trellis 验收（2026-10-06）
 
-当前结论：**Not Run / 未完成端到端验收**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。
+当前结论：**本轮模板／Skill／Trellis 目标通过，保留列出的已知限制**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。以下保留执行过程及当时状态，最终结论和证据以本节末尾的完成审计为准。
 
 - 临时修复：[PR #11](https://github.com/big91987/model-relay/pull/11) 原 head `943d053` 与 main `6f1ec16` 在 task/delivery/qa/pr 四份任务文档冲突，产品代码无文本冲突。人工临时集成提交 `f26590c0589ede73edf38604ba5a415e50f68e15` 保留 Issue #8 文档原文到历史目录、原位置保留 Issue #9 文档；两侧四份文档逐字节核对。完整 `make verify` exit 0，含健康方法、版本展示、Go race/HTTP/CLI 与两个视口真实 Go 服务浏览器旅程。GitHub 确认 CLEAN/MERGEABLE；按既有测试仓授权合入 main，merge SHA `73681a7df4c5cbe5914056ac13348154d58726e0`。这是人工临时方案，**不是 Pipeline 自动冲突恢复通过**；未手动部署。
 - 正式维护源 `df527c3`：按 Run 隔离公共任务文档，阶段指令不再定义固定内容模板；发布使用实际 QA 产物，保留旧冻结 Connector 的固定路径兼容；Trellis 0.6.15 官方初始化进入 prepare，研发挂载 before-dev/check/spec-bootstrap/update-spec。`scripts/verify.sh` 全量 exit 0（含 27 项 workflow 示例测试及 Go race），脱敏扫描通过。
@@ -466,3 +466,28 @@ Issue #12 的 requirements seq 4、design seq 5 已实际完成。独立产物�
 
 
 Trellis 升级边界补验：发现原准备 helper 只检查 CLI 版本而未检查项目 `.trellis/.version`，且将 Git Connector 的 `GH_TOKEN` 继承给项目上下文脚本。新增两项失败回归后，维护源校验项目资产版本并在 Trellis 子进程环境移除该令牌；旧版本显式拒绝，文档给出官方 dry-run/create-new 升级路径以保留本地修改。30 项 workflow 示例测试通过；真实官方 CLI 新装、重复准备、原 AGENTS 保留和旧资产拒绝通过。此改动仅影响后续准备调用，不重跑当前 Run 已完成的 prepare，不用手工初始化替代现有记录。
+
+
+Issue #12 研发与宿主测试续验：development seq 6 已完成实际规范 bootstrap、before-dev、update-spec 与 check。工具事件可核对 Skill/reference 读取、packages 查询、索引与具体规则读取、实现后的差异和规范检查。形成 8 份有源码依据的 Trellis 规范；公共交付保留 README／milestones／tasks／verification 层次，未退回旧固定 task/delivery 文件。研发原生沙箱的完整门禁因监听限制退出 2；27 项前端及非监听检查成功，两类结果分别保留。tests seq 7 通过既有宿主 Connector 执行固定 `make verify`，退出 0，源码摘要 `0f6ee2d6894067323697f632231ee0d62b098be0261a4da7e975edb6e1efb37b` 与最终研发工作树一致。回执文本在 24 KB 截断，完整命令退出码与串行 fail-fast 验证入口可确认门禁结果，不能宣称拥有截断部分的逐项原始输出。
+
+独立 QA seq 8 正在执行，使用验收 Skill 的 acceptance 目录与旅程契约；其自身完整复跑仍受沙箱监听限制，不能混同为宿主成功。旧项目的 health-history 测试会重写固定历史日志，Agent 已将本轮生成证据归档到当前 Run 后恢复旧路径；验收方读取 Git 差异确认原任务文档与全部原日志未改动。这是处理既有项目测试副作用，不是模板继续要求共写固定文档。最终 QA 结论、PR 发布与新文档合入仍待验证。本轮未部署，源 PR 仍 Draft/Open，最新可复用修复提交 `ddaaee9`；该提交跟踪文件脱敏扫描无命中。
+
+
+### 本轮完成审计
+
+新 [Issue #12](https://github.com/big91987/model-relay/issues/12) 的唯一 Run `836b817833886b3188f263800b0f092f` 已 completed，共 12 次节点执行。独立 QA seq 8 为 Go with known issues，report seq 9 读取实际 QA 产物生成 PR 正文；publish seq 10 正式提交推送 head `15b7c7373978ac1a9e0bfead1c6c8011de158c19`，pr seq 11 自动创建 [PR #13](https://github.com/big91987/model-relay/pull/13)。原 Issue 的阶段与完成 Hook 均已发送，未另建替代 Issue/Run。
+
+| 用户要求 | 当前事实与证明 | 结论 |
+|---|---|---|
+| 先临时解决已有冲突 | PR #11 临时人工合并保留两项功能及两侧历史文档，完整门禁通过并已合入测试 main；不计自动冲突恢复 | 完成 |
+| 编排模板只约束文档位置，内容由 Skill 决定 | 源模板按 Run 指定根目录、通过实际 artifacts/inputs 交接；真实产物包含需求 PRD/G1、架构/G2、研发 README/milestones/tasks/verification、QA acceptance 报告/矩阵/旅程/缺陷表。发布不要求固定 qa.md | 通过 |
+| 实现使用 Trellis | 受支持 prepare 使用官方 0.6.15 初始化；真实研发工具记录覆盖 spec-bootstrap、before-dev、update-spec、check 和参考文件读取，产出 8 份源码规范；未仅以挂载当作使用证明 | 通过 |
+| 模板修复后开新 Issue 验证 | GitHub issues 事件 → 原 Issue/唯一 Run → 需求/设计/研发 → 固定宿主 make verify 退出 0 → 独立 QA → 平台提交推送/草稿 PR 全链完成；原生 Skill 故障保留并正式恢复原 Run | 通过 |
+| 不再覆盖旧任务文档，检查合入冲突 | 验收方发布后逐字节比较 main 基线下全部 79 个原 workflow 文件，无变化；工作树干净，源码摘要与 QA/宿主一致。GitHub CLEAN/MERGEABLE；按用户对测试仓授权合入 PR #13，merge `066f035bc551b2b4d031166cebdab0849084afd4`，Issue #12 CLOSED。GitHub Git tree `6863e426d06cf806bd7997b8604c03f22faf2adb` 在 PR head 和 merge 相同，无额外集成改写 | 通过 |
+| 可复用维护源和标准升级 | 修复在源 PR #5，运行代码 a75def0、示例/helper 最新修复 ddaaee9；原 manifest 完成后重入字节不变，17 条历史 Run 的状态/seq 均保留；空白平台新装和重复安装另有真实 API 证据，CLI 新装/旧资产拒绝有真实官方工具证据 | 通过 |
+| 用户页面可追踪 | 从该工作流 Runs 列表点击新任务，页面展示 completed/12 个节点、真实测试回执、独立 QA、原失败和恢复会话、PR #13 链接及通知记录；与 API/GitHub 分别核对 | 通过 |
+
+本轮没有把全部工程链路宣称无缺陷：既有测试脚本的 P3 `QA12-HISTORY-WRITE` 仍 Open，测试会写旧日志，本轮由流水线 Agent 归档新结果并精确恢复基线；后续执行仍需该保护。宿主回执截断保留为诊断限制，完整命令退出 0 和同版本源码/未改门禁是通过依据；QA 自己的监听受限尝试仍标 Blocked/Not Run。源 PR #5 未合并发行；测试仓合并由验收方依据既有授权执行，未触发手动部署。自动 PR 冲突修复、第二真实仓库全链及真实供应商联调不在本轮通过结论内。删除的定时续验未恢复。
+
+
+合入后补验：[main 自动准备 37370705742](https://github.com/big91987/model-relay/actions/runs/37370705742) 已 success，精确 SHA 为 `066f035bc551b2b4d031166cebdab0849084afd4`，prepare success／deploy skipped。受支持预览控制器的该 SHA 私有完整验证日志末尾包含 1280px、390px 的真实 Go 服务浏览器旅程和版本回归 PASS；这份合入后证据补充诊断可见性，但不改写原 Run 截断回执或 QA 受限执行。用户页面交付回链显示同一已合并 SHA，明确尚无包含该提交的部署记录；未触发部署。
