@@ -201,3 +201,18 @@ test('native elevation shows requested permissions and only enables administrato
  await vm.runInContext("loadConversation('c1')",context);
  assert.equal(node('#apply-agent-permissions').disabled,false);
 });
+
+test('tool catalog leads with currently assigned shared connection and folds unassigned history',async()=>{
+ const content={innerHTML:''};
+ const context=vm.createContext({URLSearchParams,location:{},clearInterval,clearTimeout,setTimeout,window:{addEventListener(){}},document:{addEventListener(){},querySelector:()=>content,querySelectorAll:()=>[]}});
+ vm.runInContext(readFileSync(__dirname+'/app.js','utf8').replace(/\nroute\(\)\.catch\(showRouteError\);\s*$/, ''),context);
+ vm.runInContext(`state.agents=[{tool_servers:[{server_id:'browser-validation'}]}];heading=()=>'<h1>外部工具</h1>';api=async()=>[
+ {id:'browser-validation',name:'浏览器验证',enabled:true,connection:{}},
+ {id:'old-a',name:'旧项目 A 浏览器',enabled:false,connection:{}},
+ {id:'old-b',name:'旧项目 B 浏览器',enabled:true,connection:{}}
+ ];`,context);
+ await vm.runInContext('toolsView()',context);
+ assert.match(content.innerHTML,/<h2>浏览器验证<\/h2>/);
+ assert.match(content.innerHTML,/<details[^>]*>\s*<summary>未分配给当前 Agent 的连接（2）<\/summary>/);
+ assert.match(content.innerHTML,/<summary>未分配给当前 Agent 的连接（2）<\/summary>[\s\S]*旧项目 A 浏览器[\s\S]*旧项目 B 浏览器/);
+});
