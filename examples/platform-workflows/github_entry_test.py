@@ -50,12 +50,114 @@ class EventInputTest(unittest.TestCase):
             },
         )
         self.assertEqual(event_input(self.config, self.env, self.event), (7, 11))
-        self.event["comment"]["body"] = "自动回执 <!-- agent-platform:run -->"
-        self.assertIsNone(event_input(self.config, self.env, self.event))
+        for marker in (
+            "<!-- agent-platform:run -->",
+            "<!-- agent-platform-hook:receipt -->",
+        ):
+            self.event["comment"]["body"] = "自动回执 " + marker
+            self.assertIsNone(event_input(self.config, self.env, self.event))
         self.event["comment"]["body"] = "请修改"
         self.event["comment"]["user"]["login"] = "stranger"
         with self.assertRaises(ValueError):
             event_input(self.config, self.env, self.event)
+
+
+class WorkspaceTest(unittest.TestCase):
+    def test_failed_clone_can_retry_with_configured_transport(self):
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from github_entry import prepare_workspace
+
+        with tempfile.TemporaryDirectory() as temporary:
+            config = {
+                "repository": "owner/repo",
+                "workspace_root": temporary,
+                "git_proxy": "http://localhost:12345",
+            }
+            calls = []
+
+            def run(argv, **kwargs):
+                if "clone" not in argv:
+                    return
+                calls.append(argv)
+                if len(calls) == 1:
+                    raise subprocess.TimeoutExpired(argv, 180)
+                Path(argv[-1]).mkdir()
+
+            with patch("github_entry.subprocess.run", side_effect=run):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    prepare_workspace(config, 123)
+                self.assertEqual(list(Path(temporary).iterdir()), [])
+                result = prepare_workspace(config, 123)
+            self.assertTrue(result.is_dir())
+            self.assertIn("http.proxy=http://localhost:12345", calls[-1])
+
+    def test_transport_reconfiguration_uses_real_local_checkout_only(self):
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        from github_entry import prepare_workspace
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / "github-issue-123"
+            subprocess.run(
+                ["git", "init", str(directory)], check=True, capture_output=True
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(directory),
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/owner/repo.git",
+                ],
+                check=True,
+            )
+            config = {
+                "repository": "owner/repo",
+                "workspace_root": temporary,
+                "git_proxy": "http://localhost:12345",
+            }
+            self.assertEqual(prepare_workspace(config, 123), directory.resolve())
+            output = subprocess.check_output(
+                [
+                    "git",
+                    "-C",
+                    str(directory),
+                    "config",
+                    "--local",
+                    "--get",
+                    "http.proxy",
+                ],
+                text=True,
+            )
+            self.assertEqual(output.strip(), config["git_proxy"])
+            config["git_proxy"] = ""
+            prepare_workspace(config, 123)
+            self.assertEqual(
+                subprocess.check_output(
+                    [
+                        "git",
+                        "-C",
+                        str(directory),
+                        "config",
+                        "--local",
+                        "--get",
+                        "http.proxy",
+                    ],
+                    text=True,
+                ).strip(),
+                "",
+            )
+            config["git_proxy"] = "http://private:secret@localhost:12345"
+            with self.assertRaises(ValueError):
+                prepare_workspace(config, 123)
 
 
 class ForwardTest(unittest.TestCase):

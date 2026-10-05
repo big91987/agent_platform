@@ -287,6 +287,11 @@ def main():
         type=Path,
         help="Existing authorized platform user's API Token file",
     )
+    parser.add_argument(
+        "--git-proxy",
+        default=None,
+        help="Optional Git clone proxy URL; empty disables the recorded proxy",
+    )
     parser.add_argument("--prefix", default="software-delivery")
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument(
@@ -358,6 +363,8 @@ def main():
         args.github_config = Path(prior_entry["path"])
         if not args.github_token_file:
             args.github_token_file = Path(prior_entry["config"]["token_file"])
+    if args.git_proxy is None:
+        args.git_proxy = (prior_entry or {}).get("config", {}).get("git_proxy", "")
     check_upgrade_runs(api, installation)
     base = next(
         (a for a in api.call("GET", "/api/agents") if a["id"] == args.base_agent), None
@@ -423,9 +430,15 @@ def main():
             ).replace("{{verification_command}}", command_label),
             "skills": [str(skills[role].resolve())] if role in skills else [],
             "env": {
-                key: os.environ[key]
-                for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
-                if key in os.environ
+                **installation.data["objects"]
+                .get(role, {})
+                .get("spec", {})
+                .get("env", {}),
+                **{
+                    key: os.environ[key]
+                    for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
+                    if key in os.environ
+                },
             },
             "network_access": False,
             "allow_elevation": False,
@@ -477,9 +490,7 @@ def main():
                 else test_command,
             )
             spec["env_refs"] = {
-                key: key
-                for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
-                if key in os.environ
+                key: key for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
             }
             if role != "tests":
                 spec["env_refs"]["GH_TOKEN"] = args.token_env
@@ -529,6 +540,7 @@ def main():
             "token_file": str(token_path),
             "state_root": str(config_path.parent / (config_path.stem + "-state")),
         }
+        config["git_proxy"] = args.git_proxy
         previous = installation.data.get("github_entry")
         if config_path.exists():
             existing = json.loads(config_path.read_text())

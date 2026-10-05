@@ -8,4 +8,6 @@
 
 入口判断写 docs/workflow/task.md；其他实际执行阶段的产物分别存放 docs/workflow/requirements.md、design.md、delivery.md、qa.md、pr.md，避免把各阶段合成临时大文档。保留失败证据。实现放在项目原有位置；全新小型网页可使用 app/。为产生缓存配置 .gitignore，不提交凭据、node_modules、个人会话或绝对本机路径。
 
+GitHub Issue 原文及新增评论已由入口作为会话输入提供。Issue 接单、进度、澄清问题和最终回复均由平台 Connector/Hook 自动回写；需要澄清时在当前会话正常输出问题并等待即可，后续用户评论由入口送回当前会话。本节点不自行读取 GitHub 评论或发送评论，不因缺少 GitHub 凭据而判定业务阻塞。平台带标记的自动通知不是新的用户要求。
+
 Git 分支、提交、推送和草稿 PR 由明确的 Connector 节点负责；本节点不自行创建 Issue、切分支、推送、合并或启动 GitHub Workflow。正常自然语言输出进展和结论；本节点实际完成后使用平台 handoff 工具选择 outgoing_edges 中对应 route 的 target，提交摘要、交接输入和产物；只有固定完成线才使用 complete_node。需要等待用户时不要先交接。

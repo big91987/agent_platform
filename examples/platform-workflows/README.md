@@ -175,6 +175,8 @@ Go 项目安装示例：在原安装参数中加入 `--test-command-json '["make
 
 为该仓库创建平台 caller 账户，从平台用户管理页生成 API Token，保存到 Agent 工作区以外的私有文件（权限 0600）。不要放到 Issue、工作流 YAML 或 Git 仓库。使用原安装命令和原 manifest，追加 `--upgrade --authorized-user <platform-user-id> --github-config <private-ci-config.json> --github-token-file <private-token-file>`；首次安装不加 `--upgrade`。安装器同步授权 Agent、Connector 和 Workflow，导出配置并记录在原 manifest。以后不显式覆盖授权时继承原值，标准升级同时维护已导出的 CI 配置。已有在途运行先完成或停止。
 
+Runner 的 Git HTTPS 连接需要代理时，在同一安装命令中指定 `--git-proxy <proxy-url>`；配置保存在私有配置及原 manifest 中，后续升级继承。仅允许无凭据的代理端点；入口将它写入专属 checkout 的 Git 配置，使准备和发布使用相同网络路径。对已失败或停止的原 Run 重跑入口时可更新该配置，但不会自动重新执行节点；随后通过 Run 的停止／回退入口重试失败步骤。不要将主机地址写入项目 YAML 或修改全局 Git 配置。克隆失败不会留下可执行的任务工作区，恢复网络配置后通过 Actions 重跑同一事件。
+
 在项目 checkout 安装入口：
 
 ```sh

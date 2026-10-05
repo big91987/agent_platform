@@ -12,7 +12,22 @@ from pathlib import Path
 
 def git(workspace, *args):
     result = subprocess.run(
-        ["git", "-C", str(workspace), *args],
+        [
+            "git",
+            "-C",
+            str(workspace),
+            *(
+                [
+                    "-c",
+                    "credential.helper=",
+                    "-c",
+                    "credential.helper=!gh auth git-credential",
+                ]
+                if os.environ.get("GH_TOKEN") and args[0] in ("fetch", "push")
+                else []
+            ),
+            *args,
+        ],
         capture_output=True,
         text=True,
         check=True,

@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 from agent_platform_client import APIError, Client
@@ -25,6 +26,13 @@ def save(path, value):
         temporary = Path(output.name)
     temporary.chmod(0o600)
     temporary.replace(path)
+
+
+def platform_output(body):
+    return any(
+        marker in (body or "")
+        for marker in ("<!-- agent-platform:", "<!-- agent-platform-hook:")
+    )
 
 
 def event_input(config, env, event):
@@ -69,7 +77,7 @@ def event_input(config, env, event):
             or comment.get("user", {}).get("type") != "User"
         ):
             raise ValueError("Comment author is not authorized")
-        if "<!-- agent-platform:" in comment.get("body", ""):
+        if platform_output(comment.get("body")):
             return None
         if not isinstance(comment.get("id"), int) or comment["id"] < 1:
             raise ValueError("Invalid comment ID")
@@ -77,7 +85,40 @@ def event_input(config, env, event):
     raise ValueError("Unsupported GitHub event")
 
 
+def validate_proxy(config):
+    proxy = config.get("git_proxy", "")
+    if proxy:
+        parsed = urllib.parse.urlsplit(proxy)
+        if (
+            parsed.scheme not in ("http", "https", "socks5", "socks5h")
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            raise ValueError("Git proxy must be an endpoint without credentials")
+
+
+def configure_transport(config, directory):
+    # Persist only a credential-free endpoint in this installation's checkout.
+    validate_proxy(config)
+    if "git_proxy" in config:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(directory),
+                "config",
+                "--local",
+                "http.proxy",
+                config["git_proxy"],
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+
 def prepare_workspace(config, issue_id):
+    validate_proxy(config)
     root = Path(config["workspace_root"]).resolve(strict=True)
     directory = root / ("github-issue-" + str(issue_id))
     remote = "https://github.com/" + config["repository"] + ".git"
@@ -89,6 +130,7 @@ def prepare_workspace(config, issue_id):
         ).strip()
         if actual != remote:
             raise ValueError("Existing checkout belongs to another repository")
+        configure_transport(config, directory)
         return directory
     base = config.get("base", "main")
     subprocess.run(
@@ -100,6 +142,11 @@ def prepare_workspace(config, issue_id):
         subprocess.run(
             [
                 "git",
+                *(
+                    ["-c", "http.proxy=" + config["git_proxy"]]
+                    if config.get("git_proxy")
+                    else []
+                ),
                 "-c",
                 "credential.helper=",
                 "-c",
@@ -117,6 +164,7 @@ def prepare_workspace(config, issue_id):
             capture_output=True,
             timeout=180,
         )
+        configure_transport(config, checkout)
         checkout.rename(directory)
     return directory
 
@@ -179,7 +227,7 @@ def forward(config, client, number, comment_id=0):
                 or comment["user"].get("type") != "User"
             ):
                 raise ValueError("Comment does not belong to this authorized Issue")
-            if "<!-- agent-platform:" in (comment.get("body") or ""):
+            if platform_output(comment.get("body")):
                 return current
             event_key = f"github:{repo}:comment:{comment_id}"
             snapshot = state / ("comment-" + str(comment_id) + ".json")
@@ -232,6 +280,13 @@ def forward(config, client, number, comment_id=0):
                     request_id=key,
                     parameters=payload["parameters"],
                 )
+            elif current["status"] in ("failed", "stopped"):
+                expected = Path(config["workspace_root"]).resolve() / (
+                    "github-issue-" + str(issue["id"])
+                )
+                if Path(current["workspace_path"]).resolve() != expected:
+                    raise ValueError("Run workspace does not match the original Issue")
+                prepare_workspace(config, issue["id"])
             save(
                 state / (str(issue["id"]) + "-run.json"),
                 {"id": current["id"], "request_id": key},
