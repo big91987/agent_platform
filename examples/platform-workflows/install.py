@@ -351,6 +351,7 @@ def main():
             )
         ],
         "qa": [args.qa_skill],
+        "report": [args.skill_root / "managing-engineering-delivery-cn"],
     }
     for paths in skills.values():
         for path in paths:

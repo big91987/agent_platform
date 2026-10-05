@@ -200,3 +200,6 @@ SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow
 安装前在受信 Runner 安装 `npm install -g @mindfoldhq/trellis@0.6.15`，或通过 `--trellis-executable` 指定该版本 CLI。安装器记录绝对可执行路径与版本，prepare 会复核；升级仍用原 manifest。首次任务通过官方 `trellis init --codex --yes --skip-existing --user workflow` 初始化，不覆盖已有项目文件。生成的本机适配器和个人运行状态被忽略；公共脚本、规范与配置可正常审查。研发使用挂载的 `trellis-spec-bootstrap` 填写真实项目规范，随后 `trellis-before-dev`、实现、`trellis-check`，必要时 `trellis-update-spec`。空白模板或只挂载 Skill 不构成通过证据。平台负责阶段交接和 Git 发布，Trellis 会话自动提交关闭。
 
 已有 `.trellis` 安装沿用，但项目 `.version` 必须与受信 CLI 版本一致；不完整或旧版本安装显式失败，先用固定版本 CLI 的 `trellis update --dry-run` 检查，再通过 `trellis update --create-new` 保留本地修改并完成必要合并，复核后重试。Trellis 初始化和项目上下文脚本不继承 Git 写令牌。新目录契约通过 Connector 的 `--task-docs` 开启，旧冻结 Connector 参数不变，发布仍兼容旧路径。请在没有在途任务时升级；用新 Issue 验证，不用旧任务已有的 QA 结论冒充新版验证。
+
+
+报告节点也挂载研发交付管理 Skill：在独立 QA 后根据真实证据闭环公共任务、里程碑与总览，再整理 PR 正文。正文生成不能替代公共状态同步；Git 发布、合并和部署仍由对应后续入口决定，报告不得提前声称发生。升级通过原 manifest 应用同一 Skill 挂载与节点指令。

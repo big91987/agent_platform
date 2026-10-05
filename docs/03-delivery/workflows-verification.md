@@ -443,7 +443,7 @@ Runner 迁移续验：经所有者明确授权，从已离线且无常驻服务�
 
 ## Skill 产物契约与 Trellis 验收（2026-10-06）
 
-当前结论：**本轮模板／Skill／Trellis 目标通过，保留列出的已知限制**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。以下保留执行过程及当时状态，最终结论和证据以本节末尾的完成审计为准。
+当前结论：**新 Issue 链路和文档隔离已验证，交付状态闭环仍需修复复验，目标未完成**。用户要求模板只约束文档位置、内容遵循 Skill，并允许先临时解除 PR 冲突，再用新 Issue 验证正式修复。以下保留执行过程及当时状态，最终结论和证据以本节末尾的完成审计为准。
 
 - 临时修复：[PR #11](https://github.com/big91987/model-relay/pull/11) 原 head `943d053` 与 main `6f1ec16` 在 task/delivery/qa/pr 四份任务文档冲突，产品代码无文本冲突。人工临时集成提交 `f26590c0589ede73edf38604ba5a415e50f68e15` 保留 Issue #8 文档原文到历史目录、原位置保留 Issue #9 文档；两侧四份文档逐字节核对。完整 `make verify` exit 0，含健康方法、版本展示、Go race/HTTP/CLI 与两个视口真实 Go 服务浏览器旅程。GitHub 确认 CLEAN/MERGEABLE；按既有测试仓授权合入 main，merge SHA `73681a7df4c5cbe5914056ac13348154d58726e0`。这是人工临时方案，**不是 Pipeline 自动冲突恢复通过**；未手动部署。
 - 正式维护源 `df527c3`：按 Run 隔离公共任务文档，阶段指令不再定义固定内容模板；发布使用实际 QA 产物，保留旧冻结 Connector 的固定路径兼容；Trellis 0.6.15 官方初始化进入 prepare，研发挂载 before-dev/check/spec-bootstrap/update-spec。`scripts/verify.sh` 全量 exit 0（含 27 项 workflow 示例测试及 Go race），脱敏扫描通过。
@@ -473,7 +473,7 @@ Issue #12 研发与宿主测试续验：development seq 6 已完成实际规范 
 独立 QA seq 8 正在执行，使用验收 Skill 的 acceptance 目录与旅程契约；其自身完整复跑仍受沙箱监听限制，不能混同为宿主成功。旧项目的 health-history 测试会重写固定历史日志，Agent 已将本轮生成证据归档到当前 Run 后恢复旧路径；验收方读取 Git 差异确认原任务文档与全部原日志未改动。这是处理既有项目测试副作用，不是模板继续要求共写固定文档。最终 QA 结论、PR 发布与新文档合入仍待验证。本轮未部署，源 PR 仍 Draft/Open，最新可复用修复提交 `ddaaee9`；该提交跟踪文件脱敏扫描无命中。
 
 
-### 本轮完成审计
+### 新 Issue 产物和集成复核
 
 新 [Issue #12](https://github.com/big91987/model-relay/issues/12) 的唯一 Run `836b817833886b3188f263800b0f092f` 已 completed，共 12 次节点执行。独立 QA seq 8 为 Go with known issues，report seq 9 读取实际 QA 产物生成 PR 正文；publish seq 10 正式提交推送 head `15b7c7373978ac1a9e0bfead1c6c8011de158c19`，pr seq 11 自动创建 [PR #13](https://github.com/big91987/model-relay/pull/13)。原 Issue 的阶段与完成 Hook 均已发送，未另建替代 Issue/Run。
 
@@ -491,3 +491,6 @@ Issue #12 研发与宿主测试续验：development seq 6 已完成实际规范 
 
 
 合入后补验：[main 自动准备 37370705742](https://github.com/big91987/model-relay/actions/runs/37370705742) 已 success，精确 SHA 为 `066f035bc551b2b4d031166cebdab0849084afd4`，prepare success／deploy skipped。受支持预览控制器的该 SHA 私有完整验证日志末尾包含 1280px、390px 的真实 Go 服务浏览器旅程和版本回归 PASS；这份合入后证据补充诊断可见性，但不改写原 Run 截断回执或 QA 受限执行。用户页面交付回链显示同一已合并 SHA，明确尚无包含该提交的部署记录；未触发部署。
+
+
+完成审计追加发现：PR #13 已合并，但公共任务 T001 仍 In Review、M01 仍 Ready for Review，总览保留“待宿主测试”等当前状态。需求/实现/测试与 QA 证据成立，但交付管理 Skill 的公共事实闭环缺责任人；原 report 只汇总 PR，未挂载该 Skill。不能以 QA 链接覆盖任务文件事实源的过期状态，因此本轮目标重新保持未完成。维护源将研发交付 Skill 同时挂载 report，由其按 Skill 更新公共交付事实，模板只规定职责与位置，不自定内容或强制 Done。待原 manifest 升级和新的真实任务复验；旧历史不手改成成功。
