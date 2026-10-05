@@ -1,0 +1,48 @@
+name: Deploy Model Relay locally
+run-name: Prepare main for local Model Relay · ${{ github.sha }}
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: model-relay-local-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 90
+    outputs:
+      deploy: ${{ steps.plan.outputs.deploy }}
+    steps:
+      - name: Verify and prepare exact main commit
+        id: plan
+        env:
+          DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$DEPLOY_ROOT"
+          python3 "$DEPLOY_ROOT/controller.py" prepare \
+            --root "$DEPLOY_ROOT" --sha "$TARGET_SHA" \
+            --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" \
+            --github-output "$GITHUB_OUTPUT"
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.deploy == 'true'
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 10
+    environment:
+      name: local-data-review
+      url: ${{ vars.MODEL_RELAY_PREVIEW_URL }}
+    steps:
+      - name: Activate reviewed version and check health
+        env:
+          DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$DEPLOY_ROOT"
+          exec python3 "$DEPLOY_ROOT/controller.py" activate \
+            --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json"
