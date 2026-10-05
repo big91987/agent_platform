@@ -4,6 +4,8 @@
 import argparse
 import hashlib
 import json
+import re
+import subprocess
 from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/deploy-local.yml")
@@ -18,9 +20,18 @@ def install(project, upgrade=False):
     project = project.resolve()
     if not (project / ".git").exists():
         raise ValueError("project must be a Git checkout")
+    remote = subprocess.check_output(
+        ["git", "-C", str(project), "remote", "get-url", "origin"], text=True
+    ).strip()
+    if not re.search(r"(?:/|:)model-relay(?:\.git)?$", remote):
+        raise ValueError("project origin must be a Model Relay repository")
     source = Path(__file__).with_name("deploy-local.yml").read_bytes()
     target = project / WORKFLOW
     manifest = project / MANIFEST
+    if not target.resolve().is_relative_to(
+        project
+    ) or not manifest.resolve().is_relative_to(project):
+        raise ValueError("installation path escapes project checkout")
     if target.exists() != manifest.exists():
         raise ValueError("workflow or installation manifest is missing; inspect drift")
     if target.exists():
