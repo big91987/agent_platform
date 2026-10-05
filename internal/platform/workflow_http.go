@@ -19,6 +19,14 @@ func (h *Server) workflowRunRoutes() {
 		}
 		respond(w, 200, v)
 	}))
+	h.mux.HandleFunc("GET /api/workflow-run-groups", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		groups, err := h.store.WorkflowRunGroups(c)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, groups)
+	}))
 	h.mux.HandleFunc("POST /api/workflow-runs", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		var in WorkflowStart
 		if e := decode(w, r, &in); e != nil {

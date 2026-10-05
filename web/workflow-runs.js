@@ -10,13 +10,17 @@ async function startWorkflowDialog(w){
  const inputKey="workflow:"+w.id;
  $('#wf-start-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{const run=await api('/api/workflow-runs','POST',platformInputs.body(inputKey,{workflow_id:w.id,input:$('#wf-task').value,workspace_path:$('#wf-workspace').value,start_node:$('#wf-entry')?.value||w.entry}));platformInputs.accepted(inputKey);$('#dialog').close();go('/workflow-runs/'+run.id)}catch(err){toast(err.message);e.submitter.disabled=false}};
 }
-async function workflowRunsList(workflowID){
- const runs=await api('/api/workflow-runs?workflow_id='+encodeURIComponent(workflowID));
+async function workflowRunsList(workflowID,runs){
+ runs=runs||await api('/api/workflow-runs?workflow_id='+encodeURIComponent(workflowID));
  return `<section class="wf-runs-list"><h2>运行记录</h2><p class="hint">点击任务查看节点进度、执行记录和当前 Agent 会话。</p>${runs.length?runs.map(r=>`<a data-nav class="wf-run-row" href="/workflow-runs/${esc(r.id)}"><span><strong>${esc(r.definition.name)}</strong><small>${esc(r.input.slice(0,100))}</small></span><span class="wf-run-status status-${esc(r.status)}">${esc(workflowStatus[r.status]||r.status)} · 查看进度 →</span></a>`).join(''):'<p class="muted">此工作流还没有运行。打开编排，输入任务即可开始。</p>'}</section>`;
 }
 async function workflowRunsView(id){
- const workflow=await api('/api/workflows/'+id);
- $('#content').innerHTML=heading(workflow.name+' · 运行记录','点击一次运行查看节点进度，再进入对应 Agent 会话。',`<a data-nav class="wf-link" href="/workflows/${esc(id)}">打开编排 ↗</a>`)+await workflowRunsList(id);
+ const runs=await api('/api/workflow-runs?workflow_id='+encodeURIComponent(id));
+ let workflow;
+ try{workflow=await api('/api/workflows/'+id)}catch(error){if(![403,404].includes(error.status)||!runs.length)throw error}
+ const name=workflow?.name||runs[0].definition.name;
+ const action=workflow?`<a data-nav class="wf-link" href="/workflows/${esc(id)}">打开编排 ↗</a>`:'';
+ $('#content').innerHTML=heading(name+' · 运行记录','点击一次运行查看节点进度，再进入对应 Agent 会话。',action)+await workflowRunsList(id,runs);
 }
 async function workflowRunView(id){
  workflowRunPage={id,signature:''};

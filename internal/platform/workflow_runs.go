@@ -166,6 +166,43 @@ func (s *Store) WorkflowRun(c Caller, id string) (WorkflowRun, error) {
 	}
 	return r, e
 }
+
+// WorkflowRunGroup is a navigation summary from the latest visible frozen run.
+// It does not grant access to the current workflow definition.
+type WorkflowRunGroup struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func (s *Store) WorkflowRunGroups(c Caller) ([]WorkflowRunGroup, error) {
+	rows, err := s.DB.Query(`SELECT r.workflow_id,r.definition FROM workflow_runs r
+ WHERE (r.owner=? OR ?) AND r.id=(SELECT x.id FROM workflow_runs x
+ WHERE x.workflow_id=r.workflow_id AND (x.owner=? OR ?)
+ ORDER BY x.created DESC,x.id DESC LIMIT 1)
+ ORDER BY r.created DESC,r.id DESC`, c.UserID, c.Admin, c.UserID, c.Admin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	groups := []WorkflowRunGroup{}
+	for rows.Next() {
+		var group WorkflowRunGroup
+		var raw string
+		if err := rows.Scan(&group.ID, &raw); err != nil {
+			return nil, err
+		}
+		var frozen struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal([]byte(raw), &frozen); err != nil {
+			return nil, err
+		}
+		group.Name = frozen.Name
+		groups = append(groups, group)
+	}
+	return groups, rows.Err()
+}
+
 func (s *Store) WorkflowRuns(c Caller) ([]WorkflowRun, error) {
 	return s.WorkflowRunsFor(c, "")
 }
