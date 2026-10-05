@@ -188,7 +188,7 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
 
 当前信任边界与旧方案相同：只接受仓库 Owner 本人创建的 Issue 和评论，Actions 原触发者及重跑者都须为 Owner；不是面向匿名公共仓库的自动执行服务。普通 Issue 评论转发到当前 Agent。平台回写带受识别标记，不触发输入回环。GitHub API 再读取 Issue/评论校验归属，不把 PR 当 Issue，不执行事件文本里的命令。
 
-Actions 完成只表示事件已交给平台；研发进度在原 Issue 和 Run。必要澄清可在原 Issue 评论回复。节点交接、停止或结束时无法接收的评论返回明确失败通知；先通过 Run 页面继续或回退，再在 Actions 手动输入原 Issue 和 `comment_id` 重试，不另建任务。对已接收评论的重试返回原回执；修改旧评论不产生新指令，需要新增评论。首次接单/评论的快照与锁由适配器保存在私有 state_root，未知响应通过稳定事件键找回原 Run。恢复时保留这些状态文件及平台数据库，不能删除它们来绕过去重。
+Actions 完成只表示事件已交给平台；研发进度在原 Issue 和 Run。必要澄清可在原 Issue 评论回复。节点交接、停止或结束时无法接收的评论返回明确失败通知；先通过 Run 页面继续或回退，再在 Actions 手动输入原 Issue 和 `comment_id` 重试，不另建任务。对已接收评论的重试返回原回执；修改旧评论不产生新指令，需要新增评论。 若交接时已有入队补充，平台拒绝提前交接并自动在同一会话接续；Agent 应正常结束当前轮，处理补充后重试交接，不要求用户重发，也不循环调用交接工具。该恢复提示随平台二进制升级生效，旧冻结图与会话仍沿用原身份。首次接单/评论的快照与锁由适配器保存在私有 state_root，未知响应通过稳定事件键找回原 Run。恢复时保留这些状态文件及平台数据库，不能删除它们来绕过去重。
 
 SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow_message`、`workflow_command` 与 `wait_workflow` 均复用公开 API；企业微信、钉钉以后实现各自的身份与事件适配即可，当前未实现这两类渠道。平台参数为有界字符串映射，固定命令通过 stdin 获取，不进行 shell 插值。
 

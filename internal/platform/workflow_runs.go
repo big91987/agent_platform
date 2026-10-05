@@ -534,7 +534,7 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 			return e
 		}
 		if n > 0 {
-			return fmt.Errorf("pending user input must be handled before handoff: %w", ErrConflict)
+			return fmt.Errorf("handoff not accepted: user input is already saved and pending delivery. End this turn normally so the platform can deliver it in this conversation; handle it before retrying handoff. Do not ask the user to resend it or poll the handoff tool: %w", ErrConflict)
 		}
 	}
 	_, e = tx.Exec(`UPDATE workflow_steps SET result=?,updated=? WHERE run_id=? AND seq=?`, string(raw), now(), id, seq)
