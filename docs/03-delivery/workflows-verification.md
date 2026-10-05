@@ -292,3 +292,13 @@ bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，
 回归先复现缺少分页方法及无法发现第二页活跃运行，再实现。覆盖跨页新增、工作流与所有者隔离、HTTP 游标传递、旧平台忽略游标；13 项模板 Python 测试及 scripts/verify.sh 全部通过（`.data/workflow-evidence/verify-run-pagination.log`）。
 
 独立运行实例经公开 HTTP 入口创建历史夹具：共 204 条运行，最新 200 条均 completed；安装器在第二页找到旧活跃 Run `b3111c10c2a155a9ee38870647eb05a5` 并拒绝升级，游标无重复。使用正式 decision 结束该夹具，无数据库修改。初次夹具试用相同工作区被独占规则正常拒绝，随后为每次运行使用独立目录。证据 `.data/shared-tools-e2e/pagination-proof.json`。这是正式 HTTP／安装器核查路径，不冒充用户页面或完整产品交付验收。
+
+### Model Relay 宿主验证与自动返工
+
+同一产品 Run `c1089fdc410a9dcce0725c30ad190df4` 的首次研发于 seq 6 交接固定 make verify。seq 7 的宿主真实执行中，Go/race、HTTP/SSE、取消、故障、CLI、异常进程终止及备份恢复测试通过，构建通过；真实 Go 服务浏览器旅程 locator.waitFor 超时，完整入口退出 2。图按 failed 出口自动进入 seq 8 development，没有新建 Issue 或 Run。
+
+seq 8 保留全部原断言，修复测试回执仅保留第一行而丢失断言位置的诊断缺口。seq 9 再次由宿主执行完整 make verify，Go 和构建通过，浏览器仍失败；新诊断定位桌面宽度 1280 的“上游已保存”可见断言，未见配置 PUT 请求。系统再次按 failed 自动进入 seq 10 development。研发复现加载中表单提前可编辑、异步回填覆盖输入的问题，修复及后续宿主确认仍按实际节点结果推进。
+
+真实页面点验：当前运行保留两轮 failed 回执及每次研发会话；点击当前“进入 Agent 会话”到 seq 10 会话，再点击“返回编排运行”回到同一 Run。工具卡片按执行顺序显示，已完成调用默认折叠，当前进展持续更新。此观察是升级前运行页和会话页的实际行为，不替代新版每工作流 Runs 入口验收。
+
+以上证明真实项目测试失败能够自动携带回执返回研发；不代表浏览器验收、独立 QA、最终交付或平台升级已通过。私有原始状态 `.data/workflow-evidence/model-relay-current-run.json` 包含各次 Connector 真实退出码和回执；产品工作区 delivery.md 保存对应代码摘要与修复记录。
