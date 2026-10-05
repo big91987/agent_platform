@@ -28,6 +28,7 @@ jobs:
         env:
           DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
           TARGET_SHA: ${{ github.sha }}
+          MODEL_RELAY_REPO_TOKEN: ${{ github.token }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$DEPLOY_ROOT"

@@ -2,6 +2,7 @@
 """Trusted local release controller for the Model Relay CLI contract."""
 
 import argparse
+import base64
 import fcntl
 import hashlib
 import json
@@ -18,13 +19,14 @@ from contextlib import contextmanager
 from pathlib import Path
 
 
-def run(*args, cwd=None, stdout=None, check=True):
+def run(*args, cwd=None, stdout=None, check=True, env=None):
     return subprocess.run(
         args,
         cwd=cwd,
         stdout=stdout,
         stderr=subprocess.STDOUT if stdout else None,
         check=check,
+        env=env,
         text=stdout is None,
     )
 
@@ -140,8 +142,23 @@ def current_sha(root):
     return read_json(record)["sha"] if record.exists() else None
 
 
-def latest_main(root):
-    run("git", "-C", str(root / "repository"), "fetch", "origin", "main")
+def latest_main(root, token=None):
+    environment = os.environ.copy()
+    environment["GIT_TERMINAL_PROMPT"] = "0"
+    if token:
+        credentials = base64.b64encode(("x-access-token:" + token).encode()).decode()
+        environment["GIT_CONFIG_COUNT"] = "1"
+        environment["GIT_CONFIG_KEY_0"] = "http.https://github.com/.extraheader"
+        environment["GIT_CONFIG_VALUE_0"] = "AUTHORIZATION: basic " + credentials
+    run(
+        "git",
+        "-C",
+        str(root / "repository"),
+        "fetch",
+        "origin",
+        "main",
+        env=environment,
+    )
     return git(root, "rev-parse", "FETCH_HEAD")
 
 
@@ -172,9 +189,10 @@ def stamp_binary(source, sha, log):
 def prepare(root, sha, plan_path, output):
     if not valid_sha(sha):
         raise ValueError("target must be a full lowercase commit SHA")
+    token = os.environ.pop("MODEL_RELAY_REPO_TOKEN", None)
     config = settings(root)
     with locked(root):
-        latest = latest_main(root)
+        latest = latest_main(root, token)
         if latest != sha:
             raise ValueError("requested commit is no longer the current main head")
         old = current_sha(root)

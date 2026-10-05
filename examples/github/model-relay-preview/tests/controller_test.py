@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -87,6 +88,44 @@ class DeploymentControllerTest(unittest.TestCase):
     def prepare(self, sha, plan=None):
         with patch.object(controller, "stamp_binary"):
             controller.prepare(self.root, sha, plan or self.plan, None)
+
+    def test_prepare_authenticates_fetch_with_job_token(self):
+        fakebin = self.base / "fakebin"
+        fakebin.mkdir()
+        fake_git = fakebin / "git"
+        fake_git.write_text(
+            "#!/usr/bin/env python3\n"
+            "import os, sys\n"
+            "if 'fetch' in sys.argv:\n"
+            "    if os.environ.get('GIT_CONFIG_VALUE_0') != "
+            "'AUTHORIZATION: basic eC1hY2Nlc3MtdG9rZW46dGVzdC10b2tlbg==':\n"
+            "        sys.exit(23)\n"
+            "    if 'MODEL_RELAY_REPO_TOKEN' in os.environ:\n"
+            "        sys.exit(24)\n"
+            "os.execv('/usr/bin/git', ['/usr/bin/git', *sys.argv[1:]])\n"
+        )
+        fake_git.chmod(0o700)
+        with patch.dict(
+            os.environ,
+            {
+                "MODEL_RELAY_REPO_TOKEN": "test-token",
+                "PATH": str(fakebin) + os.pathsep + os.environ["PATH"],
+            },
+        ):
+            self.prepare(self.old)
+        self.assertEqual(json.loads(self.plan.read_text())["sha"], self.old)
+
+    def test_prepare_does_not_expose_job_token_to_project_verification(self):
+        makefile = self.work / "Makefile"
+        makefile.write_text(
+            makefile.read_text().replace(
+                "verify:\n", 'verify:\n\ttest -z "$$MODEL_RELAY_REPO_TOKEN"\n'
+            )
+        )
+        target = self.commit("verify cannot read job token")
+        with patch.dict(os.environ, {"MODEL_RELAY_REPO_TOKEN": "test-token"}):
+            self.prepare(target)
+        self.assertEqual(json.loads(self.plan.read_text())["sha"], target)
 
     def test_exact_main_preparation_is_repeatable_and_rejects_stale_head(self):
         self.prepare(self.old)
