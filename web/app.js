@@ -64,6 +64,7 @@ async function route(){
  if(!state.me.admin&&['/agents','/tools','/users','/integrations','/api-docs'].includes(path)){go('/conversations/');return}
  if(path==='/agents'){shell('agents','智能体');await agentsView()}
  else if(path==='/workflows'){shell('workflows','智能体编排');await workflowsView()}
+ else if(/^\/workflows\/[a-f0-9]{32}\/runs$/.test(path)){shell('workflows','运行记录');await workflowRunsView(path.split('/')[2])}
  else if(/^\/workflows\/(new|[a-f0-9]{32})$/.test(path)){shell('workflows','智能体编排');await workflowView(path.split('/')[2])}
  else if(/^\/workflow-runs\/[a-f0-9]{32}$/.test(path)){shell('workflows','编排运行');await workflowRunView(path.split('/')[2])}
  else if(path==='/tools'){shell('tools','外部工具');await toolsView()}

@@ -148,6 +148,83 @@ class Installation:
         return result
 
 
+def install_shared_browser(api, installation, manifest, evidence):
+    shared = Installation(
+        api,
+        manifest,
+        {"platform": api.url, "capability": "browser-validation"},
+        installation.upgrade,
+    )
+    spec = {
+        "id": "browser-validation",
+        "name": "浏览器验证",
+        "enabled": True,
+        "connection": {
+            "command": sys.executable,
+            "args": [
+                str(HERE / "browser_tool.py"),
+                "--workspace-root",
+                "{{workspace}}",
+                "--evidence",
+                str(evidence.resolve()),
+            ],
+            "env_vars": ["PATH"],
+        },
+    }
+    browser = shared.apply("tool-servers", "browser", spec)
+    api.call("POST", "/api/tool-servers/" + browser["id"] + "/discover", {})
+    installation.data["shared_browser"] = {
+        "id": browser["id"],
+        "manifest": str(manifest.resolve()),
+    }
+    installation.save()
+    return browser
+
+
+def check_upgrade_runs(api, installation):
+    agents = {
+        v["id"]
+        for k, v in installation.data["objects"].items()
+        if k.startswith("agent-")
+    }
+    if not installation.upgrade or not agents:
+        return
+    for run in api.call("GET", "/api/workflow-runs"):
+        if run["status"] in ("running", "waiting", "stopping") and any(
+            node.get("agent_id") in agents for node in run["definition"]["nodes"]
+        ):
+            raise ValueError(
+                "Installed Agents are in an active Run; finish or stop it before upgrading: "
+                + run["id"]
+            )
+
+
+def retire_project_browser(api, installation):
+    saved = installation.data["objects"].get("browser")
+    if not saved or saved["id"] == "browser-validation":
+        return
+    # Preserve a registration still referenced by another Agent or resumable Run.
+    for agent in api.call("GET", "/api/agents"):
+        if any(
+            binding["server_id"] == saved["id"]
+            for binding in agent.get("tool_servers", []) or []
+        ):
+            return
+    for run in api.call("GET", "/api/workflow-runs"):
+        if run["status"] != "completed" and any(
+            node.get("agent_id")
+            in {
+                v["id"]
+                for k, v in installation.data["objects"].items()
+                if k.startswith("agent-")
+            }
+            for node in run["definition"]["nodes"]
+        ):
+            return
+    spec = {**saved["spec"], "enabled": False}
+    installation.apply("tool-servers", "browser", spec)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform-url", required=True)
@@ -164,6 +241,14 @@ def main():
     )
     parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
+    parser.add_argument(
+        "--browser-manifest", type=Path, help="Shared platform browser manifest"
+    )
+    parser.add_argument(
+        "--browser-evidence",
+        type=Path,
+        default=HERE.parents[1] / ".data/browser-evidence",
+    )
     parser.add_argument("--skill-root", required=True, type=Path)
     parser.add_argument("--qa-skill", required=True, type=Path)
     parser.add_argument("--base-agent", required=True)
@@ -231,32 +316,20 @@ def main():
         },
         args.upgrade,
     )
+    check_upgrade_runs(api, installation)
     base = next(
         (a for a in api.call("GET", "/api/agents") if a["id"] == args.base_agent), None
     )
     if not base:
         parser.error("base Agent not found")
-    browser = installation.apply(
-        "tool-servers",
-        "browser",
-        {
-            "id": args.prefix + "-browser",
-            "name": args.prefix + " · 浏览器验证",
-            "enabled": True,
-            "connection": {
-                "command": sys.executable,
-                "args": [
-                    str(HERE / "browser_tool.py"),
-                    "--workspace-root",
-                    str(root),
-                    "--evidence",
-                    str(evidence),
-                ],
-                "env_vars": ["PATH"],
-            },
-        },
+    if args.browser_evidence.resolve().is_relative_to(root):
+        parser.error("browser evidence must be outside task workspaces")
+    browser = install_shared_browser(
+        api,
+        installation,
+        args.browser_manifest or HERE.parents[1] / ".data/shared-browser-install.json",
+        args.browser_evidence,
     )
-    api.call("POST", "/api/tool-servers/" + browser["id"] + "/discover", {})
     common = (HERE / "prompts/common.md").read_text()
     command_label = shlex.join(test_command)
     common += (
@@ -389,6 +462,7 @@ def main():
         "workflow" if args.template == "software-delivery" else args.template,
         graph,
     )
+    retire_project_browser(api, installation)
     print(api.url + "/workflows/" + workflow["id"])
 
 

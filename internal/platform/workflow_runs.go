@@ -167,7 +167,10 @@ func (s *Store) WorkflowRun(c Caller, id string) (WorkflowRun, error) {
 	return r, e
 }
 func (s *Store) WorkflowRuns(c Caller) ([]WorkflowRun, error) {
-	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE owner=? OR ? ORDER BY created DESC LIMIT 200`, c.UserID, c.Admin)
+	return s.WorkflowRunsFor(c, "")
+}
+func (s *Store) WorkflowRunsFor(c Caller, workflowID string) ([]WorkflowRun, error) {
+	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE (owner=? OR ?) AND (?='' OR workflow_id=?) ORDER BY created DESC LIMIT 200`, c.UserID, c.Admin, workflowID, workflowID)
 	if e != nil {
 		return nil, e
 	}

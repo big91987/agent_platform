@@ -43,5 +43,39 @@ class VerificationCommandTest(unittest.TestCase):
                 install.verification_command(value)
 
 
+class SharedBrowserTest(unittest.TestCase):
+    def test_two_projects_reference_one_registration(self):
+        import tempfile
+
+        class API:
+            url = "http://localhost"
+
+            def __init__(self):
+                self.items = []
+
+            def call(self, method, path, body=None):
+                if method == "GET":
+                    return self.items
+                if method == "POST" and path.endswith("/discover"):
+                    return {}
+                if method == "POST":
+                    self.items.append(dict(body))
+                    return self.items[-1]
+                raise AssertionError((method, path))
+
+        api = API()
+        with tempfile.TemporaryDirectory() as tmp:
+            for project in ("first", "second"):
+                installation = install.Installation(
+                    api, Path(tmp) / project / "install.json", {"project": project}
+                )
+                result = install.install_shared_browser(
+                    api, installation, Path(tmp) / "shared.json", Path(tmp) / "evidence"
+                )
+                self.assertEqual(result["id"], "browser-validation")
+            self.assertEqual(len(api.items), 1)
+            self.assertIn("{{workspace}}", api.items[0]["connection"]["args"])
+
+
 if __name__ == "__main__":
     unittest.main()

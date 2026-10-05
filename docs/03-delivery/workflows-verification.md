@@ -256,3 +256,17 @@ bug Run 的 report 最终回复通知在 GET 查重时遭遇 TLS 握手超时，
 先出现缺少 verification_command 的红灯，再实现并通过 8 项 Python 回归与 ruff 检查。正式安装及同参数重复安装均保留 6 个阶段 Agent、6 个 Connector 和同一张图；API 核对测试 argv 为 make verify，所有阶段指令无未展开占位符，测试环境无 GH_TOKEN。通过网页启动 Run `c1089fdc410a9dcce0725c30ad190df4`，准备分支和真实 [Issue #1](https://github.com/big91987/model-relay/issues/1) 已完成。此记录只证明产品接入和任务启动；Go 产品功能、实际 make verify 与独立 QA 的结果尚待该 Run 完成，不预先声称通过。
 
 补充结果：`scripts/verify.sh` 完整退出 0（`.data/workflow-evidence/verify-go-project-install.log`）。网页确认 intake 没有把已写路线图误当成完整 PRD，而是依据新产品和用户明确要求交给 requirements；当前 seq 4 需求节点执行中。未创建另一份重复 Issue／Run，未启动后续里程碑。
+
+接续核验：通过真实运行页确认同一 Run 已完成 requirements（seq 4）及 design（seq 5），自动进入 development（seq 6），没有重复创建 Issue 或启动第二个 Run。设计产物为产品仓库 docs/workflow/design.md，G2 自查 Ready for Development；这只是阶段交接结论，不代表实现验收通过。运行页显示前三个 Agent 阶段的启动／最终回复通知及研发启动通知均已发送，并链接 Issue #1 的真实评论。研发会话显示原生命令和 Thinking 按执行顺序归属同一 Agent，已结束工具卡片默认折叠；当前仍在实现，make verify、独立 QA、真实后端浏览器旅程和草稿 PR 未完成，供应商联调未测。
+
+工具命名核查：安装器把项目 prefix 与“浏览器验证”组合成 MCP 配置名称，工具页直接展示该名称。model-relay 是该配置的项目范围标识，不是工具实现的产品专用能力；维护源仍为同一 browser_tool.py。已向用户解释此边界；名称呈现尚未调整，不通过单独修改运行配置绕过安装清单的漂移检查。
+
+## 共享浏览器与工作流运行记录（2026-10-05）
+
+用户确认通用浏览器注册不应随项目重复，并纠正运行入口：每个工作流有自己的 Runs 页面，而非在总览混列运行。维护源已实现编排卡片／详情的“运行记录”、独立 `workflows/<id>/runs` 页面，以及单次运行返回所属记录列表。API 在所有者授权范围内先按 workflow_id 筛选，再取最近 200 条；旧全局 API 调用兼容。
+
+浏览器统一注册 browser-validation，共享 manifest 负责配置升级，项目 manifest 保存引用。平台把显式 `{{workspace}}` 参数绑定到已核验会话的最终工作区，并固定 stdio cwd；原必需 workspace-root 校验保留。旧安装通过同一安装器升级；活跃 Run 阻止共享阶段 Agent 升级，仍被 Agent／可恢复 Run 使用的旧工具保留，其余旧配置停用，历史不删除。
+
+验证：共享注册回归先因缺少实现失败；工作区绑定及工作流／所有者筛选回归先编译失败，再全部通过。最终 scripts/verify.sh 退出 0（私有日志 `.data/workflow-evidence/verify-shared-browser-final.log`）。隔离真实平台通过安装器共享注册入口，两个项目清单引用唯一 MCP 注册并成功发现工具；真实 API 两个工作流各创建一条人工等待 Run，按工作流查询只返回自己的记录。CUA 实际点击卡片“运行记录”→独立列表→单次运行→返回列表，没有混入另一工作流。浏览器适配器在两个隔离工作区执行真实浏览器检查均通过，越界 cwd 均拒绝；这只是工具组件验证，不冒充完整 Agent Pipeline。
+
+应用边界：8792 的 Model Relay Run 仍在 development（seq 6），本次没有重启服务或升级其在途 Agent。新源码在独立实例通过验证，8792 新页面与两份既有项目注册的迁移尚未应用；完整项目安装／升级、共享工具经过原生 Agent 调用的端到端复验仍待安全升级时完成。产品 make verify、QA 和供应商联调状态沿用实际 Run，不因平台回归通过而预先通过。

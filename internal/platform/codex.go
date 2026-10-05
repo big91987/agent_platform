@@ -269,6 +269,7 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 	} else if !os.IsNotExist(e) {
 		return "", "", e
 	}
+	toolWorkspace := workspace
 	parent := filepath.Dir(finalRoot)
 	if e := os.MkdirAll(parent, 0700); e != nil {
 		return "", "", e
@@ -283,7 +284,7 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 		workspace = c.WorkspacePath
 	}
 	marker = filepath.Join(home, "prepared")
-	a := c.Snapshot
+	a := bindToolWorkspace(c.Snapshot, toolWorkspace)
 	cfg, e := nativeConfig(a)
 	if e != nil {
 		return "", "", e
