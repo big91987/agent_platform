@@ -20,11 +20,12 @@ import (
 )
 
 type connectorRequest struct {
-	Endpoint string         `json:"endpoint,omitempty"`
-	Lookup   string         `json:"lookup,omitempty"`
-	Marker   string         `json:"marker,omitempty"`
-	Payload  map[string]any `json:"payload,omitempty"`
-	Stdin    string         `json:"stdin,omitempty"`
+	ReadIssue bool           `json:"read_issue,omitempty"`
+	Endpoint  string         `json:"endpoint,omitempty"`
+	Lookup    string         `json:"lookup,omitempty"`
+	Marker    string         `json:"marker,omitempty"`
+	Payload   map[string]any `json:"payload,omitempty"`
+	Stdin     string         `json:"stdin,omitempty"`
 }
 
 func connectorExpand(text string, r WorkflowRun) string {
@@ -44,7 +45,7 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 				previous = append(previous, s)
 			}
 		}
-		raw, _ := json.Marshal(map[string]any{"run_id": r.ID, "seq": step.Seq, "input": r.Input, "workspace_path": r.WorkspacePath, "node": node.ID, "previous_results": previous})
+		raw, _ := json.Marshal(map[string]any{"run_id": r.ID, "seq": step.Seq, "input": r.Input, "workspace_path": r.WorkspacePath, "node": node.ID, "previous_results": previous, "parameters": r.Parameters})
 		out.Stdin = string(raw) + "\n"
 		return out, nil
 	}
@@ -67,6 +68,14 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 		title = string([]rune(title)[:200])
 	}
 	issue := p.IssueNumber
+	if v.Kind == "github.issue" && p.IssueParameter != "" {
+		if value, ok := r.Parameters[p.IssueParameter]; ok {
+			issue, err = strconv.Atoi(value)
+			if err != nil || issue < 1 {
+				return out, errors.New("issue parameter must be a positive integer")
+			}
+		}
+	}
 	if p.IssueNode != "" {
 		for i := len(r.Steps) - 1; i >= 0; i-- {
 			old := r.Steps[i]
@@ -74,8 +83,8 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 				continue
 			}
 			source := r.Connectors[r.Definition.node(old.NodeID).ConnectorID]
-			if source.Repository != v.Repository || old.Receipt.Kind != "github.issue_create" {
-				return out, errors.New("issue source must be a completed issue creation in this repository")
+			if source.Repository != v.Repository || (old.Receipt.Kind != "github.issue_create" && old.Receipt.Kind != "github.issue") {
+				return out, errors.New("issue source must be a completed Issue receipt in this repository")
 			}
 			issue = old.Receipt.Number
 			break
@@ -88,7 +97,12 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 	body += "\n\n" + out.Marker
 	repo := "/repos/" + v.Repository
 	switch v.Kind {
-	case "github.issue_create":
+	case "github.issue", "github.issue_create":
+		if v.Kind == "github.issue" && issue > 0 {
+			out.ReadIssue = true
+			out.Endpoint = repo + "/issues/" + strconv.Itoa(issue)
+			return out, nil
+		}
 		out.Endpoint = repo + "/issues"
 		out.Lookup = out.Endpoint + "?state=all&sort=created&direction=desc&per_page=100"
 		out.Payload = map[string]any{"title": title, "body": body}
@@ -160,10 +174,11 @@ func githubRequest(ctx context.Context, v Connector, method, path string, payloa
 }
 
 type githubObject struct {
-	Number int    `json:"number"`
-	URL    string `json:"html_url"`
-	Body   string `json:"body"`
-	Head   struct {
+	PullRequest json.RawMessage `json:"pull_request,omitempty"`
+	Number      int             `json:"number"`
+	URL         string          `json:"html_url"`
+	Body        string          `json:"body"`
+	Head        struct {
 		SHA string `json:"sha"`
 	} `json:"head"`
 }
@@ -180,6 +195,16 @@ func (e *githubNotSentError) Error() string { return e.err.Error() }
 func (e *githubNotSentError) Unwrap() error { return e.err }
 
 func executeGitHub(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
+	if request.ReadIssue {
+		var obj githubObject
+		if err := githubRequest(ctx, v, "GET", request.Endpoint, nil, &obj); err != nil {
+			return ConnectorReceipt{}, &githubNotSentError{err}
+		}
+		if obj.Number < 1 || len(obj.PullRequest) > 0 || obj.URL != "https://github.com/"+v.Repository+"/issues/"+strconv.Itoa(obj.Number) || request.Endpoint != "/repos/"+v.Repository+"/issues/"+strconv.Itoa(obj.Number) {
+			return ConnectorReceipt{}, &githubNotSentError{errors.New("GitHub resource is not the requested Issue in this repository")}
+		}
+		return githubReceipt(v, obj, lookupOnly), nil
+	}
 	// Query the marker before a write. Recovery is deliberately read-only: an
 	// absent marker never proves that an interrupted POST failed to take effect.
 	attempts := 1

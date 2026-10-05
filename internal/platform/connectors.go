@@ -33,12 +33,13 @@ type Connector struct {
 	Updated         string            `json:"updated_at"`
 }
 type ConnectorInput struct {
-	Title       string `json:"title,omitempty"`
-	BodyFile    string `json:"body_file,omitempty"`
-	Head        string `json:"head,omitempty"`
-	Base        string `json:"base,omitempty"`
-	IssueNode   string `json:"issue_node,omitempty"`
-	IssueNumber int    `json:"issue_number,omitempty"`
+	IssueParameter string `json:"issue_parameter,omitempty"`
+	Title          string `json:"title,omitempty"`
+	BodyFile       string `json:"body_file,omitempty"`
+	Head           string `json:"head,omitempty"`
+	Base           string `json:"base,omitempty"`
+	IssueNode      string `json:"issue_node,omitempty"`
+	IssueNumber    int    `json:"issue_number,omitempty"`
 }
 type ConnectorReceipt struct {
 	Kind      string `json:"kind"`
@@ -131,7 +132,7 @@ func validateConnector(v Connector) error {
 		if v.Repository != "" || v.TokenEnv != "" {
 			return errors.New("command cannot include GitHub configuration")
 		}
-	case "github.issue_create", "github.issue_comment", "github.pull_request":
+	case "github.issue", "github.issue_create", "github.issue_comment", "github.pull_request":
 		if !githubRepo.MatchString(v.Repository) || !envName.MatchString(v.TokenEnv) {
 			return errors.New("GitHub needs owner/repository and token environment-variable name")
 		}
@@ -260,6 +261,9 @@ func validateConnectorNode(v Connector, n WorkflowNode, w Workflow) error {
 }
 func validateConnectorInput(v Connector, n WorkflowNode, w Workflow) error {
 	p := n.ConnectorInput
+	if p.IssueParameter != "" && (v.Kind != "github.issue" || !envName.MatchString(p.IssueParameter) || len(p.IssueParameter) > 64 || p.IssueNumber != 0 || p.IssueNode != "") {
+		return errors.New("issue_parameter needs an input parameter name on a GitHub Issue connector")
+	}
 	if len(p.Title) > 256 || len(p.BodyFile) > 4096 || len(p.Head) > 256 || len(p.Base) > 256 || p.IssueNumber < 0 {
 		return errors.New("invalid connector parameters")
 	}

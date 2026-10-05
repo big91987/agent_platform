@@ -51,6 +51,35 @@ class ClientTest(unittest.TestCase):
     def respond(self, data, status=200):
         self.response = (status, "application/json", json.dumps(data).encode())
 
+    def test_workflow_entry_and_feedback_use_stable_event_keys(self):
+        self.respond({"id": "run", "status": "running"}, 201)
+        result = self.client.start_workflow(
+            "graph",
+            "修复",
+            workspace_path="/work/issue",
+            request_id="issue:1",
+            parameters={"issue_number": "7"},
+        )
+        self.assertEqual(result["id"], "run")
+        self.assertEqual(self.calls[-1][1], "/api/workflow-runs")
+        self.assertEqual(
+            json.loads(self.calls[-1][3])["parameters"], {"issue_number": "7"}
+        )
+        self.client.workflow_by_request("github:owner/repo:1")
+        self.assertIn("request_id=github%3Aowner%2Frepo%3A1", self.calls[-1][1])
+        self.client.workflow_message("run", "说明", request_id="comment:4")
+        self.assertEqual(self.calls[-1][1], "/api/workflow-runs/run/messages")
+        self.assertEqual(
+            json.loads(self.calls[-1][3]),
+            {"message": "说明", "request_id": "comment:4"},
+        )
+        with self.assertRaises(ValueError):
+            self.client.start_workflow(
+                "graph", "work", workspace_path="/work", request_id=""
+            )
+        with self.assertRaises(ValueError):
+            self.client.workflow_command("run", "delete", seq=1)
+
     def test_network_scope_preserves_explicit_false(self):
         self.client.invoke(
             "offline", agent_id="a", request_id="network", network_access=False

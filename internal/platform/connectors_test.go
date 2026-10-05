@@ -259,3 +259,73 @@ func TestConnectorSecretsAreNeitherInputNorOutput(t *testing.T) {
 		t.Fatal("credential leaked")
 	}
 }
+
+func TestConnectorBindsExistingIssueWithoutCreatingOne(t *testing.T) {
+	s := testStore(t)
+	c, v, w, dir := connectorFixture(t, s, Connector{Name: "Issue", Kind: "github.issue", Enabled: true, Repository: "owner/repo", TokenEnv: "TEST_GITHUB_TOKEN", TimeoutSeconds: 3})
+	t.Setenv("TEST_GITHUB_TOKEN", "secret")
+	w.Nodes[0].ConnectorInput = ConnectorInput{IssueParameter: "issue_number"}
+	w, err := s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := githubClient
+	t.Cleanup(func() { githubClient = original })
+	calls := 0
+	githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
+		calls++
+		if req.Method != "GET" || req.URL.Path != "/repos/owner/repo/issues/42" {
+			t.Fatalf("unexpected write or wrong Issue: %s %s", req.Method, req.URL)
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"number":42,"html_url":"https://github.com/owner/repo/issues/42","body":"original"}`)), Header: http.Header{}}, nil
+	})}
+	r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "original", WorkspacePath: dir, Parameters: map[string]string{"issue_number": "42"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewWorkflowEngine(s, nil, "")
+	r = waitConnectorRun(t, engine, r.ID, "completed")
+	receipt := r.Steps[0].Receipt
+	if calls != 1 || receipt.Number != 42 || receipt.Kind != "github.issue" {
+		t.Fatal(calls, receipt, v)
+	}
+}
+
+func TestIssueBindingRejectsPullRequestAndInvalidParameter(t *testing.T) {
+	s := testStore(t)
+	c, _, w, dir := connectorFixture(t, s, Connector{Name: "Issue", Kind: "github.issue", Enabled: true, Repository: "owner/repo", TokenEnv: "TEST_GITHUB_TOKEN", TimeoutSeconds: 3})
+	t.Setenv("TEST_GITHUB_TOKEN", "secret")
+	w.Nodes[0].ConnectorInput = ConnectorInput{IssueParameter: "issue_number"}
+	w, err := s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := githubClient
+	t.Cleanup(func() { githubClient = original })
+	writes := 0
+	githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
+		if req.Method != "GET" {
+			writes++
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"number":42,"html_url":"https://github.com/owner/repo/pull/42","pull_request":{}}`)), Header: http.Header{}}, nil
+	})}
+	r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "wrong resource", WorkspacePath: dir, Parameters: map[string]string{"issue_number": "42"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewWorkflowEngine(s, nil, "")
+	r = waitConnectorRun(t, engine, r.ID, "failed")
+	if writes != 0 || !strings.Contains(r.Error, "not the requested Issue") {
+		t.Fatal(writes, r.Error)
+	}
+	r.Parameters["issue_number"] = "42; echo unsafe"
+	_, err = prepareConnectorRequest(r.Connectors[w.Nodes[0].ConnectorID], r, r.Steps[0])
+	if err == nil {
+		t.Fatal("unsafe parameter accepted")
+	}
+	delete(r.Parameters, "issue_number")
+	req, err := prepareConnectorRequest(r.Connectors[w.Nodes[0].ConnectorID], r, r.Steps[0])
+	if err != nil || req.ReadIssue || req.Endpoint != "/repos/owner/repo/issues" || req.Payload["title"] != "wrong resource" {
+		t.Fatal(req, err)
+	}
+}

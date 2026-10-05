@@ -273,6 +273,20 @@ def main():
     parser.add_argument("--qa-skill", required=True, type=Path)
     parser.add_argument("--base-agent", required=True)
     parser.add_argument("--token-env", default="WORKFLOW_GITHUB_TOKEN")
+    parser.add_argument(
+        "--authorized-user",
+        action="append",
+        default=None,
+        help="Platform user ID allowed to call this installation",
+    )
+    parser.add_argument(
+        "--github-config", type=Path, help="Export private CI entry configuration"
+    )
+    parser.add_argument(
+        "--github-token-file",
+        type=Path,
+        help="Existing authorized platform user's API Token file",
+    )
     parser.add_argument("--prefix", default="software-delivery")
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument(
@@ -336,6 +350,14 @@ def main():
         },
         args.upgrade,
     )
+    prior_graph = installation.data["objects"].get("workflow", {}).get("spec", {})
+    if args.authorized_user is None:
+        args.authorized_user = prior_graph.get("authorized_users", [])
+    prior_entry = installation.data.get("github_entry")
+    if prior_entry and not args.github_config:
+        args.github_config = Path(prior_entry["path"])
+        if not args.github_token_file:
+            args.github_token_file = Path(prior_entry["config"]["token_file"])
     check_upgrade_runs(api, installation)
     base = next(
         (a for a in api.call("GET", "/api/agents") if a["id"] == args.base_agent), None
@@ -367,7 +389,7 @@ def main():
                 "executor": base["executor"],
                 "model": base["model"],
                 "enabled": True,
-                "authorized_users": [],
+                "authorized_users": args.authorized_user,
                 "sandbox": "workspace-write",
                 "inherit_env": False,
                 "instructions": "专用编排验收：只完成当前节点指令。使用真实文件及平台注册工具，不模拟交接。需要用户回答时提问并结束本轮，不交接。其他时候自主继续。无需读取其他仓库。",
@@ -393,7 +415,7 @@ def main():
             "executor": base["executor"],
             "model": base["model"],
             "enabled": True,
-            "authorized_users": [],
+            "authorized_users": args.authorized_user,
             "sandbox": "workspace-write",
             "inherit_env": False,
             "instructions": (
@@ -425,13 +447,13 @@ def main():
         spec = {
             "name": args.prefix + " · " + role,
             "enabled": True,
-            "authorized_users": [],
+            "authorized_users": args.authorized_user,
             "workspace_root": str(root),
             "timeout_seconds": 300,
         }
         if role in ("issue", "pr", "comment"):
             spec.update(
-                kind="github.issue_create"
+                kind="github.issue"
                 if role == "issue"
                 else "github.issue_comment"
                 if role == "comment"
@@ -467,6 +489,7 @@ def main():
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
     graph = json.loads((HERE / (args.template + ".json")).read_text())
     graph["name"] = args.prefix + " · " + graph["name"]
+    graph["authorized_users"] = args.authorized_user
     for node in graph["nodes"]:
         if node["kind"] == "agent":
             node["agent_id"] = agents[node["agent_id"]]
@@ -482,6 +505,48 @@ def main():
         "workflow" if args.template == "software-delivery" else args.template,
         graph,
     )
+    if args.github_config:
+        if (
+            args.template != "software-delivery"
+            or not args.github_token_file
+            or not args.github_token_file.is_file()
+        ):
+            raise ValueError(
+                "GitHub entry requires software-delivery and an existing --github-token-file"
+            )
+        config_path = args.github_config.resolve()
+        token_path = args.github_token_file.resolve()
+        if config_path.is_relative_to(root) or token_path.is_relative_to(root):
+            raise ValueError(
+                "CI configuration and token must be outside Agent workspaces"
+            )
+        config = {
+            "base_url": api.url,
+            "repository": args.repository,
+            "workflow_id": workflow["id"],
+            "workspace_root": str(root),
+            "base": args.base,
+            "token_file": str(token_path),
+            "state_root": str(config_path.parent / (config_path.stem + "-state")),
+        }
+        previous = installation.data.get("github_entry")
+        if config_path.exists():
+            existing = json.loads(config_path.read_text())
+            if previous != {"path": str(config_path), "config": existing}:
+                raise ValueError(
+                    "CI configuration drift; reconcile with original manifest"
+                )
+            if existing != config and not args.upgrade:
+                raise ValueError("CI configuration change requires --upgrade")
+        elif previous:
+            raise ValueError("Installed CI configuration is missing")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = config_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
+        temporary.chmod(0o600)
+        temporary.replace(config_path)
+        installation.data["github_entry"] = {"path": str(config_path), "config": config}
+        installation.save()
     retire_project_browser(api, installation)
     print(api.url + "/workflows/" + workflow["id"])
 

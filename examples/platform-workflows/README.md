@@ -1,6 +1,6 @@
 # 平台内研发交付示例
 
-本例把研发流程保存在 Agent Platform 的图中，由持久 Run 推进。GitHub 只保存 Issue、代码和草稿 PR，不启动 CI 编排。平台本身不包含“需求／设计／研发”等业务阶段；这些是本目录提供的可编辑模板。
+本例把研发流程保存在 Agent Platform 的图中，由持久 Run 推进。GitHub Issue 与平台网页都是任务入口；CI 只转发事件，平台推进研发节点。当前真实验收状态见验证记录，不能以代码或单元测试代替接单实测。平台本身不包含“需求／设计／研发”等业务阶段；这些是本目录提供的可编辑模板。
 
 ## 组成与边界
 
@@ -162,3 +162,30 @@ Go 项目安装示例：在原安装参数中加入 `--test-command-json '["make
 查看执行进度：左侧“智能体编排” → 对应工作流卡片的“运行记录” → 点击某次运行 → 当前节点“进入 Agent 会话”。编排详情也提供“运行记录”；每个工作流拥有独立 Runs 页面，不在总览混列全部运行。运行状态、节点历史和会话是实际执行进度，不按阶段数量推算完成百分比。
 
 升级保护从 manifest 的 Agent 配置识别实际角色，不依赖角色名称前缀。安装器通过运行清单 API 的 `before` 游标逐页检查完整历史，每页最多 200 条；分页期间新增运行不会挤掉旧记录。旧版平台若忽略游标并重复返回同一页，安装器会明确拒绝继续，应先升级平台二进制，不能删历史或手改 manifest 绕过保护。
+
+## GitHub Issue 入口与 Workflow SDK
+
+同一张研发图接受两种输入：网页输入任务时创建 Issue；GitHub 入口传入 `parameters.issue_number` 时核对并关联原 Issue。平台记录真实 GitHub 回执，后续评论和 PR 使用同仓原 Issue。CI 不等待 Agent 完成，不保存原生会话，也不逐阶段触发 Actions。
+
+在受信平台主机的 Runner Python 环境安装维护源 SDK（Python 3.10+）：
+
+```sh
+<runner-python> -m pip install <platform-source>/sdk/python
+```
+
+为该仓库创建平台 caller 账户，从平台用户管理页生成 API Token，保存到 Agent 工作区以外的私有文件（权限 0600）。不要放到 Issue、工作流 YAML 或 Git 仓库。使用原安装命令和原 manifest，追加 `--upgrade --authorized-user <platform-user-id> --github-config <private-ci-config.json> --github-token-file <private-token-file>`；首次安装不加 `--upgrade`。安装器同步授权 Agent、Connector 和 Workflow，导出配置并记录在原 manifest。以后不显式覆盖授权时继承原值，标准升级同时维护已导出的 CI 配置。已有在途运行先完成或停止。
+
+在项目 checkout 安装入口：
+
+```sh
+python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
+  --project <project-repository> --repository <owner>/<repository>
+```
+
+将生成的 `.github/workflows/agent-platform-entry.yml` 及 `.github/agent-platform-entry-source.json` 通过项目正常 PR 合入默认分支。后续通过同一命令加 `--upgrade` 更新；手工改动会被漂移保护拒绝覆盖。仓库 Actions variables 设置 `AGENT_PLATFORM_WORKFLOW_ROOT=<platform-source>`、`AGENT_PLATFORM_WORKFLOW_CONFIG=<private-ci-config.json>`。复用能访问平台主机的现有 Runner；分发模板默认标签为 self-hosted/macOS/ARM64/he-full，安装位置必须包含 `.data/runner-venv/bin/python`。现有 Runner 标签不同的部署应在维护源模板中适配并通过安装器分发，不手改项目副本。
+
+当前信任边界与旧方案相同：只接受仓库 Owner 本人创建的 Issue 和评论，Actions 原触发者及重跑者都须为 Owner；不是面向匿名公共仓库的自动执行服务。普通 Issue 评论转发到当前 Agent。平台回写带受识别标记，不触发输入回环。GitHub API 再读取 Issue/评论校验归属，不把 PR 当 Issue，不执行事件文本里的命令。
+
+Actions 完成只表示事件已交给平台；研发进度在原 Issue 和 Run。必要澄清可在原 Issue 评论回复。节点交接、停止或结束时无法接收的评论返回明确失败通知；先通过 Run 页面继续或回退，再在 Actions 手动输入原 Issue 和 `comment_id` 重试，不另建任务。对已接收评论的重试返回原回执；修改旧评论不产生新指令，需要新增评论。首次接单/评论的快照与锁由适配器保存在私有 state_root，未知响应通过稳定事件键找回原 Run。恢复时保留这些状态文件及平台数据库，不能删除它们来绕过去重。
+
+SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow_message`、`workflow_command` 与 `wait_workflow` 均复用公开 API；企业微信、钉钉以后实现各自的身份与事件适配即可，当前未实现这两类渠道。平台参数为有界字符串映射，固定命令通过 stdin 获取，不进行 shell 插值。

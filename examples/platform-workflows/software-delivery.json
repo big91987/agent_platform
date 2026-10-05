@@ -20,7 +20,8 @@
       "kind": "connector",
       "connector_id": "issue",
       "connector_input": {
-        "title": "{{input}}"
+        "title": "{{input}}",
+        "issue_parameter": "issue_number"
       },
       "x": 360,
       "y": 70

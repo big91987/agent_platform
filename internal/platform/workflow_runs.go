@@ -10,11 +10,12 @@ import (
 )
 
 type WorkflowStart struct {
-	WorkflowID    string `json:"workflow_id"`
-	StartNode     string `json:"start_node,omitempty"`
-	Input         string `json:"input"`
-	WorkspacePath string `json:"workspace_path"`
-	RequestID     string `json:"request_id,omitempty"`
+	Parameters    map[string]string `json:"parameters,omitempty"`
+	WorkflowID    string            `json:"workflow_id"`
+	StartNode     string            `json:"start_node,omitempty"`
+	Input         string            `json:"input"`
+	WorkspacePath string            `json:"workspace_path"`
+	RequestID     string            `json:"request_id,omitempty"`
 }
 type NodeResult struct {
 	Inputs    map[string]string `json:"inputs,omitempty"`
@@ -35,6 +36,7 @@ type WorkflowStep struct {
 	Updated             string            `json:"updated_at"`
 }
 type WorkflowRun struct {
+	Parameters    map[string]string    `json:"parameters,omitempty"`
 	Connectors    map[string]Connector `json:"connectors,omitempty"`
 	ID            string               `json:"id"`
 	WorkflowID    string               `json:"workflow_id"`
@@ -86,6 +88,7 @@ func (s *Store) initWorkflowRuns() error {
  run_id TEXT NOT NULL REFERENCES workflow_runs(id),seq INTEGER NOT NULL,node_id TEXT NOT NULL,status TEXT NOT NULL,
  conversation_id TEXT NOT NULL DEFAULT '',token_hash TEXT NOT NULL DEFAULT '',result TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(run_id,seq));
+ CREATE TABLE IF NOT EXISTS workflow_run_parameters(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),parameters TEXT NOT NULL);
  CREATE UNIQUE INDEX IF NOT EXISTS workflow_conversation ON workflow_steps(conversation_id) WHERE conversation_id!='';`)
 	return e
 }
@@ -101,6 +104,14 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	}
 	if e = json.Unmarshal([]byte(raw), &r.Definition); e != nil {
 		return r, e
+	}
+	var parameters string
+	if err := tx.QueryRow(`SELECT parameters FROM workflow_run_parameters WHERE run_id=?`, id).Scan(&parameters); err == nil {
+		if err = json.Unmarshal([]byte(parameters), &r.Parameters); err != nil {
+			return r, err
+		}
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return r, err
 	}
 	r.Connectors = map[string]Connector{}
 	configs, e := tx.Query(`SELECT connector_id,definition FROM workflow_run_connectors WHERE run_id=?`, id)
@@ -249,6 +260,14 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if strings.TrimSpace(in.Input) == "" || len(in.Input) > 64000 || len(in.RequestID) > 256 {
 		return zero, errors.New("input is required (up to 64000 bytes)")
 	}
+	if len(in.Parameters) > 32 {
+		return zero, errors.New("too many workflow parameters")
+	}
+	for key, value := range in.Parameters {
+		if !envName.MatchString(key) || len(key) > 64 || len(value) > 4096 || strings.ContainsRune(value, 0) {
+			return zero, errors.New("invalid workflow parameter")
+		}
+	}
 	if in.WorkspacePath == "" {
 		return zero, errors.New("choose an existing workspace directory")
 	}
@@ -389,6 +408,12 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	_, e = tx.Exec(`INSERT INTO workflow_runs(id,workflow_id,owner,username,definition,input,workspace,status,seq,created,updated,request_key,request_hash) VALUES(?,?,?,?,?,?,?,'running',1,?,?,?,?)`, id, w.ID, c.UserID, c.Username, raw, in.Input, path, stamp, stamp, key, hashText(string(fingerprint)))
 	if e != nil {
 		return zero, e
+	}
+	if len(in.Parameters) > 0 {
+		rawParameters, _ := json.Marshal(in.Parameters)
+		if _, e = tx.Exec(`INSERT INTO workflow_run_parameters(run_id,parameters) VALUES(?,?)`, id, string(rawParameters)); e != nil {
+			return zero, e
+		}
 	}
 	for key, v := range connectors {
 		raw, _ := json.Marshal(v)
@@ -584,4 +609,23 @@ func workflowInputAllowed(tx *sql.Tx, conversationID string) error {
 		return fmt.Errorf("workflow node is sealed; continue from its run page: %w", ErrConflict)
 	}
 	return nil
+}
+
+// WorkflowRunByRequest resolves only the calling user's stable event key.
+func (s *Store) WorkflowRunByRequest(c Caller, key string) (WorkflowRun, error) {
+	if c.UserID == "" {
+		return WorkflowRun{}, ErrForbidden
+	}
+	if key == "" || len(key) > 256 {
+		return WorkflowRun{}, errors.New("request_id is required (up to 256 bytes)")
+	}
+	var id string
+	err := s.DB.QueryRow(`SELECT id FROM workflow_runs WHERE owner=? AND request_key=?`, c.UserID, key).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return WorkflowRun{}, ErrNotFound
+	}
+	if err != nil {
+		return WorkflowRun{}, err
+	}
+	return s.WorkflowRun(c, id)
 }

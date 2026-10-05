@@ -302,6 +302,23 @@ func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string)
 			return out, e
 		}
 	}
+	if in.WorkflowRunID != "" {
+		if in.ConversationID != "" || in.AgentID != "" || in.WorkspacePath != "" || in.NetworkAccess != nil || in.UserID != c.UserID || in.RequestID == "" {
+			return out, errors.New("workflow message needs only message, request_id and optional workflow_seq")
+		}
+		run, err := loadWorkflowRun(tx, in.WorkflowRunID)
+		if err != nil {
+			return out, err
+		}
+		if !runAllowed(c, run) {
+			return out, ErrForbidden
+		}
+		step := run.Steps[len(run.Steps)-1]
+		if (run.Status != "running" && run.Status != "waiting") || (in.WorkflowSeq != 0 && in.WorkflowSeq != run.Seq) || step.ConversationID == "" || step.Result != nil {
+			return out, fmt.Errorf("%w: current workflow node cannot accept input; inspect the run before retrying", ErrConflict)
+		}
+		in.ConversationID = step.ConversationID
+	}
 	var conv Conversation
 	if in.ConversationID != "" {
 		if in.NetworkAccess != nil {

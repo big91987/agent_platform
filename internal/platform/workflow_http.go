@@ -19,6 +19,32 @@ func (h *Server) workflowRunRoutes() {
 		}
 		respond(w, 200, v)
 	}))
+	h.mux.HandleFunc("GET /api/workflow-runs/by-request", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		v, err := h.store.WorkflowRunByRequest(c, r.URL.Query().Get("request_id"))
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, v)
+	}))
+	h.mux.HandleFunc("POST /api/workflow-runs/{id}/messages", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		var in struct {
+			Message   string `json:"message"`
+			RequestID string `json:"request_id"`
+			Seq       int    `json:"seq,omitempty"`
+		}
+		if err := decode(w, r, &in); err != nil {
+			fail(w, err)
+			return
+		}
+		v, err := h.store.Submit(c, Input{UserID: c.UserID, WorkflowRunID: r.PathValue("id"), WorkflowSeq: in.Seq, Message: in.Message, RequestID: in.RequestID})
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		v.ConversationURL = h.base + "/conversations/" + v.ConversationID
+		respond(w, 202, v)
+	}))
 	h.mux.HandleFunc("GET /api/workflow-run-groups", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		groups, err := h.store.WorkflowRunGroups(c)
 		if err != nil {
