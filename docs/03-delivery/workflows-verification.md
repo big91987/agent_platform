@@ -617,3 +617,10 @@ seq25于03:09–03:12 UTC固定make verify真实退出2。当前Go/race/build通
 原生模型选择续验：seq26仅修改项目浏览器选择helper及诊断/契约测试，保留真实Tab、焦点可见、选项启用和精确值断言；81项VM/helper检查通过，不能证明原生弹出选择行为。seq27对新56文件摘要`9ebdb69472beb0ffb66565f1ec6d3bd47ea0d76b573fdb6338377ce5cc00a6f6`运行固定make verify，真实退出2。Go/race/build、1280px完整新增恢复/分页旅程及390px版本旅程通过，390px选择目标仍失败；新modelProbe明确显示after commit、optionCount=4、targetIndex=1、selectedIndex=0、targetEnabled=true、matchesTarget=false。该证据排除目标缺失/停用，不能单独证明OS弹出窗口机制；不以模拟契约转绿关闭原生故障。系统自动进入seq28研发会话`936239399cac5aa89eab92180320968f`，页面与API一致，同Run历史保留。
 
 维护者将既有交互设计的收尾静态核对通过原Issue评论[6008669722](https://github.com/big91987/model-relay/issues/16#issuecomment-6008669722)提交：§4撤销上游公开草稿时清未保存凭据且零写入、§7进行中参数保持可见且不可改写、§6使用真实created显示密钥创建时间，以及§1行启停重绘后的真实键盘焦点。前三项源码对照存在缺口；焦点仍须实际复核，不凭静态推测报原生失败。允许等价交互，不按线框按钮数量新增缺陷，明确QA-03旧泛导航驱动与新独立证据入口须独立裁定。输入20067已经queued到seq28原会话，20049仍running；补充接续、修复后门禁与再次QA尚未发生。本轮及长周期目标继续No-Go，不提前创建后续路线Issue或发布。
+
+
+四项交互补充正式接续：seq28首次输入20049完成闭合选择修正，handoff事件60198因已保存输入而被拒绝；Agent正常结束，未索取重发。补充20067随后在同一会话自动running，GitHub评论6008671606确认原会话关联，6008717201同步未交接事实。研发据原交互契约修复上游保存/恢复共享忙态与清凭据、当前调用四参数锁定及旧finally隔离、同ID密钥真实created、同对象行操作焦点恢复；pagehide/会话不明的忙态清理也纳入生命周期检查，不增加对象或迁移。
+
+当前101项VM/helper及3项Go in-process race契约通过；四项实现前未捕获红测，研发报告明确未补造。原QA脚本一度因项目helper中的import.meta进入其历史fixture前缀而SyntaxError，失败回执保留；仅调整项目测试布局，原QA文件与断言未改。恢复执行后仍3/4，QA-03泛导航与独立精确入口差异仍待独立QA裁定。真实Go两屏旅程补入恢复零PUT/即时清密/共享忙锁、进行中原值与禁改、真实GET created和行启停后即时焦点断言，尚不能据VM称原生通过。
+
+维护者独立计算当前56文件摘要`475091a58b28ca779261cb8c1dd24a55118d9c74df1c4d1be8fb5aa4fc82c63a`，与source-closure.json一致；基线131份历史workflow文件仍逐字节未改。GitHub main仍d62cd51，开放PR列表为空，正式部署入口仍先prepare再显式deploy；未提前合并或发布。上述对象完整宿主门禁及第二轮QA待执行，本轮与总目标继续No-Go。
