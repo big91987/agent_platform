@@ -681,3 +681,6 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 
 
 第二切片G1交接：seq4于05:18 UTC以next正式进入seq5 design，会话 `3b4584f1aafde6915f9bf980cbe1f29e`，未创建新的Run。需求原生工具事件69547/69551证明实际读取挂载Skill及references，随后形成当前Run的product-definition、g1-review、reference-observations，并原位承接项目唯一路线；没有覆盖上一Run历史。维护者只读核对13组P0 Story/AC和7项规则：真实路由分配、有界不同上游切换、响应提交/取消后零重放、候选冷却恢复、多尝试未知用量、两屏连续UI与精确旧main非空数据升级/备份回退都有明确证据层。G1 Ready for Architecture仅证明需求就绪；设计、实现、固定门禁、独立QA及第二轮发布尚未通过。
+
+
+第二切片设计审查发现发布接缝缺口：初稿ADR-001要求显式upgrade并让新serve拒绝schema1；维护者对照平台examples/github/model-relay-preview/controller.py的activate，确认当前只做旧binary backup、切换/start及失败时旧binary restore，无候选upgrade调用。若不接入，schema2候选会在正式部署启动失败；这是静态契约核对，未冒充实际故障部署。另初稿使用--data但基线CLI实际为--data-dir。原[Issue补充6010003185](https://github.com/big91987/model-relay/issues/18#issuecomment-6010003185)要求统一接口并明确备份→迁移→启动、失败恢复、幂等与旧版兼容；正式Actions37418716622 success，输入23302 queued至原设计会话，原23251继续running。平台源修复、产品设计接续及实测均待完成，不临时迁移或重复发任务。
