@@ -303,32 +303,90 @@ func connectorRedact(v Connector, text string) string {
 	return text
 }
 
+// Redact before retaining the bounded head/tail, so truncation cannot expose
+// pieces of a configured credential. Only a possible cross-write match remains
+// pending; memory does not grow with command output.
 type boundedConnectorLog struct {
-	mu        sync.Mutex
-	b         bytes.Buffer
-	truncated bool
+	mu      sync.Mutex
+	window  connectorLogWindow
+	secrets []string
+	pending string
+	keep    int
+}
+
+type connectorLogWindow struct {
+	head, tail string
+	truncated  bool
+}
+
+func newBoundedConnectorLog(v Connector) *boundedConnectorLog {
+	b := &boundedConnectorLog{}
+	refs := []string{v.TokenEnv}
+	for _, ref := range v.EnvRefs {
+		refs = append(refs, ref)
+	}
+	seen := map[string]bool{}
+	for _, ref := range refs {
+		if value := os.Getenv(ref); value != "" && !seen[value] {
+			b.secrets = append(b.secrets, value)
+			b.keep = max(b.keep, len(value)-1)
+			seen[value] = true
+		}
+	}
+	return b
+}
+
+func (w *connectorLogWindow) append(text string) {
+	const half = 12000
+	n := min(half-len(w.head), len(text))
+	w.head += text[:n]
+	w.tail += text[n:]
+	if len(w.tail) > half {
+		w.tail = strings.Clone(w.tail[len(w.tail)-half:])
+		w.truncated = true
+	}
+}
+
+func (b *boundedConnectorLog) redactTo(w *connectorLogWindow, text string, keep int) string {
+	for len(text) > keep {
+		limit := len(text) - keep
+		at, length := limit, 0
+		for _, secret := range b.secrets {
+			if i := strings.Index(text, secret); i >= 0 && i < limit && (i < at || i == at && len(secret) > length) {
+				at, length = i, len(secret)
+			}
+		}
+		w.append(text[:at])
+		if length == 0 {
+			return strings.Clone(text[at:])
+		}
+		w.append("[redacted]")
+		text = text[at+length:]
+	}
+	return strings.Clone(text)
 }
 
 func (b *boundedConnectorLog) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n := len(p)
-	remaining := 24000 - b.b.Len()
-	if len(p) > remaining {
-		p = p[:remaining]
-		b.truncated = true
+	for len(p) > 0 {
+		size := min(len(p), 24000)
+		b.pending = b.redactTo(&b.window, b.pending+string(p[:size]), b.keep)
+		p = p[size:]
 	}
-	b.b.Write(p)
 	return n, nil
 }
 func (b *boundedConnectorLog) String() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	out := b.b.String()
-	if b.truncated {
-		out += "\n[output truncated]"
+	w := b.window
+	b.redactTo(&w, b.pending, 0)
+	if !w.truncated {
+		return strings.ToValidUTF8(w.head+w.tail, "")
 	}
-	return out
+	// A retained boundary can split a UTF-8 rune; omit that partial rune.
+	return strings.ToValidUTF8(w.head, "") + "\n[... output omitted; showing beginning and end ...]\n" + strings.ToValidUTF8(w.tail, "")
 }
 func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, step WorkflowStep, request connectorRequest, dataDir string) (ConnectorReceipt, error) {
 	out := ConnectorReceipt{Kind: v.Kind}
@@ -362,7 +420,7 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 	if err != nil {
 		return out, err
 	}
-	log := &boundedConnectorLog{}
+	log := newBoundedConnectorLog(v)
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if err = cmd.Start(); err != nil {
@@ -393,7 +451,7 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 	err = cmd.Wait()
 	exit := cmd.ProcessState.ExitCode()
 	out.ExitCode = &exit
-	out.Output = connectorRedact(v, log.String())
+	out.Output = log.String()
 	if ctx.Err() != nil {
 		return out, errors.New("command interrupted; effects may be partial, inspect before explicitly returning to retry")
 	}
