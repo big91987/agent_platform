@@ -758,3 +758,8 @@ QA正式返工完成：seq17结束后沿原图进入seq18 development，会话`0
 隔离旧安装非空准备推进：失效临时标签页被清理后，原IAB页面真实签发2个应用密钥。首次读取password框得到工具遮罩值，使用该值的实际请求`k58dymNFKX3SGy5LvU7XgA`被网关401拒绝并落盘；此为操作诊断，不是产品密钥缺陷。第二次经页面“显示新密钥”取得实际46字符测试凭据，关闭展示后从调用测试发起请求，再点“查看本次记录”；请求`kUQ9uxNy6oWu9NUD216_zQ`识别密钥ID `G0Rk4Ke1StyzswKVfs2z_Q`、模型migration-enabled并记录上游HTTP405、未知用量。上游为公开示例域名及明确非秘密占位值，不是AI供应商，不据此宣称模型生成或供应商联调通过。没有改数据库或注入测试权限，首次停用确认的未完成状态仍保留。
 
 原生页面与正式管理API只读对账：2模型、2密钥、2历史（旧API分页字段data）；原存量都来自UI，API仅核对。私有baseline-api摘要`195eb3e8685bab4645e3f53da2046dd2a9b38a8c779f26a63fc83cfcd9a268e3`、截图及测试密钥保存在安装/私有证据中，秘密不进仓库和回执。该基线用于后续正式Actions非空迁移/恢复，当前还没有候选升级、回退或全部旧UI旅程Pass；完整成功旧UI数据迁移仍由产品seq16受控上游证据单列。
+
+
+维护源新增有界端口冲突演练入口 `examples/github/model-relay-preview/tests/port_conflict.py`，用于已授权的独立validation安装。执行前要求正式候选main SHA、已安装控制器摘要一致、旧服务健康、无在途activation、与preview根隔离；只读观察目标新轮backup_complete后绑定loopback空闲端口。它不写activation/数据库/备份/部署回执，不改产品权限或二进制。返回固定503夹具，只计算已观察upgrade_confirmed后的GET /healthz；首请求起保持25秒，升级等待130秒和首请求15秒各有限界，单次socket读写各0.1秒，不等待完整请求头。未命中窗口明确不完整，恢复字段始终not_checked。
+
+独立评审发现保持起点过早与慢速请求头拖延释放两项Important，均先用真实临时socket红控复现（延迟首请求无法连接、部分请求头等待超时），随后修复。8项针对回归及完整53项控制器/安装/隔离回归通过（46.401s）；ruff检查、格式及diff通过，独立复审另跑8项通过（3.019s），无剩余阻断项。上述只有临时根/端口夹具；尚未对真实安装注入故障，DEP-07正式Actions失败恢复和数据守恒仍Not Run。README明确等待产品QA放行及正式候选后，从原Actions validation入口演练，再单独无故障发布；不替代其他backup/upgrade/restore失败用例。

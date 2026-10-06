@@ -32,6 +32,21 @@ Actions 的 `target` 默认 `preview`；push main 仍只准备预览，显式 `d
 
 GitHub Deployment 按 local-preview/local-validation 分别记录；验收报告必须明确环境，隔离成功不替代正式预览发布，隔离故障不代表预览失败。故障演练必须在已明确授权且核对独立的根上执行，记录注入边界、旧/新版本和数据守恒；不增加产品故障开关、修改产品权限或编辑数据库/activation 记录。本模板只提供受支持的隔离入口，真实恢复仍需执行后才可写通过。
 
+#### 真实失败恢复演练
+
+仅在上面的隔离目标配置、非空旧安装与已通过产品QA的候选就绪后执行。先保留旧版本、实际二进制、页面创建的对象/身份/状态/历史以及独立密钥的私有对账基线；候选必须是正式合并后的完整main SHA。运行维护源中的有界端口冲突夹具，再通过原Actions显式选择main、target=validation、deploy=true：
+
+```sh
+python3 examples/github/model-relay-preview/tests/port_conflict.py \
+  --root <private-validation-root> \
+  --protected-root <private-preview-root> \
+  --candidate-sha <full-main-sha>
+```
+
+该命令先核对已安装控制器与本维护源摘要一致、旧服务健康、两根隔离且没有在途activation；只读观察新目标轮次的backup_complete。随后仅绑定已释放的loopback端口，health请求返回明确标记的503夹具响应，使实际候选服务启动/健康失败。观察upgrade_confirmed后，从首个GET /healthz请求起保持25秒，再释放端口，为控制器当前20秒健康等待及随后20秒停服等待留出自动恢复窗口。它不写activation、数据、备份、计划或部署回执，不修改产品二进制、权限或服务配置。未观察到目标窗口、端口已占用、身份变化、升级未确认或没有健康请求，都返回不完整；不会结束其他进程或重试到一个看似成功的场景。等待启动默认最多1800秒，可在1～5400秒内显式设置arm-timeout；升级未确认最多等待130秒，确认后等待首个健康请求最多15秒。每连接只读一次、最多4096字节，读写各限0.1秒，不等待完整请求头、不记录请求内容；计时结束或异常退出关闭自身socket。普通端口探针和升级确认前的请求不启动25秒计时。
+
+夹具JSON的evidence_kind固定为fault-injection，recovery固定not_checked；exit0只说明故障窗口发生过，不证明产品恢复。必须另核对该次正式Actions部署失败、controller的rolled_back/原deployed记录、旧binary和实际健康/schema、原对象/密钥/历史守恒及failed-data隔离。任何一层缺失都不写恢复Pass。若控制器报告恢复未完成，保留数据与备份，待夹具释放后仍沿原显式Actions入口恢复，不编辑记录或手动覆盖数据。确认旧版本恢复后，再次显式Actions无夹具发布候选，验证正常升级与可用性；失败和成功两次证据分别保存。该夹具模拟基础设施端口冲突，不代替backup/upgrade/restore自身错误和重启恢复的其他用例。
+
 首次部署通过项目正式 `init` 创建数据目录和独立主密钥，初始管理员密码仅写入部署根 `private/initial-admin-password.txt`（0600），不进入 GitHub 日志。运维者在主机安全读取并保管，登录 `MODEL_RELAY_PREVIEW_URL`。不配置默认供应商或假上游；真实供应商 URL/凭据由管理员之后从正式网页录入，未经供应商响应不能声称联调通过。
 
 候选必须提供只读 `deployment-contract` 命令，返回不超过 4 KiB 的单一 JSON。控制器协议版本1接受明确的 schema1 或 schema2 能力：`contract_version=1`、`binary_version=<full-main-sha>`，以及storage中的 `init_schema`、`serve_schemas`、`upgrade_from`、`explicit_upgrade`、`backup_schemas`、`restore_schemas`。schema2候选只serve2，声明从1升级、backup/restore兼容1和2。prepare将完整契约、控制器协议版本与二进制摘要绑定到计划，activate停服前重新读取比较；未知版本、类型错误、能力矛盾、乱码、过量输出、失败或漂移均拒绝。JSON不允许传递任意可执行命令。已有旧控制器的 `deployed.json` 未包含契约时，只兼容其记录的原SHA、原二进制摘要及实际current指针均不变的schema1旧发布；任意新无契约候选不能借命令失败进入兼容路径。新安装需要带契约的产品版本，schema2不能自动降级到schema1。
