@@ -659,3 +659,10 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 报告收尾的通用模板修正（现场待升级）：seq35恢复公共任务时发现多个“当前独立QA状态”标题及任务/里程碑状态混用，虽原证据真实，接手者仍需判断哪个当前。维护源report指令和README明确：公共总览、任务包、里程碑各自在原位维护唯一当前状态，使用挂载Skill规定的各自状态模型；历史失败/报告保留并引用，不靠反复追加“当前/最新”段落维护进度。无新文档层、ID或引擎规则，不改在途定义。
 
 首次源回归命令遗漏已文档化的SDK导入路径，24项运行含1个ModuleNotFoundError；按现有标准命令`PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v`重跑，30项全部通过（3.463s），diff检查通过。失败与最终日志分别保留；不把安装/路由回归或提示词文字变化当成实际Agent行为通过。此项与此前development诊断/证据预算指令一起待本Run完成后通过原manifest升级并用下一真实Issue验证。
+
+
+第一切片完成原发布图：seq35仅同步三份进度文档，56文件摘要从QA对象1b2f7026…变为`abf372c5dbf156b61c4eb28a16a38b9b0cf5053047b06f5e8ca0d092354bf79b`，逐文件核对其余53文件不变；新摘要未伪称重跑完整门禁。seq36原publish Connector退出0并推送`b2f271c595740e88c7413a1b60181fc8985e6a24`，seq37真实创建[草稿PR #17](https://github.com/big91987/model-relay/pull/17)，seq38结束；无重复Issue/Run/PR。当前合并、正式部署及部署后体验尚未发生。
+
+交付链接缺陷：PR正文原样发布后，GitHub body_html回读确认11个文档/截图href仍为本地相对路径。维护者经正式PR编辑入口仅将这些目标改为已发布b2f271c完整SHA下的blob URL；每个目标均核对该提交Git tree存在，回读body及渲染href确认，head不变。仓库内pr.md相对引用仍可用，没有改产品或回写已完成节点。原Issue补充评论[6009514713](https://github.com/big91987/model-relay/issues/16#issuecomment-6009514713)晚于节点交接，正式入口明确拒绝，未进入会话或重放；旧提示却建议对已完成Run继续/回退，与引擎实际不支持矛盾。
+
+通用修复落在维护源：report模板要求对外PR证据链接使用实际仓库/任务分支及正确转义的明确URL，不依赖正文文件相对位置、不把新产物指向旧main。GitHub入口遇409后重新读取Run：completed指引关联新Issue，stopped/failed按页面恢复后重试原评论，活动交接等待核对，状态查询失败只提示核对；保持原异常、原快照、事件键和通知去重，不创建新Run或自动重发。新增同一forward入口的竞争/停止/活动/查询失败回归，修前4子项失败，修后全部31项通过（最终3.530s）；Ruff格式/检查与diff通过，错误Ruff路径尝试保留并按标准PATH修正。模板/适配器尚待受支持升级及现场复验，不把该单元回归称新恢复指引已在GitHub验收。

@@ -274,6 +274,69 @@ class ForwardTest(unittest.TestCase):
                     ("run", "original feedback", "github:owner/repo:comment:11"),
                 )
 
+    def test_rejected_comment_uses_fresh_run_state_without_replaying(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from github_entry import APIError, forward
+
+        cases = [
+            ({"status": "completed"}, "新 Issue", "再在 Actions"),
+            ({"status": "stopped"}, "继续/回退", "新 Issue"),
+            ({"status": "running"}, "等待交接", "不能继续或回退"),
+            (ConnectionError("unavailable"), "状态未确认", "继续/回退"),
+        ]
+        for fresh, expected, forbidden in cases:
+            with self.subTest(fresh=fresh), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config = {
+                    "repository": "owner/repo",
+                    "workspace_root": str(root / "work"),
+                    "state_root": str(root / "state"),
+                    "base_url": "http://localhost",
+                }
+                issue = {"number": 7, "id": 123, "user": {"login": "owner"}}
+                comment = {
+                    "issue_url": "https://api.github.com/repos/owner/repo/issues/7",
+                    "user": {"login": "owner", "type": "User"},
+                    "body": "follow-up",
+                }
+                client = Mock()
+                client.workflow_by_request.return_value = {
+                    "id": "run",
+                    "status": "running",
+                }
+                rejection = APIError(409, "input closed")
+                client.workflow_message.side_effect = rejection
+                if isinstance(fresh, Exception):
+                    client.workflow_run.side_effect = fresh
+                else:
+                    client.workflow_run.return_value = {"id": "run", **fresh}
+                with (
+                    patch(
+                        "github_entry.github",
+                        side_effect=lambda path: (
+                            comment if "comments/" in path else issue
+                        ),
+                    ),
+                    patch("github_entry.notify") as notice,
+                ):
+                    with self.assertRaises(APIError) as caught:
+                        forward(config, client, 7, 11)
+                    self.assertIs(caught.exception, rejection)
+                    client.workflow_run.assert_called_once_with("run")
+                    client.workflow_message.assert_called_once_with(
+                        "run", "follow-up", request_id="github:owner/repo:comment:11"
+                    )
+                    client.start_workflow.assert_not_called()
+                    message = notice.call_args.args[3]
+                    self.assertIn(expected, message)
+                    self.assertNotIn(forbidden, message)
+                    self.assertIn("/workflow-runs/run", message)
+                    self.assertTrue((root / "state/comment-11.json").exists())
+                    self.assertFalse((root / "state/comment-11-receipt.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

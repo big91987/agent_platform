@@ -244,11 +244,26 @@ def forward(config, client, number, comment_id=0):
                 )
             except APIError as error:
                 if error.status_code == 409:
+                    run_link = (
+                        f"[Run]({config['base_url']}/workflow-runs/{current['id']})"
+                    )
+                    try:
+                        fresh_status = client.workflow_run(current["id"])["status"]
+                    except (APIError, ConnectionError, ValueError, KeyError):
+                        fresh_status = "unknown"
+                    if fresh_status == "completed":
+                        guidance = f"{run_link} 已结束，不能继续或回退。新增研发工作请创建关联原 Run/PR 的新 Issue；重试此评论不会重新打开原 Run。"
+                    elif fresh_status in ("stopped", "failed"):
+                        guidance = f"请从 {run_link} 核对效果并继续/回退，再在 Actions 用原评论 ID 重试。"
+                    elif fresh_status in ("running", "waiting", "stopping"):
+                        guidance = f"请从 {run_link} 等待交接或停止完成，核对可接收输入的 Agent 节点后，再在 Actions 用原评论 ID 重试；若 Run 已结束，应改用关联的新 Issue。"
+                    else:
+                        guidance = f"{run_link} 状态未确认，请先核对页面中的实际状态和可用操作；不要据此重新创建或重放任务。"
                     notify(
                         repo,
                         number,
                         event_key + ":rejected",
-                        f"这条补充尚未进入执行：当前节点正在交接、已停止或已结束。请从 [Run]({config['base_url']}/workflow-runs/{current['id']}) 核对并继续/回退，再在 Actions 用原评论 ID 重试。",
+                        "这条补充尚未进入执行：" + guidance,
                     )
                 raise
             save(state / ("comment-" + str(comment_id) + "-receipt.json"), receipt)
