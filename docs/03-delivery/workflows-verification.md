@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前长周期目标：**No-Go／In Progress（2026-10-06）**。路线1首次调用体验已正式发布；路线2多上游/有限切换经 Issue #18 原 Run 的固定门禁、独立 QA 返工、PR #19 合并，正式 main `98511771871cf0951ecef716bbb55deb13e18da5` 已部署。自动 prepare、隔离目标真实健康失败后的旧数据恢复、显式重试 schema1→2 及预览发布均有 Actions/API/UI 证据，见文末。路线3 Issue #20 已由 GitHub Actions/SDK 自动进入唯一 Run `9e6d05f409675e0ef65c6486691462df`，需求已交接设计；路线4待执行。DEP02–04 剩余真实 Go 联合负例、DEP05 未覆盖安装边缘及后续产品路线未全部通过。真实供应商联调 Not Run；源 PR #5 仍 Draft/Open、未合并。历史小节保留当时事实，不能把历史片段或单项通过外推整体完成。
+当前长周期目标：**No-Go／In Progress（2026-10-06）**。路线1首次调用体验已正式发布；路线2多上游/有限切换经 Issue #18 原 Run 的固定门禁、独立 QA 返工、PR #19 合并，正式 main `98511771871cf0951ecef716bbb55deb13e18da5` 已部署。自动 prepare、隔离目标真实健康失败后的旧数据恢复、显式重试 schema1→2 及预览发布均有 Actions/API/UI 证据，见文末。路线3 Issue #20 已由 GitHub Actions/SDK 自动进入唯一 Run `9e6d05f409675e0ef65c6486691462df`，需求/设计已完成并交接研发；路线4待执行。DEP02–04 剩余真实 Go 联合负例、DEP05 未覆盖安装边缘及后续产品路线未全部通过。真实供应商联调 Not Run；源 PR #5 仍 Draft/Open、未合并。历史小节保留当时事实，不能把历史片段或单项通过外推整体完成。
 
 历史切片结果：**Pass（GitHub Issue → 研发 → 草稿 PR 验收）**。通用 SDK/API、自动接单、原 Issue 绑定与评论接续、bug 短路径、新需求分派、真实项目测试、独立 QA 及返工、停止／恢复／重启和去重均有下方真实证据。此前遗漏 Issue 入站而外推的整体 Go 结论不沿用；本轮按用户要求不新增部署和 code review 验收。源仓库 PR 仍 Draft/Open、未合并；真实供应商及其它聊天渠道未测／未接入。
 
@@ -853,3 +853,12 @@ seq29独立QA形成report-03/matrix-03产品切片Go，两项SSE Important/P1在
 复查关闭唯一P1；编译、ruff检查/格式、diff和改动范围秘密/本机路径扫描通过。此入口和使用说明纳入唯一维护源，不更改运行控制器或产品副本。DEP02–04上述实际CLI拒绝/恢复/重入/降级子场景Pass；注入BaseException不等于OS父进程死亡或断电，输出碰撞不代表所有I/O错误；真实Go超时/强杀组合、畸形契约及DEP05剩余安装边缘仍须另验。服务替身、API基线和本层成功不替代正式launchd/GitHub/UI/供应商证据；前文正式Actions证据独立保留。
 
 路线3[Issue #20](https://github.com/big91987/model-relay/issues/20)已经真实Actions `37456112193` 成功并经SDK绑定唯一Run `9e6d05f409675e0ef65c6486691462df`，原Issue接单回执6015213052。原页面核验prepare→原issue→intake→requirements完成，design seq5执行中；需求结束通知6015388486、设计启动6015389059均回写原Issue。需求PRD/G1完成，设计草稿识别schema3与现有控制器只接受1/2的发布前置缺口；设计尚未交接，不据草稿宣称平台支持或产品实现完成。下一步等待冻结契约，在平台维护源扩展明确支持范围及回归，再经原安装器应用，不允许产品复制控制器或手工预迁移。整体仍In Progress／No-Go。
+
+
+## 2026-10-06：路线3冻结schema3契约与平台源支持
+
+原Run seq5设计完成，经正式handoff自动进入seq6研发（会话 `17cef7d978a872596b4686b1759d4ce7`）。产品唯一deployment-contract已冻结profile：contract_version1、init3、serve[3]、upgrade_from[1,2]、explicit_upgrade=true、backup/restore[1,2,3]，不换协议或扩大任意版本；产品研发与平台维护职责分开，正式schema3联调未执行。
+
+平台 `validate_contract` 最小扩展已知1/2/3集合及对应升级矩阵，旧profile、固定命令、停服前降级拒绝和旧binary恢复保持。5项新增回归在实现前全部因unsupported storage contract失败；实现后完整58项首轮暴露1处新增测试误取backup键，按真实attempt路径修正，补充3→3不同SHA发布的already_current路径。修订后完整58项回归通过（见本节后续执行摘要）；独立复审关闭该P2，未发现生产实现Important。覆盖1→3、2→3、首次3、3→3/同SHA、候选健康失败恢复2、降级停服前拒绝及能力缺失/未知4拒绝。产品CLI使用文本数据夹具，服务健康为替身；此层不能证明真实schema3数据库或Pipeline已验。
+
+README同步精确支持范围和发布前置；标准安装器与Workflow内容无需改动，使用原安装路径交付。当前本记录时仅维护源实现/回归通过，可信常驻控制器尚待备份及原install.py升级，真实产品schema3门禁/QA/联合CLI/Actions/API/UI均未因此改为Pass。整目标仍In Progress／No-Go。

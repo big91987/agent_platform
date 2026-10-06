@@ -454,7 +454,7 @@ def validate_contract(value, sha):
         raise ValueError("invalid storage contract")
     if (
         type(storage["init_schema"]) is not int
-        or storage["init_schema"] not in (1, 2)
+        or storage["init_schema"] not in (1, 2, 3)
         or type(storage["explicit_upgrade"]) is not bool
     ):
         raise ValueError("unsupported storage contract")
@@ -462,7 +462,7 @@ def validate_contract(value, sha):
         values = storage[name]
         if (
             not isinstance(values, list)
-            or any(type(v) is not int or v not in (1, 2) for v in values)
+            or any(type(v) is not int or v not in (1, 2, 3) for v in values)
             or values != sorted(set(values))
         ):
             raise ValueError("invalid storage schema set")
@@ -475,8 +475,8 @@ def validate_contract(value, sha):
         or not set(storage["backup_schemas"]).issubset(storage["restore_schemas"])
     ):
         raise ValueError("incompatible storage capabilities")
-    if storage["explicit_upgrade"] != (target == 2) or storage["upgrade_from"] != (
-        [1] if target == 2 else []
+    if storage["explicit_upgrade"] != (target > 1) or storage["upgrade_from"] != (
+        list(range(1, target))
     ):
         raise ValueError("unsupported upgrade contract")
     return value

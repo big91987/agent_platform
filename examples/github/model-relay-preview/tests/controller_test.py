@@ -43,21 +43,22 @@ elif args[1] == 'init':
     pathlib.Path(args[args.index('--key-file') + 1]).write_text('key')
     print('Administrator password (shown once): test-only')
 elif args[1] == 'deployment-contract':
-    print(json.dumps({'contract_version': 1, 'binary_version': sha, 'storage': {'init_schema': schema, 'serve_schemas': [schema], 'upgrade_from': [1] if schema == 2 else [], 'explicit_upgrade': schema == 2, 'backup_schemas': list(range(1, schema + 1)), 'restore_schemas': list(range(1, schema + 1))}}))
+    print(json.dumps({'contract_version': 1, 'binary_version': sha, 'storage': {'init_schema': schema, 'serve_schemas': [schema], 'upgrade_from': list(range(1, schema)), 'explicit_upgrade': schema > 1, 'backup_schemas': list(range(1, schema + 1)), 'restore_schemas': list(range(1, schema + 1))}}))
 elif args[1] == 'upgrade':
     directory = pathlib.Path(args[args.index('--data-dir') + 1])
     state = directory / 'state'
     before = state.read_text()
-    if before == 'schema2':
-        print(json.dumps({'binary_version': sha, 'result': 'already_current', 'from_schema': 2, 'schema': 2}))
+    previous = int(before[6:]) if before in ('schema2', 'schema3') else 1
+    if previous == schema:
+        print(json.dumps({'binary_version': sha, 'result': 'already_current', 'from_schema': schema, 'schema': schema}))
     else:
         output = pathlib.Path(args[args.index('--output') + 1])
         with output.open('x') as stream:
             stream.write(before)
-        state.write_text('schema2')
+        state.write_text('schema' + str(schema))
         if (pathlib.Path(__file__).resolve().parent.parent / 'VERSION').read_text() == 'migration fails':
             sys.exit(7)
-        print(json.dumps({'binary_version': sha, 'result': 'migrated', 'from_schema': 1, 'schema': 2}))
+        print(json.dumps({'binary_version': sha, 'result': 'migrated', 'from_schema': previous, 'schema': schema}))
 """
 
 
@@ -241,6 +242,129 @@ class DeploymentControllerTest(unittest.TestCase):
         plan = self.root / "plans/schema-two.json"
         self.prepare(sha, plan)
         return sha, plan
+
+    def prepare_schema_three(self, message):
+        (self.work / "service.py").write_text(
+            SCRIPT.replace("schema = 1", "schema = 3")
+        )
+        sha = self.commit(message)
+        plan = self.root / "plans/schema-three.json"
+        self.prepare(sha, plan)
+        return sha, plan
+
+    def install_schema_two(self):
+        self.install_previous_release()
+        sha, plan = self.prepare_schema_two("schema2 baseline")
+        with self.runtime():
+            controller.activate(self.root, plan)
+        return sha
+
+    def test_schema_three_upgrades_schema_one_and_preserves_snapshot(self):
+        self.install_previous_release()
+        sha, plan = self.prepare_schema_three("schema3 direct")
+        with self.runtime():
+            controller.activate(self.root, plan)
+        self.assertEqual((self.root / "data/state").read_text(), "schema3")
+        self.assertEqual(controller.current_sha(self.root), sha)
+        self.assertEqual(
+            controller.read_json(self.root / "deployed.json")["storage_schema"], 3
+        )
+        journal = controller.read_json(self.root / "activation.json")
+        self.assertEqual(
+            (
+                self.root / "backups" / (journal["attempt"] + "-rollback.backup")
+            ).read_text(),
+            "valuable schema1 data",
+        )
+
+    def test_schema_three_upgrades_schema_two_before_start(self):
+        self.install_schema_two()
+        sha, plan = self.prepare_schema_three("schema3 from two")
+        starts = []
+
+        def launch(root, config, action):
+            if action == "start":
+                starts.append((root / "data/state").read_text())
+
+        with self.runtime(), patch.object(controller, "launchctl", side_effect=launch):
+            controller.activate(self.root, plan)
+        self.assertEqual(starts, ["schema3"])
+        self.assertEqual(controller.current_sha(self.root), sha)
+        self.assertEqual(
+            (
+                self.root
+                / "backups"
+                / (
+                    controller.read_json(self.root / "activation.json")["attempt"]
+                    + "-rollback.backup"
+                )
+            ).read_text(),
+            "schema2",
+        )
+        with self.runtime(), patch.object(controller, "launchctl") as launch:
+            controller.activate(self.root, plan)
+        launch.assert_not_called()
+        next_sha, next_plan = self.prepare_schema_three("schema3 patch release")
+        with self.runtime():
+            controller.activate(self.root, next_plan)
+        self.assertEqual(controller.current_sha(self.root), next_sha)
+        self.assertEqual((self.root / "data/state").read_text(), "schema3")
+
+    def test_schema_three_health_failure_restores_schema_two(self):
+        old = self.install_schema_two()
+        old_record = controller.read_json(self.root / "deployed.json")
+        sha, plan = self.prepare_schema_three("schema3 health fails")
+
+        def health(port, expected, version=None, **kwargs):
+            if expected and version == sha:
+                self.assertEqual(kwargs["schema"], 3)
+                raise RuntimeError("schema3 health failure")
+
+        with (
+            self.runtime(),
+            patch.object(controller, "await_health", side_effect=health),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "schema3 health failure"):
+                controller.activate(self.root, plan)
+        self.assertEqual((self.root / "data/state").read_text(), "schema2")
+        self.assertEqual(controller.current_sha(self.root), old)
+        self.assertEqual(controller.read_json(self.root / "deployed.json"), old_record)
+        self.assertEqual(
+            [p.read_text() for p in (self.root / "failed-data").glob("*/data/state")],
+            ["schema3"],
+        )
+
+    def test_schema_three_fresh_install_and_downgrade_refusal(self):
+        sha, plan = self.prepare_schema_three("schema3 fresh")
+        with self.runtime():
+            controller.activate(self.root, plan)
+        self.assertEqual(
+            controller.read_json(self.root / "deployed.json")["storage_schema"], 3
+        )
+        _, downgrade = self.prepare_schema_two("schema2 downgrade")
+        with self.runtime(), patch.object(controller, "launchctl") as launch:
+            with self.assertRaisesRegex(ValueError, "cannot serve or upgrade"):
+                controller.activate(self.root, downgrade)
+        launch.assert_not_called()
+        self.assertEqual(controller.current_sha(self.root), sha)
+
+    def test_schema_three_rejects_incomplete_or_unknown_capabilities(self):
+        sha, plan = self.prepare_schema_three("schema3 validation")
+        value = controller.read_json(plan)["deployment_contract"]
+        for field, invalid in [
+            ("init_schema", 4),
+            ("upgrade_from", [2]),
+            ("upgrade_from", [1, 2, 3]),
+            ("backup_schemas", [2, 3]),
+            ("restore_schemas", [1, 2]),
+            ("serve_schemas", [2, 3]),
+            ("explicit_upgrade", False),
+        ]:
+            with self.subTest(field=field, invalid=invalid):
+                changed = json.loads(json.dumps(value))
+                changed["storage"][field] = invalid
+                with self.assertRaises(ValueError):
+                    controller.validate_contract(changed, sha)
 
     def test_migration_runs_before_candidate_start_and_preserves_old_snapshot(self):
         self.install_previous_release()
