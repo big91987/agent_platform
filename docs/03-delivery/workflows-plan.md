@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-06）：长周期真实产品演进验收 **In Progress／No-Go**。路线第1项已完成独立QA、正式合并/部署及页面核验。第2项 Issue #18 原 Run 经 seq21 完整门禁和 seq22 QA 后生成 Draft PR #19；合并前独立代码复核又发现两项 SSE Important，PR 未合并、候选未部署。正式完成后返工与原 PR 更新恢复已在维护源修复、完整门禁通过并安全升级8792；已从原 Run 页面进入seq27研发，待产品修复/宿主复验/QA和原PR更新。第3–4项待执行；供应商联调及正式候选升级/失败恢复仍未验。测试仓允许自主合并与正式部署，源仓主线仍不合并。
+当前状态（2026-10-06）：长周期真实产品演进验收 **In Progress／No-Go**。路线第1项已完成独立QA、正式合并/部署及页面核验。第2项 Issue #18 原 Run 经 seq21 完整门禁和 seq22 QA 后生成 Draft PR #19；合并前独立代码复核又发现两项 SSE Important，PR 未合并、候选未部署。正式完成后返工与原 PR 更新恢复已在维护源修复、完整门禁通过并安全升级8792；已从原 Run 页面完成seq27产品返工，独立代码复审关闭两项Important，seq28完整门禁exit0且新HTTP/两屏通过；当前seq29独立QA，原PR更新/合并/正式部署待验。第3–4项待执行；供应商联调及正式候选升级/失败恢复仍未验。测试仓允许自主合并与正式部署，源仓主线仍不合并。
 
 ## 里程碑与任务
 

@@ -791,3 +791,14 @@ seq20将回看驱动的错误文字等待修正为当前概览证据ID→请求�
 维护源 `5758a176d3eba58b239beaf78c3606ccdb35e9e0` 已推送源 Draft PR #5（未合main）。通过正式 API 确认20个Run及会话无在途执行后，备份旧二进制、原manifest及停止后的runtime目录，再按原服务CLI路径重启8792。新二进制SHA256 `2c2e7ee6decddc806f85b9c6663832ff52a013164dceb84f6b8f9ca90e4ffca8`；20个Run完整JSON与升级前一致，原manifest逐字节不变；不涉及数据库迁移、模板覆盖或产品服务部署。
 
 从原 Run 页面实际选择“研发实现”，填写两项审查红控、契约和验证要求后点击“从该节点继续”。页面显示执行中，正式API核对同Run seq27、development会话 `889e53d26ae84efed1213ab4d9ea54eb`，原26步/冻结图/工作区均未改。返工原因已持久化；原Issue收到真实 [seq27启动通知](https://github.com/big91987/model-relay/issues/18#issuecomment-6014148090)。没有新建Issue、Run、Agent或PR。此证据证明完成态经页面进入真实原生研发阶段；产品缺陷关闭、宿主门禁、独立QA、原PR再次发布及正式部署仍待发生。
+
+
+### M2 合并前返工完成与 seq28 新完整门禁
+
+seq27 研发按正式 handoff 完成两项 SSE 修复，沿原 next 进入 seq28 tests。新增确定性Writer/Transport/SQLite红控实际复现，并在项目固定入口加入真实HTTP超长行的提交前/后停止边界；原回归、双屏旅程和旧验收报告保留。最终产品源13摘要 `e3cde10304e0bbce0dcebf671f9469ab7e5c494d8524cb9a7b7e04228d71d54f`、86文件，HEAD仍为已审旧提交 `8ae4e5173aa0dc45c28ad61dbc64df20afe229a6` 加本轮未发布修复。维护者同步保存86文件逐项哈希，供发布前核对后续文档变化。
+
+独立代码复审在固定副本核对两处实现及新增回归，原两个Important关闭、无新增阻断；原红控及新增8场景race通过21.117秒，相邻健康代次/超时取消/提交前切换回归通过11.059秒。固定实现哈希：proxy.go `f6302151a1e602b311afa418f49698d22008be1ea8e2f67f7d954958c4cb7baa`，routed_proxy.go `60034cff2d2e87b999172710d57b78a670c2173e93e08a117ca73d1f12fa7671`。最终新增测试只将t标识符重命名为testContext（逐文本替换比较一致），最终哈希 `55e3cdd28858bd6adfc0d01a4b30368c6f83231f44a7ec577ca695a2adf4fac1`。审查环境真实HTTP仍因监听受限未测，未以局部绿灯替代宿主执行。
+
+**seq28正式宿主门禁通过**：10:29:58–10:38:32 UTC，固定make verify，900秒预算，exit0。正式分页日志API取得81349字节完整脱敏输出，truncated=false，SHA256 `0b8190a4521048f19436d66b667133ecda7325bddf1e90397d7b9bbe5fa1d9a6`；开头指纹与源13一致。新增 `TestSSERealHTTPOverlongLineNeverSwitchesOrCools` 两分支真实执行通过4.88秒，确定性超长行4.87秒，DONE四终态9.74秒；119VM、Go race/构建及原完整门禁通过。真实旧85f6d17c非空UI迁移/旧二进制回退、原首次调用和多上游1280/390两屏旅程均PASS。受控上游不计供应商验收，项目内迁移回退不计正式Actions控制器联合恢复。
+
+已自动进入seq29独立QA会话 `6839bfc44c99be8bad57bb666b6191df`，原Issue收到 [QA启动通知](https://github.com/big91987/model-relay/issues/18#issuecomment-6014482368)。此时独立QA新结论、报告、原PR再次更新、合并及正式部署仍未发生；原PR19仍Draft/Open、旧head，既有Runner在线空闲。整体仍In Progress/No-Go。
