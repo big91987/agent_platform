@@ -713,3 +713,8 @@ seq9宿主复验达到原300秒预算后被正确终止：回执保留Go测试�
 维护源日志与预算修复已完成隔离回归：日志独立审查无Critical/Important，发现一项Minor为纯文本响应后续读盘失败静默截断；新增首块后移除日志的回归并补固定“不完整”标记，复审关闭。命令预算采用现有管理员策略/执行seq/回执，不新建恢复对象：原冻结命令身份保持，分发时采样当前1–1800秒预算，执行中配置修改不改deadline，实际值写入回执；原resume拒绝重放，必须stop/静止/return。新真实进程回归旧实现再次超时红灯（5.05s），修复后race通过，验证旧回执不变、新seq使用新预算且管理员修改exec未替换冻结命令。模板参数默认900秒，并支持标准新装/升级。
 
 最终 `scripts/verify.sh` exit0：网页/真实隔离浏览器、Python SDK/共享工具/安装器/部署控制器回归、ruff、Go vet与全仓race（platform39.448s）、build均通过；sanitize新增源码与文档差异通过。独立复审确认日志中断Minor关闭及预算变化未引入新Critical/Important/Minor。该结果仅证明维护源回归；此记录时8792尚未升级、原Run尚未恢复，新日志与新预算的真实链路仍待下步核验。源PR不合main。
+
+
+源`f23bc3e9a5bd27e2216f1a2e3cf9334e568b7163`已推送Draft PR #5、未合main。正式API核对无running/waiting/stopping Run后，私有备份原失败Run、SQLite在线只读备份（integrity_check=ok）及原manifest；回退二进制由原运行源码6e875034重建，明确不是已被构建替换的旧进程inode副本。原Run先经stop API静止，仅重启8792，8788监听身份不变。首次启动遗漏既有WORKFLOW_GITHUB_TOKEN引用，标准安装check因此拒绝；Run仍stopped，无重试副作用。按已登记引用修正服务环境后重新启动，原Run完整JSON不变。
+
+已装平台二进制SHA-256 `4ef0392dd5591acffcf4ebf0c56e4c4e3adad1b558773fa470d5330fde3a9975`；原manifest使用固定make verify及test-timeout-seconds=900升级，仅connector-tests变化，所有对象ID不变，重复安装无变化；正式API核对当前预算900、Run冻结原配置300及历史JSON不变。旧seq7日志接口404，未伪造之前缺失输出。确认平台无剩余子进程后，从原Run用户页面选择“运行项目测试”并填写已核对副作用/版本/预算的原因，点击“从该节点继续”；页面与API确认原Run seq10 tests running，seq9保留中断退出码及人工回退原因。新命令完整结果、日志读取及下一阶段真实MCP消费仍待发生。
