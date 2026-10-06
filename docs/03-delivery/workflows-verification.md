@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前长周期目标：**No-Go／In Progress（2026-10-06）**。第1项首次调用体验已完成：Issue #16 同一 Run 经真实失败与独立 QA 返工，第二轮 QA Go 后生成 PR #17，合并为 `85f6d17c07c5fddeb2d6a39a5a067769a11bb4cc`，该合并版本通过固定双屏门禁、正式 Actions 部署与用户页面核验。第2项多上游/有限切换由 Issue #18 自动进入唯一 Run `82227c5986e5f41875895d8016c686a6`，G1/G2交接完成并在同Run研发阶段；第3–4项仍为已授权待执行范围。通用命令回执修复已有正式升级和现场证据，新阶段模板已按原 manifest 升级，实际行为随第二轮验证。第一切片通过不外推整体目标通过；源 PR 仍 Draft/Open，真实供应商联调 Not Run。最新连续证据见文末。
+当前长周期目标：**No-Go／In Progress（2026-10-06）**。路线1首次调用体验已正式发布；路线2多上游/有限切换经 Issue #18 原 Run 的固定门禁、独立 QA 返工、PR #19 合并，正式 main `98511771871cf0951ecef716bbb55deb13e18da5` 已部署。自动 prepare、隔离目标真实健康失败后的旧数据恢复、显式重试 schema1→2 及预览发布均有 Actions/API/UI 证据，见文末。路线3 Issue #20 已由 GitHub Actions/SDK 自动进入唯一 Run `9e6d05f409675e0ef65c6486691462df`，需求已交接设计；路线4待执行。DEP02–04 剩余真实 Go 联合负例、DEP05 未覆盖安装边缘及后续产品路线未全部通过。真实供应商联调 Not Run；源 PR #5 仍 Draft/Open、未合并。历史小节保留当时事实，不能把历史片段或单项通过外推整体完成。
 
 历史切片结果：**Pass（GitHub Issue → 研发 → 草稿 PR 验收）**。通用 SDK/API、自动接单、原 Issue 绑定与评论接续、bug 短路径、新需求分派、真实项目测试、独立 QA 及返工、停止／恢复／重启和去重均有下方真实证据。此前遗漏 Issue 入站而外推的整体 Go 结论不沿用；本轮按用户要求不新增部署和 code review 验收。源仓库 PR 仍 Draft/Open、未合并；真实供应商及其它聊天渠道未测／未接入。
 
@@ -831,3 +831,25 @@ seq29独立QA形成report-03/matrix-03产品切片Go，两项SSE Important/P1在
 
 
 路线3接单已确认：[Issues opened Actions37456112193](https://github.com/big91987/model-relay/actions/runs/37456112193)实际success，经正式SDK创建唯一Run `9e6d05f409675e0ef65c6486691462df`。原Issue [接单回执6015213052](https://github.com/big91987/model-relay/issues/20#issuecomment-6015213052)提供Run入口，[分派启动6015214058](https://github.com/big91987/model-relay/issues/20#issuecomment-6015214058)指向原生会话 `190543a0f27ab0aab9d9e1b2c5d3c7ca`。没有手工建平台任务。当前只证明接单/分派，尚不声称需求/研发或下一产品验收完成。
+
+
+## 2026-10-06：真实 Go 与控制器联合负例回归；路线3设计中
+
+新增可复用入口 `examples/github/model-relay-preview/tests/real_product_lifecycle.py`，用全新私有根、只读产品Git对象及精确旧 `85f6d17c07c5fddeb2d6a39a5a067769a11bb4cc`／候选 `98511771871cf0951ecef716bbb55deb13e18da5`，两版均执行未修改的完整 `make verify`。历史控制器从源提交 `657ec4f2e9ec4349210289d15f88154a4b534441` 提取，由其实际prepare/activate形成旧安装；真实管理API创建禁用上游、启用/停用各一模型、一密钥及一条401历史，无上游访问。仅替换服务管理器为受控子进程，Go CLI、健康、SQLite及控制器状态均实际执行。第一轮在服务替身错误读取deployed记录时失败；独立审查确认P1，改为跟随current链接后从全新目录重跑，未复用或覆盖失败现场。
+
+修订入口SHA256 `423ece686c46c3bd02af01a1f53e3644cddb55f88b19353f56dc54598d5a7a32`，当前控制器 `e73b92b46ea62a7520d6e93c2bf306e8cdc5dee0322fff4d83c406e51de93fba`，历史控制器 `4f9fd39c30ae73ae82c7f794100baa7751fdabb529a974a2c51c807f66a653eb`。真实整套退出0，8项检查通过：
+
+1. 已知未改旧无契约安装、非空API基线及相同SHA准备保持数据。
+2. 实际backup因输出碰撞拒绝，未调用候选upgrade，原服务与数据恢复。
+3. 实际upgrade因输出碰撞拒绝，经旧二进制restore恢复原数据。
+4. 候选实际监听端口失败，再由真实restore拒绝非空目标，记录recovery_pending且不冒充健康；显式activate重入使用原备份恢复，保留部分恢复目录，备份摘要不变。
+5. 真实upgrade完成且持久化upgrade_confirmed后注入中断；prepare仅安排恢复，显式activate恢复原快照，不用旧binary重新backup新schema。
+6. 正常schema1→2实际升级，管理员可登录、原密钥身份/模型启停与映射/历史/主密钥摘要保持。
+7. 健康同SHAactivate不执行服务或产品命令。
+8. schema2安装拒绝无契约旧候选，无停服副作用。
+
+旧完整门禁日志66814字节，SHA256 `ebe8e59782b03f27fd9ccce5c79fe42eb766280563be0ceb4ab09e7fb0a1f8aa`；新81557字节，SHA256 `42119433012de8848829846a666a48c13aecf9600dd1b079ccf2998b4f9976c1`。新binary摘要 `5255e42b9e8ec617b6794eaa18654d61ec73c65b5f3250ede997a11df745a116` 与正式发布一致。脱敏evidence JSON摘要 `a1efa65802793a0419a84072193a55532f5ac869fc1956c12cc22feaf2b64ea0`，标记evidence_kind=controller-real-go-isolated、result=passed及执行入口摘要。退出后临时服务端口已关闭；正式preview/validation实际health仍为原schema2合并SHA。私有完整日志与安装留本机，不提交凭据或数据。
+
+复查关闭唯一P1；编译、ruff检查/格式、diff和改动范围秘密/本机路径扫描通过。此入口和使用说明纳入唯一维护源，不更改运行控制器或产品副本。DEP02–04上述实际CLI拒绝/恢复/重入/降级子场景Pass；注入BaseException不等于OS父进程死亡或断电，输出碰撞不代表所有I/O错误；真实Go超时/强杀组合、畸形契约及DEP05剩余安装边缘仍须另验。服务替身、API基线和本层成功不替代正式launchd/GitHub/UI/供应商证据；前文正式Actions证据独立保留。
+
+路线3[Issue #20](https://github.com/big91987/model-relay/issues/20)已经真实Actions `37456112193` 成功并经SDK绑定唯一Run `9e6d05f409675e0ef65c6486691462df`，原Issue接单回执6015213052。原页面核验prepare→原issue→intake→requirements完成，design seq5执行中；需求结束通知6015388486、设计启动6015389059均回写原Issue。需求PRD/G1完成，设计草稿识别schema3与现有控制器只接受1/2的发布前置缺口；设计尚未交接，不据草稿宣称平台支持或产品实现完成。下一步等待冻结契约，在平台维护源扩展明确支持范围及回归，再经原安装器应用，不允许产品复制控制器或手工预迁移。整体仍In Progress／No-Go。

@@ -62,3 +62,25 @@ python3 examples/github/model-relay-preview/tests/port_conflict.py \
 维护源回归可通过 `python3 -m unittest discover -s examples/github/model-relay-preview/tests -p '*_test.py' -v` 运行。它涵盖真实Git、子进程/超时/父进程死亡、安装器、契约漂移、旧协议和数据恢复夹具；测试里的launchctl及服务健康主要为隔离替身。必须另行验证真实新旧Go二进制、标准安装、原Actions的非空旧安装升级/失败恢复和部署后浏览器，不能据该回归称整条Pipeline通过。
 
 验收时分别核对：平台 Run 的 PR head → 获授权合并后的 main SHA → Actions 自动准备、显式触发部署与部署记录 → 部署根 `deployed.json` 的 SHA 与二进制摘要 → 固定 URL 的真实 `/healthz` 和管理页。临时手工服务、`make verify` 中的短命服务、草稿 PR 本身均不算部署成功。预览仅本机可访问；主机睡眠或退出登录后不可用。产品真实供应商联调独立标记。
+
+
+### 真实 Go 与控制器联合回归
+
+`tests/real_product_lifecycle.py` 是显式运行的跨版本回归入口，不加入快速单元测试的自动发现。提供受信产品 Git 工作副本、完整旧/新 SHA、历史平台控制器和一个不存在的私有工作目录；该工具只读克隆 Git 对象，使用各版本未修改的 `make verify` 后构建精确版本制品。旧版安装由原历史控制器的 prepare/activate 生成，配置/密钥及一条拒绝请求历史经真实管理/调用 API 产生；不读取或复制常驻实例数据，不手写数据库、计划或成功部署记录。
+
+```sh
+git show <legacy-platform-ref>:examples/github/model-relay-preview/controller.py \
+  > <private-temp>/legacy-controller.py
+python3 examples/github/model-relay-preview/tests/real_product_lifecycle.py \
+  --project <trusted-product-repository> \
+  --old-sha <full-schema1-product-sha> \
+  --candidate-sha <full-schema2-product-sha> \
+  --legacy-controller <private-temp>/legacy-controller.py \
+  --work <new-private-evidence-directory>
+```
+
+运行会执行两份产品的完整门禁，所需依赖同正式部署准备；不会跳过测试或消费已有安装的制品记录。仅将 launchd 换为受控子进程，产品 serve、CLI、HTTP健康、SQLite、备份/恢复及控制器状态机都实际执行。API准备的临时数据不能算UI旅程；本层不覆盖真实launchd、GitHub权限/Actions、用户页面或供应商。正式环境仍按前述独立Actions步骤验收。
+
+场景按同一安装连续执行：已知旧无契约版本及重复准备；真实backup/upgrade对已存在输出拒绝后的旧数据恢复；候选真实端口占用与真实restore对非空目标拒绝、明确恢复未完成、再次显式activate恢复原快照；在控制器实际持久化upgrade_confirmed后注入中断，下一次prepare仅安排恢复、activate不能再用旧binary备份新schema；正常升级保留身份/模型启停/历史；相同SHA无停服或产品命令副作用；schema2拒绝无契约旧候选。输出碰撞和中断均为标注故障夹具，不改产品二进制/数据库或构造回执。该集合不声称覆盖所有可能的超时、断电、契约畸形或安装漂移边缘。
+
+工作目录保留脱敏证据JSON、完整验证日志及临时安装以便诊断，目录/文件受私有umask保护，含测试密钥和管理员凭据，不提交到仓库。工具退出时停止自己创建的服务；存在的工作目录始终拒绝复用，防止覆盖失败证据。失败或未完成不能计Pass。
