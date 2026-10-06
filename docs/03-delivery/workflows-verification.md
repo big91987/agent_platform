@@ -694,3 +694,8 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 
 
 控制器独立代码审查整改：源`0b70d6e`提交后、安装前，requesting-code-review流程发现两项Important：监督者异常死亡被当普通CLI失败，可能让持有同一锁的父控制器与存活产品命令并行恢复；deployed记录已写但最后committed未落盘时，重入会错误回滚健康新发布。两项均用新增真实回归在旧实现报错，未直接带缺陷安装。修复后监督者只有明确完成进程组收尾才返回保留的安全失败状态；异常退出、信号或无法确认wait均按ProductStillRunning保留现场。candidate_healthy只在精确部署记录、固定二进制/指针及实际version/schema健康匹配时无停服补齐提交，不健康仍走恢复。最终38项通过（42.072s）；独立复审另外在临时目录运行4项新回归全部通过，并验证无法确认child wait时的保守分类，无新增Critical/Important/Minor。仅批准继续受控安装与联调；真实Go/launchd/Actions/浏览器未由代码审查证明。
+
+
+部署控制器标准升级现场：固定维护源`d0564d05e11eec271d7707ee7a444346e7be09ae`已推送源Draft PR #5，未合main。正式API/Actions核对无部署在途，并取得私有部署锁、备份旧controller/config/deployed/LaunchAgent及摘要后，执行原install.py参数两次均成功。已安装控制器SHA-256为`fc51d9e7b329f3fdf9bc4cbe46fc0541fb411e096a6fbccf4aecff3a21fd226a`，controller-install记录与源/安装文件一致；既有preview配置、deployed记录及LaunchAgent逐字节不变，current指针不变，实际旧Go healthz仍status=ok/version=85f6d17c完整SHA。此步骤没有重启、初始化或迁移产品。
+
+原部署Workflow YAML与本轮产品文件逐字节一致。经正式workflow_dispatch选择main/deploy=false， [Actions37422891093](https://github.com/big91987/model-relay/actions/runs/37422891093) 于06:17 UTC完成：prepare success，真实日志Already deployed 85f6d17c，deploy skipped。它证明标准安装后原入口、受限仓库fetch、已有旧Go身份/健康校验及无副作用重复准备有效；没有再跑make verify、候选upgrade或发布，不计真实新旧Go/非空迁移/失败恢复通过。产品Run仍seq6研发中，这些未测项继续保留，平台源升级事实通过原Issue补充交接。
