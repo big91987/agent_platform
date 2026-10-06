@@ -65,7 +65,7 @@ python3 examples/platform-workflows/install.py \
 ## 验证入口
 
 ```sh
-python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
+PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
 ruff check examples/platform-workflows
 ruff format --check examples/platform-workflows
 ```
@@ -143,7 +143,7 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 
 用原清单加 --upgrade 安装此次更新，会注册任务判断 Agent 并升级模板和阶段策略。在途 Run 的图不变；先完成或停止受影响任务，再升级共享 Agent 定义。新仓库用相同安装入口即可获得短路径，不需手改运行数据。
 
-启动脚本等任务需要监听本地端口时，开发 Agent 的原生沙箱可能不具备该能力。该模板已由管理员配置项目测试 Connector 在宿主执行固定 npm test：开发节点提交实现、测试和沙箱失败证据，随后由项目测试节点实际执行，失败回研发，成功再进独立 QA。QA 独立核对用例和真实回执，有缺口继续返工。不得修改测试为恒通过或临时放开 Agent 权限。这不授权任意未配置的宿主命令；其他测试入口由管理员配置相应 Connector。
+启动脚本等任务需要监听本地端口时，开发 Agent 的原生沙箱可能不具备该能力。该模板由管理员配置项目测试 Connector 在宿主执行固定验证入口：开发节点提交实现、测试和沙箱失败证据，随后由项目测试节点实际执行，失败回研发，成功再进独立 QA。确认稳定的沙箱环境限制后，不因代码或文档变化重复运行必然在相同限制处退出的命令；保留失败命令、代码版本及受限范围，完成可运行检查并交接当前代码，由宿主完整验证。代码、用例和依赖错误不能当作环境限制跳过；相关执行环境改变后须重新核验。QA 独立核对用例和真实回执，有缺口继续返工。不得修改测试为恒通过或临时放开 Agent 权限。这不授权任意未配置的宿主命令；其他测试入口由管理员配置相应 Connector。
 
 ### 通知失败后的处理
 
