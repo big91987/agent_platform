@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 )
 
@@ -92,5 +93,44 @@ func TestConnectorLogRedactsSecretsAcrossWritesAndFinalFlush(t *testing.T) {
 				t.Fatalf("chunk size %d: unsafe output %q", size, got)
 			}
 		}
+	}
+}
+
+func TestConnectorCommandMayIgnoreLargeWorkflowInput(t *testing.T) {
+	workspace := t.TempDir()
+	v := Connector{Name: "fixed test entry", Kind: "command", Enabled: true, WorkspaceRoot: workspace, Executable: "/bin/sh", Args: []string{"-c", "printf 'actual failure: assertion failed\\n'; exit 23"}, TimeoutSeconds: 5}
+	receipt, err := executeConnectorCommand(context.Background(), v, WorkflowRun{ID: "large-input", WorkspacePath: workspace}, WorkflowStep{Seq: 1}, connectorRequest{Stdin: strings.Repeat("previous workflow results\n", 10000)}, t.TempDir())
+	if err != nil {
+		t.Fatalf("command did not need stdin, but its result was discarded: %v", err)
+	}
+	if receipt.ExitCode == nil || *receipt.ExitCode != 23 || receipt.Output != "actual failure: assertion failed\n" {
+		t.Fatalf("lost actual command result: %+v", receipt)
+	}
+}
+
+func TestConnectorCommandConsumesLargeWorkflowInput(t *testing.T) {
+	workspace := t.TempDir()
+	payload := "input-start\n" + strings.Repeat("input-body\n", 10000) + "input-end\n"
+	v := Connector{Name: "read workflow input", Kind: "command", Enabled: true, WorkspaceRoot: workspace, Executable: "/bin/cat", TimeoutSeconds: 5}
+	receipt, err := executeConnectorCommand(context.Background(), v, WorkflowRun{ID: "read-large-input", WorkspacePath: workspace}, WorkflowStep{Seq: 1}, connectorRequest{Stdin: payload}, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.ExitCode == nil || *receipt.ExitCode != 0 || !strings.HasPrefix(receipt.Output, "input-start\n") || !strings.HasSuffix(receipt.Output, "input-end\n") {
+		t.Fatalf("input-consuming command lost data: %+v", receipt)
+	}
+}
+
+func TestConnectorCancelWithUnreadWorkflowInputKeepsReceipt(t *testing.T) {
+	workspace := t.TempDir()
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	v := Connector{Name: "cancel unread input", Kind: "command", Enabled: true, WorkspaceRoot: workspace, Executable: "/bin/sh", Args: []string{"-c", "printf 'started\\n'; sleep 20"}, TimeoutSeconds: 30}
+	receipt, err := executeConnectorCommand(ctx, v, WorkflowRun{ID: "cancel-large-input", WorkspacePath: workspace}, WorkflowStep{Seq: 1}, connectorRequest{Stdin: strings.Repeat("previous results\n", 10000)}, t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "command interrupted") {
+		t.Fatalf("interruption replaced by a pipe error: %v", err)
+	}
+	if receipt.ExitCode == nil || *receipt.ExitCode != -1 || receipt.Output != "started\n" {
+		t.Fatalf("lost interrupted command receipt: %+v", receipt)
 	}
 }

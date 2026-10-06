@@ -441,14 +441,25 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 		return out, err
 	}
 	registered = true
-	if _, err = io.WriteString(input, nonce+"\n"+request.Stdin); err != nil {
+	if _, err = io.WriteString(input, nonce+"\n"); err != nil {
 		input.Close()
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		cmd.Wait()
 		return out, err
 	}
-	input.Close()
+	// Fixed commands such as make need not consume the workflow JSON. A large
+	// history must not block waiting for stdin before we can collect their exit
+	// status/output. Wait closes the pipe even when the child never reads it.
+	inputDone := make(chan error, 1)
+	go func() {
+		_, writeErr := io.WriteString(input, request.Stdin)
+		input.Close()
+		inputDone <- writeErr
+	}()
+
 	err = cmd.Wait()
+	input.Close()
+	inputErr := <-inputDone
 	exit := cmd.ProcessState.ExitCode()
 	out.ExitCode = &exit
 	out.Output = log.String()
@@ -458,6 +469,11 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 	var exitErr *exec.ExitError
 	if err != nil && !errors.As(err, &exitErr) {
 		return out, err
+	}
+	// EPIPE/closed pipe only means the command did not consume all optional
+	// context. Its actual exit code remains authoritative, including nonzero.
+	if inputErr != nil && !errors.Is(inputErr, syscall.EPIPE) && !errors.Is(inputErr, os.ErrClosed) {
+		return out, fmt.Errorf("command stdin delivery failed: %w", inputErr)
 	}
 	return out, nil
 }
