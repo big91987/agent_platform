@@ -811,3 +811,23 @@ seq29独立QA形成report-03/matrix-03产品切片Go，两项SSE Important/P1在
 原图seq31正式提交推送新head `23aff17f6b8e7e0834dbf1d751d05e66cab69366`，seq32 github.pull_request回执指向同一个[PR #19](https://github.com/big91987/model-relay/pull/19)，number19及head一致；外部API确认正文含新执行marker seq32。seq33 end完成。原26步及历史Issue/PR保留，未新建PR或Run；这关闭完成态页面返工→真实研发→固定tests→独立QA→报告→原PR更新的正常重入链。PATCH丢响应仍只有隔离回归，未进行真实GitHub网络故障注入。
 
 维护者核对源码/测试/规范/锁/模板与seq28及独立审查身份、GitGuardian通过和精确base/head后，按既有测试仓授权标记就绪并以match-head-commit合并。GitHub确认2026-10-06 10:54:22 UTC合并，main为 `98511771871cf0951ecef716bbb55deb13e18da5`；源平台PR #5未合并。正式push触发[Actions自动准备37452871127](https://github.com/big91987/model-relay/actions/runs/37452871127)，此记录时in_progress，只prepare、不deploy。效果服务及独立验证安装仍旧版本；正式非空升级、隔离故障恢复及部署后浏览器尚未完成，DEP02–04/06–07与其他未测边缘和供应商限制保留，总目标In Progress/No-Go。
+
+
+### M2 正式非空升级、失败恢复与效果发布（2026-10-06）
+
+精确main `98511771871cf0951ecef716bbb55deb13e18da5` 的[自动prepare 37452871127](https://github.com/big91987/model-relay/actions/runs/37452871127)成功，deploy按push规则skipped；正式完整项目日志81355字节，SHA256 `ff4a245bf0d06b8221680e440504560e6afc0a8902812f5717da81fc29d349f3`。两屏首次配置/多上游、真实旧版非空UI迁移回退和新SSE回归均通过；计划绑定schema2契约及制品SHA256 `5255e42b9e8ec617b6794eaa18654d61ec73c65b5f3250ede997a11df745a116`。准备成功未自动停旧或发布。
+
+独立validation根按原Actions入口执行[正式故障轮37454004343](https://github.com/big91987/model-relay/actions/runs/37454004343)，prepare独立完整通过（81352字节，SHA256 `a2f632c90acc5aaf435a4621d76e7459545e74990c62eeac086b30f1a37aa23a`）。维护源有界端口夹具实际观察新attempt `1791285276838380000` backup_complete→upgrade_confirmed，首健康请求后占用25秒、90次健康请求，最终自动释放；夹具只声称fault-injection，恢复另行核验。Actions deploy真实exit1，Deployment6882450407 local-validation/failure，诊断service health未达预期。
+
+控制器实际写入rolled_back；current/deployed/旧二进制恢复85f6d17c且原主密钥摘要不变，原回退归档摘要匹配。只读SQLite核验failed-data保留schema2，正式API恢复旧schema1并与UI私有基线核对2模型/2密钥/2历史全部一致；原preview在整个演练中未变。没有手改activation、计划、数据库或部署回执。真实UI重新登录→调用测试→输入原密钥→发送→查看本次记录，新增请求`RWeOUAcw6p22qFKm-9A92w`仍归属原密钥ID并映射原模型，示例域名405明确不算供应商生成。该额外请求作为后续正常升级前的第三条历史保留。
+
+故障释放并核对恢复后，沿同一正式入口执行[无故障validation 37455472388](https://github.com/big91987/model-relay/actions/runs/37455472388)，Deployment6882521991 success，attempt `1791285501622378000` committed。prepare复用原已验证不可变制品并复核main/摘要/契约，不冒称再次完整跑门禁。实际health为精确main及schema2，原模型映射/密钥/历史API守恒；UI原管理员重新登录、两旧模型显示原上游候选、全部三条旧历史可见。原密钥从页面新发请求`uAhZEw91cfrtnWx19yxYLg`归属相同身份、远端映射和1次上游尝试，未知用量保持未知；示例域名405，真实供应商仍Not Run。
+
+随后[正式preview 37455730994](https://github.com/big91987/model-relay/actions/runs/37455730994)成功，Deployment6882565695 local-preview/success；实际deployed/current/binary/health/version/schema与精确main及上述制品摘要一致。管理页真实重新登录→概览→接入上游→回概览可用，显示新SHA与多上游空状态，无注入演示供应商；没有凭据，完整生成不在该常驻实例冒称通过。原Run页点击刷新部署状态，真实显示已合并SHA、preview成功及效果链接、validation成功与此前failure，失败未被成功覆盖。截图留私有证据，不进入共享仓。
+
+**分层结论**：产品路线2发布闭环完成；DEP06正式非空schema1→2与DEP07隔离正式健康失败恢复已有真实Actions/API/UI/数据证据。DEP02顺序、DEP03健康失败恢复、DEP04已知旧无契约二进制backup/restore子范围获得真实联合补强；其余backup/upgrade/restore错误、超时/崩溃、未知契约/降级等真实Go联合负例及DEP05未覆盖安装边缘仍未测，不能整行自动置Pass。供应商Not Run。整体目标继续In Progress/No-Go，源PR #5仍Draft且未合main。
+
+路线3按既有授权创建[Issue #20：应用访问生命周期与用量控制](https://github.com/big91987/model-relay/issues/20)，绑定上述实际基线/QA/正式发布与限制；通过标准GitHub Issue→Actions→SDK入口接单，不在平台另建重复Run或手改产品。此记录时仅Issue已创建，接单和后续执行另核验。
+
+
+路线3接单已确认：[Issues opened Actions37456112193](https://github.com/big91987/model-relay/actions/runs/37456112193)实际success，经正式SDK创建唯一Run `9e6d05f409675e0ef65c6486691462df`。原Issue [接单回执6015213052](https://github.com/big91987/model-relay/issues/20#issuecomment-6015213052)提供Run入口，[分派启动6015214058](https://github.com/big91987/model-relay/issues/20#issuecomment-6015214058)指向原生会话 `190543a0f27ab0aab9d9e1b2c5d3c7ca`。没有手工建平台任务。当前只证明接单/分派，尚不声称需求/研发或下一产品验收完成。
