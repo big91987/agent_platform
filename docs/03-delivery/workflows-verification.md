@@ -784,3 +784,10 @@ seq20将回看驱动的错误文字等待修正为当前概览证据ID→请求�
 - 这里不把平台回归或审查通过计为产品修复、真实重入发布、正式候选升级、故障恢复或供应商联调通过；后续记录实际页面、API和外部回执。
 
 平台返工入口最终固定 `scripts/verify.sh` exit0：网页/隔离浏览器、SDK及安装器回归、Go vet/race/build全部通过。独立代码复核的两个 Important 已关闭，且补回撤权 stopped Run 的管理员清理回归；源码差异脱敏与 diff 检查通过。门禁日志 SHA256 `0cacc4105095f02ba6177676d8d7b41e576301b517f734856187840aadac710e`。此处仍未计运行环境升级或产品返工通过。
+
+
+### 完成后返工的现场升级与原 Run 页面复验
+
+维护源 `5758a176d3eba58b239beaf78c3606ccdb35e9e0` 已推送源 Draft PR #5（未合main）。通过正式 API 确认20个Run及会话无在途执行后，备份旧二进制、原manifest及停止后的runtime目录，再按原服务CLI路径重启8792。新二进制SHA256 `2c2e7ee6decddc806f85b9c6663832ff52a013164dceb84f6b8f9ca90e4ffca8`；20个Run完整JSON与升级前一致，原manifest逐字节不变；不涉及数据库迁移、模板覆盖或产品服务部署。
+
+从原 Run 页面实际选择“研发实现”，填写两项审查红控、契约和验证要求后点击“从该节点继续”。页面显示执行中，正式API核对同Run seq27、development会话 `889e53d26ae84efed1213ab4d9ea54eb`，原26步/冻结图/工作区均未改。返工原因已持久化；原Issue收到真实 [seq27启动通知](https://github.com/big91987/model-relay/issues/18#issuecomment-6014148090)。没有新建Issue、Run、Agent或PR。此证据证明完成态经页面进入真实原生研发阶段；产品缺陷关闭、宿主门禁、独立QA、原PR再次发布及正式部署仍待发生。
