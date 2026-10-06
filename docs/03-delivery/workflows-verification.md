@@ -673,3 +673,8 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 外部 GitHub Deployment `6876076706` 的 local-preview success、平台正式 delivery API 的 PR/merge/deployment、实际 healthz 200/version及浏览器概览均返回同一85f6d17c完整SHA。用户Run页面显示“已合并PR”“local-preview success”“打开效果地址”和部署记录入口。正式预览重启后旧会话明确过期，通过正常登录恢复；从空概览“接入上游”进入配置页，从调用测试看到三项缺失依赖、对应修复入口、发送禁用和真实Base URL，再回概览成功。未向正式服务注入测试上游或伪造配置；完整配置/普通与SSE/故障恢复仍由同mergeSHA的固定双屏真实Go旅程证明，真实供应商保持Not Run。第一切片可进入下一轮，整条四轮目标尚未完成。
 
 通用模板正式升级：先经API确认安装对象无在途执行，保存原manifest、共享浏览器manifest、入口配置、只读SQLite备份、完整已完成Run和源版本（私有受限目录，不提交运行数据）；以原选项执行install.py --upgrade，仅development/report spec变化，所有对象ID不变。重复升级无进一步变更；正式agents集合API回读两阶段完整投影与manifest一致，原Run 38步完整JSON逐值不变。一次探查不存在的agent详情GET返回404，按安装器已使用的集合API完成正确回读，没有据404误判升级失败。GitHub入口安装器返回Unchanged，仓库源路径变量指向唯一维护源，原SDK已支持workflow_run查询。该记录只关闭安装/历史保留验收，新的阶段策略和409通知现场行为仍需下一真实事件复验。
+
+
+第二切片正式接单与终态指引复验：原 Issue #16 发布收尾评论 `6009708202` 仅记录实际部署结果；入口Actions `37416728939`如约返回拒绝/失败，随后评论 `6009710157`明确“Run已结束，不能继续或回退；新增工作用关联新Issue；重试不重开”，未入会话或修改已完成历史。这是新版409 completed分支的真实现场证据；其余状态分支仍只有源回归，不扩大Pass范围。
+
+在第一切片正式部署与页面核验完成后创建[Issue #18](https://github.com/big91987/model-relay/issues/18)，正文承接精确合并基线、QA和Actions证据，定义多上游/公共模型路由、有限重试/输出后不重放、健康恢复、同请求诊断、旧数据迁移与连续UI结果。正式入口Actions `37416760795`成功，仅生成Run `82227c5986e5f41875895d8016c686a6`；接单评论 `6009714426`提供用户进度入口。seq1 prepare退出0，任务分支head为85f6d17c完整SHA，沿用Trellis0.6.15而不重新初始化；seq2绑定原Issue #18，seq3自动启动intake会话 `afb2f6c0faef217a8ee1ee354d7c64cb`。新Issue/Run只代表第二轮已开始，未预报需求、实现、QA或新发布通过。
