@@ -3,6 +3,7 @@
 
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 import plistlib
@@ -69,13 +70,6 @@ def main():
                 ["git", "-C", str(repository), "config", "http.proxy", args.git_proxy],
                 check=True,
             )
-        source = Path(__file__).with_name("controller.py")
-        controller = root / "controller.py"
-        temporary = root / ".controller-next.py"
-        shutil.copyfile(source, temporary)
-        temporary.chmod(0o700)
-        os.replace(temporary, controller)
-        settings.write_text(json.dumps(expected, sort_keys=True) + "\n")
         plist = Path.home() / "Library/LaunchAgents" / (label + ".plist")
         plist.parent.mkdir(parents=True, exist_ok=True)
         content = {
@@ -98,7 +92,41 @@ def main():
         }
         if plist.exists() and plistlib.loads(plist.read_bytes()) != content:
             raise ValueError("existing LaunchAgent differs; inspect before changing it")
+        source = Path(__file__).with_name("controller.py")
+        activation = root / "activation.json"
+        controller = root / "controller.py"
+        if (
+            activation.exists()
+            and json.loads(activation.read_text()).get("stage")
+            not in ("committed", "rolled_back")
+            and (
+                not controller.exists()
+                or controller.read_bytes() != source.read_bytes()
+            )
+        ):
+            raise ValueError(
+                "activation is unfinished; recover with the installed controller before upgrading"
+            )
+        temporary = root / ".controller-next.py"
+        shutil.copyfile(source, temporary)
+        temporary.chmod(0o700)
+        os.replace(temporary, controller)
+        settings.write_text(json.dumps(expected, sort_keys=True) + "\n")
         plist.write_bytes(plistlib.dumps(content))
+        manifest = root / ".controller-install-next.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "format": 1,
+                    "controller_sha256": hashlib.sha256(
+                        controller.read_bytes()
+                    ).hexdigest(),
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        os.replace(manifest, root / "controller-install.json")
     print("Installed trusted controller at", controller)
     print("No product release was deployed or started.")
     print("Set repository Actions variable MODEL_RELAY_PREVIEW_ROOT to", root)

@@ -8,7 +8,9 @@ import hashlib
 import json
 import os
 import plistlib
+import selectors
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -19,7 +21,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 
-def run(*args, cwd=None, stdout=None, check=True, env=None):
+def run(*args, cwd=None, stdout=None, check=True, env=None, timeout=None):
     return subprocess.run(
         args,
         cwd=cwd,
@@ -28,6 +30,7 @@ def run(*args, cwd=None, stdout=None, check=True, env=None):
         check=check,
         env=env,
         text=stdout is None,
+        timeout=timeout,
     )
 
 
@@ -51,15 +54,47 @@ def read_json(path):
 
 def save_json(path, value):
     temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(json.dumps(value, sort_keys=True, indent=2) + "\n")
+    with temporary.open("w") as stream:
+        stream.write(json.dumps(value, sort_keys=True, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     os.replace(temporary, path)
+    sync_path(path.parent)
+
+
+def sync_path(path):
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+_LOCK_FD = None
 
 
 @contextmanager
 def locked(root):
+    global _LOCK_FD
     with (root / "deploy.lock").open("a") as stream:
-        fcntl.flock(stream, fcntl.LOCK_EX)
-        yield
+        deadline = time.monotonic() + 10
+        while True:
+            try:
+                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(
+                        "deployment operation still owns the lock; retry later"
+                    )
+                time.sleep(0.1)
+        _LOCK_FD = stream.fileno()
+        try:
+            yield
+        finally:
+            # Closing, rather than LOCK_UN, preserves the inherited lock while a
+            # surviving supervised product command still owns this open file.
+            _LOCK_FD = None
 
 
 def settings(root):
@@ -95,20 +130,44 @@ def service_plist_valid(root, config):
 def launchctl(root, config, action):
     domain = "gui/" + str(os.getuid())
     if action == "stop":
-        run("launchctl", "bootout", domain + "/" + config["label"], check=False)
+        run(
+            "launchctl",
+            "bootout",
+            domain + "/" + config["label"],
+            check=False,
+            timeout=10,
+        )
     else:
-        run("launchctl", "bootstrap", domain, str(service_plist(root, config)))
+        run(
+            "launchctl",
+            "bootstrap",
+            domain,
+            str(service_plist(root, config)),
+            timeout=10,
+        )
 
 
-def healthy(port, version=None):
+def healthy(port, version=None, schema=None):
     try:
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         with opener.open(f"http://127.0.0.1:{port}/healthz", timeout=2) as response:
-            result = json.load(response)
+            raw = response.read(4097)
+            if len(raw) > 4096:
+                return False
+            result = json.loads(raw)
+            if not isinstance(result, dict):
+                return False
             return (
                 response.status == 200
                 and result.get("status") == "ok"
                 and (version is None or result.get("version") == version)
+                and (
+                    schema is None
+                    or (
+                        type(result.get("storage_schema")) is int
+                        and result["storage_schema"] == schema
+                    )
+                )
             )
     except (OSError, ValueError, urllib.error.URLError):
         return False
@@ -120,10 +179,10 @@ def port_open(port):
         return connection.connect_ex(("127.0.0.1", port)) == 0
 
 
-def await_health(port, expected, version=None, timeout=20):
+def await_health(port, expected, version=None, timeout=20, schema=None):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if healthy(port, version) if expected else not port_open(port):
+        if healthy(port, version, schema) if expected else not port_open(port):
             return
         time.sleep(0.2)
     raise RuntimeError("service health did not reach expected state")
@@ -158,6 +217,7 @@ def latest_main(root, token=None):
         "origin",
         "main",
         env=environment,
+        timeout=30,
     )
     return git(root, "rev-parse", "FETCH_HEAD")
 
@@ -186,6 +246,212 @@ def stamp_binary(source, sha, log):
         )
 
 
+CONTROLLER_CONTRACT = 1
+
+
+class ProductStillRunning(RuntimeError):
+    pass
+
+
+def capture_command(args, timeout, lock_fd=None):
+    """Worker owns the deadline and lock even if its controller parent exits."""
+    process = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+        pass_fds=(() if lock_fd is None else (lock_fd,)),
+    )
+    streams = {process.stdout: bytearray(), process.stderr: bytearray()}
+    deadline = time.monotonic() + timeout
+    try:
+        with selectors.DefaultSelector() as selector:
+            for stream in streams:
+                selector.register(stream, selectors.EVENT_READ)
+            while selector.get_map():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError("product command timed out")
+                for key, _ in selector.select(remaining):
+                    chunk = os.read(
+                        key.fileobj.fileno(), 4097 - len(streams[key.fileobj])
+                    )
+                    if not chunk:
+                        selector.unregister(key.fileobj)
+                    else:
+                        streams[key.fileobj].extend(chunk)
+                        if len(streams[key.fileobj]) > 4096:
+                            raise ValueError("product command result exceeds limit")
+            if process.wait(timeout=max(0.01, deadline - time.monotonic())):
+                raise RuntimeError("product command failed")
+        return bytes(streams[process.stdout])
+    finally:
+        # Kill the group even if the direct child already exited with descendants.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait(timeout=3)
+        for stream in streams:
+            stream.close()
+        deadline = time.monotonic() + 3
+        while True:
+            try:
+                os.killpg(process.pid, 0)
+            except ProcessLookupError:
+                break
+            if time.monotonic() >= deadline:
+                raise ProductStillRunning("product process group has not exited")
+            time.sleep(0.02)
+
+
+def product_command(*args, timeout=60):
+    inherited = () if _LOCK_FD is None else (_LOCK_FD,)
+    worker = subprocess.Popen(
+        [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "_product-command",
+            str(timeout),
+            str(_LOCK_FD if _LOCK_FD is not None else -1),
+            *args,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        pass_fds=inherited,
+        start_new_session=True,
+    )
+    try:
+        stdout, _ = worker.communicate(timeout=timeout + 8)
+        if worker.returncode == 75:
+            raise ProductStillRunning("product process group has not exited")
+        if worker.returncode:
+            raise RuntimeError("product command failed or timed out")
+        return stdout
+    except subprocess.TimeoutExpired:
+        # A surviving product process keeps the inherited deployment lock. A
+        # recovery must acquire it before touching data; uncertainty fails closed.
+        worker.kill()
+        worker.wait(timeout=3)
+        raise ProductStillRunning("product supervisor timed out; preserve installation")
+    finally:
+        worker.stdout.close()
+        worker.stderr.close()
+
+
+def command_json(*args, timeout=15):
+    return json.loads(product_command(*args, timeout=timeout))
+
+
+def validate_contract(value, sha):
+    if not isinstance(value, dict) or set(value) != {
+        "contract_version",
+        "binary_version",
+        "storage",
+    }:
+        raise ValueError("invalid deployment contract")
+    if (
+        type(value["contract_version"]) is not int
+        or value["contract_version"] != 1
+        or value["binary_version"] != sha
+    ):
+        raise ValueError("unsupported deployment contract or binary version")
+    storage = value["storage"]
+    fields = {
+        "init_schema",
+        "serve_schemas",
+        "upgrade_from",
+        "explicit_upgrade",
+        "backup_schemas",
+        "restore_schemas",
+    }
+    if not isinstance(storage, dict) or set(storage) != fields:
+        raise ValueError("invalid storage contract")
+    if (
+        type(storage["init_schema"]) is not int
+        or storage["init_schema"] not in (1, 2)
+        or type(storage["explicit_upgrade"]) is not bool
+    ):
+        raise ValueError("unsupported storage contract")
+    for name in ("serve_schemas", "upgrade_from", "backup_schemas", "restore_schemas"):
+        values = storage[name]
+        if (
+            not isinstance(values, list)
+            or any(type(v) is not int or v not in (1, 2) for v in values)
+            or values != sorted(set(values))
+        ):
+            raise ValueError("invalid storage schema set")
+    target = storage["init_schema"]
+    if (
+        storage["serve_schemas"] != [target]
+        or not set(storage["serve_schemas"] + storage["upgrade_from"]).issubset(
+            storage["backup_schemas"]
+        )
+        or not set(storage["backup_schemas"]).issubset(storage["restore_schemas"])
+    ):
+        raise ValueError("incompatible storage capabilities")
+    if storage["explicit_upgrade"] != (target == 2) or storage["upgrade_from"] != (
+        [1] if target == 2 else []
+    ):
+        raise ValueError("unsupported upgrade contract")
+    return value
+
+
+def product_contract(root, sha):
+    binary = release_binary(root, sha)
+    try:
+        return validate_contract(command_json(str(binary), "deployment-contract"), sha)
+    except ProductStillRunning:
+        raise
+    except (RuntimeError, ValueError):
+        # Only the already-installed, unchanged legacy release is recognized.
+        # A new binary without a valid contract is never assumed to use schema1.
+        record = root / "deployed.json"
+        if record.exists():
+            previous = read_json(record)
+            if (
+                "deployment_contract" not in previous
+                and previous.get("sha") == sha
+                and previous.get("binary_sha256") == digest(binary)
+                and (root / "current").resolve() == (root / "releases" / sha).resolve()
+            ):
+                return {
+                    "contract_version": 0,
+                    "binary_version": sha,
+                    "storage": {
+                        "init_schema": 1,
+                        "serve_schemas": [1],
+                        "upgrade_from": [],
+                        "explicit_upgrade": False,
+                        "backup_schemas": [1],
+                        "restore_schemas": [1],
+                    },
+                }
+        raise
+
+
+def validate_upgrade(result, contract):
+    target = contract["storage"]["init_schema"]
+    if (
+        not isinstance(result, dict)
+        or result.get("binary_version") != contract["binary_version"]
+        or type(result.get("from_schema")) is not int
+        or type(result.get("schema")) is not int
+        or result["schema"] != target
+    ):
+        raise ValueError("invalid upgrade result")
+    previous = result["from_schema"]
+    if not (
+        (result.get("result") == "already_current" and previous == target)
+        or (
+            result.get("result") == "migrated"
+            and previous in contract["storage"]["upgrade_from"]
+            and previous != target
+        )
+    ):
+        raise ValueError("incompatible upgrade result")
+
+
 def prepare(root, sha, plan_path, output):
     if not valid_sha(sha):
         raise ValueError("target must be a full lowercase commit SHA")
@@ -196,7 +462,17 @@ def prepare(root, sha, plan_path, output):
         if latest != sha:
             raise ValueError("requested commit is no longer the current main head")
         old = current_sha(root)
+        pending = pending_activation(root)
+        if pending:
+            save_json(plan_path, pending["plan"])
+            if output:
+                output.write_text("deploy=true\n")
+            print(
+                "Interrupted activation requires explicit activate recovery; no deployment performed."
+            )
+            return
         if old == sha:
+            verify_deployed(root, config)
             if output:
                 output.write_text("deploy=false\n")
             print("Already deployed:", sha)
@@ -246,8 +522,11 @@ def prepare(root, sha, plan_path, output):
                 raise RuntimeError("make verify did not build the service")
             candidate = {"sha": sha, "binary_sha256": digest(binary)}
             save_json(ready, candidate)
+        contract = product_contract(root, sha)
         plan = {
             **candidate,
+            "controller_contract": CONTROLLER_CONTRACT,
+            "deployment_contract": contract,
             "previous_sha": old,
             "repository": config["repository"],
             "port": config["port"],
@@ -269,23 +548,176 @@ def switch_current(root, sha):
     else:
         temporary.symlink_to(root / "releases" / sha)
         os.replace(temporary, pointer)
+    sync_path(root)
+
+
+def pending_activation(root):
+    path = root / "activation.json"
+    if not path.exists():
+        return None
+    value = read_json(path)
+    if value["stage"] in ("committed", "rolled_back"):
+        return None
+    return value
+
+
+def verify_deployed(root, config):
+    recorded = read_json(root / "deployed.json")
+    sha = recorded["sha"]
+    if (
+        not valid_sha(sha)
+        or recorded.get("binary_sha256") != digest(release_binary(root, sha))
+        or (root / "current").resolve() != (root / "releases" / sha).resolve()
+    ):
+        raise ValueError("current deployed binary differs from recorded release")
+    if not healthy(config["port"], sha, recorded.get("storage_schema")):
+        raise RuntimeError("recorded deployment is not healthy")
+    return recorded
+
+
+def stage(root, journal, name):
+    journal["stage"] = name
+    save_json(root / "activation.json", journal)
+
+
+def recovery(root, config, journal):
+    """Restore the pinned original snapshot; never back up uncertain new data."""
+    old = journal["previous"]
+    name = journal["stage"]
+    allowed = {
+        "stopping",
+        "initializing",
+        "backup_complete",
+        "upgrade_confirmed",
+        "candidate_healthy",
+        "recovery_pending",
+        "restore_ready",
+        "restored",
+    }
+    if name not in allowed or not str(journal["attempt"]).isdigit():
+        raise ValueError("unknown activation stage; preserve installation")
+    if not service_plist_valid(root, config):
+        raise ValueError("service installation changed during recovery")
+    if old:
+        sha = old["sha"]
+        if (
+            not valid_sha(sha)
+            or digest(release_binary(root, sha)) != old["binary_sha256"]
+        ):
+            raise ValueError("previous binary changed; recovery incomplete")
+        if digest(root / "master.key") != journal["key_sha256"]:
+            raise ValueError("master key changed; recovery incomplete")
+        backup = root / "backups" / (journal["attempt"] + "-rollback.backup")
+        if journal["backup_sha256"] is not None:
+            if digest(backup) != journal["backup_sha256"]:
+                raise ValueError("rollback backup changed; recovery incomplete")
+        elif name not in ("stopping", "restored"):
+            raise ValueError("rollback backup is unconfirmed; recovery incomplete")
+    launchctl(root, config, "stop")
+    await_health(config["port"], False)
+    if old and name == "stopping":
+        # No mutating command is allowed before durable backup_complete.
+        stage(root, journal, "restored")
+    else:
+        # Prevent automatic launchd restart against partly migrated data.
+        switch_current(root, None)
+        failed = root / "failed-data" / journal["attempt"]
+        failed.mkdir(exist_ok=True)
+        if name not in ("restore_ready", "restored"):
+            stage(root, journal, "recovery_pending")
+            pairs = [(root / "data", failed / "data")]
+            if not old:
+                pairs += [
+                    (root / "master.key", failed / "master.key"),
+                    (
+                        root / "private/initial-admin-password.txt",
+                        failed / "initial-admin-password.txt",
+                    ),
+                ]
+            for source, target in pairs:
+                if source.exists():
+                    if target.exists():
+                        raise ValueError(
+                            "ambiguous recovery data; preserve both directories"
+                        )
+                    source.rename(target)
+                    sync_path(source.parent)
+                    sync_path(target.parent)
+            if old:
+                restored = failed / "restored"
+                if restored.exists():
+                    # A failed/uncertain restore is evidence, never a usable copy.
+                    restored.rename(failed / ("partial-restore-" + str(time.time_ns())))
+                product_command(
+                    str(release_binary(root, old["sha"])),
+                    "restore",
+                    "--input",
+                    str(backup),
+                    "--data-dir",
+                    str(restored),
+                    "--key-file",
+                    str(root / "master.key"),
+                    timeout=120,
+                )
+                if not restored.is_dir():
+                    raise RuntimeError("restore did not produce an installation")
+                sync_path(restored)
+                stage(root, journal, "restore_ready")
+            else:
+                stage(root, journal, "restored")
+        if journal["stage"] == "restore_ready":
+            restored, data = failed / "restored", root / "data"
+            if restored.is_dir() and not data.exists():
+                restored.rename(data)
+                sync_path(failed)
+                sync_path(root)
+            elif restored.exists() or not data.is_dir():
+                raise ValueError(
+                    "ambiguous restored installation; preserve directories"
+                )
+            # If the move completed before a crash, this only records completion.
+            stage(root, journal, "restored")
+    switch_current(root, old["sha"] if old else None)
+    if old:
+        launchctl(root, config, "start")
+        await_health(config["port"], True, old["sha"], schema=old.get("storage_schema"))
+        save_json(root / "deployed.json", old)
+    else:
+        (root / "deployed.json").unlink(missing_ok=True)
+        sync_path(root)
+    stage(root, journal, "rolled_back")
 
 
 def activate(root, plan_path):
     token = os.environ.pop("MODEL_RELAY_REPO_TOKEN", None)
     config = settings(root)
     with locked(root):
+        interrupted = pending_activation(root)
+        if interrupted:
+            try:
+                recovery(root, config, interrupted)
+            except Exception as error:
+                raise RuntimeError(
+                    "interrupted activation recovery incomplete; preserve installation"
+                ) from error
+            raise RuntimeError(
+                "interrupted activation recovered; explicitly deploy again for a new attempt"
+            )
         plan = read_json(plan_path)
         sha = plan["sha"]
         if not valid_sha(sha):
             raise ValueError("deployment plan has invalid commit SHA")
         old = current_sha(root)
         if old == sha:
+            verify_deployed(root, config)
             print("Already deployed:", sha)
             return
+        contract = product_contract(root, sha)
         if plan != {
             "sha": sha,
             "binary_sha256": digest(release_binary(root, sha)),
+            "controller_contract": CONTROLLER_CONTRACT,
+            "deployment_contract": contract,
             "previous_sha": old,
             "repository": config["repository"],
             "port": config["port"],
@@ -293,86 +725,111 @@ def activate(root, plan_path):
             raise ValueError("deployment plan or release changed; prepare again")
         if latest_main(root, token) != sha:
             raise ValueError("newer main exists; old deployment plan rejected")
+        recorded = verify_deployed(root, config) if old else None
         if old:
-            recorded = read_json(root / "deployed.json")
-            if (
-                recorded.get("binary_sha256") != digest(release_binary(root, old))
-                or (root / "current").resolve() != (root / "releases" / old).resolve()
+            previous_contract = product_contract(root, old)
+            if previous_contract["storage"]["init_schema"] not in (
+                contract["storage"]["serve_schemas"]
+                + contract["storage"]["upgrade_from"]
             ):
                 raise ValueError(
-                    "current deployed binary differs from recorded release"
+                    "candidate cannot serve or upgrade the deployed schema"
                 )
-        if old and not healthy(config["port"], old):
+        elif any(
+            (root / p).exists()
+            for p in ("data", "master.key", "private/initial-admin-password.txt")
+        ):
             raise RuntimeError(
-                "current service is unhealthy; preserve it for diagnosis"
+                "unrecorded installation exists; preserve it for diagnosis"
             )
-        if not old and (root / "data").exists() != (root / "master.key").exists():
-            raise RuntimeError("initial data and key are inconsistent; preserve them")
         if not service_plist_valid(root, config):
             raise RuntimeError("service installation is missing or changed")
-        launchctl(root, config, "stop")
-        await_health(config["port"], False)
-        backup = None
-        if old:
-            backup = root / "backups" / (str(time.time_ns()) + "-" + old + ".backup")
-            try:
-                run(
+        journal = {
+            "attempt": str(time.time_ns()),
+            "plan": plan,
+            "previous": recorded,
+            "key_sha256": digest(root / "master.key") if old else None,
+            "backup_sha256": None,
+        }
+        stage(root, journal, "stopping" if old else "initializing")
+        try:
+            launchctl(root, config, "stop")
+            await_health(config["port"], False)
+            if old:
+                backup = root / "backups" / (journal["attempt"] + "-rollback.backup")
+                product_command(
                     str(release_binary(root, old)),
                     "backup",
                     "--data-dir",
                     str(root / "data"),
                     "--output",
                     str(backup),
+                    timeout=60,
                 )
-            except Exception:
-                launchctl(root, config, "start")
-                await_health(config["port"], True, old)
-                raise
-        elif not (root / "data").exists():
-            password = root / "private" / "initial-admin-password.txt"
-            with password.open("x") as stream:
-                run(
+                if not backup.is_file() or backup.stat().st_size == 0:
+                    raise ValueError("backup did not produce a nonempty archive")
+                sync_path(backup)
+                sync_path(backup.parent)
+                journal["backup_sha256"] = digest(backup)
+                stage(root, journal, "backup_complete")
+                if contract["storage"]["explicit_upgrade"]:
+                    result = command_json(
+                        str(release_binary(root, sha)),
+                        "upgrade",
+                        "--data-dir",
+                        str(root / "data"),
+                        "--key-file",
+                        str(root / "master.key"),
+                        "--output",
+                        str(
+                            root / "backups" / (journal["attempt"] + "-upgrade.backup")
+                        ),
+                        timeout=120,
+                    )
+                    validate_upgrade(result, contract)
+            else:
+                result = product_command(
                     str(release_binary(root, sha)),
                     "init",
                     "--data-dir",
                     str(root / "data"),
                     "--key-file",
                     str(root / "master.key"),
-                    stdout=stream,
                 )
-            password.chmod(0o600)
-        try:
+                password = root / "private/initial-admin-password.txt"
+                with password.open("xb") as stream:
+                    stream.write(result)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                password.chmod(0o600)
+            stage(root, journal, "upgrade_confirmed")
             switch_current(root, sha)
             launchctl(root, config, "start")
-            await_health(config["port"], True, sha)
+            await_health(
+                config["port"], True, sha, schema=contract["storage"]["init_schema"]
+            )
+            stage(root, journal, "candidate_healthy")
             save_json(
                 root / "deployed.json",
                 {
                     "sha": sha,
                     "previous_sha": old,
                     "binary_sha256": plan["binary_sha256"],
+                    "deployment_contract": contract,
+                    "storage_schema": contract["storage"]["init_schema"],
                 },
             )
+            stage(root, journal, "committed")
+        except ProductStillRunning:
+            # Do not overlap recovery with an uncertain mutating process.
+            raise
         except Exception:
-            launchctl(root, config, "stop")
-            await_health(config["port"], False)
-            if backup:
-                failed = root / "failed-data" / (str(time.time_ns()) + "-" + sha)
-                (root / "data").rename(failed)
-                run(
-                    str(release_binary(root, old)),
-                    "restore",
-                    "--input",
-                    str(backup),
-                    "--data-dir",
-                    str(root / "data"),
-                    "--key-file",
-                    str(root / "master.key"),
-                )
-            switch_current(root, old)
-            if old:
-                launchctl(root, config, "start")
-                await_health(config["port"], True, old)
+            try:
+                recovery(root, config, journal)
+            except Exception as error:
+                raise RuntimeError(
+                    "deployment failed; recovery incomplete; preserve installation"
+                ) from error
             raise
         print("Deployed:", sha)
         print("URL: http://127.0.0.1:" + str(config["port"]) + "/admin/")
@@ -398,7 +855,21 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        if len(sys.argv) > 1 and sys.argv[1] == "_product-command":
+            # Parent cancellation does not abandon a mutating CLI operation.
+            # The worker's own deadline kills its process group and closes lock.
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+            descriptor = int(sys.argv[3])
+            sys.stdout.buffer.write(
+                capture_command(
+                    sys.argv[4:],
+                    float(sys.argv[2]),
+                    None if descriptor < 0 else descriptor,
+                )
+            )
+        else:
+            main()
     except Exception as error:
         print("Deployment failed:", error, file=sys.stderr)
-        sys.exit(1)
+        sys.exit(75 if isinstance(error, ProductStillRunning) else 1)

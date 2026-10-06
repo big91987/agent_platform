@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前长周期目标：**No-Go／In Progress（2026-10-06）**。第1项首次调用体验已完成：Issue #16 同一 Run 经真实失败与独立 QA 返工，第二轮 QA Go 后生成 PR #17，合并为 `85f6d17c07c5fddeb2d6a39a5a067769a11bb4cc`，该合并版本通过固定双屏门禁、正式 Actions 部署与用户页面核验。第2项多上游/有限切换由 Issue #18 自动进入唯一 Run `82227c5986e5f41875895d8016c686a6`，G1完成并在同Run设计阶段；第3–4项仍为已授权待执行范围。通用命令回执修复已有正式升级和现场证据，新阶段模板已按原 manifest 升级，实际行为随第二轮验证。第一切片通过不外推整体目标通过；源 PR 仍 Draft/Open，真实供应商联调 Not Run。最新连续证据见文末。
+当前长周期目标：**No-Go／In Progress（2026-10-06）**。第1项首次调用体验已完成：Issue #16 同一 Run 经真实失败与独立 QA 返工，第二轮 QA Go 后生成 PR #17，合并为 `85f6d17c07c5fddeb2d6a39a5a067769a11bb4cc`，该合并版本通过固定双屏门禁、正式 Actions 部署与用户页面核验。第2项多上游/有限切换由 Issue #18 自动进入唯一 Run `82227c5986e5f41875895d8016c686a6`，G1/G2交接完成并在同Run研发阶段；第3–4项仍为已授权待执行范围。通用命令回执修复已有正式升级和现场证据，新阶段模板已按原 manifest 升级，实际行为随第二轮验证。第一切片通过不外推整体目标通过；源 PR 仍 Draft/Open，真实供应商联调 Not Run。最新连续证据见文末。
 
 历史切片结果：**Pass（GitHub Issue → 研发 → 草稿 PR 验收）**。通用 SDK/API、自动接单、原 Issue 绑定与评论接续、bug 短路径、新需求分派、真实项目测试、独立 QA 及返工、停止／恢复／重启和去重均有下方真实证据。此前遗漏 Issue 入站而外推的整体 Go 结论不沿用；本轮按用户要求不新增部署和 code review 验收。源仓库 PR 仍 Draft/Open、未合并；真实供应商及其它聊天渠道未测／未接入。
 
@@ -684,3 +684,10 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 
 
 第二切片设计审查发现发布接缝缺口：初稿ADR-001要求显式upgrade并让新serve拒绝schema1；维护者对照平台examples/github/model-relay-preview/controller.py的activate，确认当前只做旧binary backup、切换/start及失败时旧binary restore，无候选upgrade调用。若不接入，schema2候选会在正式部署启动失败；这是静态契约核对，未冒充实际故障部署。另初稿使用--data但基线CLI实际为--data-dir。原[Issue补充6010003185](https://github.com/big91987/model-relay/issues/18#issuecomment-6010003185)要求统一接口并明确备份→迁移→启动、失败恢复、幂等与旧版兼容；正式Actions37418716622 success，输入23302 queued至原设计会话，原23251继续running。平台源修复、产品设计接续及实测均待完成，不临时迁移或重复发任务。
+
+
+第二切片设计接续与部署维护源修复：原设计输入23251、补充23302和23332均由正式API核对为completed；Agent先正常结束以接收已保存输入，处理完两项补充后才next到seq6研发，会话`129ff36b81a8bc7e39c1dc811e3844e0`。用户Run页显示第6步研发执行中及进入会话入口。第二条[补充6010041466](https://github.com/big91987/model-relay/issues/18#issuecomment-6010041466)关闭了验证草稿把API可替代旧UI主旅程的歧义：至少一条精确旧main用户页面配置/调用的非空升级主链保持，API仅补计数/错误/并发边界。G2及CLI契约文档就绪不等于产品实现或迁移通过。
+
+平台唯一维护源增加prepare绑定4KiB有界只读部署契约、activate重核并先backup→candidate upgrade→start→实际version/schema健康；只对已登记且摘要/指针不变的legacy旧发布兼容，不把任意无契约候选视作schema1。失败与中断保存必要阶段及原快照摘要，隔离候选数据，以旧binary正式restore到空暂存目录再原子恢复；未确认/失败restore保留，后续显式Actions重入先恢复原发布，不重新备份可能已升级的数据。监督子进程继承锁且有限超时，父进程死亡后的不确定写入不会与新恢复并行。首次不明数据拒绝；同SHA重复操作检查实际健康。安装器先检查服务配置，未完成activation拒绝覆盖控制器，标准安装记录控制器摘要。
+
+回归证据分层：第一批新增迁移测试在原控制器12项中2失败/1错误，恢复边界新增后19项中3失败/1错误，安装安全新增3项中2失败/1错误，均保留真实红灯日志。修复后最终34项全部通过（37.102s）：本地真实Git/产品子进程夹具、父控制器实际SIGKILL后的继承锁和限时退出、HTTP health类型/版本检查、新装/已有安装及Workflow安装器；launchctl和大部分产品健康仍为替身，数据为脚本夹具，不称真实Go或Actions端到端通过。当前产品seq6尚执行中；维护源正式安装、真实新旧Go联调、原Actions非空迁移及隔离失败恢复均仍Not Run。源PR保持Draft，整条目标No-Go。
