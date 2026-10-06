@@ -913,3 +913,9 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 源版本 `ea332aa` 已推送既有源Draft PR #5，未合main。先通过官方升级安全检查确认无引用本安装对象的在途执行，将原manifest、CI入口配置、API对象定义及旧Run记录备份到私有维护备份目录；本次仅升级工具/配置，无二进制或存储迁移。使用原manifest、原工作区/仓库/prefix、原验证命令make verify及原预算执行install.py --upgrade，再执行完全相同命令；对象ID集合保持一致，没有额外Agent/Connector/Workflow。官方API对照旧M3 Run仍stopped/seq13，冻结connectors和parameters与备份逐项相同。
 
 安装完成只证明新任务能获得版本材料准备和门禁配置，不证明真实Issue已入站、执行阶段实际引用、DSH实现、独立QA、PR或部署。这些要求仍待用户审阅原型与补充DSH身份后完成，当前目标继续No-Go；没有恢复旧Run或新建产品任务。
+
+### 2026-10-07：用户指定 Codex / gpt-6.1-sol
+
+用户明确将本轮被考核执行器由待确认的DSH改为Codex，模型指定为 `gpt-6.1-sol`；这解除执行器身份阻塞，不再要求DSH适配。通过原安装manifest的Installation升级入口和正式API，将既有intake、requirements、design、development、qa、report六个阶段配置统一为executor=codex、model=gpt-6.1-sol，保留对象ID、权限、Skill和工具绑定。升级前备份manifest和旧Run，升级安全检查确认无在途任务；API回读全部六个阶段模型一致，重复应用没有改变对象。旧M3 Run保持stopped/seq13且整份API记录与备份一致。
+
+这是已保存的执行配置；尚无本轮原生执行会话，不能据配置声称模型实际执行或产品验收通过。原型与设计包仍为待用户评审草案，新的Issue/实施/QA/合并/部署未启动。整体端到端目标未完成，后续按用户指定Codex模型核验实际会话。
