@@ -730,3 +730,10 @@ seq9宿主复验达到原300秒预算后被正确终止：回执保留Go测试�
 正式隔离部署入口维护源：原Actions增加预配置target=preview/validation，默认preview、push只prepare；两目标沿同一Owner/main/固定测试/prepare/activate与串行规则，GitHub Environment分别记录。validation根缺失不回退预览，两阶段传protected-root并拒绝根别名/嵌套、共享端口或服务、敏感状态树软链接/跨根硬链接、发布执行路径逃逸。无任意SHA/目录/命令输入、产品故障开关或测试权限。
 
 隔离变更先新增CLI能力缺失红灯；独立评审发现仅检查顶层目录会放过内层数据库软/硬链接，Important经真实临时文件红灯复现后修正；发布source别名另有红转绿。最终45项控制器/安装/真实Actions shell参数回归通过（48.584s），ruff与diff检查通过。独立复审6项隔离回归及合法current指针通过，无剩余Critical/Important/Minor，可进入标准集成。此记录时新控制器未安装、新Workflow未同步，真实Go/Actions非空升级与恢复仍Not Run；回归不是正式部署证据。
+
+
+隔离入口标准集成进展：固定维护源`294ddb3`已推送源Draft PR #5。确认无Actions部署在途并取得部署锁后，私有备份旧控制器与记录，原install.py对既有预览执行两次均成功。控制器实际摘要`e73b92b46ea62a7520d6e93c2bf306e8cdc5dee0322fff4d83c406e51de93fba`与源/manifest一致；preview配置、deployed/current/key保持不变，health仍为旧85f6d17c。新建预配置local-validation Environment并限制main，独立ROOT/URL变量读回正确，原preview变量未改。此时产品Workflow尚未同步/合并，不能据环境配置声称Actions路径通过。
+
+原[Issue补充6012006592](https://github.com/big91987/model-relay/issues/18#issuecomment-6012006592)经入口Actions37433355966 success保存为seq15会话`bab911e0c63e66d87ff5d993d977d264`的输入25911 queued；原输入25844继续running。补充要求研发通过固定维护源原install_workflow.py --upgrade同步模板/摘要并重入核对，不直接编辑产品在途文件。seq14已真实exit2并保留77,652字节日志；原生按键到达、控件无重绘、选择仍0的轨迹由失败边交seq15继续处理。失败未闭环、不推进QA/合并。
+
+隔离旧安装准备使用历史正式维护源`657ec4f2e9ec4349210289d15f88154a4b534441`的未修改install.py/controller.py和当前精确旧main85f6d17c，从独立私有根/未占用端口运行原prepare及make verify；不复制既有数据/key、不手写deployed记录、不增加产品测试权限。此记录时prepare仍执行中，尚未activate、UI建数据或升级控制器。它是明确标记的旧安装准备，不是正式Actions候选升级或恢复证据。
