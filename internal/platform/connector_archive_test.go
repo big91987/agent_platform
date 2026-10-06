@@ -163,3 +163,24 @@ func (w *interruptLogWriter) Write(p []byte) (int, error) {
 	}
 	return n, e
 }
+
+func TestConnectorArchiveWriteFailurePreservesBoundedReceipt(t *testing.T) {
+	archive, err := newConnectorArchive(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := newBoundedConnectorLog(Connector{})
+	log.window.archive = archive
+	if err := archive.file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := log.Write([]byte("actual command failure\n")); err != nil || n != 23 {
+		t.Fatal("diagnostic storage failure interrupted output capture", n, err)
+	}
+	if log.finishArchive() != nil {
+		t.Fatal("failed storage advertised a readable complete archive")
+	}
+	if log.String() != "actual command failure\n" {
+		t.Fatal("storage failure lost bounded receipt")
+	}
+}

@@ -133,4 +133,7 @@ func TestConnectorCancelWithUnreadWorkflowInputKeepsReceipt(t *testing.T) {
 	if receipt.ExitCode == nil || *receipt.ExitCode != -1 || receipt.Output != "started\n" {
 		t.Fatalf("lost interrupted command receipt: %+v", receipt)
 	}
+	if receipt.Log == nil || receipt.Log.Truncated || receipt.Log.Bytes != int64(len(receipt.Output)) {
+		t.Fatal("cancelled execution lost retained log", receipt.Log)
+	}
 }

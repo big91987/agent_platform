@@ -718,3 +718,8 @@ seq9宿主复验达到原300秒预算后被正确终止：回执保留Go测试�
 源`f23bc3e9a5bd27e2216f1a2e3cf9334e568b7163`已推送Draft PR #5、未合main。正式API核对无running/waiting/stopping Run后，私有备份原失败Run、SQLite在线只读备份（integrity_check=ok）及原manifest；回退二进制由原运行源码6e875034重建，明确不是已被构建替换的旧进程inode副本。原Run先经stop API静止，仅重启8792，8788监听身份不变。首次启动遗漏既有WORKFLOW_GITHUB_TOKEN引用，标准安装check因此拒绝；Run仍stopped，无重试副作用。按已登记引用修正服务环境后重新启动，原Run完整JSON不变。
 
 已装平台二进制SHA-256 `4ef0392dd5591acffcf4ebf0c56e4c4e3adad1b558773fa470d5330fde3a9975`；原manifest使用固定make verify及test-timeout-seconds=900升级，仅connector-tests变化，所有对象ID不变，重复安装无变化；正式API核对当前预算900、Run冻结原配置300及历史JSON不变。旧seq7日志接口404，未伪造之前缺失输出。确认平台无剩余子进程后，从原Run用户页面选择“运行项目测试”并填写已核对副作用/版本/预算的原因，点击“从该节点继续”；页面与API确认原Run seq10 tests running，seq9保留中断退出码及人工回退原因。新命令完整结果、日志读取及下一阶段真实MCP消费仍待发生。
+
+
+新日志/预算真实链路复验：seq10使用900秒预算，完整命令exit2且保存74,586字节日志（truncated=false）；正式API分3页读取，拼接摘要`0cb5a4388c304856c488ed5968377afdbe9ba9fe7c120a86064bc5e77fafad39`，原04源码摘要一致。Go/CLI、旧UI非空迁移及旧binary回滚、1280/390既有主旅程通过；新增routing浏览器在create candidate set 1280失败，不能外推为全部路由AC通过。工作流自动进入seq11研发，会话`766766edfc4f4a62008ab01026842415`，输入25255。真实原生工具事件79835/79836调用read_command_output(seq=10,offset=68000)，error=null且结果含该失败断言，证明新阶段快照实际挂载并消费正式只读能力。用户Run页点击“查看命令日志”也打开对应纯文本页并显示真实失败；API/UI/原生Agent三层分别核对。旧seq7仍404，未补造历史。
+
+日志审查补充的写入失败/取消证据现已纳入维护源回归：文件写入失败不打断命令输出收集，Log=nil且首尾回执保留；真实取消保存实际退出码和日志元数据。聚焦race exit0（2.059s）；这些测试没有改变已安装f23bc3e的产品代码。当前总目标仍In Progress/No-Go，seq11继续定位新增路由UI失败；QA、正式新版本合并/部署、真实Go联合控制器、正式非空Actions升级/失败恢复仍未验收。
