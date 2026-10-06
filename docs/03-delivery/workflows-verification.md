@@ -612,3 +612,8 @@ seq23于02:55–02:57 UTC固定门禁实际退出2。当前Go/race/build通过�
 补充接续与两屏续验：输入19186在原seq24会话完成，实现概览调用时间/配置版本仅取该次call_evidence；修复前77项VM中2失败保留，修复后77/77通过，并扩展真实UI与同ID精确记录的time/revision比较及未知/配置变化/失败清旧值。原19131重读屏障修复保持，补充处理后才正式进入seq25 tests；新56文件摘要`7f6faaac87ad3501cf76108b850db068439f0c6a47c8e10003e5caa4694775c9`。
 
 seq25于03:09–03:12 UTC固定make verify真实退出2。当前Go/race/build通过，1280px新增QA恢复、旧成功精确定位、started/unknown/404/明确注入503、原生分页及整条真实Go旅程通过；390px版本旅程通过，随后`keyboardModel`在journey.mjs:161模型选择值断言失败，未完成窄屏全链。回执checkpoint仍是前一个通用keyboard动作，不将其误诊成焦点失败；实际定位由对应源码行核对。系统自动进入seq26 development会话`843f8c92efe627e1be173adf912c7eb1`，继续原Run。宽屏推进不能代替两屏验收或第二轮QA；本轮仍No-Go、尚无PR/合并/正式发布，后续路线2–4仍待执行。
+
+
+原生模型选择续验：seq26仅修改项目浏览器选择helper及诊断/契约测试，保留真实Tab、焦点可见、选项启用和精确值断言；81项VM/helper检查通过，不能证明原生弹出选择行为。seq27对新56文件摘要`9ebdb69472beb0ffb66565f1ec6d3bd47ea0d76b573fdb6338377ce5cc00a6f6`运行固定make verify，真实退出2。Go/race/build、1280px完整新增恢复/分页旅程及390px版本旅程通过，390px选择目标仍失败；新modelProbe明确显示after commit、optionCount=4、targetIndex=1、selectedIndex=0、targetEnabled=true、matchesTarget=false。该证据排除目标缺失/停用，不能单独证明OS弹出窗口机制；不以模拟契约转绿关闭原生故障。系统自动进入seq28研发会话`936239399cac5aa89eab92180320968f`，页面与API一致，同Run历史保留。
+
+维护者将既有交互设计的收尾静态核对通过原Issue评论[6008669722](https://github.com/big91987/model-relay/issues/16#issuecomment-6008669722)提交：§4撤销上游公开草稿时清未保存凭据且零写入、§7进行中参数保持可见且不可改写、§6使用真实created显示密钥创建时间，以及§1行启停重绘后的真实键盘焦点。前三项源码对照存在缺口；焦点仍须实际复核，不凭静态推测报原生失败。允许等价交互，不按线框按钮数量新增缺陷，明确QA-03旧泛导航驱动与新独立证据入口须独立裁定。输入20067已经queued到seq28原会话，20049仍running；补充接续、修复后门禁与再次QA尚未发生。本轮及长周期目标继续No-Go，不提前创建后续路线Issue或发布。
