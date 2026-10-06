@@ -4,6 +4,8 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
+当前状态（2026-10-06）：长周期真实产品演进验收 **In Progress／No-Go**。本文件前部保留各历史切片的范围与状态，不代表当前总目标完成。最新范围见文末“真实产品演进验收”：路线第1项仍处于独立QA返工，第2–4项继续待执行；测试仓允许自主合并与正式部署，源仓主线仍不合并。
+
 ## 里程碑与任务
 
 | 里程碑／任务 | 交付结果、范围与依赖 | AC 与退出证据 | 状态 |
