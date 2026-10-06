@@ -206,4 +206,4 @@ SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow
 已有 `.trellis` 安装沿用，但项目 `.version` 必须与受信 CLI 版本一致；不完整或旧版本安装显式失败，先用固定版本 CLI 的 `trellis update --dry-run` 检查，再通过 `trellis update --create-new` 保留本地修改并完成必要合并，复核后重试。Trellis 初始化和项目上下文脚本不继承 Git 写令牌。新目录契约通过 Connector 的 `--task-docs` 开启，旧冻结 Connector 参数不变，发布仍兼容旧路径。请在没有在途任务时升级；用新 Issue 验证，不用旧任务已有的 QA 结论冒充新版验证。
 
 
-报告节点也挂载研发交付管理 Skill：在独立 QA 后根据真实证据闭环公共任务、里程碑与总览，再整理 PR 正文。正文生成不能替代公共状态同步；Git 发布、合并和部署仍由对应后续入口决定，报告不得提前声称发生。升级通过原 manifest 应用同一 Skill 挂载与节点指令。
+报告节点也挂载研发交付管理 Skill：在独立 QA 后根据真实证据闭环公共任务、里程碑与总览，再整理 PR 正文。公共总览、任务和里程碑各自在原位维护唯一当前状态，遵循 Skill 各自的状态模型；历史结论与失败证据保留并引用，避免重复追加相互矛盾的“当前状态”。正文生成不能替代公共状态同步；Git 发布、合并和部署仍由对应后续入口决定，报告不得提前声称发生。升级通过原 manifest 应用同一 Skill 挂载与节点指令。

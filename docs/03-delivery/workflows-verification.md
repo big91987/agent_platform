@@ -654,3 +654,8 @@ seq33完整宿主门禁通过：04:17–04:21 UTC，原样make verify真实退�
 QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆盖缺口正式关闭。旧QA-03把泛records导航当概览明确动作，原脚本仍3/4退出1，不删除或改绿；新增独立动作5项与真实UI精确GET/刷新/重登录/旧ID分页证明所需用户结果，报告明确裁决差异。首轮No-Go、夹具异步应答失败、zsh只读变量导致的收尾命令失败均保留，最终独立命令退出码另存。公共T001–T003 Done、M01–M03 Accepted仅指第一条实现与验收切片，不是Published。当前Go允许继续报告/PR，本轮合并/正式部署与部署后体验仍Not Run，总目标继续未完成。
 
 发布准备只读核验：既有model-relay-local Runner online/idle且标签满足原Workflow；产品main仍d62cd51，开放PR为空。维护源部署README澄清已获授权维护者可以通过正式workflow_dispatch设置main/deploy=true，不必要求用户亲自重复点击；Owner校验、main限制、固定门禁与显式发布机制不变，测试仓授权不扩大到源仓。该文档修订已纳入源Draft PR，产品已有对应授权说明，无运行配置变更。新版通用阶段模板仍待本Run结束后经原manifest升级。
+
+
+报告收尾的通用模板修正（现场待升级）：seq35恢复公共任务时发现多个“当前独立QA状态”标题及任务/里程碑状态混用，虽原证据真实，接手者仍需判断哪个当前。维护源report指令和README明确：公共总览、任务包、里程碑各自在原位维护唯一当前状态，使用挂载Skill规定的各自状态模型；历史失败/报告保留并引用，不靠反复追加“当前/最新”段落维护进度。无新文档层、ID或引擎规则，不改在途定义。
+
+首次源回归命令遗漏已文档化的SDK导入路径，24项运行含1个ModuleNotFoundError；按现有标准命令`PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v`重跑，30项全部通过（3.463s），diff检查通过。失败与最终日志分别保留；不把安装/路由回归或提示词文字变化当成实际Agent行为通过。此项与此前development诊断/证据预算指令一起待本Run完成后通过原manifest升级并用下一真实Issue验证。
