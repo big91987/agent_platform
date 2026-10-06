@@ -330,6 +330,18 @@ class Client:
     def workflow_run(self, run_id):
         return self._json(self._workflow_path(run_id))
 
+    def workflow_command_output(self, run_id, seq, *, offset=0):
+        """Read one retained log page; next_offset/eof bound subsequent reads.
+
+        truncated reports archive overflow, not a successful command. Legacy
+        receipts without log metadata have no recoverable archive (404).
+        """
+        if type(seq) is not int or seq < 1 or type(offset) is not int or offset < 0:
+            raise ValueError("seq must be positive and offset nonnegative integers")
+        return self._json(
+            self._workflow_path(run_id) + f"/steps/{seq}/output?offset={offset}"
+        )
+
     def workflow_runs(self, *, workflow_id="", before=""):
         """One page, at most 200 runs. Pass the last ID as before for the next."""
         return self._json(

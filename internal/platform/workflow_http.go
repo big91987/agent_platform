@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -73,6 +74,54 @@ func (h *Server) workflowRunRoutes() {
 			return
 		}
 		respond(w, 200, v)
+	}))
+	h.mux.HandleFunc("GET /api/workflow-runs/{id}/steps/{seq}/output", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		run, err := h.store.WorkflowRun(c, r.PathValue("id"))
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		seq, err := strconv.Atoi(r.PathValue("seq"))
+		if err != nil {
+			fail(w, ErrNotFound)
+			return
+		}
+		offset := int64(0)
+		if value := r.URL.Query().Get("offset"); value != "" {
+			offset, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				fail(w, ErrNotFound)
+				return
+			}
+		}
+		page, err := h.store.connectorOutput(run, seq, offset)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		if r.URL.Query().Get("format") != "text" {
+			respond(w, 200, page)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		for {
+			if _, err := w.Write([]byte(page.Output)); err != nil {
+				return
+			}
+			if page.EOF {
+				break
+			}
+			page, err = h.store.connectorOutput(run, seq, page.NextOffset)
+			if err != nil {
+				w.Write([]byte("\n[command log read interrupted; output is incomplete]\n"))
+				return
+			}
+		}
+		if page.Truncated {
+			w.Write([]byte("\n[log capped at 8 MiB; remaining output not retained]\n"))
+		}
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}/delivery", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, err := h.workflowDelivery(r.Context(), c, r.PathValue("id"))
@@ -186,6 +235,35 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			return nil, nil, e
 		}
 		return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "target": in.Target, "message": "Handoff saved. End this turn; dispatch follows after the Agent is quiet."}, nil
+	})
+	mcp.AddTool(service, &mcp.Tool{Name: "read_command_output", Description: "Read a retained redacted command log from an earlier step of this Run. Use next_offset until eof. Truncated means output exceeded the archive cap. Old executions without a retained log return not found; never infer success from missing output."}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Seq    int   `json:"seq"`
+		Offset int64 `json:"offset,omitempty"`
+	}) (*mcp.CallToolResult, any, error) {
+		current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
+		if e != nil {
+			return nil, nil, e
+		}
+		owner, e := h.store.workflowCaller(current)
+		if e != nil {
+			return nil, nil, e
+		}
+		if _, e = h.store.Workflow(owner, current.WorkflowID); e != nil {
+			return nil, nil, e
+		}
+		if current.Seq != seq || current.Status != "running" || len(current.Steps) == 0 {
+			return nil, nil, ErrConflict
+		}
+		step := current.Steps[len(current.Steps)-1]
+		node := current.Definition.node(step.NodeID)
+		if step.Status != "running" || step.Result != nil || in.Seq >= seq {
+			return nil, nil, ErrConflict
+		}
+		if !allowed(owner, node.AgentID) {
+			return nil, nil, ErrForbidden
+		}
+		page, e := h.store.connectorOutput(current, in.Seq, in.Offset)
+		return nil, page, e
 	})
 	r.Body = http.MaxBytesReader(w, r.Body, 512*1024)
 	mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return service }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}).ServeHTTP(w, r)

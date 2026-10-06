@@ -80,6 +80,17 @@ class ClientTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.client.workflow_command("run", "delete", seq=1)
 
+    def test_workflow_log_pages_preserve_receipt_and_validate_offsets(self):
+        page = {"output": "failure", "next_offset": 7, "eof": True, "truncated": False}
+        self.respond(page)
+        self.assertEqual(self.client.workflow_command_output("run", 7), page)
+        self.assertEqual(
+            self.calls[-1][1], "/api/workflow-runs/run/steps/7/output?offset=0"
+        )
+        for seq, offset in [(0, 0), (1, -1), (True, 0), (1, "4")]:
+            with self.assertRaises(ValueError):
+                self.client.workflow_command_output("run", seq, offset=offset)
+
     def test_network_scope_preserves_explicit_false(self):
         self.client.invoke(
             "offline", agent_id="a", request_id="network", network_access=False

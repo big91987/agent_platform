@@ -383,3 +383,41 @@ func TestConnectorBodyFileUsesRunDirectoryAndRejectsEscapingSymlink(t *testing.T
 		t.Fatal("escaped body accepted")
 	}
 }
+
+func TestConnectorTimeoutRecoveryKeepsIdentityAndRequiresExplicitReturn(t *testing.T) {
+	s := testStore(t)
+	c, config, w, dir := connectorFixture(t, s, Connector{Name: "bounded test", Kind: "command", Enabled: true, Executable: "/bin/sh", Args: []string{"-c", "printf started; sleep 1.2; printf finished"}, TimeoutSeconds: 1})
+	run, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "test", WorkspacePath: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewWorkflowEngine(s, nil, "")
+	engine.Tick(context.Background())
+	config.TimeoutSeconds = 3
+	config.Executable = "/usr/bin/false"
+	config.Args = nil
+	if _, err := s.SaveConnector(c, config); err != nil {
+		t.Fatal(err)
+	}
+	failed := waitConnectorRun(t, engine, run.ID, "failed")
+	if failed.Steps[0].Receipt.TimeoutSeconds != 1 {
+		t.Fatal("active execution deadline changed with admin policy")
+	}
+	if err := engine.Resume(c, run.ID, 1, "retry"); err == nil {
+		t.Fatal("budget change replayed uncertain command")
+	}
+	if err := engine.Stop(c, run.ID, 1); err != nil {
+		t.Fatal(err)
+	}
+	waitConnectorRun(t, engine, run.ID, "stopped")
+	if err := engine.Return(c, run.ID, 1, "call", "inspected effects; retry original command with revised admin time budget"); err != nil {
+		t.Fatal(err)
+	}
+	completed := waitConnectorRun(t, engine, run.ID, "completed")
+	if completed.Connectors[config.ID].TimeoutSeconds != 1 || completed.Steps[0].Receipt.TimeoutSeconds != 1 || completed.Steps[1].Receipt.TimeoutSeconds != 3 {
+		t.Fatal("history/frozen identity or actual execution budget changed incorrectly")
+	}
+	if completed.Steps[1].Receipt.Output != "startedfinished" || *completed.Steps[1].Receipt.ExitCode != 0 {
+		t.Fatal("live executable replaced frozen command or old budget repeated")
+	}
+}

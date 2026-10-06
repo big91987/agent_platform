@@ -315,6 +315,7 @@ type boundedConnectorLog struct {
 }
 
 type connectorLogWindow struct {
+	archive    *connectorArchive
 	head, tail string
 	truncated  bool
 }
@@ -337,6 +338,9 @@ func newBoundedConnectorLog(v Connector) *boundedConnectorLog {
 }
 
 func (w *connectorLogWindow) append(text string) {
+	if w.archive != nil {
+		w.archive.append(text)
+	}
 	const half = 12000
 	n := min(half-len(w.head), len(text))
 	w.head += text[:n]
@@ -381,6 +385,7 @@ func (b *boundedConnectorLog) String() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	w := b.window
+	w.archive = nil
 	b.redactTo(&w, b.pending, 0)
 	if !w.truncated {
 		return strings.ToValidUTF8(w.head+w.tail, "")
@@ -421,6 +426,17 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 		return out, err
 	}
 	log := newBoundedConnectorLog(v)
+	archive, archiveErr := newConnectorArchive(home)
+	if archiveErr != nil {
+		input.Close()
+		return out, errors.New("cannot create command log before execution")
+	}
+	log.window.archive = archive
+	defer func() {
+		if log.window.archive != nil {
+			log.finishArchive()
+		}
+	}()
 	cmd.Stdout = log
 	cmd.Stderr = log
 	if err = cmd.Start(); err != nil {
@@ -462,7 +478,11 @@ func executeConnectorCommand(ctx context.Context, v Connector, r WorkflowRun, st
 	inputErr := <-inputDone
 	exit := cmd.ProcessState.ExitCode()
 	out.ExitCode = &exit
+	out.Log = log.finishArchive()
 	out.Output = log.String()
+	if out.Log == nil {
+		out.Output += "\n[command log persistence failed; receipt contains only the bounded preview]"
+	}
 	if ctx.Err() != nil {
 		return out, errors.New("command interrupted; effects may be partial, inspect before explicitly returning to retry")
 	}

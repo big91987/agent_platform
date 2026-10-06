@@ -699,3 +699,17 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 部署控制器标准升级现场：固定维护源`d0564d05e11eec271d7707ee7a444346e7be09ae`已推送源Draft PR #5，未合main。正式API/Actions核对无部署在途，并取得私有部署锁、备份旧controller/config/deployed/LaunchAgent及摘要后，执行原install.py参数两次均成功。已安装控制器SHA-256为`fc51d9e7b329f3fdf9bc4cbe46fc0541fb411e096a6fbccf4aecff3a21fd226a`，controller-install记录与源/安装文件一致；既有preview配置、deployed记录及LaunchAgent逐字节不变，current指针不变，实际旧Go healthz仍status=ok/version=85f6d17c完整SHA。此步骤没有重启、初始化或迁移产品。
 
 原部署Workflow YAML与本轮产品文件逐字节一致。经正式workflow_dispatch选择main/deploy=false， [Actions37422891093](https://github.com/big91987/model-relay/actions/runs/37422891093) 于06:17 UTC完成：prepare success，真实日志Already deployed 85f6d17c，deploy skipped。它证明标准安装后原入口、受限仓库fetch、已有旧Go身份/健康校验及无副作用重复准备有效；没有再跑make verify、候选upgrade或发布，不计真实新旧Go/非空迁移/失败恢复通过。产品Run仍seq6研发中，这些未测项继续保留，平台源升级事实通过原Issue补充交接。
+
+
+第二切片首次宿主测试与自动回退：研发seq6原输入24076及平台升级补充24298均完成，交接78617被接受后自动进入seq7固定 `make verify`。80文件摘要 `39c1a53b0851952ced57519c97a5e5a146c3c0a53f49158df24a676a035287b9` 与研发03回执一致；宿主exit2，沿既有失败边进入seq8研发，会话 `eea8ee6766619c46e99f90d6c2863796`。页面、正式API及GitHub阶段通知均能定位原Run；没有重建Issue/Run。研发seq6真实读取交付管理、Trellis before-dev/check/update-spec等Skill，111前端VM及非监听局部检查通过不替代宿主/浏览器门禁。
+
+seq7诊断边界：平台首尾24KB保留了旧版故障预期红测和末尾relay/历史分类PASS，但截掉了中间实际失败断言。只能确认整体Go测试FAIL/make退出2，不把旧红灯或Agent本地监听限制误判为宿主根因。seq8通过代码与真实handler最小诊断确认CLI安装驱动仍使用旧单上游接口，修改当前驱动为新接口同时保留进程/端口/重启/密码恢复等断言。研发04摘要 `5b30123a1570e5cef7c1cf18ddf6243753d6e5518d2962523984f2cdef4743e0`，维护者独立重算80文件一致；seq9已自动执行原完整门禁，尚未取得通过结果。不能据局部修复声称首个宿主根因唯一确定或全部消除。
+
+命令日志维护源补强进行中：真实回执缺口驱动新增每执行8MiB有界脱敏日志及现有Run/seq授权读取，保留首尾窗口和真实退出码。新增回归先因能力缺失失败，中文分页再暴露字节截断丢字符并修复；命令/日志/MCP的聚焦race验证通过，包含真实子进程中段保留、跨写入凭据脱敏、上限、旧回执404、用户隔离、根目录逃逸拒绝、当前节点只读前序及交接后立即失效。完整维护源检查与独立审查进行中；尚未安装到在途8792，不称当前seq7已有可恢复日志或真实新日志链已验。旧缺失日志无法追补。
+
+
+seq9宿主复验达到原300秒预算后被正确终止：回执保留Go测试及build通过、精确旧UI非空schema1→2及旧binary回滚隔离旅程通过（2 aliases、2 keys、2历史请求、4受控访问）、1280浏览器主旅程通过，以及390版本展示检查通过，之后中断。整体仍Fail/Not Run，不能据部分PASS放行；正式Actions迁移、独立QA及完整390旅程仍待执行。原Run failed，未自动重放。
+
+维护源日志与预算修复已完成隔离回归：日志独立审查无Critical/Important，发现一项Minor为纯文本响应后续读盘失败静默截断；新增首块后移除日志的回归并补固定“不完整”标记，复审关闭。命令预算采用现有管理员策略/执行seq/回执，不新建恢复对象：原冻结命令身份保持，分发时采样当前1–1800秒预算，执行中配置修改不改deadline，实际值写入回执；原resume拒绝重放，必须stop/静止/return。新真实进程回归旧实现再次超时红灯（5.05s），修复后race通过，验证旧回执不变、新seq使用新预算且管理员修改exec未替换冻结命令。模板参数默认900秒，并支持标准新装/升级。
+
+最终 `scripts/verify.sh` exit0：网页/真实隔离浏览器、Python SDK/共享工具/安装器/部署控制器回归、ruff、Go vet与全仓race（platform39.448s）、build均通过；sanitize新增源码与文档差异通过。独立复审确认日志中断Minor关闭及预算变化未引入新Critical/Important/Minor。该结果仅证明维护源回归；此记录时8792尚未升级、原Run尚未恢复，新日志与新预算的真实链路仍待下步核验。源PR不合main。

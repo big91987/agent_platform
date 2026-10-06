@@ -269,6 +269,12 @@ def main():
         default='["npm", "test"]',
         help='Fixed project verification argv; e.g. ["make", "verify"]',
     )
+    parser.add_argument(
+        "--test-timeout-seconds",
+        type=int,
+        default=900,
+        help="Project verification budget, 1–1800 seconds (default: 900)",
+    )
     parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument(
@@ -325,6 +331,8 @@ def main():
         )
     try:
         test_command = verification_command(args.test_command_json)
+        if not 1 <= args.test_timeout_seconds <= 1800:
+            raise ValueError("test timeout must be 1–1800 seconds")
     except ValueError as error:
         parser.error(str(error))
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,39}", args.prefix):
@@ -494,7 +502,7 @@ def main():
             "enabled": True,
             "authorized_users": args.authorized_user,
             "workspace_root": str(root),
-            "timeout_seconds": 300,
+            "timeout_seconds": args.test_timeout_seconds if role == "tests" else 300,
         }
         if role in ("issue", "pr", "comment"):
             spec.update(

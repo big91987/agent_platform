@@ -16,6 +16,7 @@ import (
 
 // Connector is an administrator-owned capability. Runs freeze its configuration;
 // current enablement and user access are checked again before each external call.
+// Command time budgets use current admin policy, sampled once per dispatch.
 type Connector struct {
 	ID              string            `json:"id"`
 	Name            string            `json:"name"`
@@ -42,13 +43,15 @@ type ConnectorInput struct {
 	IssueNumber    int    `json:"issue_number,omitempty"`
 }
 type ConnectorReceipt struct {
-	Kind      string `json:"kind"`
-	URL       string `json:"url,omitempty"`
-	Number    int    `json:"number,omitempty"`
-	HeadSHA   string `json:"head_sha,omitempty"`
-	ExitCode  *int   `json:"exit_code,omitempty"`
-	Output    string `json:"output,omitempty"`
-	Recovered bool   `json:"recovered,omitempty"`
+	TimeoutSeconds int               `json:"timeout_seconds,omitempty"`
+	Log            *ConnectorLogInfo `json:"log,omitempty"`
+	Kind           string            `json:"kind"`
+	URL            string            `json:"url,omitempty"`
+	Number         int               `json:"number,omitempty"`
+	HeadSHA        string            `json:"head_sha,omitempty"`
+	ExitCode       *int              `json:"exit_code,omitempty"`
+	Output         string            `json:"output,omitempty"`
+	Recovered      bool              `json:"recovered,omitempty"`
 }
 
 func (s *Store) initConnectors() error {

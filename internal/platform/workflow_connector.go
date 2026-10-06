@@ -45,6 +45,12 @@ func (e *WorkflowEngine) connectorAccess(c Caller, r WorkflowRun, node WorkflowN
 	if err = connectorWorkspace(frozen, r.WorkspacePath); err != nil {
 		return frozen, err
 	}
+	// The command identity remains frozen. Time budget is an administrator's
+	// operational policy, sampled once at dispatch (never extending an active
+	// context). A timed-out command still requires explicit stop/return.
+	if frozen.Kind == "command" {
+		frozen.TimeoutSeconds = current.TimeoutSeconds
+	}
 	return frozen, nil
 }
 func (e *WorkflowEngine) startConnector(ctx context.Context, c Caller, r WorkflowRun, step WorkflowStep, node WorkflowNode) error {
@@ -118,6 +124,7 @@ func (e *WorkflowEngine) startConnector(ctx context.Context, c Caller, r Workflo
 		} else {
 			receipt, actionErr = executeGitHub(callCtx, v, request, recoverOnly)
 		}
+		receipt.TimeoutSeconds = v.TimeoutSeconds
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		delete(e.connectorJobs, r.ID)
