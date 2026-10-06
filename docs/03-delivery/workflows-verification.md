@@ -691,3 +691,6 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 平台唯一维护源增加prepare绑定4KiB有界只读部署契约、activate重核并先backup→candidate upgrade→start→实际version/schema健康；只对已登记且摘要/指针不变的legacy旧发布兼容，不把任意无契约候选视作schema1。失败与中断保存必要阶段及原快照摘要，隔离候选数据，以旧binary正式restore到空暂存目录再原子恢复；未确认/失败restore保留，后续显式Actions重入先恢复原发布，不重新备份可能已升级的数据。监督子进程继承锁且有限超时，父进程死亡后的不确定写入不会与新恢复并行。首次不明数据拒绝；同SHA重复操作检查实际健康。安装器先检查服务配置，未完成activation拒绝覆盖控制器，标准安装记录控制器摘要。
 
 回归证据分层：第一批新增迁移测试在原控制器12项中2失败/1错误，恢复边界新增后19项中3失败/1错误，安装安全新增3项中2失败/1错误，均保留真实红灯日志。修复后最终34项全部通过（37.102s）：本地真实Git/产品子进程夹具、父控制器实际SIGKILL后的继承锁和限时退出、HTTP health类型/版本检查、新装/已有安装及Workflow安装器；launchctl和大部分产品健康仍为替身，数据为脚本夹具，不称真实Go或Actions端到端通过。当前产品seq6尚执行中；维护源正式安装、真实新旧Go联调、原Actions非空迁移及隔离失败恢复均仍Not Run。源PR保持Draft，整条目标No-Go。
+
+
+控制器独立代码审查整改：源`0b70d6e`提交后、安装前，requesting-code-review流程发现两项Important：监督者异常死亡被当普通CLI失败，可能让持有同一锁的父控制器与存活产品命令并行恢复；deployed记录已写但最后committed未落盘时，重入会错误回滚健康新发布。两项均用新增真实回归在旧实现报错，未直接带缺陷安装。修复后监督者只有明确完成进程组收尾才返回保留的安全失败状态；异常退出、信号或无法确认wait均按ProductStillRunning保留现场。candidate_healthy只在精确部署记录、固定二进制/指针及实际version/schema健康匹配时无停服补齐提交，不健康仍走恢复。最终38项通过（42.072s）；独立复审另外在临时目录运行4项新回归全部通过，并验证无法确认child wait时的保守分类，无新增Critical/Important/Minor。仅批准继续受控安装与联调；真实Go/launchd/Actions/浏览器未由代码审查证明。

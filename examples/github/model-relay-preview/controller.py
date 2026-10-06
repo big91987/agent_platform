@@ -253,6 +253,10 @@ class ProductStillRunning(RuntimeError):
     pass
 
 
+class ProductCommandFailed(RuntimeError):
+    """The worker positively confirmed cleanup after a command failure."""
+
+
 def capture_command(args, timeout, lock_fd=None):
     """Worker owns the deadline and lock even if its controller parent exits."""
     process = subprocess.Popen(
@@ -264,6 +268,8 @@ def capture_command(args, timeout, lock_fd=None):
     )
     streams = {process.stdout: bytearray(), process.stderr: bytearray()}
     deadline = time.monotonic() + timeout
+    failure = None
+    output = b""
     try:
         with selectors.DefaultSelector() as selector:
             for stream in streams:
@@ -284,25 +290,36 @@ def capture_command(args, timeout, lock_fd=None):
                             raise ValueError("product command result exceeds limit")
             if process.wait(timeout=max(0.01, deadline - time.monotonic())):
                 raise RuntimeError("product command failed")
-        return bytes(streams[process.stdout])
+        output = bytes(streams[process.stdout])
+    except Exception as error:
+        failure = error
     finally:
-        # Kill the group even if the direct child already exited with descendants.
+        # Every cleanup failure is uncertainty, never an ordinary CLI failure.
         try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        process.wait(timeout=3)
-        for stream in streams:
-            stream.close()
-        deadline = time.monotonic() + 3
-        while True:
             try:
-                os.killpg(process.pid, 0)
+                os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
-                break
-            if time.monotonic() >= deadline:
-                raise ProductStillRunning("product process group has not exited")
-            time.sleep(0.02)
+                pass
+            process.wait(timeout=3)
+            deadline = time.monotonic() + 3
+            while True:
+                try:
+                    os.killpg(process.pid, 0)
+                except ProcessLookupError:
+                    break
+                if time.monotonic() >= deadline:
+                    raise ProductStillRunning("product process group has not exited")
+                time.sleep(0.02)
+        except Exception as error:
+            raise ProductStillRunning(
+                "product cleanup could not be confirmed"
+            ) from error
+        finally:
+            for stream in streams:
+                stream.close()
+    if failure:
+        raise ProductCommandFailed("product command failed or timed out") from failure
+    return output
 
 
 def product_command(*args, timeout=60):
@@ -323,20 +340,24 @@ def product_command(*args, timeout=60):
     )
     try:
         stdout, _ = worker.communicate(timeout=timeout + 8)
-        if worker.returncode == 75:
-            raise ProductStillRunning("product process group has not exited")
-        if worker.returncode:
-            raise RuntimeError("product command failed or timed out")
-        return stdout
-    except subprocess.TimeoutExpired:
-        # A surviving product process keeps the inherited deployment lock. A
-        # recovery must acquire it before touching data; uncertainty fails closed.
-        worker.kill()
-        worker.wait(timeout=3)
-        raise ProductStillRunning("product supervisor timed out; preserve installation")
+    except Exception as error:
+        # A surviving product keeps the lock. This controller must not attempt
+        # recovery under its own lock after uncertain supervisor communication.
+        try:
+            worker.kill()
+            worker.wait(timeout=3)
+        finally:
+            raise ProductStillRunning(
+                "product supervisor completion is unknown; preserve installation"
+            ) from error
     finally:
         worker.stdout.close()
         worker.stderr.close()
+    if worker.returncode == 65:
+        raise RuntimeError("product command failed or timed out")
+    if worker.returncode:
+        raise ProductStillRunning("product supervisor exited without confirmed cleanup")
+    return stdout
 
 
 def command_json(*args, timeout=15):
@@ -463,6 +484,8 @@ def prepare(root, sha, plan_path, output):
             raise ValueError("requested commit is no longer the current main head")
         old = current_sha(root)
         pending = pending_activation(root)
+        if pending and reconcile_committed(root, config, pending):
+            pending = None
         if pending:
             save_json(plan_path, pending["plan"])
             if output:
@@ -573,6 +596,39 @@ def verify_deployed(root, config):
     if not healthy(config["port"], sha, recorded.get("storage_schema")):
         raise RuntimeError("recorded deployment is not healthy")
     return recorded
+
+
+def deployment_record(journal):
+    plan = journal["plan"]
+    return {
+        "sha": plan["sha"],
+        "previous_sha": plan["previous_sha"],
+        "binary_sha256": plan["binary_sha256"],
+        "deployment_contract": plan["deployment_contract"],
+        "storage_schema": plan["deployment_contract"]["storage"]["init_schema"],
+    }
+
+
+def reconcile_committed(root, config, journal):
+    record = root / "deployed.json"
+    if (
+        journal["stage"] != "candidate_healthy"
+        or not record.exists()
+        or read_json(record) != deployment_record(journal)
+    ):
+        return False
+    try:
+        verify_deployed(root, config)
+    except RuntimeError:
+        # A recorded candidate which is no longer healthy still needs recovery.
+        return False
+    if (
+        journal["key_sha256"] is not None
+        and digest(root / "master.key") != journal["key_sha256"]
+    ):
+        raise ValueError("master key changed; preserve interrupted deployment")
+    stage(root, journal, "committed")
+    return True
 
 
 def stage(root, journal, name):
@@ -693,6 +749,9 @@ def activate(root, plan_path):
     config = settings(root)
     with locked(root):
         interrupted = pending_activation(root)
+        if interrupted and reconcile_committed(root, config, interrupted):
+            print("Already deployed:", interrupted["plan"]["sha"])
+            return
         if interrupted:
             try:
                 recovery(root, config, interrupted)
@@ -809,16 +868,7 @@ def activate(root, plan_path):
                 config["port"], True, sha, schema=contract["storage"]["init_schema"]
             )
             stage(root, journal, "candidate_healthy")
-            save_json(
-                root / "deployed.json",
-                {
-                    "sha": sha,
-                    "previous_sha": old,
-                    "binary_sha256": plan["binary_sha256"],
-                    "deployment_contract": contract,
-                    "storage_schema": contract["storage"]["init_schema"],
-                },
-            )
+            save_json(root / "deployed.json", deployment_record(journal))
             stage(root, journal, "committed")
         except ProductStillRunning:
             # Do not overlap recovery with an uncertain mutating process.
@@ -872,4 +922,8 @@ if __name__ == "__main__":
             main()
     except Exception as error:
         print("Deployment failed:", error, file=sys.stderr)
-        sys.exit(75 if isinstance(error, ProductStillRunning) else 1)
+        if len(sys.argv) > 1 and sys.argv[1] == "_product-command":
+            # Only status 65 proves failed CLI cleanup completed. Signals and all
+            # other failures are uncertain to the parent, even ordinary exit 1.
+            sys.exit(65 if isinstance(error, ProductCommandFailed) else 75)
+        sys.exit(1)

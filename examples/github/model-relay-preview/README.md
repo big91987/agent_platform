@@ -30,7 +30,7 @@ python3 examples/github/model-relay-preview/install_workflow.py --project <model
 
 迁移、启动或健康失败时，先确认进程退出/端口关闭，隔离失败数据，用旧二进制正式restore原回退快照到同一私有根内的空暂存目录；restore成功后原子移动到正式data路径，再切回旧版本并核对healthz。部分恢复目录保留，不覆盖或宣称可用。备份包含加密凭据，主密钥单独保存并校验摘要；恢复不混并候选健康窗口内的新增记录，它们保留在failed-data中。恢复失败明确报告“recovery incomplete”，不写成功部署记录。
 
-`activation.json`保存目标/旧版本、二进制与回退备份摘要及必要执行阶段，不包含主密钥、密码或产品数据库内容。进程中断后的prepare只安排恢复，不停止服务或重放迁移；获授权维护者沿原Actions入口显式deploy，activate先恢复原快照并以失败结果报告“interrupted activation recovered”。确认旧版本恢复后，再显式运行一次才开始新发布。即使main期间变化，也不以旧二进制重新备份不确定的新数据；不手改阶段记录或业务库。相同SHA只有已提交且实际健康一致才是无副作用重入。
+`activation.json`保存目标/旧版本、二进制与回退备份摘要及必要执行阶段，不包含主密钥、密码或产品数据库内容。进程中断后的prepare只安排恢复，不停止服务或重放迁移；获授权维护者沿原Actions入口显式deploy，activate先恢复原快照并以失败结果报告“interrupted activation recovered”。确认旧版本恢复后，再显式运行一次才开始新发布。即使main期间变化，也不以旧二进制重新备份不确定的新数据；不手改阶段记录或业务库。若新deployed记录已落盘但最后committed标记中断，prepare/activate仅在目标记录、二进制、current指针与实际version/schema健康完全一致时补齐提交；不停止健康候选或丢弃已产生的新记录。不健康候选仍沿原快照恢复。相同SHA只有已提交且实际健康一致才是无副作用重入。
 
 产品CLI由有限时长的监督子进程执行并继承部署锁。控制器父进程被终止时，监督者继续限时收尾；未确认产品进程退出则保留现场，后续恢复必须重新取得同一部署锁。契约读取15秒、backup/init60秒、upgrade/restore120秒，单次服务等待20秒，并为10分钟部署作业留出恢复预算。产品stdout/stderr各限制4 KiB，错误不向Actions打印原始产品输出；初始密码只写私有文件。Git fetch与launchctl也有限时。该边界支持受信同机产品CLI，不保证机器断电期间的可用性；再次运行同一正式入口处理保留的中断记录。
 

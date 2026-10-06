@@ -2,6 +2,7 @@ import fcntl
 import importlib.util
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -693,6 +694,117 @@ class DeploymentControllerTest(unittest.TestCase):
             (self.root / "data/state").read_text(), "valuable schema1 data"
         )
         self.assertEqual(controller.current_sha(self.root), self.old)
+
+    def interrupted_recorded_candidate(self):
+        self.install_previous_release()
+        sha, plan = self.prepare_schema_two("schema2")
+
+        class Crash(BaseException):
+            pass
+
+        real = controller.save_json
+
+        def crash(path, value):
+            real(path, value)
+            if path.name == "deployed.json" and value.get("sha") == sha:
+                raise Crash()
+
+        with self.runtime(), patch.object(controller, "save_json", side_effect=crash):
+            with self.assertRaises(Crash):
+                controller.activate(self.root, plan)
+        return sha, plan
+
+    def test_crash_after_deployment_record_reconciles_without_rolling_back(self):
+        sha, plan = self.interrupted_recorded_candidate()
+        self.assertEqual(controller.current_sha(self.root), sha)
+        self.assertEqual(
+            controller.read_json(self.root / "activation.json")["stage"],
+            "candidate_healthy",
+        )
+        (self.root / "data/state").write_text("new schema2 requests after publication")
+        before = {p.name: p.read_bytes() for p in (self.root / "backups").iterdir()}
+        with (
+            self.runtime(),
+            patch.object(controller, "launchctl") as launch,
+            patch.object(controller, "product_command") as product,
+        ):
+            controller.activate(self.root, plan)
+        launch.assert_not_called()
+        product.assert_not_called()
+        self.assertEqual(controller.current_sha(self.root), sha)
+        self.assertEqual(
+            (self.root / "data/state").read_text(),
+            "new schema2 requests after publication",
+        )
+        self.assertEqual(
+            controller.read_json(self.root / "activation.json")["stage"], "committed"
+        )
+        self.assertEqual(
+            before, {p.name: p.read_bytes() for p in (self.root / "backups").iterdir()}
+        )
+
+    def test_supervisor_death_is_uncertain_and_never_safe_to_restore(self):
+        pidfile = self.base / "running-product.json"
+        script = self.base / "running-product.py"
+        script.write_text(
+            "import os,pathlib,json,time\npathlib.Path("
+            + repr(str(pidfile))
+            + ").write_text(json.dumps([os.getppid(),os.getpid()]))\ntime.sleep(30)\n"
+        )
+        captured = []
+
+        def terminate_supervisor():
+            deadline = time.monotonic() + 5
+            while not pidfile.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            if pidfile.exists():
+                supervisor, product = json.loads(pidfile.read_text())
+                captured.append(product)
+                os.kill(supervisor, signal.SIGKILL)
+
+        killer = threading.Thread(target=terminate_supervisor)
+        killer.start()
+        try:
+            with controller.locked(self.root):
+                with self.assertRaises(controller.ProductStillRunning):
+                    controller.product_command(sys.executable, str(script), timeout=5)
+            killer.join(timeout=6)
+            self.assertTrue(captured)
+            # The product is still alive; ordinary recovery would be unsafe.
+            os.kill(captured[0], 0)
+        finally:
+            killer.join(timeout=6)
+            if captured:
+                try:
+                    os.killpg(captured[0], signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_prepare_reconciles_healthy_recorded_candidate_without_activation(self):
+        sha, plan = self.interrupted_recorded_candidate()
+        output = self.base / "prepare-output"
+        with (
+            self.runtime(),
+            patch.object(controller, "launchctl") as launch,
+            patch.object(controller, "product_command") as product,
+        ):
+            controller.prepare(self.root, sha, plan, output)
+        launch.assert_not_called()
+        product.assert_not_called()
+        self.assertEqual(output.read_text(), "deploy=false\n")
+        self.assertEqual(
+            controller.read_json(self.root / "activation.json")["stage"], "committed"
+        )
+
+    def test_unhealthy_recorded_candidate_is_recovered_instead_of_reconciled(self):
+        _, plan = self.interrupted_recorded_candidate()
+        with self.runtime(), patch.object(controller, "healthy", return_value=False):
+            with self.assertRaisesRegex(RuntimeError, "interrupted.*recovered"):
+                controller.activate(self.root, plan)
+        self.assertEqual(controller.current_sha(self.root), self.old)
+        self.assertEqual(
+            (self.root / "data/state").read_text(), "valuable schema1 data"
+        )
 
 
 class ProductProtocolTest(unittest.TestCase):
