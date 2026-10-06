@@ -647,3 +647,10 @@ seq31诊断门禁于04:07–04:10 UTC执行，56文件摘要`11c3732c72f61b19512
 seq33完整宿主门禁通过：04:17–04:21 UTC，原样make verify真实退出0，当前56文件摘要`1b2f7026692d0633f6f050d585cec0bb67571a7ecf411848d8213d2fd609cdc6`与研发交接及维护者独立计算一致。回执保留Go/race/build通过，以及1280px和390px运行版本、QA恢复、旧成功精确定位、started/unknown/404/明确注入503、原生分页及完整真实Go服务旅程通过；仍是受控上游，不是供应商联调。当前原生execution98536的390px首个非首项选择实际targetIndex=1、selectedIndex=1、matchesTarget=true、同控件/选项及documentFocused=true；对应完整行17,982字节（含LF）、SHA-256 `f68ef1b18ecc610733b0424271ebea9d9011a138a2e5b554a539a8ea5bbff9a1`。这证明修改后的实际键入路径完成了选择，不据此声称所有OS箭头机制已定位。
 
 维护者逐字节核对基线131份workflow历史文件仍未改动。系统无需人工派发自动启动同Run seq34第二轮独立QA，会话`6da434e991029b15651eea1b291ad234`，已开始恢复验收契约、首轮缺陷及当前宿主回执。第二轮QA尚无结论，QA-03旧驱动与独立精确入口语义仍需裁定，本轮PR/合并/正式部署未发生；完整门禁绿色不等于第一切片发布通过，更不等于路线2–4或长周期目标完成。源通用模板升级继续等待本Run无在途执行后经原manifest应用。
+
+
+第二轮独立QA于04:37 UTC正式完成并自动交接：seq34 route=next，进入seq35 report会话`f6fd7365acdc3f28d83fd9d623a10230`。最终56文件摘要仍`1b2f7026692d0633f6f050d585cec0bb67571a7ecf411848d8213d2fd609cdc6`，QA新增report-02、18AC分层matrix-02和journeys-02，175本地引用、语法/diff、固定门禁/锁文件不变和最终指纹检查通过。QA实际独立108VM/helper、3项Go race与5项明确证据动作契约通过；用同轮宿主seq33真实两屏同层证据核对UI，不将QA沙箱未运行浏览器改为Pass。
+
+QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆盖缺口正式关闭。旧QA-03把泛records导航当概览明确动作，原脚本仍3/4退出1，不删除或改绿；新增独立动作5项与真实UI精确GET/刷新/重登录/旧ID分页证明所需用户结果，报告明确裁决差异。首轮No-Go、夹具异步应答失败、zsh只读变量导致的收尾命令失败均保留，最终独立命令退出码另存。公共T001–T003 Done、M01–M03 Accepted仅指第一条实现与验收切片，不是Published。当前Go允许继续报告/PR，本轮合并/正式部署与部署后体验仍Not Run，总目标继续未完成。
+
+发布准备只读核验：既有model-relay-local Runner online/idle且标签满足原Workflow；产品main仍d62cd51，开放PR为空。维护源部署README澄清已获授权维护者可以通过正式workflow_dispatch设置main/deploy=true，不必要求用户亲自重复点击；Owner校验、main限制、固定门禁与显式发布机制不变，测试仓授权不扩大到源仓。该文档修订已纳入源Draft PR，产品已有对应授权说明，无运行配置变更。新版通用阶段模板仍待本Run结束后经原manifest升级。
