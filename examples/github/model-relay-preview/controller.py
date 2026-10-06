@@ -106,6 +106,70 @@ def settings(root):
     return value
 
 
+def require_isolation(root, protected):
+    """Refuse an operator-selected drill target that aliases the preview."""
+    root, protected = root.resolve(), protected.expanduser().resolve()
+    if root.is_relative_to(protected) or protected.is_relative_to(root):
+        raise ValueError("deployment roots overlap")
+    config, other = settings(root), settings(protected)
+    if config["repository"] != other["repository"]:
+        raise ValueError("isolated installation belongs to a different repository")
+    if config["port"] == other["port"] or config["label"] == other["label"]:
+        raise ValueError("deployment installations share a service")
+    for installation in (root, protected):
+        paths = [installation / name for name in ("current", "repository", "releases")]
+        releases = installation / "releases"
+        if releases.exists():
+            for release in releases.iterdir():
+                paths.extend(
+                    [
+                        release,
+                        release / "source",
+                        release / "source/bin",
+                        release / "source/bin/model-relay",
+                    ]
+                )
+        for path in paths:
+            if not path.resolve().is_relative_to(installation):
+                raise ValueError(
+                    "deployment paths overlap or escape their installation"
+                )
+    state_names = (
+        "data",
+        "master.key",
+        "logs",
+        "plans",
+        "backups",
+        "failed-data",
+        "private",
+        "activation.json",
+        "deployed.json",
+        "deploy.lock",
+    )
+
+    def state_files(installation):
+        identities = set()
+        pending = [installation / name for name in state_names]
+        while pending:
+            path = pending.pop()
+            if path.is_symlink():
+                raise ValueError(
+                    "deployment state has a link that could overlap installations"
+                )
+            try:
+                metadata = path.stat()
+            except FileNotFoundError:
+                continue
+            if path.is_dir():
+                pending.extend(path.iterdir())
+            else:
+                identities.add((metadata.st_dev, metadata.st_ino))
+        return identities
+
+    if state_files(root) & state_files(protected):
+        raise ValueError("deployment installations have shared state")
+
+
 def service_plist(root, config):
     return Path.home() / "Library/LaunchAgents" / (config["label"] + ".plist")
 
@@ -891,10 +955,13 @@ def main():
     parser.add_argument("action", choices=["prepare", "activate"])
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--sha")
+    parser.add_argument("--protected-root", type=Path)
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
     root = args.root.expanduser().resolve()
+    if args.protected_root is not None:
+        require_isolation(root, args.protected_root)
     if args.action == "prepare":
         if not args.sha:
             parser.error("prepare requires --sha")

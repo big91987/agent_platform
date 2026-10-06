@@ -723,3 +723,10 @@ seq9宿主复验达到原300秒预算后被正确终止：回执保留Go测试�
 新日志/预算真实链路复验：seq10使用900秒预算，完整命令exit2且保存74,586字节日志（truncated=false）；正式API分3页读取，拼接摘要`0cb5a4388c304856c488ed5968377afdbe9ba9fe7c120a86064bc5e77fafad39`，原04源码摘要一致。Go/CLI、旧UI非空迁移及旧binary回滚、1280/390既有主旅程通过；新增routing浏览器在create candidate set 1280失败，不能外推为全部路由AC通过。工作流自动进入seq11研发，会话`766766edfc4f4a62008ab01026842415`，输入25255。真实原生工具事件79835/79836调用read_command_output(seq=10,offset=68000)，error=null且结果含该失败断言，证明新阶段快照实际挂载并消费正式只读能力。用户Run页点击“查看命令日志”也打开对应纯文本页并显示真实失败；API/UI/原生Agent三层分别核对。旧seq7仍404，未补造历史。
 
 日志审查补充的写入失败/取消证据现已纳入维护源回归：文件写入失败不打断命令输出收集，Log=nil且首尾回执保留；真实取消保存实际退出码和日志元数据。聚焦race exit0（2.059s）；这些测试没有改变已安装f23bc3e的产品代码。当前总目标仍In Progress/No-Go，seq11继续定位新增路由UI失败；QA、正式新版本合并/部署、真实Go联合控制器、正式非空Actions升级/失败恢复仍未验收。
+
+
+第二切片seq12复验exit2：900秒预算、74,970字节完整日志，源码05摘要`f251735964e9fcc330e4f70387e3a3b073fd63537f3960e6cbd8a4daca560510`。旧UI迁移/回滚和既有1280/390主旅程通过，新路由候选primary选择1280仍失败。诊断确认标签唯一命中、Tab后selectedIndex仍0而期望1；标签修正不足以关闭原问题，不能推断更换按键即可修复。原Run自动seq13研发，会话`f05152cc21b44bda48b5570a17de6361`，保留按键与断言补逐键焦点/选项/重绘脱敏轨迹，114项前端回归及静态检查通过后自动交seq14宿主完整门禁。此处seq14仍running，未到QA或发布。
+
+正式隔离部署入口维护源：原Actions增加预配置target=preview/validation，默认preview、push只prepare；两目标沿同一Owner/main/固定测试/prepare/activate与串行规则，GitHub Environment分别记录。validation根缺失不回退预览，两阶段传protected-root并拒绝根别名/嵌套、共享端口或服务、敏感状态树软链接/跨根硬链接、发布执行路径逃逸。无任意SHA/目录/命令输入、产品故障开关或测试权限。
+
+隔离变更先新增CLI能力缺失红灯；独立评审发现仅检查顶层目录会放过内层数据库软/硬链接，Important经真实临时文件红灯复现后修正；发布source别名另有红转绿。最终45项控制器/安装/真实Actions shell参数回归通过（48.584s），ruff与diff检查通过。独立复审6项隔离回归及合法current指针通过，无剩余Critical/Important/Minor，可进入标准集成。此记录时新控制器未安装、新Workflow未同步，真实Go/Actions非空升级与恢复仍Not Run；回归不是正式部署证据。

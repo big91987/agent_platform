@@ -22,6 +22,16 @@ python3 examples/github/model-relay-preview/install_workflow.py --project <model
 
 合并后 `push main` 自动准备：只接受当前远端 main 的完整 SHA。Workflow 在准备与手动切换作业中，把各自的 `github.token`（`contents: read`）仅交给可信控制器用于私有仓库 `git fetch` 和切换前的 main 复核；控制器随即移除令牌，不把它传入项目 `make verify`、构建或服务命令，也不依赖 Runner 的个人 Git 登录状态。在隔离工作树运行项目固定 `make verify` 并保存私有日志。准备通过后仍服务旧版。获授权的维护者在仓库 Actions → Deploy Model Relay locally → Run workflow 选择 `main`、勾选 `deploy`，或通过正式 workflow_dispatch API 提交同样的输入；新运行重新验证当前 main 后执行切换。部署时再次检查 main 未变化、计划与二进制摘要不变；若有新提交，旧计划拒绝切换。重复运行已部署 SHA 仍核对实际二进制、指针和 healthz 的版本/schema，成立后才跳过，不生成新版本。未勾选 `deploy` 的手动运行也只准备。
 
+### 隔离发布验收
+
+Actions 的 `target` 默认 `preview`；push main 仍只准备预览，显式 `deploy=true` 才激活。需要验证升级和失败恢复时，用相同固定版本安装器另装一个私有根，选择不同端口；配置 `MODEL_RELAY_VALIDATION_ROOT`、`MODEL_RELAY_VALIDATION_URL`，创建限制 main 的 `local-validation` Environment。管理员通过同一 Workflow 选择 `target=validation`。验证目标使用同一完整测试、精确 main、契约和激活控制器，不接受用户输入的目录、SHA 或任意命令；两目标共用仓库部署并发锁，仍要求 Owner 显式部署。
+
+标准安装器输出的是默认预览变量名，安装隔离根时将其根和 URL 填入上述 VALIDATION 变量，保留原 PREVIEW 变量。先按原参数升级隔离根控制器，再通过 `install_workflow.py --upgrade` 将模板和摘要纳入产品 PR。已有只传 deploy 的调用兼容，未配置隔离根时选择 validation 明确失败，不回退到预览。此配置不会初始化旧版本、生成测试数据或自动执行故障；真实版本和数据准备必须另按被验产品的正式安装/页面路径完成并记录。
+
+隔离选择向两阶段控制器传 `--protected-root <preview-root>`。执行前要求两个已安装根不相同、不嵌套、解析软链接后不重叠，仓库相同而端口和服务名不同；current/repository/releases不能指向根外；数据、密钥、备份、日志、计划和恢复记录的状态树拒绝软链接，并检查两根文件 inode 不共享，防止复制目录后残留数据库硬链接。它防止配置误指向预览，不作为同机恶意管理员的隔离沙箱。各自独立的密钥、备份、部署记录与服务生命周期不能人工串接。缺少配置/安装或检查失败时保持失败，不降级成默认目标。
+
+GitHub Deployment 按 local-preview/local-validation 分别记录；验收报告必须明确环境，隔离成功不替代正式预览发布，隔离故障不代表预览失败。故障演练必须在已明确授权且核对独立的根上执行，记录注入边界、旧/新版本和数据守恒；不增加产品故障开关、修改产品权限或编辑数据库/activation 记录。本模板只提供受支持的隔离入口，真实恢复仍需执行后才可写通过。
+
 首次部署通过项目正式 `init` 创建数据目录和独立主密钥，初始管理员密码仅写入部署根 `private/initial-admin-password.txt`（0600），不进入 GitHub 日志。运维者在主机安全读取并保管，登录 `MODEL_RELAY_PREVIEW_URL`。不配置默认供应商或假上游；真实供应商 URL/凭据由管理员之后从正式网页录入，未经供应商响应不能声称联调通过。
 
 候选必须提供只读 `deployment-contract` 命令，返回不超过 4 KiB 的单一 JSON。控制器协议版本1接受明确的 schema1 或 schema2 能力：`contract_version=1`、`binary_version=<full-main-sha>`，以及storage中的 `init_schema`、`serve_schemas`、`upgrade_from`、`explicit_upgrade`、`backup_schemas`、`restore_schemas`。schema2候选只serve2，声明从1升级、backup/restore兼容1和2。prepare将完整契约、控制器协议版本与二进制摘要绑定到计划，activate停服前重新读取比较；未知版本、类型错误、能力矛盾、乱码、过量输出、失败或漂移均拒绝。JSON不允许传递任意可执行命令。已有旧控制器的 `deployed.json` 未包含契约时，只兼容其记录的原SHA、原二进制摘要及实际current指针均不变的schema1旧发布；任意新无契约候选不能借命令失败进入兼容路径。新安装需要带契约的产品版本，schema2不能自动降级到schema1。

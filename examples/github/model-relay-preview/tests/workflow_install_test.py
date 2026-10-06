@@ -1,7 +1,10 @@
 import importlib.util
 import json
+import os
+import re
 import subprocess
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -21,6 +24,62 @@ class WorkflowInstallTest(unittest.TestCase):
             "github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.deploy",
             content,
         )
+
+    def test_actual_job_shell_keeps_target_and_isolation_arguments(self):
+        content = SOURCE.with_name("deploy-local.yml").read_text()
+        scripts = [
+            textwrap.dedent(value)
+            for value in re.findall(
+                r"        run: \|\n((?:          .*\n)+)",
+                content,
+            )
+        ]
+        self.assertEqual(len(scripts), 2)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "validation root"
+            root.mkdir()
+            receipt = root / "args.json"
+            (root / "controller.py").write_text(
+                "import json, pathlib, sys\n"
+                "pathlib.Path(__file__).with_name('args.json').write_text(json.dumps(sys.argv[1:]))\n"
+            )
+            base_env = {
+                **os.environ,
+                "DEPLOY_ROOT": str(root),
+                "PREVIEW_ROOT": str(Path(temporary) / "preview root"),
+                "TARGET_SHA": "a" * 40,
+                "GITHUB_RUN_ID": "123",
+                "GITHUB_OUTPUT": str(root / "output"),
+            }
+            for script in scripts:
+                for target in ("preview", "validation"):
+                    result = subprocess.run(
+                        ["bash", "-e", "-c", script],
+                        env={**base_env, "DEPLOY_TARGET": target},
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    args = json.loads(receipt.read_text())
+                    self.assertEqual(args[args.index("--root") + 1], str(root))
+                    self.assertEqual("--protected-root" in args, target == "validation")
+                    if target == "validation":
+                        self.assertEqual(
+                            args[args.index("--protected-root") + 1],
+                            base_env["PREVIEW_ROOT"],
+                        )
+                    receipt.unlink()
+                for overrides in (
+                    {"DEPLOY_TARGET": "unknown"},
+                    {"DEPLOY_TARGET": "validation", "PREVIEW_ROOT": ""},
+                    {"DEPLOY_TARGET": "validation", "DEPLOY_ROOT": ""},
+                ):
+                    result = subprocess.run(
+                        ["bash", "-e", "-c", script],
+                        env={**base_env, **overrides},
+                        capture_output=True,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(receipt.exists())
 
     def project(self, temporary, remote="https://github.com/example/model-relay.git"):
         project = Path(temporary)

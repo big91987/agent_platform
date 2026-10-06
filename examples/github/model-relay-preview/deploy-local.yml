@@ -1,5 +1,5 @@
 name: Deploy Model Relay locally
-run-name: ${{ github.event_name == 'workflow_dispatch' && 'Deploy' || 'Prepare' }} Model Relay · ${{ github.sha }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && 'Deploy' || 'Prepare' }} Model Relay (${{ inputs.target || 'preview' }}) · ${{ github.sha }}
 on:
   push:
     branches: [main]
@@ -10,6 +10,12 @@ on:
         required: true
         type: boolean
         default: false
+      target:
+        description: "Preconfigured installation (validation is isolated from preview)"
+        required: true
+        type: choice
+        default: preview
+        options: [preview, validation]
 permissions:
   contents: read
 concurrency:
@@ -26,14 +32,25 @@ jobs:
       - name: Verify and prepare exact main commit
         id: plan
         env:
-          DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          DEPLOY_ROOT: ${{ vars[inputs.target == 'validation' && 'MODEL_RELAY_VALIDATION_ROOT' || 'MODEL_RELAY_PREVIEW_ROOT'] }}
+          PREVIEW_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          DEPLOY_TARGET: ${{ inputs.target || 'preview' }}
           TARGET_SHA: ${{ github.sha }}
           MODEL_RELAY_REPO_TOKEN: ${{ github.token }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$DEPLOY_ROOT"
+          isolation=()
+          case "$DEPLOY_TARGET" in
+            preview) ;;
+            validation)
+              test -n "$PREVIEW_ROOT"
+              isolation=(--protected-root "$PREVIEW_ROOT")
+              ;;
+            *) echo "Unknown deployment target" >&2; exit 1 ;;
+          esac
           python3 "$DEPLOY_ROOT/controller.py" prepare \
-            --root "$DEPLOY_ROOT" --sha "$TARGET_SHA" \
+            --root "$DEPLOY_ROOT" "${isolation[@]}" --sha "$TARGET_SHA" \
             --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json" \
             --github-output "$GITHUB_OUTPUT"
   deploy:
@@ -42,15 +59,26 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 10
     environment:
-      name: local-preview
-      url: ${{ vars.MODEL_RELAY_PREVIEW_URL }}
+      name: ${{ inputs.target == 'validation' && 'local-validation' || 'local-preview' }}
+      url: ${{ vars[inputs.target == 'validation' && 'MODEL_RELAY_VALIDATION_URL' || 'MODEL_RELAY_PREVIEW_URL'] }}
     steps:
       - name: Activate reviewed version and check health
         env:
-          DEPLOY_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          DEPLOY_ROOT: ${{ vars[inputs.target == 'validation' && 'MODEL_RELAY_VALIDATION_ROOT' || 'MODEL_RELAY_PREVIEW_ROOT'] }}
+          PREVIEW_ROOT: ${{ vars.MODEL_RELAY_PREVIEW_ROOT }}
+          DEPLOY_TARGET: ${{ inputs.target || 'preview' }}
           MODEL_RELAY_REPO_TOKEN: ${{ github.token }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$DEPLOY_ROOT"
+          isolation=()
+          case "$DEPLOY_TARGET" in
+            preview) ;;
+            validation)
+              test -n "$PREVIEW_ROOT"
+              isolation=(--protected-root "$PREVIEW_ROOT")
+              ;;
+            *) echo "Unknown deployment target" >&2; exit 1 ;;
+          esac
           exec python3 "$DEPLOY_ROOT/controller.py" activate \
-            --root "$DEPLOY_ROOT" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json"
+            --root "$DEPLOY_ROOT" "${isolation[@]}" --plan "$DEPLOY_ROOT/plans/$GITHUB_RUN_ID.json"
