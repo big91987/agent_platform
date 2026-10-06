@@ -42,7 +42,7 @@ class ControllerInstallTest(unittest.TestCase):
             / "Library/LaunchAgents/com.agent-platform.model-relay.example.model-relay.5678.plist"
         )
 
-    def install(self):
+    def install(self, port="5678"):
         return subprocess.run(
             [
                 sys.executable,
@@ -52,7 +52,7 @@ class ControllerInstallTest(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--port",
-                "5678",
+                port,
             ],
             env={**os.environ, "HOME": str(self.home)},
             capture_output=True,
@@ -97,6 +97,45 @@ class ControllerInstallTest(unittest.TestCase):
         self.assertEqual(
             (self.root / "controller.py").read_text(), "previous controller"
         )
+
+    def test_wrong_port_or_repository_preserves_existing_installation(self):
+        self.assertEqual(self.install().returncode, 0)
+        paths = [
+            self.root / name
+            for name in ("controller.py", "controller-install.json", "preview.json")
+        ] + [self.plist]
+
+        def snapshot():
+            return {
+                str(path): (
+                    path.read_bytes(),
+                    path.stat().st_ino,
+                    path.stat().st_mtime_ns,
+                )
+                for path in paths
+            }
+
+        before = snapshot()
+        result = self.install(port="5679")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("different settings", result.stderr)
+        self.assertEqual(snapshot(), before)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.root / "repository"),
+                "remote",
+                "set-url",
+                "origin",
+                "https://github.com/example/other.git",
+            ],
+            check=True,
+        )
+        result = self.install()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("remote differs", result.stderr)
+        self.assertEqual(snapshot(), before)
 
     def test_pending_activation_requires_recovery_before_controller_replacement(self):
         (self.root / "controller.py").write_text("previous controller")

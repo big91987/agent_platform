@@ -8,6 +8,7 @@ state transitions run in a fresh private fixture. No existing installation is re
 
 import argparse
 import contextlib
+import errno
 import http.cookiejar
 import importlib.util
 import json
@@ -15,6 +16,7 @@ import os
 import re
 import socket
 import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -313,6 +315,78 @@ def run_case(args, controller, legacy):
                     else (args.old_sha, "restore") in commands
                 )
                 passed("real Go " + verb + " destination refusal and old data recovery")
+
+            # Explicit I/O-stall fixture: only this upgrade's key-file argument
+            # points at an empty FIFO. The real master key and database are untouched.
+            fifo = args.work / "blocked-key-read.fifo"
+            os.mkfifo(fifo, 0o600)
+            reader_seen = threading.Event()
+            release_writer = threading.Event()
+            writer = {}
+
+            def hold_key_read():
+                deadline = time.monotonic() + 5
+                while not release_writer.is_set() and time.monotonic() < deadline:
+                    try:
+                        descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+                    except OSError as error:
+                        if error.errno != errno.ENXIO:
+                            raise
+                        time.sleep(0.01)
+                    else:
+                        writer["fd"] = descriptor
+                        reader_seen.set()
+                        try:
+                            release_writer.wait(5)
+                        finally:
+                            os.close(descriptor)
+                        return
+
+            def stalled_upgrade(*command, **kwargs):
+                if command[1] != "upgrade":
+                    return observed_command(*command, **kwargs)
+                altered = list(command)
+                altered[altered.index("--key-file") + 1] = str(fifo)
+                hold = threading.Thread(target=hold_key_read)
+                hold.start()
+                started = time.monotonic()
+                try:
+                    try:
+                        return observed_command(*altered, timeout=1)
+                    except controller.ProductStillRunning:
+                        raise
+                    except RuntimeError:
+                        assert reader_seen.is_set(), "real Go never opened FIFO"
+                        assert time.monotonic() - started >= 1
+                        # Keep the writer open until cleanup is positively checked.
+                        # A surviving Go reader would accept this byte and fail us.
+                        try:
+                            os.write(writer["fd"], b"x")
+                        except BrokenPipeError:
+                            pass
+                        else:
+                            raise controller.ProductStillRunning(
+                                "product reader survived timeout"
+                            )
+                        raise
+                finally:
+                    release_writer.set()
+                    hold.join(timeout=2)
+                    if hold.is_alive():
+                        raise controller.ProductStillRunning(
+                            "FIFO writer cleanup not confirmed"
+                        )
+
+            commands.clear()
+            with patch.object(
+                controller, "product_command", side_effect=stalled_upgrade
+            ):
+                expect_failure(lambda: controller.activate(root, plan), "timed out")
+            check_old()
+            assert (args.old_sha, "restore") in commands
+            passed(
+                "real Go blocked-read timeout confirms reader exit before old data restore"
+            )
 
             def obstruct_restore(*command, **kwargs):
                 if command[1] == "restore":

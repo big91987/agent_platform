@@ -867,3 +867,14 @@ README同步精确支持范围和发布前置；标准安装器与Workflow内容
 schema3平台交付补记：源提交 `add852abb8dd76bcf9cbf5082f7aaea3d103b380` 已推至源草稿PR #5，controller SHA256 `782d4861df5aa3e93c241e037904dd3c58d9f4772f790170f6328aa5c62307a2`。完整58项耗时60.624s、日志SHA256 `138645e2ef11548b1912d853ff2d5036e45b289403d607e14e9ed718ee24474e`。确认无在途部署、原activation为committed后，分别私有备份并经原install.py升级preview/validation，再重复安装；实际manifest摘要匹配源，重复安装manifest不变，preview.json/deployed/activation/主密钥摘要/current指针保持。两实际health均仍为 `98511771871cf0951ecef716bbb55deb13e18da5`／schema2，未迁移产品。
 
 正式Actions只准备核验：[preview 37460765087](https://github.com/big91987/model-relay/actions/runs/37460765087)、[validation 37460769786](https://github.com/big91987/model-relay/actions/runs/37460769786)均success、deploy skipped，日志均Already deployed当前schema2 SHA。这验证新安装控制器的既有版本路径，不是重跑make verify或schema3迁移。源版本/安装/58项夹具与真实schema3未测边界已从[原Issue评论6015883622](https://github.com/big91987/model-relay/issues/20#issuecomment-6015883622)交还原流程；评论入口Actions `37461024848` success，原Run仍seq6研发执行中。平台源支持及标准安装已完成，真实schema3产品/联合/正式发布仍待实际候选后验证；不修改历史结论或当前Run状态。
+
+
+## 2026-10-06：真实 Go 超时回收与安装身份拒绝补验
+
+在既有真实Go联合入口加入可重复的阻塞读取场景：仅候选upgrade进程的key-file参数指向私有FIFO，真实旧/候选二进制、正式数据及原主密钥不改；写端保持打开且不提供字节，实际Go读取因此阻塞。控制器使用缩短的1秒执行期限；只有确认读端已退出（写入得到EPIPE）后，才允许按普通命令失败路径调用旧binary restore。进程回收不确定、读端仍存活或夹具线程未退出均保留ProductStillRunning语义，禁止降级成可恢复普通错误。独立审查先发现两处异常覆盖风险，修订后关闭Important。前两轮在旧版门禁阶段主动终止以修订入口，均未执行产品激活、未计Pass，现场分别保留。
+
+最终全新隔离轮真实exit0，9项检查全部通过，包括前节8项及本次超时检查。执行入口SHA256 `59052947f1db6e8a1c1cc38d3807446455ea7863c225842414f3b2389a5afdb3`；实际控制器为schema3支持版 `782d4861df5aa3e93c241e037904dd3c58d9f4772f790170f6328aa5c62307a2`；两版产品仍固定旧85f6d17c与候选9851177（schema1→2）。旧完整make verify日志66809字节／SHA256 `5febb3b7efe26d670109f786630c978ecdaa2c9de0e6afea140a421988a1b731`，候选81554字节／`2db340ce46ddd4b218438493f5e75373c2ac9f0520207d8bd5ec32cb44ed3dbe`；候选binary摘要仍与正式M2一致。evidence JSON1479字节／`f137f85d7d78648b1465704bff38e4ce6c1d470dccaaa55c56d86d0d04ae1e07`，result=passed；退出后临时服务端口已关闭。
+
+另以真实install.py子进程验证既有安装拒绝不同端口和不同Git origin：明确非零及对应错误，controller、安装manifest、设置和LaunchAgent四文件的字节/inode/mtime_ns均未变化。该文件4项测试通过0.669s；测试只在临时HOME/安装根执行，不启动服务，不等同正式部署或全部文件系统无副作用。独立审查通过，ruff与diff检查通过。
+
+上述补验仅关闭DEP超时及安装身份拒绝的具体子范围；FIFO为阻塞读取夹具、期限缩短，不代表真实磁盘故障、迁移写入中断、OS父进程死亡或断电，服务管理仍为子进程替身。未把本层回归计为launchd、GitHub、UI、真实供应商或schema3产品迁移通过。原Issue #20／Run 9e6d05f409675e0ef65c6486691462df仍处于seq6研发；平台支持说明已核实送达该原生研发会话。整体继续In Progress／No-Go。
