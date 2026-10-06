@@ -14,6 +14,7 @@ import urllib.parse
 from pathlib import Path
 
 from agent_platform_client import APIError, Client
+from materials import validate_description
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "github"))
 from requirements import github  # noqa: E402
@@ -26,6 +27,25 @@ def save(path, value):
         temporary = Path(output.name)
     temporary.chmod(0o600)
     temporary.replace(path)
+
+
+def issue_parameters(issue, repository):
+    body = issue.get("body") or ""
+    opened = re.findall(r"^ {0,3}```agent-platform-material[^\n]*$", body, re.MULTILINE)
+    blocks = re.findall(
+        r"^ {0,3}```agent-platform-material\r?\n(.*?)\r?\n {0,3}```[ \t]*$",
+        body,
+        re.MULTILINE | re.DOTALL,
+    )
+    parameters = {"issue_number": str(issue["number"])}
+    if opened:
+        if len(opened) != 1 or len(blocks) != 1:
+            raise ValueError("Issue must contain exactly one complete material block")
+        description = validate_description(blocks[0], repository)
+        parameters["material"] = json.dumps(
+            description, sort_keys=True, separators=(",", ":")
+        )
+    return parameters
 
 
 def platform_output(body):
@@ -284,7 +304,7 @@ def forward(config, client, number, comment_id=0):
                     payload = {
                         "workflow_id": config["workflow_id"],
                         "message": issue["title"] + "\n\n" + (issue.get("body") or ""),
-                        "parameters": {"issue_number": str(number)},
+                        "parameters": issue_parameters(issue, repo),
                     }
                     save(snapshot, payload)
                 workspace = prepare_workspace(config, issue["id"])

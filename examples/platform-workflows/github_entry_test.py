@@ -338,5 +338,92 @@ class ForwardTest(unittest.TestCase):
                     self.assertFalse((root / "state/comment-11-receipt.json").exists())
 
 
+
+
+class MaterialEntryTest(unittest.TestCase):
+    def test_explicit_material_is_checked_and_old_issues_are_compatible(self):
+        import json
+
+        from github_entry import issue_parameters
+
+        descriptor = {
+            "url": "https://api.github.com/repos/owner/repo/releases/assets/123",
+            "sha256": "a" * 64,
+            "version": "v1",
+        }
+        issue = {
+            "number": 7,
+            "body": "Requirements\n```agent-platform-material\n"
+            + json.dumps(descriptor)
+            + "\n```",
+        }
+        params = issue_parameters(issue, "owner/repo")
+        self.assertEqual(json.loads(params["material"]), descriptor)
+        self.assertEqual(params["issue_number"], "7")
+        self.assertEqual(
+            issue_parameters({"number": 7, "body": "ordinary task"}, "owner/repo"),
+            {"issue_number": "7"},
+        )
+        for body in [
+            issue["body"] + "\n" + issue["body"],
+            "```agent-platform-material\n{}",
+            "```agent-platform-material\n{}\n```",
+        ]:
+            with self.subTest(body=body), self.assertRaises(ValueError):
+                issue_parameters({"number": 7, "body": body}, "owner/repo")
+
+    def test_lost_response_freezes_material_with_original_issue(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from github_entry import APIError, forward
+
+        descriptor = {
+            "url": "https://api.github.com/repos/owner/repo/releases/assets/123",
+            "sha256": "a" * 64,
+            "version": "v1",
+        }
+        issue = {
+            "number": 7,
+            "id": 123,
+            "title": "task",
+            "body": "```agent-platform-material\n" + json.dumps(descriptor) + "\n```",
+            "user": {"login": "owner"},
+            "state": "open",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = Mock()
+            client.workflow_by_request.side_effect = APIError(404, "missing")
+            client.start_workflow.side_effect = ConnectionError("lost response")
+            config = {
+                "repository": "owner/repo",
+                "workflow_id": "graph",
+                "state_root": str(root / "state"),
+                "workspace_root": str(root / "work"),
+                "base_url": "http://localhost",
+            }
+            with (
+                patch("github_entry.github", return_value=issue),
+                patch("github_entry.notify"),
+                patch(
+                    "github_entry.prepare_workspace",
+                    return_value=root / "work" / "task",
+                ),
+            ):
+                with self.assertRaises(ConnectionError):
+                    forward(config, client, 7)
+                original = client.start_workflow.call_args
+                issue["body"] = "Edited without attachment"
+                with self.assertRaises(ConnectionError):
+                    forward(config, client, 7)
+                self.assertEqual(original, client.start_workflow.call_args)
+                self.assertEqual(
+                    json.loads(original.kwargs["parameters"]["material"]), descriptor
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -183,5 +183,95 @@ class UpgradeRunSafetyTest(unittest.TestCase):
             install.retire_project_browser(installation.api, installation)
 
 
+
+
+class MaterialInstallCommandTest(unittest.TestCase):
+    def test_every_fixed_delivery_command_is_installed_from_source(self):
+        prepare = install.repository_command(
+            "prepare", "owner/repo", "main", ["make", "verify"]
+        )
+        publish = install.repository_command(
+            "publish", "owner/repo", "main", ["make", "verify"]
+        )
+        tests = install.repository_command(
+            "tests", "owner/repo", "main", ["make", "verify"]
+        )
+        for argv in [prepare, publish, tests]:
+            self.assertEqual(argv[0], str(install.HERE / "repository.py"))
+            self.assertIn("--materials", argv)
+            self.assertIn("owner/repo", argv)
+        self.assertIn("verify", tests)
+        self.assertEqual(
+            json.loads(tests[tests.index("--test-command") + 1]), ["make", "verify"]
+        )
+
+
+class MaterialManifestUpgradeTest(unittest.TestCase):
+    def test_first_repeat_upgrade_and_drift_keep_original_manifest_and_ids(self):
+        import tempfile
+
+        class API:
+            def __init__(self):
+                self.items = []
+                self.writes = 0
+
+            def call(self, method, path, body=None):
+                if method == "GET":
+                    return self.items
+                self.writes += 1
+                if method == "POST":
+                    result = {**body, "id": "connector-1", "revision": 1}
+                    self.items.append(result)
+                    return result
+                if method == "PUT":
+                    result = {**body, "revision": self.items[0]["revision"] + 1}
+                    self.items[0] = result
+                    return result
+                raise AssertionError(method)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            api = API()
+            path = Path(tmp) / "manifest.json"
+            old = {
+                "name": "tests",
+                "kind": "command",
+                "executable": "/usr/bin/env",
+                "args": ["make", "verify"],
+            }
+            fresh = install.Installation(api, path, {"repository": "owner/repo"})
+            old_id = fresh.apply("connectors", "connector-tests", old)["id"]
+            repeat = install.Installation(api, path, {"repository": "owner/repo"})
+            repeat.apply("connectors", "connector-tests", old)
+            self.assertEqual(api.writes, 1)
+            new = {
+                **old,
+                "executable": sys.executable,
+                "args": install.repository_command(
+                    "tests", "owner/repo", "main", ["make", "verify"]
+                ),
+            }
+            with self.assertRaises(ValueError):
+                repeat.apply("connectors", "connector-tests", new)
+            upgraded = install.Installation(
+                api, path, {"repository": "owner/repo"}, True
+            )
+            self.assertEqual(
+                upgraded.apply("connectors", "connector-tests", new)["id"], old_id
+            )
+            self.assertEqual(
+                json.loads(path.read_text())["objects"]["connector-tests"]["spec"][
+                    "args"
+                ],
+                new["args"],
+            )
+            same = install.Installation(api, path, {"repository": "owner/repo"}, True)
+            same.apply("connectors", "connector-tests", new)
+            self.assertEqual(api.writes, 2)
+            api.items[0]["args"] = ["unexpected external edit"]
+            with self.assertRaisesRegex(ValueError, "edited outside"):
+                same.apply("connectors", "connector-tests", new)
+            self.assertEqual(api.writes, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

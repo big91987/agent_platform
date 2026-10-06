@@ -224,5 +224,98 @@ class RepositoryTest(unittest.TestCase):
                 repo.remote_repository(value)
 
 
+
+    def test_material_drift_blocks_publish_and_private_inputs_never_enter_commit(self):
+        import hashlib
+        import json
+
+        import materials
+        from materials_test import REPOSITORY, bundle
+
+        raw = bundle()
+        self.run["parameters"] = {
+            "material": json.dumps(
+                {
+                    "url": "https://api.github.com/repos/example/product/releases/assets/123",
+                    "sha256": hashlib.sha256(raw).hexdigest(),
+                    "version": "v1",
+                }
+            )
+        }
+        repo.prepare(self.workspace, self.run, "main")
+        with patch.object(
+            materials, "download", side_effect=lambda d, p: p.write_bytes(raw)
+        ):
+            receipt = repo.prepare_material(self.workspace, self.run, REPOSITORY)
+        docs = self.workspace / "docs/workflow"
+        docs.mkdir(parents=True)
+        (docs / "qa.md").write_text("Independent QA")
+        (docs / "pr.md").write_text("Delivery")
+        original = repo.git(self.workspace, "rev-parse", "HEAD")
+        source = self.workspace / receipt["root"] / "docs/prd.md"
+        source.write_text("modified input")
+        with self.assertRaises(ValueError):
+            repo.publish(self.workspace, self.run, materials=True)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), original)
+        source.write_bytes(b"Actual requirements")
+        repo.publish(self.workspace, self.run, materials=True)
+        committed = repo.git(
+            self.workspace, "ls-tree", "-r", "--name-only", "HEAD"
+        ).splitlines()
+        self.assertIn(".gitignore", committed)
+        self.assertFalse(any(x.startswith(".workflow-input/") for x in committed))
+
+
+class MaterialCommandTest(unittest.TestCase):
+    def test_fixed_tests_verify_input_before_running_project_command(self):
+        import json
+        import sys
+
+        import materials
+        from materials_test import REPOSITORY, bundle
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            raw = bundle()
+            import hashlib
+
+            run = {
+                "run_id": "a" * 32,
+                "parameters": {
+                    "material": json.dumps(
+                        {
+                            "url": "https://api.github.com/repos/example/product/releases/assets/123",
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "version": "v1",
+                        }
+                    )
+                },
+            }
+            with patch.object(
+                materials, "download", side_effect=lambda d, p: p.write_bytes(raw)
+            ):
+                receipt = materials.install_material(workspace, run, REPOSITORY)
+            cmd = [
+                sys.executable,
+                "-c",
+                "from pathlib import Path; Path('test-effects').write_text('ran')",
+            ]
+            (workspace / receipt["root"] / "docs/prd.md").write_text("changed")
+            with self.assertRaises(ValueError):
+                repo.run_tests(workspace, run, cmd)
+            self.assertFalse((workspace / "test-effects").exists())
+            (workspace / receipt["root"] / "docs/prd.md").write_bytes(
+                b"Actual requirements"
+            )
+            self.assertEqual(repo.run_tests(workspace, run, cmd), 0)
+            self.assertEqual((workspace / "test-effects").read_text(), "ran")
+            self.assertEqual(
+                repo.run_tests(
+                    workspace, run, [sys.executable, "-c", "raise SystemExit(7)"]
+                ),
+                7,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

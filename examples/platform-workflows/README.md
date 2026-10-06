@@ -224,3 +224,23 @@ PR正文由GitHub Connector原样发布，报告阶段应核对对外证据链�
 原 Run 已结束、但产物仍需修订时，从该 Run 页面填写回退原因并选择研发或 QA 节点。已完成历史保留；新增节点继续使用原工作区、冻结图、任务文档根目录与分支。平台先检查工作区未被其他未结束 Run 占用。不要直接续聊已交接的旧会话，也不要重复创建 Issue。返工后的项目测试、QA、报告和发布按原图执行；同一 PR 节点更新原打开的 PR 说明与回执。已关闭 PR 需要另行确认新的任务范围，平台不会自动新建或重开。
 
 这一入口是运行时能力，无数据库迁移，不需重装模板或覆盖原 manifest。已有安装先核对无在途执行，备份数据与旧二进制，运行固定验证入口，再按服务安装流程升级二进制和内嵌页面。原图、Agent/Connector IDs 与 Run 记录保留；恢复启动后通过页面返工复验。模板/Agent 配置改动仍走原 manifest 的 `install.py --upgrade`。
+
+## 带原型和文档的 Issue 输入
+
+首次接单支持一个ZIP材料包，包内可含PRD、交互原型、截图和验收说明。先上传到同仓库的GitHub Release Asset，再在Issue正文填写：
+
+```agent-platform-material
+{"url":"https://api.github.com/repos/<owner>/<repository>/releases/assets/<asset-id>","sha256":"<64 lowercase hex>","version":"<design-version>"}
+```
+
+也支持浏览器上传后得到的 `https://github.com/user-attachments/files/<id>/<name>.zip`；两种路径分别验证，不能把Release资产下载通过说成Issue拖拽上传通过。私有Release由准备Connector的既有GitHub身份下载，公开附件不带该令牌，重定向仅允许GitHub下载主机。本文没有提供自动上传Issue文件的REST入口；GitHub Issue创建API不含上传参数。
+
+ZIP根目录必须有UTF-8 `manifest.json`，包含version和files；每个文件记录path、bytes、sha256。version必须等于Issue声明，整个ZIP和每文件都核验。文件路径必须相对，无点段、链接、重复，全部目录前缀不得有大小写或Unicode规范化碰撞；下载16MiB、单文件16MiB、总展开64MiB、256文件。不执行包内脚本或安装依赖，不让材料改变工具授权。
+
+入口首次快照冻结材料描述，重试或修改原Issue不换输入。prepare成功回执包含material的实际版本/摘要/root/manifest_path，所有阶段从该回执引用资料；文件保存在工作区忽略目录 `.workflow-input/<run_id>/<sha256>/files/`。测试和发布前再次对照原包摘要复验，修改展开manifest也不能自证完整；固定门禁失败时不执行项目测试或发布。阶段正式产物仍在本Run文档根按Skill维护，不将私有输入自动提交到PR。
+
+通过原 `install.py --upgrade` 更新prepare、tests、publish及阶段指令；GitHub入口同步使用维护源github_entry.py，新项目仍走原 `install_github_entry.py` 安装。旧Run沿用冻结命令，升级不会改其输入。没有材料的任务保持原行为。私有资产权限或网络暂时失败修复后用原Run正式回退/恢复；错误版本或SHA不能靠修改已接受Issue自动改包，需要明确的需求修正流程，首期不支持偷偷替换冻结材料。
+
+SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(description)})`；平台JSON API使用同一个parameters字段，不新增上传服务或依赖SDK专用附件状态。真实退出要求见 `docs/02-architecture/workflow-materials.md`；本地ZIP回归不等于正式Issue→Run→Agent→部署通过。
+
+准备工具使用POSIX文件锁，当前运行契约为macOS/Linux。中断后在下一次同Run准备中清理失去执行者的临时目录；并发重试不会删除仍在下载的内容。已验证材料始终复验，不自动覆盖。

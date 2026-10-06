@@ -131,3 +131,25 @@ state = client.workflow_run(run["id"])
 
 
 Retained command diagnostics: `client.workflow_command_output(run_id, seq, offset=0)` returns one page with `output`, `next_offset`, `eof`, and `truncated`. Follow offsets until `eof`; `truncated` still means the 8 MiB archive cap omitted later output. The Run owner's token is required. A legacy receipt without `log` metadata has no archive and returns 404. This read never reruns a command and does not interpret its exit status. Requires a platform version with command log archives; upgrading the SDK alone cannot recover old omitted logs.
+
+### 版本化工作流材料
+
+使用已经安装材料校验工具的研发交付模板时，可通过已有参数接口传入一个ZIP材料描述：
+
+```python
+import json
+
+run = client.start_workflow(
+    workflow_id,
+    "按已确定的PRD与交互材料实施",
+    workspace_path=workspace_path,
+    request_id="<channel>:<stable-event-id>",
+    parameters={"material": json.dumps({
+        "url": "https://api.github.com/repos/<owner>/<repository>/releases/assets/<asset-id>",
+        "sha256": "<actual-64-hex-zip-sha256>",
+        "version": "<material-version>",
+    })},
+)
+```
+
+SDK只传递参数；支持来源、安全下载、ZIP和manifest校验、输入保留及恢复属于受信模板的prepare工具。客户端不直接上传文件、不把个人机器文件路径或localhost预览地址当远端材料。成功以实际prepare回执为准，不能以start_workflow返回就判断材料已接收。完整契约见 `examples/platform-workflows/README.md` 的“带原型和文档的Issue输入”；旧冻结模板需标准升级后才能获得该能力。

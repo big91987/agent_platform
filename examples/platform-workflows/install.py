@@ -42,6 +42,22 @@ def verification_command(value):
     return command
 
 
+def repository_command(role, repository, base, test_command):
+    command = [
+        str(HERE / "repository.py"),
+        "verify" if role == "tests" else role,
+        "--repository",
+        repository,
+        "--base",
+        base,
+        "--task-docs",
+        "--materials",
+    ]
+    if role == "tests":
+        command += ["--test-command", json.dumps(test_command)]
+    return command
+
+
 class API:
     def __init__(self, url, username, password):
         self.url = url.rstrip("/")
@@ -517,18 +533,8 @@ def main():
         else:
             spec.update(
                 kind="command",
-                executable=sys.executable if role != "tests" else "/usr/bin/env",
-                args=[
-                    str(HERE / "repository.py"),
-                    role,
-                    "--repository",
-                    args.repository,
-                    "--base",
-                    args.base,
-                    "--task-docs",
-                ]
-                if role != "tests"
-                else test_command,
+                executable=sys.executable,
+                args=repository_command(role, args.repository, args.base, test_command),
             )
             if role == "prepare":
                 spec["args"] += [

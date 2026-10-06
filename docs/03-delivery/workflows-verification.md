@@ -889,3 +889,21 @@ schema3平台交付补记：源提交 `add852abb8dd76bcf9cbf5082f7aaea3d103b380`
 路线3原Run `9e6d05f409675e0ef65c6486691462df` 的seq7固定make verify实际exit2（900秒预算；内部Go测试600秒超时），失败完整日志90215字节／SHA256 `5e33a2952bc9299120eacddcdb9bbe4369a189b5e105cde65f0633804277c556`。自动沿failed进入seq8研发，seq9重新完整make verify exit0，104文件指纹 `125ae584daabf62e7e9e410a6aaa90cbe01101582b5490e0ce9e1602d4461529`；日志83637字节／`b349eb3ef721c1a45c57441372d145c9b4b49c9f492b86b06068091dc24dc164`。两份均从正式分页API读至eof且truncated=false，保留原失败；旧1及精确旧2非空真UI→schema3显式CLI迁移/旧binary回退、原两屏旅程与新权限首次链确在seq9执行。它仍不等于控制器/正式Actions联合迁移通过。
 
 seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景证据缺口，分别涉及双模型授权/期限与轮换异常UI、独立Q/L/C并发和跨窗口/回拨/迟到、app/key历史分页作用域与迟到结果、同一请求三次尝试的实际/未知用量。不是把未来正式发布责任强行前置给研发，也不是已复现四组实现故障。seq11补测试时真实红控发现process_interrupted且Finished为空的attempt可被迟到success覆盖，修正finishAttempt的终态更新条件并保留原success→canceled校正；旧QA快照/失败日志保留。原研发正式handoff提供107文件新指纹 `b807c2d9834d806f3b0578e99aa31d91fe5c0f485d9484bbabb5f2c1df56719f`，自动进入seq12固定tests。本记录时seq12仍执行，新QA及产品PR/合并/部署未发生；旧seq9绿灯不得外推新版本。维护者已对该冻结工作树另取只读快照启动合并前代码复核，结果待定。整体仍In Progress／No-Go。
+
+### 2026-10-07：新版原型与材料入站核查（未实施Run）
+
+本地独立设计包design-v0.1.0-draft已交付：前端现代后台、PRD、交互、AC、材料交接要求及浏览器走查截图。ZIP16文件、211596字节，SHA-256 `bef4ce741c8c9fd3f02e3eadcdca79056602532ce9d21bc5787af37cba4cf1d3`，重复打包一致且所有manifest文件摘要复核通过。这里只证明设计包，不是产品后台或供应商证据；运营模式默认内部成本分账，待用户评审。
+
+正式API再次核对旧M3 Run `9e6d05f409675e0ef65c6486691462df`：stopped、seq13，保留原工作区，无恢复或新建任务。`GET /api/agents`显示现有model-relay研发Agent executor=codex、model为空、native_config为空；此前PRD明确DSH适配是后续目标。当前证据不足以确认用户指定DSH，已请求精确产品名称/本机启动方式，不能据此擅自换执行器并判定验收通过。
+
+源码核查：github_entry首次快照只接收Issue标题/正文与issue_number，附件链接作为普通文字，未实现下载、完整性校验和输入版本锁定。既有SDK/API参数可承载材料描述，Connector回执与阶段inputs/artifacts可传递实际文件，无需另建上传服务。通用设计和计划位于 `docs/02-architecture/workflow-materials.md`、`docs/03-delivery/workflow-materials-plan.md`，当前待实现；没有宣称正式安装或真实附件路径已完成。旧部署未改变，本轮Issue、执行、QA、PR、部署继续Not Run。
+
+### 2026-10-07：材料工具与通用模板源码（安装前）
+
+维护源新增materials.py，Issue正文显式材料块冻结到parameters；prepare下载并核验ZIP/manifest及每文件，输出实际材料路径；固定项目测试和发布先检查原包摘要与展开树。安装器统一生成新命令，旧Run命令不变。源码提供标准安装/升级和SDK通用参数说明，不创建第二套上传服务。
+
+相关模板回归53项、SDK9项、ruff、go vet及diff检查通过。独立审查发现2项Important：macOS父目录大小写碰撞导致失败包先发布并毒化重试；SIGKILL留下未清理临时输入。分别先复现失败，再修正全部目录前缀/Unicode碰撞和发布前复验、Run文件锁下孤儿清理。材料回归16项含真实SIGKILL、双进程并发、Git发布漂移拒绝和输入不入提交；原manifest首次/重复/升级/漂移保护回归通过（模拟API库存，非正式实例升级）。没有保留审查阻断项，但真实Pipeline仍待验。
+
+已将design-v0.1.0-draft包发布为私有测试仓草稿Release（未批准实施基线），真实附件API：`https://api.github.com/repos/big91987/model-relay/releases/assets/616037961`。GitHub返回211596字节及相同SHA，受信下载工具通过官方API再次下载，核对16文件manifest和SHA均一致。该证据是实际传输校验探针，不是Workflow回执；没有创建新的产品Issue/Run或触发部署。浏览器Issue拖拽附件与阶段Agent实际引用仍未验证。
+
+原manifest官方升级安全检查通过：没有引用本安装对象的在途Run；旧M3保持stopped/seq13。下一步原manifest备份和正式升级，随后等待原型反馈及指定执行器信息推进真实实施，整体目标继续No-Go。

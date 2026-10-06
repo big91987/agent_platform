@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from materials import install_material, verify_material
+
 
 def git(workspace, *args):
     result = subprocess.run(
@@ -124,6 +126,8 @@ def prepare_trellis(workspace, executable, version):
         # Native platform Skill selection is authoritative. Generated host adapters,
         # personal journals, and local Trellis task state are not shared artifacts.
         ignore = workspace / ".gitignore"
+        if ignore.is_symlink():
+            raise ValueError("Material ignore file must not be a symlink")
         original = ignore.read_text() if ignore.exists() else ""
         patterns = [
             "/.agents/",
@@ -197,7 +201,14 @@ def check_publish_files(workspace):
             "id_rsa",
             "id_ed25519",
         ) or any(
-            part in ("node_modules", ".codex", ".aws", ".workflow-evidence")
+            part
+            in (
+                "node_modules",
+                ".codex",
+                ".aws",
+                ".workflow-evidence",
+                ".workflow-input",
+            )
             for part in file.parts
         ):
             raise ValueError("Refusing local credentials/cache artifact: " + name)
@@ -246,7 +257,9 @@ def delivery_artifacts(workspace, run):
             raise ValueError("Empty delivery artifact: " + name)
 
 
-def publish(workspace, run, scoped_docs=False):
+def publish(workspace, run, scoped_docs=False, materials=False):
+    if materials:
+        verify_material(workspace, run)
     branch = branch_for(run)
     if git(workspace, "branch", "--show-current") != branch:
         raise ValueError(
@@ -271,12 +284,44 @@ def publish(workspace, run, scoped_docs=False):
     }
 
 
+def run_tests(workspace, run, command):
+    verify_material(workspace, run)
+    if (
+        not isinstance(command, list)
+        or not command
+        or any(not isinstance(x, str) or not x or "\0" in x for x in command)
+    ):
+        raise ValueError("Fixed test command must be a non-empty argv array")
+    environment = dict(os.environ)
+    environment.pop("GH_TOKEN", None)
+    return subprocess.run(
+        command, cwd=workspace, stdin=subprocess.DEVNULL, env=environment
+    ).returncode
+
+
+def prepare_material(workspace, run, repository):
+    receipt = install_material(workspace, run, repository)
+    if receipt:
+        ignore = workspace / ".gitignore"
+        if ignore.is_symlink():
+            raise ValueError("Material ignore file must not be a symlink")
+        original = ignore.read_text() if ignore.exists() else ""
+        if "/.workflow-input/" not in original.splitlines():
+            ignore.write_text(
+                original.rstrip()
+                + "\n\n# Private, pinned Workflow input materials\n/.workflow-input/\n"
+            )
+    return receipt
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=["prepare", "publish"])
+    parser.add_argument("operation", choices=["prepare", "publish", "verify"])
     parser.add_argument("--repository", required=True)
     parser.add_argument("--base", default="main")
     parser.add_argument("--task-docs", action="store_true")
+    parser.add_argument("--materials", action="store_true")
+    parser.add_argument("--test-command")
     parser.add_argument("--trellis-executable")
     parser.add_argument("--trellis-version")
     args = parser.parse_args()
@@ -289,11 +334,19 @@ def main():
         != args.repository
     ):
         raise ValueError("Workspace origin differs from configured repository")
+    if args.operation == "verify":
+        if not args.test_command:
+            raise ValueError("Fixed test argv required")
+        raise SystemExit(run_tests(workspace, run, json.loads(args.test_command)))
     result = (
         prepare(workspace, run, args.base, args.task_docs)
         if args.operation == "prepare"
-        else publish(workspace, run, args.task_docs)
+        else publish(workspace, run, args.task_docs, args.materials)
     )
+    if args.operation == "prepare" and args.materials:
+        material = prepare_material(workspace, run, args.repository)
+        if material:
+            result["material"] = material
     if args.operation == "prepare" and args.trellis_executable:
         result["trellis"] = prepare_trellis(
             workspace, args.trellis_executable, args.trellis_version
