@@ -919,3 +919,11 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 用户明确将本轮被考核执行器由待确认的DSH改为Codex，模型指定为 `gpt-6.1-sol`；这解除执行器身份阻塞，不再要求DSH适配。通过原安装manifest的Installation升级入口和正式API，将既有intake、requirements、design、development、qa、report六个阶段配置统一为executor=codex、model=gpt-6.1-sol，保留对象ID、权限、Skill和工具绑定。升级前备份manifest和旧Run，升级安全检查确认无在途任务；API回读全部六个阶段模型一致，重复应用没有改变对象。旧M3 Run保持stopped/seq13且整份API记录与备份一致。
 
 这是已保存的执行配置；尚无本轮原生执行会话，不能据配置声称模型实际执行或产品验收通过。原型与设计包仍为待用户评审草案，新的Issue/实施/QA/合并/部署未启动。整体端到端目标未完成，后续按用户指定Codex模型核验实际会话。
+
+### 2026-10-07：产品基线自查与首次负责人原型修正
+
+自查设计包PRD、交互、AC与必要前端行为，初始16文件均与已发布原manifest一致。发现创建租户直接将负责人标为active，跳过PRD要求的接受邀请。独立本地原型已按原产品规则修正：负责人邮箱必填，创建后invited，演示接受后active；浏览器先复现旧偏差，再验证缺失邮箱拒绝、待接受→已加入及最后有效管理员移除拒绝，error/warn为空。它仍不是真实身份/邮件/后端权限证据，未写产品实现或启动Run。
+
+更新草案design-v0.1.1-draft，18文件、233983字节，SHA-256 `ffe8bb1ccbf0a4e3cb77a6765b1a1c184fb0d5bf9f3ad06ac9c9e2cc9d3569be`；重复打包相同，ZIP与manifest/源文件逐项核对，原v0.1.0发布ZIP摘要仍相同，新包未发布到GitHub。包内baseline-review.md明确G1自查NOT READY：开发者应用/Key分配与成员退出规则、账单结账/更正入口与权限、失败/未知多尝试的租户收费口径还需在需求阶段闭合。没有将自查当独立QA，不删除P0范围。
+
+已集中询问用户是否以A工作台、内部多租户成本分账、API/已有端点管理、USD测试计价作为方向；该问题是待确认业务基线，与已解决的执行器选择分开。真实Issue材料交接和本轮实施、QA、合并部署未发生，目标继续未完成。
