@@ -802,3 +802,12 @@ seq27 研发按正式 handoff 完成两项 SSE 修复，沿原 next 进入 seq28
 **seq28正式宿主门禁通过**：10:29:58–10:38:32 UTC，固定make verify，900秒预算，exit0。正式分页日志API取得81349字节完整脱敏输出，truncated=false，SHA256 `0b8190a4521048f19436d66b667133ecda7325bddf1e90397d7b9bbe5fa1d9a6`；开头指纹与源13一致。新增 `TestSSERealHTTPOverlongLineNeverSwitchesOrCools` 两分支真实执行通过4.88秒，确定性超长行4.87秒，DONE四终态9.74秒；119VM、Go race/构建及原完整门禁通过。真实旧85f6d17c非空UI迁移/旧二进制回退、原首次调用和多上游1280/390两屏旅程均PASS。受控上游不计供应商验收，项目内迁移回退不计正式Actions控制器联合恢复。
 
 已自动进入seq29独立QA会话 `6839bfc44c99be8bad57bb666b6191df`，原Issue收到 [QA启动通知](https://github.com/big91987/model-relay/issues/18#issuecomment-6014482368)。此时独立QA新结论、报告、原PR再次更新、合并及正式部署仍未发生；原PR19仍Draft/Open、旧head，既有Runner在线空闲。整体仍In Progress/No-Go。
+
+
+### M2 原 PR 再次发布、合并与正式自动准备
+
+seq29独立QA形成report-03/matrix-03产品切片Go，两项SSE Important/P1在原发现层关闭；旧四项P1未复发。seq30只同步公共交付投影，产品源13的86项逐文件清单中仅四份状态文档变化；两处实现及新增回归与独立复审的固定摘要完全一致，工作树在发布后干净。其余QA/报告产物单独保留，未把报告后摘要当新门禁结果。
+
+原图seq31正式提交推送新head `23aff17f6b8e7e0834dbf1d751d05e66cab69366`，seq32 github.pull_request回执指向同一个[PR #19](https://github.com/big91987/model-relay/pull/19)，number19及head一致；外部API确认正文含新执行marker seq32。seq33 end完成。原26步及历史Issue/PR保留，未新建PR或Run；这关闭完成态页面返工→真实研发→固定tests→独立QA→报告→原PR更新的正常重入链。PATCH丢响应仍只有隔离回归，未进行真实GitHub网络故障注入。
+
+维护者核对源码/测试/规范/锁/模板与seq28及独立审查身份、GitGuardian通过和精确base/head后，按既有测试仓授权标记就绪并以match-head-commit合并。GitHub确认2026-10-06 10:54:22 UTC合并，main为 `98511771871cf0951ecef716bbb55deb13e18da5`；源平台PR #5未合并。正式push触发[Actions自动准备37452871127](https://github.com/big91987/model-relay/actions/runs/37452871127)，此记录时in_progress，只prepare、不deploy。效果服务及独立验证安装仍旧版本；正式非空升级、隔离故障恢复及部署后浏览器尚未完成，DEP02–04/06–07与其他未测边缘和供应商限制保留，总目标In Progress/No-Go。
