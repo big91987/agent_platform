@@ -563,3 +563,5 @@ Run 在 seq 8 waiting 后经正式 stop 入口进入 stopped；确认没有执�
 平台完整 `bash scripts/verify.sh` 退出 0：前端/浏览器、SDK、GitHub与预览安装、工作流30项回归、Go vet/race/构建全部通过。macOS链接器报告既有LC_DYSYMTAB警告，但测试与构建成功；changed-file脱敏扫描4文件及diff检查通过。以下现场升级和新命令结果另行登记，不将单元/集成测试等同现场关闭。
 
 现场升级完成：维护源提交 `d5e1403481f8d761d49eb0286e1f8267b89a087d` 已推送源 Draft PR #5，源主线未合并；以该干净提交构建并于01:19 UTC启动开发实例，构建摘要存私有升级记录。原 manifest 升级及重复升级均成功，Agent/Connector/Workflow对象身份保持；正式API对照备份确认原Run seq、冻结图、Connector和全部历史steps逐值相等。通过resume恢复同一seq8、同一研发会话 `789d45c3f91817bd78abd129c1f7726b`，输入16587 running；页面显示第8次执行的研发节点进行中。Agent已明确不重复稳定的监听受限检查，准备核对原工作树并交接宿主。命令首尾日志实际复验、产品失败定位与QA仍待下一正式执行；提示改动和新版模板在新建真实Issue中的效果仍待验证。
+
+命令诊断现场复验通过：seq8正式交接后，seq9以原固定 `make verify` 重跑相同56文件摘要 `9254855737fbe400acf1d8c3a038767ca7807e0e1ea43160b7b5ed87d5456d0a`，真实退出2。新回执保留24053字节并明确中段省略，开头包含原源码指纹，末尾包含Go测试成功、构建及浏览器实际失败：1280px的password hidden检查在`journey.mjs:43:10`触发AssertionError，随后make browser/verify传播退出2。未推测中间省略的逐项结果。用户Run页展开seq9“调用回执”后可见同一省略提示及最终错误，API与UI一致；旧seq7回执仍为旧格式。失败边自动进入seq10 development会话 `49b4a9ee3cf82e66bda1c5f20abf1b7e`，Agent开始区分密码显隐实现和原生键盘测试问题。通用日志缺陷已在原故障场景关闭，产品浏览器缺陷尚未修复/验收，整体验收继续No-Go。
