@@ -907,3 +907,9 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 已将design-v0.1.0-draft包发布为私有测试仓草稿Release（未批准实施基线），真实附件API：`https://api.github.com/repos/big91987/model-relay/releases/assets/616037961`。GitHub返回211596字节及相同SHA，受信下载工具通过官方API再次下载，核对16文件manifest和SHA均一致。该证据是实际传输校验探针，不是Workflow回执；没有创建新的产品Issue/Run或触发部署。浏览器Issue拖拽附件与阶段Agent实际引用仍未验证。
 
 原manifest官方升级安全检查通过：没有引用本安装对象的在途Run；旧M3保持stopped/seq13。下一步原manifest备份和正式升级，随后等待原型反馈及指定执行器信息推进真实实施，整体目标继续No-Go。
+
+### 2026-10-07：材料模板正式升级（产品链路仍未开始）
+
+源版本 `ea332aa` 已推送既有源Draft PR #5，未合main。先通过官方升级安全检查确认无引用本安装对象的在途执行，将原manifest、CI入口配置、API对象定义及旧Run记录备份到私有维护备份目录；本次仅升级工具/配置，无二进制或存储迁移。使用原manifest、原工作区/仓库/prefix、原验证命令make verify及原预算执行install.py --upgrade，再执行完全相同命令；对象ID集合保持一致，没有额外Agent/Connector/Workflow。官方API对照旧M3 Run仍stopped/seq13，冻结connectors和parameters与备份逐项相同。
+
+安装完成只证明新任务能获得版本材料准备和门禁配置，不证明真实Issue已入站、执行阶段实际引用、DSH实现、独立QA、PR或部署。这些要求仍待用户审阅原型与补充DSH身份后完成，当前目标继续No-Go；没有恢复旧Run或新建产品任务。

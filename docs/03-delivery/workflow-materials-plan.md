@@ -53,7 +53,7 @@ Consumes: 任务1三个函数。Produces: 冻结parameters.material及prepare材
 
 Files: update docs/03-delivery/workflows-verification.md; reuse existing deployment/install documentation.
 
-- [ ] 核对当前无在途执行，备份正式服务及manifest；通过原manifest升级，不改变旧暂停Run输入。
+- [x] 核对当前无在途执行，备份正式配置及manifest；通过原manifest升级，重复安装保留ID，旧暂停Run冻结命令/输入不变。本次无二进制或存储迁移。
 - [ ] 原型评审完成后发布确定版本ZIP为私有测试仓Release Asset，建立一个真实Issue引用版本/SHA。记录实际资产URL，不能把localhost当Agent输入。
 - [ ] 核对Actions交给唯一Run、准备回执的实际SHA、原生阶段工具读取材料、输出覆盖原PRD/AC及视觉交互。实际执行器须与用户指定一致。
 - [ ] 用支持入口验证附件404/权限拒绝、SHA错误、下载中断与输入漂移；权限或网络失败在同Run正式恢复，错误摘要维持明确拒绝，不偷偷换包，无手改检查点、无补造回执。
