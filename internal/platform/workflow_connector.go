@@ -172,7 +172,7 @@ func (e *WorkflowEngine) finishConnector(r WorkflowRun, step WorkflowStep, recei
 	// Receipt, result and failure are committed together. Stop/revocation retains
 	// the actual outcome but cannot turn into permission to advance.
 	if actionErr != nil {
-		if _, err = tx.Exec(`UPDATE workflow_steps SET error=?,updated=? WHERE run_id=? AND seq=?`, message, now(), r.ID, step.Seq); err != nil {
+		if _, err = tx.Exec(`UPDATE workflow_steps SET error=CASE WHEN error='' THEN ? ELSE error || char(10) || ? END,updated=? WHERE run_id=? AND seq=?`, message, message, now(), r.ID, step.Seq); err != nil {
 			return err
 		}
 		if current.Status == "running" || current.Status == "waiting" {

@@ -3,6 +3,10 @@ package platform
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -187,5 +191,197 @@ func TestWorkflowAgentContextIsNotPresentedAsUserInput(t *testing.T) {
 	}
 	if !strings.Contains(conv.Snapshot.Instructions, "complete_node") || conv.Snapshot.ResolvedTools[workflowToolServer].Connection.URL == "" {
 		t.Fatal("scoped context/tool missing")
+	}
+}
+
+func completedRunForReturn(t *testing.T, s *Store) (Caller, WorkflowRun) {
+	t.Helper()
+	c, _, r := runFixture(t, s)
+	if err := s.CompleteWorkflowNode(c, r.ID, 1, NodeResult{Route: "approved", Summary: "Original acceptance"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.advanceWorkflow(r.ID, 1); err != nil {
+		t.Fatal(err)
+	}
+	r, err := s.WorkflowRun(c, r.ID)
+	if err != nil || r.Status != "completed" {
+		t.Fatal(r, err)
+	}
+	return c, r
+}
+
+func TestWorkflowCompletedReturnPreservesHistoryAndRejectsReplay(t *testing.T) {
+	s := testStore(t)
+	c, r := completedRunForReturn(t, s)
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	if err := engine.Return(c, r.ID, r.Seq, "revise", "Review found a defect"); err != nil {
+		t.Fatal(err)
+	}
+	after, err := s.WorkflowRun(c, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Seq != r.Seq+1 || after.Status == "completed" || after.Steps[len(after.Steps)-1].NodeID != "revise" {
+		t.Fatal(after)
+	}
+	if !reflect.DeepEqual(r.Steps, after.Steps[:len(r.Steps)]) || !reflect.DeepEqual(r.Definition, after.Definition) || after.WorkspacePath != r.WorkspacePath {
+		t.Fatal("completed history/snapshot/workspace changed")
+	}
+	if !strings.Contains(after.Steps[len(after.Steps)-1].Error, "Review found a defect") {
+		t.Fatal("redirection reason not recorded")
+	}
+	if err := engine.Return(c, r.ID, r.Seq, "revise", "duplicate"); !errors.Is(err, ErrConflict) {
+		t.Fatal("stale return accepted", err)
+	}
+	if err := s.CompleteWorkflowNode(c, r.ID, 1, NodeResult{Route: "approved"}); !errors.Is(err, ErrConflict) {
+		t.Fatal("late result accepted", err)
+	}
+	if _, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: r.WorkflowID, Input: "competing", WorkspacePath: r.WorkspacePath}); !errors.Is(err, ErrConflict) {
+		t.Fatal("workspace was not reacquired", err)
+	}
+}
+
+func TestWorkflowCompletedReturnRejectsOccupiedWorkspace(t *testing.T) {
+	for _, nested := range []bool{false, true} {
+		t.Run(fmt.Sprint(nested), func(t *testing.T) {
+			s := testStore(t)
+			c, r := completedRunForReturn(t, s)
+			path := r.WorkspacePath
+			if nested {
+				path = filepath.Join(path, "child")
+				if err := os.Mkdir(path, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			other, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: r.WorkflowID, Input: "other task", WorkspacePath: path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewWorkflowEngine(s, nil, "http://localhost")
+			if err = engine.Return(c, r.ID, r.Seq, "revise", "review feedback"); !errors.Is(err, ErrConflict) {
+				t.Fatal("occupied workspace accepted", err)
+			}
+			after, _ := s.WorkflowRun(c, r.ID)
+			otherAfter, _ := s.WorkflowRun(c, other.ID)
+			if !reflect.DeepEqual(after, r) || !reflect.DeepEqual(otherAfter, other) {
+				t.Fatal("failed return mutated history")
+			}
+		})
+	}
+}
+
+func TestWorkflowCompletedReturnValidatesAuthorityReasonAndTarget(t *testing.T) {
+	s := testStore(t)
+	c, r := completedRunForReturn(t, s)
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	for _, x := range []struct {
+		caller         Caller
+		target, reason string
+	}{
+		{Caller{}, "revise", "reason"}, {c, "revise", " "}, {c, "missing", "reason"},
+	} {
+		if err := engine.Return(x.caller, r.ID, r.Seq, x.target, x.reason); err == nil {
+			t.Fatal("invalid return accepted", x)
+		}
+	}
+	after, _ := s.WorkflowRun(c, r.ID)
+	if !reflect.DeepEqual(r, after) {
+		t.Fatal("invalid return changed run")
+	}
+}
+
+func TestWorkflowCompletedReturnFeedbackSurvivesFailureAndResume(t *testing.T) {
+	for _, connectorFailure := range []bool{false, true} {
+		t.Run(fmt.Sprint(connectorFailure), func(t *testing.T) {
+			s := testStore(t)
+			c, r := completedRunForReturn(t, s)
+			engine := NewWorkflowEngine(s, nil, "http://localhost")
+			if err := engine.Return(c, r.ID, r.Seq, "revise", "required review correction"); err != nil {
+				t.Fatal(err)
+			}
+			returned, _ := s.WorkflowRun(c, r.ID)
+			if connectorFailure {
+				if err := engine.finishConnector(returned, returned.Steps[len(returned.Steps)-1], ConnectorReceipt{}, errors.New("temporary connector failure")); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				engine.fail(returned, errors.New("temporary startup failure"))
+			}
+			if err := engine.Resume(c, r.ID, returned.Seq, "retry startup"); err != nil {
+				t.Fatal(err)
+			}
+			resumed, _ := s.WorkflowRun(c, r.ID)
+			feedback := resumed.Steps[len(resumed.Steps)-1].Error
+			if !strings.Contains(feedback, "required review correction") || !strings.Contains(feedback, "temporary") {
+				t.Fatal("feedback lost", feedback)
+			}
+		})
+	}
+}
+
+func TestWorkflowCompletedReturnRejectsRevokedWorkflowAccess(t *testing.T) {
+	s := testStore(t)
+	admin, w, _ := runFixture(t, s)
+	a := testAgent(t, s)
+	aliceUser, _ := testUser(t, s, &a, "return-owner")
+	alice, err := s.userCaller(aliceUser.Username)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.AuthorizedUsers = []string{alice.UserID}
+	w, err = s.SaveWorkflow(admin, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := s.StartWorkflow(alice, WorkflowStart{WorkflowID: w.ID, Input: "owned", WorkspacePath: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.CompleteWorkflowNode(alice, r.ID, 1, NodeResult{Route: "approved"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.advanceWorkflow(r.ID, 1); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := s.WorkflowRun(alice, r.ID)
+	w.AuthorizedUsers = nil
+	if w, err = s.SaveWorkflow(admin, w); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	if err = engine.Return(alice, r.ID, before.Seq, "revise", "feedback"); !errors.Is(err, ErrForbidden) {
+		t.Fatal("revoked owner reactivated run", err)
+	}
+	after, _ := s.WorkflowRun(alice, r.ID)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("revoked return changed completed run")
+	}
+	// Historical stopped runs must remain administratively closable after revocation.
+	w.AuthorizedUsers = []string{alice.UserID}
+	w, err = s.SaveWorkflow(admin, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	active, err := s.StartWorkflow(alice, WorkflowStart{WorkflowID: w.ID, Input: "cleanup", WorkspacePath: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = engine.Stop(admin, active.ID, active.Seq); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	w.AuthorizedUsers = nil
+	w, err = s.SaveWorkflow(admin, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = engine.Return(admin, active.ID, active.Seq, "done", "administrative close"); err != nil {
+		t.Fatal("revoked stopped run cannot be closed", err)
+	}
+	if _, err = s.StartWorkflow(admin, WorkflowStart{WorkflowID: w.ID, Input: "after cleanup", WorkspacePath: active.WorkspacePath}); err != nil {
+		t.Fatal("closed workspace not released", err)
+	}
+	if _, err = s.StartWorkflow(admin, WorkflowStart{WorkflowID: w.ID, Input: "authorized task", WorkspacePath: r.WorkspacePath}); err != nil {
+		t.Fatal("workspace was reclaimed", err)
 	}
 }

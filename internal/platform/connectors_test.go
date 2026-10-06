@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -419,5 +420,97 @@ func TestConnectorTimeoutRecoveryKeepsIdentityAndRequiresExplicitReturn(t *testi
 	}
 	if completed.Steps[1].Receipt.Output != "startedfinished" || *completed.Steps[1].Receipt.ExitCode != 0 {
 		t.Fatal("live executable replaced frozen command or old budget repeated")
+	}
+}
+
+func TestConnectorPullRequestReworkUpdatesOwnedPRAndRecoversLostResponse(t *testing.T) {
+	t.Setenv("PR_REWORK_TOKEN", "test-only-token")
+	original := githubClient
+	t.Cleanup(func() { githubClient = original })
+	dir := t.TempDir()
+	v := Connector{ID: "pr", Kind: "github.pull_request", Repository: "demo/repo", TokenEnv: "PR_REWORK_TOKEN", WorkspaceRoot: dir}
+	r := WorkflowRun{ID: "run", Input: "updated delivery", WorkspacePath: dir, Definition: Workflow{Nodes: []WorkflowNode{{ID: "pr", Kind: "connector", ConnectorID: "pr", ConnectorInput: ConnectorInput{Head: "workflow/run", Base: "main"}}}}}
+	r.Steps = []WorkflowStep{{Seq: 3, NodeID: "pr", Status: "completed", Receipt: &ConnectorReceipt{Kind: "github.pull_request", Number: 7, URL: "https://github.com/demo/repo/pull/7"}}}
+	request, err := prepareConnectorRequest(v, r, WorkflowStep{Seq: 9, NodeID: "pr"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A confirmed external PR still exists if the execution was then cancelled.
+	r.Steps[0].Status = "cancelled"
+	cancelledRequest, err := prepareConnectorRequest(v, r, WorkflowStep{Seq: 9, NodeID: "pr"})
+	if err != nil || cancelledRequest.UpdatePR != request.UpdatePR || cancelledRequest.Endpoint != request.Endpoint {
+		t.Fatal("cancelled receipt lost PR identity", cancelledRequest, err)
+	}
+	body := "original delivery"
+	patches := 0
+	githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path != "/repos/demo/repo/pulls/7" {
+			t.Errorf("unexpected endpoint %s", req.URL.Path)
+			return nil, errors.New("unexpected endpoint")
+		}
+		if req.Method == "PATCH" {
+			patches++
+			var payload map[string]any
+			if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+				t.Fatal(err)
+			}
+			if len(payload) != 2 || payload["title"] != "updated delivery" {
+				t.Fatal("unexpected PR mutation", payload)
+			}
+			body = payload["body"].(string)
+			return nil, errors.New("response lost after PATCH")
+		}
+		if req.Method != "GET" {
+			t.Fatal("unexpected write", req.Method)
+		}
+		raw, _ := json.Marshal(map[string]any{"number": 7, "html_url": "https://github.com/demo/repo/pull/7", "state": "open", "body": body, "head": map[string]any{"sha": "new-head", "ref": "workflow/run", "repo": map[string]any{"full_name": "demo/repo"}}, "base": map[string]any{"ref": "main"}})
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(raw)), Header: http.Header{}}, nil
+	})}
+	if _, err = executeGitHub(context.Background(), v, request, false); err == nil || patches != 1 {
+		t.Fatal("first PATCH not uncertain", err, patches)
+	}
+	receipt, err := executeGitHub(context.Background(), v, request, true)
+	if err != nil || !receipt.Recovered || receipt.Number != 7 || receipt.HeadSHA != "new-head" || patches != 1 {
+		t.Fatal(receipt, err, patches)
+	}
+}
+
+func TestConnectorPullRequestReworkRefusesClosedChangedAndUnknown(t *testing.T) {
+	t.Setenv("PR_REWORK_TOKEN", "test-only-token")
+	original := githubClient
+	t.Cleanup(func() { githubClient = original })
+	for _, mode := range []string{"closed", "head", "base", "repo", "number", "unknown"} {
+		t.Run(mode, func(t *testing.T) {
+			v := Connector{Kind: "github.pull_request", Repository: "demo/repo", TokenEnv: "PR_REWORK_TOKEN"}
+			request := connectorRequest{UpdatePR: 7, Endpoint: "/repos/demo/repo/pulls/7", Marker: "new-marker", Payload: map[string]any{"head": "workflow/run", "base": "main", "title": "updated", "body": "new-marker"}}
+			githubClient = &http.Client{Transport: connectorTransport(func(req *http.Request) (*http.Response, error) {
+				if req.Method != "GET" {
+					t.Fatal("unverified update attempted", req.Method)
+				}
+				obj := map[string]any{"number": 7, "html_url": "https://github.com/demo/repo/pull/7", "state": "open", "body": "old-marker", "head": map[string]any{"sha": "sha", "ref": "workflow/run", "repo": map[string]any{"full_name": "demo/repo"}}, "base": map[string]any{"ref": "main"}}
+				switch mode {
+				case "closed":
+					obj["state"] = "closed"
+				case "head":
+					obj["head"].(map[string]any)["ref"] = "other"
+				case "base":
+					obj["base"].(map[string]any)["ref"] = "other"
+				case "repo":
+					obj["head"].(map[string]any)["repo"] = map[string]any{"full_name": "other/repo"}
+				case "number":
+					obj["number"] = 8
+				}
+				raw, _ := json.Marshal(obj)
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(raw)), Header: http.Header{}}, nil
+			})}
+			_, err := executeGitHub(context.Background(), v, request, mode == "unknown")
+			if err == nil {
+				t.Fatal("unconfirmed PR accepted")
+			}
+			var notSent *githubNotSentError
+			if errors.As(err, &notSent) == (mode == "unknown") {
+				t.Fatal("write certainty incorrect", err)
+			}
+		})
 	}
 }

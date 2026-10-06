@@ -130,7 +130,7 @@ func (e *WorkflowEngine) fail(r WorkflowRun, err error) {
 		var n int64
 		n, dbErr = changed.RowsAffected()
 		if n == 1 && dbErr == nil {
-			_, dbErr = tx.Exec(`UPDATE workflow_steps SET status='failed',error=?,updated=? WHERE run_id=? AND seq=?`, err.Error(), now(), r.ID, r.Seq)
+			_, dbErr = tx.Exec(`UPDATE workflow_steps SET status='failed',error=CASE WHEN error='' THEN ? ELSE error || char(10) || ? END,updated=? WHERE run_id=? AND seq=?`, err.Error(), err.Error(), now(), r.ID, r.Seq)
 		}
 	}
 	if dbErr == nil {
@@ -323,8 +323,8 @@ func (e *WorkflowEngine) Stop(c Caller, id string, seq int) error {
 	return tx.Commit()
 }
 
-// Return deliberately requires the current process to be stopped first. The UI
-// exposes this as two explicit operations, never a optimistic cancellation.
+// Return requires a stopped or completed run. Completed history is immutable;
+// explicit review feedback starts a new execution only after workspace reacquisition.
 func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -332,8 +332,17 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if err != nil {
 		return err
 	}
-	if r.Seq != seq || r.Status != "stopped" || strings.TrimSpace(reason) == "" {
+	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed") || strings.TrimSpace(reason) == "" {
 		return ErrConflict
+	}
+	if r.Status == "completed" {
+		owner, err := e.store.workflowCaller(r)
+		if err != nil {
+			return err
+		}
+		if _, err = e.store.Workflow(owner, r.WorkflowID); err != nil {
+			return err
+		}
 	}
 	if !e.connectorQuiet(r.ID) || !e.quiet(r.Steps[len(r.Steps)-1].ConversationID) {
 		return ErrConflict
@@ -350,8 +359,28 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if err != nil {
 		return err
 	}
-	if current.Seq != seq || current.Status != "stopped" {
+	if current.Seq != seq || current.Status != r.Status {
 		return ErrConflict
+	}
+	if current.Status == "completed" {
+		path, err := normalizeWorkspace(current.WorkspacePath)
+		if err != nil {
+			return err
+		}
+		if path != current.WorkspacePath {
+			return fmt.Errorf("%w: workspace location changed", ErrConflict)
+		}
+		if err = workflowWorkspaceAvailable(tx, path, current.ID); err != nil {
+			return err
+		}
+		current.Seq++
+		if err = insertWorkflowStep(tx, current, target); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(`UPDATE workflow_steps SET error=? WHERE run_id=? AND seq=?`, "完成后回退到 "+target+": "+strings.TrimSpace(reason), id, current.Seq); err != nil {
+			return err
+		}
+		return tx.Commit()
 	}
 	old := current.Steps[len(current.Steps)-1]
 	if old.ConversationID != "" {

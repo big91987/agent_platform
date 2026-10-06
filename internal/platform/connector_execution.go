@@ -20,6 +20,7 @@ import (
 )
 
 type connectorRequest struct {
+	UpdatePR  int            `json:"update_pr,omitempty"`
 	ReadIssue bool           `json:"read_issue,omitempty"`
 	Endpoint  string         `json:"endpoint,omitempty"`
 	Lookup    string         `json:"lookup,omitempty"`
@@ -121,6 +122,21 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 		out.Endpoint = repo + "/pulls"
 		out.Lookup = out.Endpoint + "?" + url.Values{"state": {"all"}, "head": {strings.Split(v.Repository, "/")[0] + ":" + head}, "base": {base}, "per_page": {"100"}}.Encode()
 		out.Payload = map[string]any{"title": title, "body": body, "head": head, "base": base, "draft": true}
+		// Re-entering this PR node updates only its own earlier confirmed PR.
+		// A new execution marker makes an uncertain PATCH independently reconcilable.
+		for i := len(r.Steps) - 1; i >= 0; i-- {
+			old := r.Steps[i]
+			if old.Seq >= step.Seq || old.NodeID != step.NodeID || old.Receipt == nil || old.Receipt.Kind != "github.pull_request" {
+				continue
+			}
+			number := old.Receipt.Number
+			if number < 1 || old.Receipt.URL != "https://github.com/"+v.Repository+"/pull/"+strconv.Itoa(number) {
+				return out, errors.New("prior PR receipt identity is invalid")
+			}
+			out.UpdatePR = number
+			out.Endpoint += "/" + strconv.Itoa(number)
+			break
+		}
 	default:
 		return out, errors.New("unsupported connector")
 	}
@@ -177,12 +193,20 @@ func githubRequest(ctx context.Context, v Connector, method, path string, payloa
 }
 
 type githubObject struct {
+	State string `json:"state"`
+	Base  struct {
+		Ref string `json:"ref"`
+	} `json:"base"`
 	PullRequest json.RawMessage `json:"pull_request,omitempty"`
 	Number      int             `json:"number"`
 	URL         string          `json:"html_url"`
 	Body        string          `json:"body"`
 	Head        struct {
-		SHA string `json:"sha"`
+		SHA  string `json:"sha"`
+		Ref  string `json:"ref"`
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repo"`
 	} `json:"head"`
 }
 
@@ -197,7 +221,48 @@ type githubNotSentError struct{ err error }
 func (e *githubNotSentError) Error() string { return e.err.Error() }
 func (e *githubNotSentError) Unwrap() error { return e.err }
 
+// Updating an existing PR never falls back to creating another PR. Recovery
+// only reads its new execution marker, even when a PATCH response was lost.
+func updateGitHubPR(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
+	fail := func(err error) (ConnectorReceipt, error) {
+		if !lookupOnly {
+			return ConnectorReceipt{}, &githubNotSentError{err}
+		}
+		return ConnectorReceipt{}, err
+	}
+	if v.Kind != "github.pull_request" || request.Endpoint != "/repos/"+v.Repository+"/pulls/"+strconv.Itoa(request.UpdatePR) {
+		return fail(errors.New("invalid PR update destination"))
+	}
+	var obj githubObject
+	if err := githubRequest(ctx, v, "GET", request.Endpoint, nil, &obj); err != nil {
+		return fail(err)
+	}
+	if obj.Number != request.UpdatePR || obj.URL != "https://github.com/"+v.Repository+"/pull/"+strconv.Itoa(request.UpdatePR) || obj.Head.Ref != request.Payload["head"] || obj.Base.Ref != request.Payload["base"] || obj.Head.Repo.FullName != v.Repository {
+		return fail(errors.New("existing PR identity or branches changed; inspect before continuing"))
+	}
+	if strings.Contains(obj.Body, request.Marker) {
+		return githubReceipt(v, obj, true), nil
+	}
+	if lookupOnly {
+		return ConnectorReceipt{}, errors.New("PR update receipt not found; outcome remains unknown, no write was replayed")
+	}
+	if obj.State != "open" {
+		return fail(errors.New("existing PR is closed; no update or new PR was created"))
+	}
+	payload := map[string]any{"title": request.Payload["title"], "body": request.Payload["body"]}
+	if err := githubRequest(ctx, v, "PATCH", request.Endpoint, payload, &obj); err != nil {
+		return ConnectorReceipt{}, err
+	}
+	if obj.Number != request.UpdatePR || obj.URL != "https://github.com/"+v.Repository+"/pull/"+strconv.Itoa(request.UpdatePR) || !strings.Contains(obj.Body, request.Marker) {
+		return ConnectorReceipt{}, errors.New("PR update response is unconfirmed; reconcile before retrying")
+	}
+	return githubReceipt(v, obj, false), nil
+}
+
 func executeGitHub(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
+	if request.UpdatePR > 0 {
+		return updateGitHubPR(ctx, v, request, lookupOnly)
+	}
 	if request.ReadIssue {
 		var obj githubObject
 		if err := githubRequest(ctx, v, "GET", request.Endpoint, nil, &obj); err != nil {

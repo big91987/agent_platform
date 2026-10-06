@@ -48,9 +48,10 @@ function renderWorkflowDelivery(){
 }
 async function loadWorkflowDelivery(id){
  if(workflowRunPage?.id!==id)return;
+ const receiptKey=workflowRunPage.deliveryKey;
  workflowRunPage.delivery={};renderWorkflowDelivery();
- try{const value=await api('/api/workflow-runs/'+id+'/delivery');if(workflowRunPage?.id===id){workflowRunPage.delivery={value};renderWorkflowDelivery()}}
- catch(error){if(workflowRunPage?.id===id){workflowRunPage.delivery={error:error.message};renderWorkflowDelivery()}}
+ try{const value=await api('/api/workflow-runs/'+id+'/delivery');if(workflowRunPage?.id===id&&workflowRunPage.deliveryKey===receiptKey){workflowRunPage.delivery={value};renderWorkflowDelivery()}}
+ catch(error){if(workflowRunPage?.id===id&&workflowRunPage.deliveryKey===receiptKey){workflowRunPage.delivery={error:error.message};renderWorkflowDelivery()}}
 }
 async function refreshWorkflowRun(id){
  const r=await api('/api/workflow-runs/'+id);if(workflowRunPage?.id!==id)return;
@@ -60,7 +61,10 @@ async function refreshWorkflowRun(id){
  $('#wf-run-header').innerHTML=`<div class="wf-heading"><div><a data-nav href="/workflows/${esc(r.workflow_id)}/runs" class="muted small">← 运行记录</a><h1>${esc(r.definition.name)} <span class="wf-run-status status-${esc(r.status)}">${esc(workflowStatus[r.status]||r.status)}</span></h1><span class="muted small">版本 ${r.definition.revision} · 第 ${r.seq} 次节点执行</span></div></div><p class="wf-run-input">${esc(r.input)}</p>${r.error?`<div class="callout" role="alert">${esc(r.error)}</div>`:''}`;
  $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3>${esc(n?.name||s.node_id)}</h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStatus[s.status]||s.status)}</span></div>${s.result?`<p>${esc(s.result.summary)}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<details><summary>调用回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</summary><pre>${esc(JSON.stringify(s.connector_receipt,null,2))}</pre></details>`:''}${s.connector_receipt?.log?`<a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(r.id)}/steps/${s.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${s.connector_receipt.log.truncated?"（已达保留上限）":""} ↗</a>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
  if(notices.length){$('#wf-run-history').insertAdjacentHTML('beforeend',`<section class="card wf-run-step"><h3>通知记录</h3><p class="hint">通知失败独立处理，不会重跑 Agent 或交接。结果未知时只查询外部回执。</p>${notices.map(n=>`<div class="wf-hook-row"><strong>${esc(workflowHookEvents[n.event]||n.event)} · ${esc(r.definition.nodes.find(v=>v.id===n.node)?.name||n.node)}</strong><small>${esc({pending:'待发送',sending:'发送中',succeeded:'已发送',failed:'准备失败',unknown:'结果未知，需核对'}[n.status]||n.status)}</small>${n.error?`<p class="hint">${esc(n.error)}</p>`:''}${n.receipt?.url?`<a class="wf-link" href="${esc(n.receipt.url)}" target="_blank" rel="noopener noreferrer">查看通知 ↗</a>`:''}${['failed','unknown'].includes(n.status)?`<button data-notice-retry="${esc(n.id)}">${n.status==='unknown'?'核对外部结果':'重试通知'}</button>`:''}</div>`).join('')}</section>`);document.querySelectorAll('[data-notice-retry]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/api/workflow-runs/'+id+'/notifications/'+b.dataset.noticeRetry+'/retry','POST',{});await refreshWorkflowRun(id)}catch(e){toast(e.message);b.disabled=false}})}
- if(r.steps.some(s=>s.connector_receipt?.kind==='github.pull_request')){
+ const latestPR=r.steps.filter(s=>s.connector_receipt?.kind==='github.pull_request').at(-1);
+ if(latestPR){
+  const receiptKey=JSON.stringify([latestPR.seq,latestPR.connector_receipt]);
+  if(workflowRunPage.deliveryKey!==receiptKey){workflowRunPage.deliveryKey=receiptKey;workflowRunPage.deliveryRequested=false;workflowRunPage.delivery=null}
   $('#wf-run-history').insertAdjacentHTML('beforeend','<section id="wf-delivery" class="card wf-run-step"></section>');
   renderWorkflowDelivery();
   if(!workflowRunPage.deliveryRequested){workflowRunPage.deliveryRequested=true;loadWorkflowDelivery(id)}
@@ -77,9 +81,9 @@ async function refreshWorkflowRun(id){
   if(r.status==='failed')controls+='<button id="wf-stop" class="quiet">停止并选择回退节点</button>';
   if(node.kind==='connector'&&step.connector_dispatched)controls+='<p class="hint">该动作已经发出。GitHub 恢复只核对已有资源；命令如需重新执行，请先检查效果，再停止并回到该节点。</p>';
   if(!step.result&&!(node.kind==='connector'&&step.connector_dispatched&&r.connectors[node.connector_id]?.kind==='command'))controls+='<form id="wf-resume-form"><div class="field"><label for="wf-resume-message">继续说明</label><textarea id="wf-resume-message" rows="3" placeholder="说明如何接着处理；已执行的动作不会自动重放"></textarea></div><button type="submit">继续原节点</button></form>';
-  if(r.status==='stopped')controls+=`<form id="wf-return-form"><div class="field"><label for="wf-return-target">回到节点</label><select id="wf-return-target">${r.definition.nodes.map(n=>`<option value="${esc(n.id)}">${esc(n.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-return-reason">回退原因</label><textarea id="wf-return-reason" rows="3" required></textarea></div><button type="submit">从该节点继续</button></form>`;
  }
- if(r.status==='completed')controls+='<p class="hint">已到达结束节点。全部执行记录与会话保留。</p>';
+ if(r.status==='completed')controls+='<p class="hint">已到达结束节点。需要修订时可填写原因并回到指定节点；已有记录保留，后续节点和外部动作将按原图重新执行。工作区被其他运行占用时不能继续。</p>';
+  if(['stopped','completed'].includes(r.status))controls+=`<form id="wf-return-form"><div class="field"><label for="wf-return-target">回到节点</label><select id="wf-return-target">${r.definition.nodes.map(n=>`<option value="${esc(n.id)}">${esc(n.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-return-reason">回退原因</label><textarea id="wf-return-reason" rows="3" required></textarea></div><button type="submit">从该节点继续</button></form>`;
  controls+=`<details><summary>运行信息</summary><p class="hint">运行 ID：${esc(r.id)}</p><p class="hint">工作区：${esc(r.workspace_path)}</p></details>`;
  $('#wf-run-controls').innerHTML=controls;for(const [key,value]of Object.entries(old)){const el=$('#'+key);if(el)el.value=value}
  const command=async(action,data={})=>{const panel=$('#wf-run-controls');panel.inert=true;try{await api('/api/workflow-runs/'+id+'/'+action,'POST',{seq:r.seq,...data});if(workflowRunPage?.id===id){workflowRunPage.signature='';await refreshWorkflowRun(id)}}catch(e){toast(e.message)}finally{panel.inert=false}};

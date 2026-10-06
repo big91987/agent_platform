@@ -379,25 +379,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		}
 		entry = in.StartNode
 	}
-	// A stopped/failed Run is still resumable; its workspace must remain exclusive.
-	rows, e := tx.Query(`SELECT workspace FROM workflow_runs WHERE status != 'completed'`)
-	if e != nil {
-		return zero, e
-	}
-	for rows.Next() {
-		var occupied string
-		if e = rows.Scan(&occupied); e != nil {
-			rows.Close()
-			return zero, e
-		}
-		if containsPath(occupied, path) || containsPath(path, occupied) {
-			rows.Close()
-			return zero, fmt.Errorf("%w: workspace overlaps an unfinished workflow; resume that run or use a separate checkout", ErrConflict)
-		}
-	}
-	e = rows.Err()
-	rows.Close()
-	if e != nil {
+	if e = workflowWorkspaceAvailable(tx, path, ""); e != nil {
 		return zero, e
 	}
 	id, stamp := newID(), now()
@@ -431,6 +413,27 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	}
 	return out, tx.Commit()
 }
+
+// Stopped/failed runs remain resumable and keep their workspace reservation.
+// Starting and returning a completed run both acquire it inside their transaction.
+func workflowWorkspaceAvailable(tx *sql.Tx, path, exceptID string) error {
+	rows, err := tx.Query(`SELECT workspace FROM workflow_runs WHERE status != 'completed' AND id != ?`, exceptID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var occupied string
+		if err = rows.Scan(&occupied); err != nil {
+			return err
+		}
+		if containsPath(occupied, path) || containsPath(path, occupied) {
+			return fmt.Errorf("%w: workspace overlaps an unfinished workflow; resume that run or use a separate checkout", ErrConflict)
+		}
+	}
+	return rows.Err()
+}
+
 func insertWorkflowStep(tx *sql.Tx, r WorkflowRun, nodeID string) error {
 	status, runStatus := "pending", "running"
 	switch r.Definition.node(nodeID).Kind {
