@@ -624,3 +624,8 @@ seq25于03:09–03:12 UTC固定make verify真实退出2。当前Go/race/build通
 当前101项VM/helper及3项Go in-process race契约通过；四项实现前未捕获红测，研发报告明确未补造。原QA脚本一度因项目helper中的import.meta进入其历史fixture前缀而SyntaxError，失败回执保留；仅调整项目测试布局，原QA文件与断言未改。恢复执行后仍3/4，QA-03泛导航与独立精确入口差异仍待独立QA裁定。真实Go两屏旅程补入恢复零PUT/即时清密/共享忙锁、进行中原值与禁改、真实GET created和行启停后即时焦点断言，尚不能据VM称原生通过。
 
 维护者独立计算当前56文件摘要`475091a58b28ca779261cb8c1dd24a55118d9c74df1c4d1be8fb5aa4fc82c63a`，与source-closure.json一致；基线131份历史workflow文件仍逐字节未改。GitHub main仍d62cd51，开放PR列表为空，正式部署入口仍先prepare再显式deploy；未提前合并或发布。上述对象完整宿主门禁及第二轮QA待执行，本轮与总目标继续No-Go。
+
+
+seq29于03:40 UTC进入宿主固定make verify，回执开头确认上述475091a5…摘要，真实退出2。Go/race/build、1280px含新增交互补充的完整旅程通过，390px运行版本通过但模型选择仍在journey.mjs:168失败：targetIndex=1、enabledTargetIndex=1、selectedIndex=0、targetEnabled=true。闭合方向键方案未在该场景解决问题，不能把101项模拟检查或宽屏首项成功视为原生选择修复。用户Run页与API均曾显示第29步外部执行中，实际make和browser进程存活；完整回执正常保存后按失败边自动进入seq30研发会话`830b0ed4ff74253c1cd4beb9feae4d1a`，未因等待重启或丢失大历史结果。
+
+维护者通过原Issue评论[6008903077](https://github.com/big91987/model-relay/issues/16#issuecomment-6008903077)要求先补原生逐边界诊断：同select实际焦点/是否重绘、离焦前后索引、导航读取与标题焦点的时序，再按证据修复，不再仅凭模拟中定义的按键行为更换组合；导航/焦点竞争明确是待证假设。输入20797已queued到seq30原会话，20754 running。两屏精确值、焦点与后续真实路由断言保持，不能改用程序化selectOption或删掉窄屏场景放行。第二轮QA及本轮PR/合并/部署仍未发生，总目标继续No-Go。
