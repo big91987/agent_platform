@@ -862,3 +862,8 @@ seq29独立QA形成report-03/matrix-03产品切片Go，两项SSE Important/P1在
 平台 `validate_contract` 最小扩展已知1/2/3集合及对应升级矩阵，旧profile、固定命令、停服前降级拒绝和旧binary恢复保持。5项新增回归在实现前全部因unsupported storage contract失败；实现后完整58项首轮暴露1处新增测试误取backup键，按真实attempt路径修正，补充3→3不同SHA发布的already_current路径。修订后完整58项回归通过（见本节后续执行摘要）；独立复审关闭该P2，未发现生产实现Important。覆盖1→3、2→3、首次3、3→3/同SHA、候选健康失败恢复2、降级停服前拒绝及能力缺失/未知4拒绝。产品CLI使用文本数据夹具，服务健康为替身；此层不能证明真实schema3数据库或Pipeline已验。
 
 README同步精确支持范围和发布前置；标准安装器与Workflow内容无需改动，使用原安装路径交付。当前本记录时仅维护源实现/回归通过，可信常驻控制器尚待备份及原install.py升级，真实产品schema3门禁/QA/联合CLI/Actions/API/UI均未因此改为Pass。整目标仍In Progress／No-Go。
+
+
+schema3平台交付补记：源提交 `add852abb8dd76bcf9cbf5082f7aaea3d103b380` 已推至源草稿PR #5，controller SHA256 `782d4861df5aa3e93c241e037904dd3c58d9f4772f790170f6328aa5c62307a2`。完整58项耗时60.624s、日志SHA256 `138645e2ef11548b1912d853ff2d5036e45b289403d607e14e9ed718ee24474e`。确认无在途部署、原activation为committed后，分别私有备份并经原install.py升级preview/validation，再重复安装；实际manifest摘要匹配源，重复安装manifest不变，preview.json/deployed/activation/主密钥摘要/current指针保持。两实际health均仍为 `98511771871cf0951ecef716bbb55deb13e18da5`／schema2，未迁移产品。
+
+正式Actions只准备核验：[preview 37460765087](https://github.com/big91987/model-relay/actions/runs/37460765087)、[validation 37460769786](https://github.com/big91987/model-relay/actions/runs/37460769786)均success、deploy skipped，日志均Already deployed当前schema2 SHA。这验证新安装控制器的既有版本路径，不是重跑make verify或schema3迁移。源版本/安装/58项夹具与真实schema3未测边界已从[原Issue评论6015883622](https://github.com/big91987/model-relay/issues/20#issuecomment-6015883622)交还原流程；评论入口Actions `37461024848` success，原Run仍seq6研发执行中。平台源支持及标准安装已完成，真实schema3产品/联合/正式发布仍待实际候选后验证；不修改历史结论或当前Run状态。
