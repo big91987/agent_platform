@@ -763,3 +763,8 @@ QA正式返工完成：seq17结束后沿原图进入seq18 development，会话`0
 维护源新增有界端口冲突演练入口 `examples/github/model-relay-preview/tests/port_conflict.py`，用于已授权的独立validation安装。执行前要求正式候选main SHA、已安装控制器摘要一致、旧服务健康、无在途activation、与preview根隔离；只读观察目标新轮backup_complete后绑定loopback空闲端口。它不写activation/数据库/备份/部署回执，不改产品权限或二进制。返回固定503夹具，只计算已观察upgrade_confirmed后的GET /healthz；首请求起保持25秒，升级等待130秒和首请求15秒各有限界，单次socket读写各0.1秒，不等待完整请求头。未命中窗口明确不完整，恢复字段始终not_checked。
 
 独立评审发现保持起点过早与慢速请求头拖延释放两项Important，均先用真实临时socket红控复现（延迟首请求无法连接、部分请求头等待超时），随后修复。8项针对回归及完整53项控制器/安装/隔离回归通过（46.401s）；ruff检查、格式及diff通过，独立复审另跑8项通过（3.019s），无剩余阻断项。上述只有临时根/端口夹具；尚未对真实安装注入故障，DEP-07正式Actions失败恢复和数据守恒仍Not Run。README明确等待产品QA放行及正式候选后，从原Actions validation入口演练，再单独无故障发布；不替代其他backup/upgrade/restore失败用例。
+
+
+seq18按原QA整改完成，产品10指纹85文件`ff456d824299075fe8d98104a2cd51671ca41f08421f18cb1dd053d80efe93c8`；119项局部前端回归与专项检查不作为整轮放行。seq19宿主900秒原make verify于09:02–09:09 UTC真实exit2：QA核验协议/10秒预算负控及真实HTTP头/body预算、工具输出后EOF/idle/cancel边界均通过，原两屏旅程和旧版非空UI迁移仍Pass；新增1280px“completed task fold and keyboard review”TimeoutError，390px新增旅程未到达。固定门禁整体Fail，不用前面通过覆盖后段失败。正式分页API取得83,109字节完整日志、truncated=false，SHA-256 `966690092c2a17f2c331da8e30a5dca4141281f1952aeee74a52714627a890a4`；原selection轨迹显示目标index4/实际4，不能沿用先前选择器故障归因。
+
+原失败边自动进入seq20研发会话`7adceb28a67020960e705a7caacaeea9`；其公开诊断指出详情正文缺少驱动等待的“请求”字样，拟改为核对同一Request ID并细分失败阶段。此为研发诊断，修复后新宿主门禁/独立QA仍待验；未重复创建Issue/Run或人工修改产品。预览与隔离旧安装只读核验仍健康、deployed/health均为85f6d17c，两个controller摘要与维护源一致。未运行故障夹具或部署候选，正式恢复仍Not Run。
