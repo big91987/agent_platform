@@ -666,3 +666,10 @@ QA-D01/P1失败清密、QA-D03/P1概览同ID、QA-D02/P2写读反馈和QA-G01覆
 交付链接缺陷：PR正文原样发布后，GitHub body_html回读确认11个文档/截图href仍为本地相对路径。维护者经正式PR编辑入口仅将这些目标改为已发布b2f271c完整SHA下的blob URL；每个目标均核对该提交Git tree存在，回读body及渲染href确认，head不变。仓库内pr.md相对引用仍可用，没有改产品或回写已完成节点。原Issue补充评论[6009514713](https://github.com/big91987/model-relay/issues/16#issuecomment-6009514713)晚于节点交接，正式入口明确拒绝，未进入会话或重放；旧提示却建议对已完成Run继续/回退，与引擎实际不支持矛盾。
 
 通用修复落在维护源：report模板要求对外PR证据链接使用实际仓库/任务分支及正确转义的明确URL，不依赖正文文件相对位置、不把新产物指向旧main。GitHub入口遇409后重新读取Run：completed指引关联新Issue，stopped/failed按页面恢复后重试原评论，活动交接等待核对，状态查询失败只提示核对；保持原异常、原快照、事件键和通知去重，不创建新Run或自动重发。新增同一forward入口的竞争/停止/活动/查询失败回归，修前4子项失败，修后全部31项通过（最终3.530s）；Ruff格式/检查与diff通过，错误Ruff路径尝试保留并按标准PATH修正。模板/适配器尚待受支持升级及现场复验，不把该单元回归称新恢复指引已在GitHub验收。
+
+
+第一切片正式交付闭环（2026-10-06 04:52–05:06 UTC）：授权维护者在 PR #17 的固定 head `b2f271c595740e88c7413a1b60181fc8985e6a24`、GitGuardian success、无冲突条件下标记就绪并合并，得到 `85f6d17c07c5fddeb2d6a39a5a067769a11bb4cc`。push main 自动 [prepare 37415786989](https://github.com/big91987/model-relay/actions/runs/37415786989) 于04:57完成；固定 make verify 对该 merge SHA 真正运行，日志包含Go/race/build及1280/390两屏完整受控上游旅程。后续显式 [deploy 37416309483](https://github.com/big91987/model-relay/actions/runs/37416309483) 的 prepare复用相同SHA校验产物，deploy于04:59成功；不把缓存复用描述成再次完整测试。计划中的产物SHA-256为 `58a159c2aaf7c67119c9e491bde81c395eeacbb72142a6b0fbebf569d36933e5`。
+
+外部 GitHub Deployment `6876076706` 的 local-preview success、平台正式 delivery API 的 PR/merge/deployment、实际 healthz 200/version及浏览器概览均返回同一85f6d17c完整SHA。用户Run页面显示“已合并PR”“local-preview success”“打开效果地址”和部署记录入口。正式预览重启后旧会话明确过期，通过正常登录恢复；从空概览“接入上游”进入配置页，从调用测试看到三项缺失依赖、对应修复入口、发送禁用和真实Base URL，再回概览成功。未向正式服务注入测试上游或伪造配置；完整配置/普通与SSE/故障恢复仍由同mergeSHA的固定双屏真实Go旅程证明，真实供应商保持Not Run。第一切片可进入下一轮，整条四轮目标尚未完成。
+
+通用模板正式升级：先经API确认安装对象无在途执行，保存原manifest、共享浏览器manifest、入口配置、只读SQLite备份、完整已完成Run和源版本（私有受限目录，不提交运行数据）；以原选项执行install.py --upgrade，仅development/report spec变化，所有对象ID不变。重复升级无进一步变更；正式agents集合API回读两阶段完整投影与manifest一致，原Run 38步完整JSON逐值不变。一次探查不存在的agent详情GET返回404，按安装器已使用的集合API完成正确回读，没有据404误判升级失败。GitHub入口安装器返回Unchanged，仓库源路径变量指向唯一维护源，原SDK已支持workflow_run查询。该记录只关闭安装/历史保留验收，新的阶段策略和409通知现场行为仍需下一真实事件复验。
