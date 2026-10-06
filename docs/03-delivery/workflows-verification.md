@@ -768,3 +768,8 @@ QA正式返工完成：seq17结束后沿原图进入seq18 development，会话`0
 seq18按原QA整改完成，产品10指纹85文件`ff456d824299075fe8d98104a2cd51671ca41f08421f18cb1dd053d80efe93c8`；119项局部前端回归与专项检查不作为整轮放行。seq19宿主900秒原make verify于09:02–09:09 UTC真实exit2：QA核验协议/10秒预算负控及真实HTTP头/body预算、工具输出后EOF/idle/cancel边界均通过，原两屏旅程和旧版非空UI迁移仍Pass；新增1280px“completed task fold and keyboard review”TimeoutError，390px新增旅程未到达。固定门禁整体Fail，不用前面通过覆盖后段失败。正式分页API取得83,109字节完整日志、truncated=false，SHA-256 `966690092c2a17f2c331da8e30a5dca4141281f1952aeee74a52714627a890a4`；原selection轨迹显示目标index4/实际4，不能沿用先前选择器故障归因。
 
 原失败边自动进入seq20研发会话`7adceb28a67020960e705a7caacaeea9`；其公开诊断指出详情正文缺少驱动等待的“请求”字样，拟改为核对同一Request ID并细分失败阶段。此为研发诊断，修复后新宿主门禁/独立QA仍待验；未重复创建Issue/Run或人工修改产品。预览与隔离旧安装只读核验仍健康、deployed/health均为85f6d17c，两个controller摘要与维护源一致。未运行故障夹具或部署候选，正式恢复仍Not Run。
+
+
+seq20将回看驱动的错误文字等待修正为当前概览证据ID→请求详情API身份→页面同ID，保留步骤数量、默认收起、键盘展开/收起和可见焦点断言；未改产品行为或降低原需求。11指纹85文件`852f7bfc90323b6253658c8b9c2167fa22c43a5f59389f0bbcb92539865120e7`，119项局部回归通过后正式交接seq21。seq21于09:19–09:27 UTC完整make verify exit0（900秒预算），原Go race/CLI、QA负控、旧UI非空迁移/旧binary回退、既有两屏和新增1280/390原生键盘/核验/折叠回看/重启旅程全部执行成功。正式日志分页API取得79,939字节、truncated=false，SHA-256 `e1decdc833ef8f2167d55013ed24d1b2718fe0af0fee85b17a4403a4483829d7`；维护者核对两屏新截图时间属于本轮，完成步骤实际位于可展开回看区、下一步与已完成分开、窄屏布局和焦点可见。截图是测试构建dev，不能当正式部署SHA证明。
+
+原图自动进入seq22独立QA，会话`84cf7708dcaf51134cdc05044fc5717c`。需由其核对原四项缺陷及缺失覆盖，不从完整门禁直接推断Accepted或全部AC通过。原Issue已真实同步seq20启动评论6013053758及上一研发交接，不重建Issue/Run。当前没有M2 PR/合并/正式候选升级或故障演练；DEP02～04/06～07与供应商限制继续保留，整目标No-Go。
