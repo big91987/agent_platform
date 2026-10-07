@@ -1085,3 +1085,5 @@ GitHub双向入口实测发现：平台建立的测试Issue #22又被opened入�
 后续固定测试、独立QA/返工、PR、授权合并、正式部署及5545实际用户旅程仍须逐项留证；上述小任务不能替代产品端到端验收。供应商、其他执行器及高并发压力未测试，不外推保证。
 
 平台实现已提交 `1830f81` 并推送 [草稿 PR #6](https://github.com/big91987/agent_platform/pull/6)，base为已封版 `codex/platform-workflows`；源main未合并。产品Run已通过intake进入requirements，当前结果仍不能替代最终交付。
+
+用户随后纠正：Platform 此阶段只在新分支开发，不需要创建PR。上述PR #6（`codex/workflow-node-config-ui` → `codex/platform-workflows`）已关闭，未合并、未删除分支或提交。后续平台改动直接提交/推送当前开发分支；测试仓研发流程的PR、授权合并和部署要求保持。
