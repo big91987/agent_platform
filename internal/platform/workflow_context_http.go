@@ -38,12 +38,16 @@ func (h *Server) workflowContextRoutes() {
 			fail(w, errors.New("preview requires an Agent node"))
 			return
 		}
-		prompt, err := workflowSessionPrompt(in.Workflow, n)
+		prompt, err := workflowNodeInstructions(in.Workflow, n)
 		if err != nil {
 			fail(w, err)
 			return
 		}
-		respond(w, 200, map[string]any{"session_prompt": prompt, "input": prompt + "\n\n## 当前任务\n运行时追加用户任务、修正及必要上游回执。", "context_version": in.Workflow.ContextVersion})
+		preview := map[string]any{"input": prompt + "\n\n## 当前任务\n运行时追加用户任务、修正及必要上游回执。", "context_version": in.Workflow.ContextVersion}
+		if in.Workflow.ContextVersion < 2 {
+			preview["session_prompt"] = prompt
+		}
+		respond(w, 200, preview)
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}/steps/{seq}/context", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		run, err := h.store.WorkflowRun(c, r.PathValue("id"))

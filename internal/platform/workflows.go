@@ -64,7 +64,7 @@ func validateWorkflow(w Workflow) error {
 	if w.MaxSteps < 1 || w.MaxSteps > 1000 {
 		return errors.New("max_steps must be between 1 and 1000")
 	}
-	if w.ContextVersion < 0 || w.ContextVersion > 1 {
+	if w.ContextVersion < 0 || w.ContextVersion > 2 {
 		return errors.New("unsupported context_version")
 	}
 	nodes := map[string]WorkflowNode{}
@@ -87,6 +87,9 @@ func validateWorkflow(w Workflow) error {
 		case "agent":
 			if (n.AgentID == "") == (n.Agent == nil) || n.ConnectorID != "" {
 				return fmt.Errorf("node %s requires one agent", n.ID)
+			}
+			if w.ContextVersion == 2 && n.Agent != nil && n.Agent.SeedDir != "" {
+				return fmt.Errorf("node %s: set the shared workspace when starting the Run, not a node seed_dir", n.ID)
 			}
 		case "connector":
 			if n.ConnectorID == "" || n.AgentID != "" || n.Agent != nil {
@@ -182,10 +185,10 @@ func validateWorkflow(w Workflow) error {
 			return fmt.Errorf("node %s has no path to an end", n.ID)
 		}
 	}
-	if w.ContextVersion == 1 {
+	if w.ContextVersion >= 1 {
 		for _, n := range w.Nodes {
 			if n.Kind == "agent" {
-				if _, err := workflowSessionPrompt(w, n); err != nil {
+				if _, err := workflowNodeInstructions(w, n); err != nil {
 					return err
 				}
 			}

@@ -7,7 +7,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     return JSON.parse(JSON.stringify(Object.fromEntries(fields.filter(key=>Object.hasOwn(source,key)).map(key=>[key,source[key]]))));
   }
   constructor(value) {
-    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,context_version:1,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
+    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,context_version:2,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
     this.value.authorized_users ||= [];
     this.value.start_nodes ||= [];
   }
@@ -20,7 +20,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     x=Math.max(0,Math.min(10000,Math.round(x)));y=Math.max(0,Math.min(10000,Math.round(y)));
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
-    if(kind==='agent'){n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
+    if(kind==='agent'){n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;if(this.value.context_version!==2)n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
     return n;
@@ -43,7 +43,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(this.value.edges.some(e=>e.source===source&&e.route===route))throw new Error('这个节点已经有同名路由');
     mode ||= n.kind==='agent'?'handoff':'automatic';
     if(!['handoff','automatic'].includes(mode)||mode==='handoff'&&n.kind!=='agent')throw new Error('连线决策方式无效');
-    if(this.value.context_version===1&&mode==='handoff'&&this.value.edges.some(e=>e.source===source&&e.target===target&&this.edgeMode(e)==='handoff'))throw new Error('同一自主交接目标只能配置一条策略，请合并策略内容');
+    if(this.value.context_version>=1&&mode==='handoff'&&this.value.edges.some(e=>e.source===source&&e.target===target&&this.edgeMode(e)==='handoff'))throw new Error('同一自主交接目标只能配置一条策略，请合并策略内容');
     if(mode==='automatic'&&n.kind==='agent'&&this.value.edges.some(e=>e.source===source&&this.edgeMode(e)==='automatic'))throw new Error('Agent 只能有一条固定完成线');
     this.value.edges.push({source,route,target,mode,description});
   }
@@ -73,11 +73,15 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       for(const key of ['executor','model','instructions','sandbox','native_config','seed_dir'])if(a[key]!=null&&typeof a[key]!=='string')throw new Error('节点配置 '+key+' 必须是字符串');
       for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
     }
-    if(this.value.context_version!==1||node.kind!=='agent')return;
+    if(!this.value.context_version||node.kind!=='agent')return;
+    if(this.value.context_version===2&&node.agent?.seed_dir)throw new Error('工作区在开始运行时统一指定，节点不单独设置工作区模板');
+    if(this.value.context_version===2&&node.prompt)throw new Error('此编排不再使用独立工作说明；请将长期职责放入角色指令，具体任务在运行时输入');
+    if(this.value.context_version===1){
     const prompt=node.prompt||'',tokens=prompt.match(/{{[\s\S]*?}}/g)||[];
     if(tokens.some(t=>t!=='{{handoff}}'))throw new Error('Session Prompt 包含未知占位符；仅支持 {{handoff}}');
     const handoff=this.value.edges.some(e=>e.source===node.id&&this.edgeMode(e)==='handoff');
     if(tokens.length>1||handoff&&tokens.length!==1)throw new Error('自主交接的 Session Prompt 必须恰好包含一个 {{handoff}}');
+    }
     if(node.allow_user_input!=null&&typeof node.allow_user_input!=='boolean')throw new Error('用户输入开关必须是布尔值');
     if(!Number.isInteger(node.continuation_limit??0)||(node.continuation_limit??0)<0||(node.continuation_limit??0)>10)throw new Error('自动继续次数必须是 0–10 的整数');
     if(!Number.isInteger(node.execution_timeout_seconds??0)||(node.execution_timeout_seconds??0)<0||(node.execution_timeout_seconds??0)>86400)throw new Error('持续推进期限必须是 0–86400 秒的整数');

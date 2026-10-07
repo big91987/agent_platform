@@ -1049,3 +1049,37 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 开发实例二进制SHA256：`5b67f10b0a8985f49cb92a487257c8de14d5f46a62451506eaeff8607ee2da78`。私有备份及API快照位于忽略的 `.data/workflow-evidence/node-agent-upgrade/`。页面入口：`<platform-url>/workflows/fbdbfd95ea6c6992bf45bf697b0769e9`；实测Run入口：`<platform-url>/workflow-runs/bff43a2d7a7f5718ebd6483613c74429`。
 
 范围限制：本次通过节点配置独立、安装升级、等待和同会话恢复小任务；普通用户权限由真实Store/HTTP自动化覆盖，未另做普通账号浏览器旅程。本次未重跑完整GitHub→研发→QA→PR→部署链路，不改变既有整体验收结论。源改动交付现有草稿PR，不合并源main，不恢复定时任务。
+
+## 配置一致性、输入与取消（2026-10-07）
+
+范围结论：独立智能体/节点公共配置、v2输入、Run取消和小型真实协作通过；完整 model-relay 产品研发仍 In Progress / No-Go。维护分支 `codex/workflow-node-config-ui`，基线 `d7bd602`；只升级8792，8788进程保持不变，不合并平台源main。
+
+### 可复用变更与验证
+
+- 独立页与节点复用表单和读取/校验；名称、执行器、模型、角色、Skill、工具审批、权限、原生设置及环境贯通保存。拒绝数组环境，保留不可用的已选工具和错误草稿；打开关闭未修改节点不再产生脏状态。新节点没有 Session Prompt，也不提供实际不会生效的工作区模板目录。
+- 新编排使用 context_version=2，平台自动生成交接/完成/等待规则；任务、修正和handoff进入User Input，原生执行器读取AGENTS.md。旧v0/v1与冻结Run保留。标准模板将长期职责迁入角色配置，一次Run仍只用启动时确定的工作区，不新增变量系统。
+- 正式 stop→cancel 支持引擎、HTTP、SDK及网页，校验归属、seq和真实执行退出；历史/文件保留，当前会话关闭，终态禁止恢复/回退/继续，工作区占用释放。自动化覆盖幂等、重启、越权、迟到及排队状态。
+- 新版标准安装、原manifest升级及重复升级真实通过：主图 `fbdbfd95ea6c6992bf45bf697b0769e9` revision7→8、六个Codex/gpt-6.1-sol节点；重复升级仍revision8。旧Run冻结定义和历史跨二进制重启不变。共享验收图新装和原manifest升级均通过，人工名称测试先经网页恢复，再标准升级，未篡改manifest绕过漂移保护。
+- 自动化：完整前端59项、模板/入口Python71项、SDK9项通过；全Go测试、race及vet通过，gofmt/Ruff/格式/diff检查通过。SDK首次在沙箱不能bind，获得宿主执行权限后原测试通过；不将环境拒绝误记为产品回归。race的Darwin既有链接器警告未影响退出0。独立只读代码复审及增量复审均无剩余阻断项。
+
+### 真实入口证据
+
+| 路径 | 事实 |
+| --- | --- |
+| 独立智能体配置 | 网页创建“配置一致性验收”，数组环境被拒绝；保存/重载模型与对象环境成功。真实会话 `200a85814c94ca8f1a630bd18475d73f` 读取指定环境、写并读回文件，原生项目规则标记出现。该专用Agent已通过网页停用，保留历史。 |
+| 网页配置与画布 | 验收图名称修改、保存重载成功；抽屉打开/关闭画布均宽892px，右栏覆盖而不占列；主图显示名称、Codex与模型，长配置可滚动。截图留私有证据。窄屏override调用后实际仍1280px，本轮不记作760px验收；上阶段窄屏证据不替代本轮。 |
+| 首轮协作 | Run `ae6c20638add3ea9c70c41caa81820e6` 完成等待→回复→真实缺失→返工→复验。发现协作夹具错误继承研发make verify，真实exit2准确保留，不声称该命令通过；源模板随后排除研发专属指导。 |
+| 最终模板复验 | Run `4fb12e7b2ba713ef656ad969466677b1`，独立工作区、同会话 `f422684e6fab8e2736852e0b8a90da90` 提问/答复。reviewer实际发现缺章节及项目规则标记并交回writer；补齐后独立命令逐项PASS，seq6 completed。真实release.md含v2.0.7-final、PROJECT_RULE_V2_FINAL及验收章节。无make verify跨模板要求。 |
+| 旧任务取消 | Run `9e6d05f409675e0ef65c6486691462df` seq13、`2f589073fb909da91a3e6f76a8ba5430` seq6均通过正式API成为cancelled，旧工作区及未提交代码保留。无数据库/检查点改写。 |
+
+GitHub双向入口实测发现：平台建立的测试Issue #22又被opened入口接为新研发Run。维护源修复为忽略正文带保留平台标记的opened事件，forward再次读取GitHub事实后拒绝手动dispatch；原仓库/操作者校验不变。真实重跑[Actions 37613210087 attempt2](https://github.com/big91987/model-relay/actions/runs/37613210087)记录 `Platform output ignored`，没有新增重复Run；随后模板复验Issue #23同样没有反射创建研发Run。标记是输出协议而非身份认证；用户复制此标记同样拒绝，手册已说明原Run页面继续。
+
+已产生的重复Run `a34ed977d6aafc90531af1d683f49910` 通过正式接口停止，仍stopped。其额外取消被自动审批以“两个旧Run的取消授权未明确覆盖这个新Run”拒绝；未重试、未绕过，已询问用户。它与新产品任务工作区独立，不阻塞后续验证。
+
+运行二进制SHA256 `3fe723f60485d6aa69d037459f696cabfadb368974ec93510feb04f75538295c`。本机备份在忽略的 `.data/maintenance-backups/20261007-config-input-v2*`，API/文件证据在 `.data/workflow-evidence/config-input-v2/`；辅助备份脚本不是正式部署机制。源码交付以构建二进制、原manifest升级和既有GitHub入口标准安装为准。
+
+### 完整产品链路进行中
+
+[model-relay #24](https://github.com/big91987/model-relay/issues/24) 明确关联旧已取消任务，保留其未验收现场，从标准main checkout重新承接同一冻结design-v0.2.0材料。[入站Actions 37615595429](https://github.com/big91987/model-relay/actions/runs/37615595429)成功，唯一新Run `713a325b560ddc53be37ff3a0bbc5014` revision8/context_version2已完成prepare和原Issue关联，开始intake。设计材料摘要仍为 `5f51d35fdc15ed7214749f9413879b4238097f1d6b6bbe2cc0d508d8e103cef7`。
+
+后续固定测试、独立QA/返工、PR、授权合并、正式部署及5545实际用户旅程仍须逐项留证；上述小任务不能替代产品端到端验收。供应商、其他执行器及高并发压力未测试，不外推保证。

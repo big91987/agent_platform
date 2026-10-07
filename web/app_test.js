@@ -57,6 +57,7 @@ function conversationPage(data) {
     URLSearchParams, location: {}, clearInterval, clearTimeout, setTimeout,
     window: {addEventListener() {}}, document: {addEventListener() {}, querySelector: node},
   });
+  vm.runInContext(readFileSync(__dirname + '/agent-config.js', 'utf8'), context);
   vm.runInContext(readFileSync(__dirname + '/markdown.js', 'utf8'), context);
   vm.runInContext(readFileSync(__dirname + '/transcript.js', 'utf8'), context);
   vm.runInContext(readFileSync(__dirname + '/app.js', 'utf8').replace(/\nroute\(\)\.catch\(showRouteError\);\s*$/, ''), context);
@@ -225,4 +226,14 @@ test('saving a shared Agent can return to the calling workflow without navigatin
  for(const [id,value]of Object.entries({'#agent-name':'角色','#agent-model':'','#agent-instructions':'职责','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'{}','#agent-sandbox':'workspace-write'}))node(id).value=value;
  await node('#agent-form').onsubmit({preventDefault(){}});
  assert.equal(vm.runInContext('returned',context),true);
+});
+test('standalone Agent rejects non-object environment values before calling save',async()=>{
+ const {context,node}=conversationPage({});context.document.querySelectorAll=()=>[];
+ node('#dialog').showModal=()=>{};node('#dialog').close=()=>{};
+ vm.runInContext("let writes=[];api=async(path,method,body)=>{if(method)writes.push(body);return []};toast=message=>{savedMessage=message}",context);
+ await vm.runInContext('editAgent()',context);
+ for(const [id,value]of Object.entries({'#agent-name':'Reviewer','#agent-executor':'codex','#agent-model':'test-model','#agent-instructions':'Review','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'[]','#agent-sandbox':'workspace-write'}))node(id).value=value;
+ await node('#agent-form').onsubmit({preventDefault(){}});
+ assert.equal(vm.runInContext('writes.length',context),0);
+ assert.match(vm.runInContext('savedMessage',context),/环境/);
 });

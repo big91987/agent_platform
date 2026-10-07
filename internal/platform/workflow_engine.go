@@ -232,7 +232,7 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		if step.Result == nil {
 			state := "running"
 			if conv.Status == "idle" {
-				if r.Definition.ContextVersion == 1 {
+				if r.Definition.ContextVersion >= 1 {
 					return e.store.continueWorkflowNode(r.ID, r.Seq)
 				}
 				state = "waiting"
@@ -272,7 +272,7 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 	contextData, _ := json.MarshalIndent(map[string]any{"run_id": r.ID, "task": r.Input, "node": node.Name, "instructions": node.Prompt, "routes": r.Definition.routes(node.ID), "outgoing_edges": workflowOutgoing(r.Definition, node.ID), "previous_results": previous}, "", "  ")
 	message := "你正在执行智能体编排中的一个节点。根据任务上下文与用户继续工作，意图和分支由你根据节点 SOP 判断，不使用额外意图模型。需要澄清时正常提问，等待用户回复，不交接。outgoing_edges 中 mode=handoff 表示你可以自主选择的目标；使用 registered_workflow_node 的 handoff 工具提交 target、真实 summary、可选 inputs 和 artifacts。mode=automatic 表示固定完成线：确认整个节点任务完成后调用 complete_node，省略 route，由平台沿固定线推进。一次执行只能交接或完成一次。工具接受后结束本轮，不再修改工作区。前序命令回执有 log 字段时，可用 read_command_output 按 seq 和 offset 分页读取脱敏日志；eof 表示已读完保存部分，truncated 表示仍有未保存输出。没有 log 的旧执行不能恢复缺失日志。自然语言回复不会推进流程。不要自行创建下一节点或重启整个流程。\n\n" + string(contextData)
 	input := r.Input
-	if r.Definition.ContextVersion == 1 {
+	if r.Definition.ContextVersion >= 1 {
 		var err error
 		input, err = e.store.workflowAgentInput(r, step, node)
 		if err != nil {
@@ -337,7 +337,7 @@ func (e *WorkflowEngine) Stop(c Caller, id string, seq int) error {
 	if !runAllowed(c, r) {
 		return ErrForbidden
 	}
-	if r.Seq != seq || r.Status == "completed" {
+	if r.Seq != seq || r.Status == "completed" || r.Status == "cancelled" {
 		return ErrConflict
 	}
 	if r.Status == "stopped" || r.Status == "stopping" {

@@ -25,6 +25,12 @@ class EventInputTest(unittest.TestCase):
     def test_open_issue_is_the_entry_not_a_new_issue(self):
         self.assertEqual(event_input(self.config, self.env, self.event), (7, 0))
 
+    def test_platform_created_issue_is_not_a_second_development_request(self):
+        self.event["issue"]["body"] = (
+            "验收任务\n<!-- agent-platform:" + "a" * 32 + ":1 -->"
+        )
+        self.assertIsNone(event_input(self.config, self.env, self.event))
+
     def test_rejects_wrong_repository_actor_and_pr(self):
         for field, value in [
             ("GITHUB_REPOSITORY", "evil/repo"),
@@ -161,6 +167,42 @@ class WorkspaceTest(unittest.TestCase):
 
 
 class ForwardTest(unittest.TestCase):
+    def test_dispatch_cannot_start_from_platform_generated_issue(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from github_entry import forward
+
+        issue = {
+            "number": 7,
+            "id": 123,
+            "user": {"login": "owner"},
+            "state": "open",
+            "title": "validation",
+            "body": "验收任务\n<!-- agent-platform:" + "a" * 32 + ":1 -->",
+        }
+        client = Mock()
+        client.start_workflow.return_value = {"id": "duplicate", "status": "running"}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = {
+                "repository": "owner/repo",
+                "state_root": str(root / "state"),
+                "workspace_root": str(root / "work"),
+                "workflow_id": "graph",
+                "base_url": "http://localhost",
+            }
+            with (
+                patch("github_entry.github", return_value=issue),
+                patch("github_entry.accepted_run", return_value=None),
+                patch("github_entry.prepare_workspace", return_value=root / "work"),
+                patch("github_entry.notify"),
+            ):
+                with self.assertRaisesRegex(ValueError, "existing platform Run"):
+                    forward(config, client, 7)
+        client.start_workflow.assert_not_called()
+
     def test_lost_start_response_recovers_original_run_without_second_clone(self):
         import tempfile
         from pathlib import Path

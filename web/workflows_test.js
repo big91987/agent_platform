@@ -6,8 +6,8 @@ function editorPage(){
  const elements=new Map();
  const el=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',disabled:false,querySelectorAll:()=>[],checkValidity:()=>true,classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){},set innerHTML(html){this.html=html;for(const match of html.matchAll(/<(textarea|select)\b([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)(?=<\/(?:textarea|select)>|$)/g)){const [,tag,attrs,key,tail]=match,target=el('#'+key);target.value=tag==='input'?(attrs.match(/\bvalue="([^"]*)"/)?.[1]||''):tag==='textarea'?tail:(tail.match(/<option[^>]*value="([^"]*)"[^>]*selected/)?.[1]||tail.match(/<option[^>]*value="([^"]*)"/)?.[1]||'');target.checked=/\bchecked\b/.test(attrs);}for(const match of html.matchAll(/<input\b([^>]*\bid="([^"]+)"[^>]*)>/g)){const target=el('#'+match[2]);target.value=match[1].match(/\bvalue="([^"]*)"/)?.[1]||'';target.checked=/\bchecked\b/.test(match[1]);}},get innerHTML(){return this.html||''}});return elements.get(id)};
  const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,state:{agents:[],me:{admin:true}},esc:x=>String(x??''),connectorKinds:{},dialog:html=>{el('#dialog').innerHTML=html;el('#dialog').close=()=>{}},toast:message=>{el('#toast').textContent=message}});
- for(const file of ['workflow-model.js','workflow-panel.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
- vm.runInContext("const graph=new WorkflowGraph();const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
+ for(const file of ['workflow-model.js','agent-config.js','workflow-panel.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
+ vm.runInContext("const graph=new WorkflowGraph();graph.value.context_version=1;const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
  return {ctx,el};
 }
 test('connection settings change the displayed target and policy in the single graph edge',()=>{
@@ -149,9 +149,16 @@ test('closing an unedited legacy node leaves migration for save',()=>{
  el('#wf-panel-close').onclick();
  assert.equal(vm.runInContext('a.agent_id',ctx),'old');assert.equal(vm.runInContext('editor.dirty',ctx),false);
 });
+test('opening and closing a stored node without editing preserves absent optional fields and clean state',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext("a.agent={executor:'codex',instructions:'Role'};delete a.allow_user_input;delete a.continuation_limit;delete a.execution_timeout_seconds;before=JSON.stringify(a);renderWorkflowInspector(editor)",ctx);
+ el('#wf-panel-close').onclick();
+ assert.equal(vm.runInContext('JSON.stringify(a)===before',ctx),true);
+ assert.equal(vm.runInContext('editor.dirty',ctx),false);
+});
 test('node tool selection and approval policy are submitted with its independent config',()=>{
  const {ctx,el}=editorPage();vm.runInContext("editor.toolServers=[{id:'browser',name:'Browser',enabled:true,tools:[{name:'navigate',description:'Open page'}]}];renderWorkflowInspector(editor)",ctx);
- el('#wf-agent-tools').querySelectorAll=selector=>selector==='[data-wf-approval]'?[{dataset:{server:'browser',tool:'navigate'},value:'confirm'}]:selector==='[data-wf-tool]:checked'?[{dataset:{server:'browser'},value:'navigate'}]:[];
+ el('#wf-agent-tools').querySelectorAll=selector=>selector==='[data-agent-approval]'?[{dataset:{server:'browser',tool:'navigate'},value:'confirm'}]:selector==='[data-agent-tool]:checked'?[{dataset:{server:'browser'},value:'navigate'}]:[];
  vm.runInContext('applyWorkflowNode(editor,a)',ctx);
  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(a.agent.tool_servers)',ctx)),[{server_id:'browser',tools:['navigate'],approvals:{navigate:'confirm'}}]);
 });
@@ -187,4 +194,34 @@ test('a failed save keeps the visible unsynchronized draft out of the stored gra
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor);before=JSON.stringify(graph.value);api=async()=>{throw new Error("offline")}',ctx);
  el('#wf-agent-instructions').value='Unsynchronized role';await vm.runInContext('saveWorkflow(editor)',ctx);
  assert.equal(vm.runInContext('JSON.stringify(graph.value)===before',ctx),true);assert.equal(el('#wf-agent-instructions').value,'Unsynchronized role');
+});
+test('new input protocol saves node name and common settings without a separate prompt',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext('graph.value.context_version=2;delete a.prompt;renderWorkflowInspector(editor)',ctx);
+ assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-node-prompt"/);
+ assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-agent-seed"/);
+ el('#wf-node-name').value='独立验收';el('#wf-node-name').oninput();
+ el('#wf-agent-model').value='gpt-6.1-sol';el('#wf-agent-instructions').value='核对实际证据';
+ ctx.requests=[];vm.runInContext("history={replaceState(){}};api=async(path,method,body)=>{requests.push(JSON.parse(JSON.stringify(body)));return {...body,id:'saved',revision:1}}",ctx);
+ await vm.runInContext('saveWorkflow(editor)',ctx);
+ assert.equal(ctx.requests.length,1,el('#toast').textContent);
+ assert.equal(ctx.requests[0].nodes[0].name,'独立验收');
+ assert.equal(ctx.requests[0].nodes[0].agent.model,'gpt-6.1-sol');
+ assert.equal(ctx.requests[0].nodes[0].prompt,undefined);
+ vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-node-name').value,'独立验收');
+ assert.equal(el('#wf-agent-instructions').value,'核对实际证据');
+});
+test('standalone and workflow forms read the same execution settings and preserve unavailable tools',()=>{
+ const {ctx,el}=editorPage();
+ const values={executor:'codex',model:'gpt-6.1-sol',instructions:'核对证据',skills:'/skills/review\n/skills/report',sandbox:'read-only',seed:'/template',native:'model_reasoning_effort = "high"',env:'{"MODE":"test","REMOVE":null}'};
+ for(const prefix of ['agent','wf-agent']){
+  for(const [key,value]of Object.entries(values))el('#'+prefix+'-'+key).value=value;
+  for(const key of ['network','elevation','trust','inherit'])el('#'+prefix+'-'+key).checked=key==='inherit';
+  el('#'+prefix+'-tools').querySelectorAll=selector=>selector==='[data-agent-approval]'?[{dataset:{server:'unavailable',tool:'inspect'},value:'confirm'}]:[{dataset:{server:'unavailable'},value:'inspect'}];
+ }
+ const standalone=JSON.parse(vm.runInContext("JSON.stringify(readAgentConfig({},'agent'))",ctx));
+ const node=JSON.parse(vm.runInContext("JSON.stringify(readAgentConfig({},'wf-agent'))",ctx));
+ assert.deepEqual(standalone,node);
+ assert.deepEqual(node.env,{MODE:'test',REMOVE:null});
+ assert.deepEqual(node.tool_servers,[{server_id:'unavailable',tools:['inspect'],approvals:{inspect:'confirm'}}]);
 });

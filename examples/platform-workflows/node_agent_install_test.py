@@ -152,7 +152,9 @@ class NodeAgentInstallTest(unittest.TestCase):
                 set(config)
                 & {"id", "name", "enabled", "authorized_users", "resolved_tools"}
             )
-            self.assertEqual(node["prompt"].count("{{handoff}}"), 1)
+            self.assertNotIn("prompt", node)
+            self.assertNotIn("{{handoff}}", config["instructions"])
+            self.assertEqual(graph["context_version"], 2)
         self.assertEqual(nodes["intake"]["agent"]["skills"], [])
         self.assertEqual(
             nodes["requirements"]["agent"]["skills"],

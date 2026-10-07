@@ -274,25 +274,18 @@ class MaterialManifestUpgradeTest(unittest.TestCase):
             self.assertEqual(api.writes, 2)
 
 
-class SessionPromptTest(unittest.TestCase):
-    def test_role_is_stable_and_node_session_owns_task_policy(self):
-        role, session = install.stage_prompts(
-            "development", "公共节点工作说明", "make verify"
+class RoleInstructionsTest(unittest.TestCase):
+    def test_role_includes_configured_verification_and_no_handoff_placeholder(self):
+        role = install.stage_instructions("development", "团队协作约定", "make verify")
+        self.assertIn("团队协作约定", role)
+        self.assertIn("make verify", role)
+        self.assertNotIn("{{handoff}}", role)
+
+    def test_collaboration_fixture_does_not_inherit_software_delivery_contract(self):
+        role = install.stage_instructions(
+            "collaboration", "研发专属约定", "make verify"
         )
-        self.assertNotIn("公共节点工作说明", role)
-        self.assertNotIn("make verify", role)
-        self.assertIn("公共节点工作说明", session)
-        self.assertIn("make verify", session)
-        self.assertEqual(session.count("{{handoff}}"), 1)
-
-
-class WaitingSOPTest(unittest.TestCase):
-    def test_installed_sop_has_one_explicit_wait_contract(self):
-        common = Path(__file__).with_name("prompts").joinpath("common.md").read_text()
-        _, session = install.stage_prompts("development", common, "make verify")
-        self.assertNotIn("正常输出问题并等待即可", session)
-        self.assertNotIn("outgoing_edges", session)
-        self.assertIn("wait_for_input", session)
+        self.assertNotIn("研发专属约定", role)
 
 
 class UserInputPermissionTest(unittest.TestCase):

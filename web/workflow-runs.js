@@ -2,7 +2,7 @@
 let workflowRunTimer=null;
 let workflowRunPage=null;
 function leaveWorkflowRun(){if(workflowRunTimer)clearInterval(workflowRunTimer);workflowRunTimer=null;workflowRunPage=null;}
-const workflowStatus={pending:'待开始',running:'执行中',waiting:'等待处理',stopping:'正在停止',stopped:'已停止',failed:'需处理',completed:'已完成',cancelled:'已回退'};
+const workflowStatus={pending:'待开始',running:'执行中',waiting:'等待处理',stopping:'正在停止',stopped:'已停止',failed:'需处理',completed:'已完成',cancelled:'已取消'};
 async function startWorkflowDialog(w){
  if(!w.id)throw new Error('请先保存智能体编排');
  const entries=[...new Set([w.entry,...w.start_nodes])];
@@ -85,12 +85,15 @@ async function refreshWorkflowRun(id){
   if(node.kind==='connector'&&step.connector_dispatched)controls+='<p class="hint">该动作已经发出。GitHub 恢复只核对已有资源；命令如需重新执行，请先检查效果，再停止并回到该节点。</p>';
   if(!step.result&&!(node.kind==='connector'&&step.connector_dispatched&&r.connectors[node.connector_id]?.kind==='command'))controls+='<form id="wf-resume-form"><div class="field"><label for="wf-resume-message">继续说明</label><textarea id="wf-resume-message" rows="3" placeholder="说明如何接着处理；已执行的动作不会自动重放"></textarea></div><button type="submit">继续原节点</button></form>';
  }
+ if(['stopped','failed'].includes(r.status))controls+='<p class="hint">不再继续这项任务时，可以取消运行。历史和文件保留，工作区可用于新任务。</p><button id="wf-cancel" class="danger">取消运行</button>';
+ if(r.status==='cancelled')controls+='<p class="hint">本次运行已取消，历史和文件保留。新增工作请开始一次新运行。</p>';
  if(r.status==='completed')controls+='<p class="hint">已到达结束节点。需要修订时可填写原因并回到指定节点；已有记录保留，后续节点和外部动作将按原图重新执行。工作区被其他运行占用时不能继续。</p>';
   if(['stopped','completed'].includes(r.status))controls+=`<form id="wf-return-form"><div class="field"><label for="wf-return-target">回到节点</label><select id="wf-return-target">${r.definition.nodes.map(n=>`<option value="${esc(n.id)}">${esc(n.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-return-reason">回退原因</label><textarea id="wf-return-reason" rows="3" required></textarea></div><button type="submit">从该节点继续</button></form>`;
  controls+=`<details><summary>运行信息</summary><p class="hint">运行 ID：${esc(r.id)}</p><p class="hint">工作区：${esc(r.workspace_path)}</p></details>`;
  $('#wf-run-controls').innerHTML=controls;for(const [key,value]of Object.entries(old)){const el=$('#'+key);if(el)el.value=value}
  const command=async(action,data={})=>{const panel=$('#wf-run-controls');panel.inert=true;try{await api('/api/workflow-runs/'+id+'/'+action,'POST',{seq:r.seq,...data});if(workflowRunPage?.id===id){workflowRunPage.signature='';await refreshWorkflowRun(id)}}catch(e){toast(e.message)}finally{panel.inert=false}};
  if($('#wf-stop'))$('#wf-stop').onclick=()=>command('stop');
+ if($('#wf-cancel'))$('#wf-cancel').onclick=()=>{if(confirm('取消后无法继续本次运行，文件和历史会保留。确认取消？'))return command('cancel')};
  if($('#wf-decision-form'))$('#wf-decision-form').onsubmit=e=>{e.preventDefault();command('decision',{route:e.submitter.value,summary:$('#wf-decision-note').value})};
  if($('#wf-return-form'))$('#wf-return-form').onsubmit=e=>{e.preventDefault();command('return',{target:$('#wf-return-target').value,summary:$('#wf-return-reason').value})};
  if($('#wf-resume-form'))$('#wf-resume-form').onsubmit=e=>{e.preventDefault();command('resume',{message:$('#wf-resume-message').value})};
@@ -121,7 +124,7 @@ if(typeof window!=='undefined')window.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&!$('#dialog')?.open&&workflowRunPage?.selectedStep){event.preventDefault();closeWorkflowStepDetails()}
 });
 function workflowStepInputHTML(context){
- return `<p class="hint">冻结版本 ${esc(context.workflow_revision)} · 输入协议 ${esc(context.context_version||0)}</p>${context.context_version!==1?'<p class="callout">旧版冻结输入协议：保留原始定义与输入；当前编辑器不会改写这次执行。</p>':''}<details><summary>角色指令</summary><textarea id="wf-actual-role" rows="8" readonly>${esc(context.role_instructions||'')}</textarea></details><details><summary>项目规则与可用工具</summary><h3>项目规则来源</h3><ul>${(context.project_instructions||[]).map(source=>`<li>${esc(source)}</li>`).join('')||'<li>未记录来源</li>'}</ul><p class="hint">由原生执行器发现工作区规则。</p><h3>可用工具</h3><ul>${(context.tools||[]).map(tool=>`<li>${esc(tool)}</li>`).join('')||'<li>无已记录工具</li>'}</ul></details><div class="field"><label for="wf-actual-input">首轮 User Input</label><textarea id="wf-actual-input" rows="22" readonly>${esc(context.input||'')}</textarea></div>`;
+ return `<p class="hint">运行时保存的版本 ${esc(context.workflow_revision)}</p><details><summary>角色指令</summary><textarea id="wf-actual-role" rows="8" readonly>${esc(context.role_instructions||'')}</textarea></details><details><summary>项目规则与可用工具</summary><h3>项目规则来源</h3><ul>${(context.project_instructions||[]).map(source=>`<li>${esc(source)}</li>`).join('')||'<li>未记录来源</li>'}</ul><p class="hint">由原生执行器发现工作区规则。</p><h3>可用工具</h3><ul>${(context.tools||[]).map(tool=>`<li>${esc(tool)}</li>`).join('')||'<li>无已记录工具</li>'}</ul></details><div class="field"><label for="wf-actual-input">首轮 User Input</label><textarea id="wf-actual-input" rows="22" readonly>${esc(context.input||'')}</textarea></div>`;
 }
 async function workflowStepDetails(id,seq,active='result'){
  const page=workflowRunPage;if(!page||page.id!==id)return;

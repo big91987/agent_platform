@@ -76,12 +76,15 @@ def repository_command(role, repository, base, test_command):
     return command
 
 
-def stage_prompts(role, common, command_label):
+def stage_instructions(role, common, command_label):
     roles = json.loads((HERE / "prompts/roles.json").read_text())
-    instructions = roles[role]
-    session = common + "\n\n" + (HERE / f"prompts/{role}.md").read_text()
-    session = session.replace("{{verification_command}}", command_label)
-    return instructions, session + "\n\n{{handoff}}"
+    responsibilities = (HERE / f"prompts/{role}.md").read_text()
+    guidance = (
+        (roles[role], responsibilities)
+        if role == "collaboration"
+        else (roles[role], common, responsibilities)
+    )
+    return "\n\n".join(guidance).replace("{{verification_command}}", command_label)
 
 
 class API:
@@ -324,7 +327,7 @@ def retire_project_browser(api, installation):
             return
     agents = installed_agent_ids(installation)
     for run in workflow_runs(api):
-        if run["status"] != "completed" and any(
+        if run["status"] not in ("completed", "cancelled") and any(
             node.get("agent_id") in agents for node in run["definition"]["nodes"]
         ):
             return
@@ -548,7 +551,15 @@ def main():
             else prior.get("model", base.get("model", "")),
             "sandbox": "workspace-write",
             "inherit_env": False,
-            "instructions": stage_prompts(role, common, command_label)[0],
+            "instructions": "\n\n".join(
+                filter(
+                    None,
+                    (
+                        node.get("agent", {}).get("instructions", ""),
+                        stage_instructions(role, common, command_label),
+                    ),
+                )
+            ),
             "skills": [str(path.resolve()) for path in skills.get(role, [])],
             "env": {
                 **(prior.get("env") or {}),
@@ -572,11 +583,6 @@ def main():
                     "approvals": {"check": "auto"},
                 }
             ]
-        node["prompt"] = (
-            node.get("prompt", "")
-            + "\n\n"
-            + stage_prompts(role, common, command_label)[1]
-        )
         node["allow_user_input"] = True
         node["continuation_limit"] = 3
         node["execution_timeout_seconds"] = 14400
@@ -625,7 +631,7 @@ def main():
             "id"
         ]
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
-    graph["context_version"] = 1
+    graph["context_version"] = 2
     graph["name"] = args.prefix + " · " + graph["name"]
     graph["authorized_users"] = args.authorized_user
     for node in graph["nodes"]:

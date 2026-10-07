@@ -26,7 +26,7 @@ func (s *Store) waitWorkflowNode(id string, seq int, token string, in WorkflowWa
 	if err != nil {
 		return err
 	}
-	if r.Definition.ContextVersion != 1 || r.Seq != seq || (r.Status != "running" && r.Status != "waiting") {
+	if r.Definition.ContextVersion < 1 || r.Seq != seq || (r.Status != "running" && r.Status != "waiting") {
 		return ErrConflict
 	}
 	step := r.Steps[len(r.Steps)-1]

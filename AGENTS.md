@@ -21,3 +21,11 @@ Show help or warnings only when they explain a current choice, a meaningful cons
 Compatibility must not add routine configuration work. When migration or a conflict requires user action, explain the concrete effect and provide the relevant action at that point. Do not add reassurance about normal behavior or narrate development decisions.
 
 Before delivering interface changes, remove explanations, duplicate status, internal identifiers and controls that do not help the user decide or act. These rules govern platform-authored interface content; preserve native Agent output under the rules above.
+
+## Agent configuration and task input
+
+Treat an Agent as a collaborator with a name, executor, model, role, Skills, tools and execution permissions. Reuse the same execution configuration form and validation in standalone Agents and workflow nodes. Each editable setting must survive save/reload and affect the supported execution path; show both executor and model, and let users edit displayed names.
+
+Concrete work arrives through User Input, corrections and handoff. Do not add a separate Session Prompt or node work-description field for new workflows. Native workspace AGENTS.md supplies project rules; do not copy it into platform prompts. One Run shares its startup workspace. Add shared workflow variables only for a demonstrated need beyond this workspace, not as a general configuration framework.
+
+Keep handoff/completion/wait controls specific to orchestration. Preserve frozen legacy runs during upgrades, and reject incompatible or externally edited configuration rather than silently dropping user instructions.

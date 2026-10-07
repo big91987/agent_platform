@@ -10,6 +10,9 @@ import (
 )
 
 func markdownRun(t *testing.T, s *Store) (Caller, WorkflowRun) {
+	return inputProtocolRun(t, s, 1)
+}
+func inputProtocolRun(t *testing.T, s *Store, version int) (Caller, WorkflowRun) {
 	t.Helper()
 	c, r := agentRun(t, s)
 	w := r.Definition
@@ -22,9 +25,12 @@ func markdownRun(t *testing.T, s *Store) (Caller, WorkflowRun) {
 	raw, _ := json.Marshal(w)
 	var v map[string]any
 	json.Unmarshal(raw, &v)
-	v["context_version"] = 1
+	v["context_version"] = version
 	n := v["nodes"].([]any)[0].(map[string]any)
 	n["prompt"] = "完成本节点工作。\n{{handoff}}"
+	if version == 2 {
+		delete(n, "prompt")
+	}
 	n["continuation_limit"] = 2
 	n["execution_timeout_seconds"] = 14400
 	raw, _ = json.Marshal(v)
@@ -38,6 +44,68 @@ func markdownRun(t *testing.T, s *Store) (Caller, WorkflowRun) {
 		t.Fatal(err)
 	}
 	return c, r
+}
+
+func TestWorkflowUserInputOnlyWaitAndHandoff(t *testing.T) {
+	s := testStore(t)
+	c, r := inputProtocolRun(t, s, 2)
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	engine.Tick(context.Background())
+	conv, msg, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conv.WorkspacePath != r.WorkspacePath || strings.Contains(conv.Snapshot.Instructions, "UNIQUE TASK") {
+		t.Fatal("workspace or role/task boundary changed")
+	}
+	if !strings.Contains(msg.Content, "UNIQUE TASK") || !strings.Contains(msg.Content, "## 自主交接") || strings.Contains(msg.Content, "{{handoff}}") {
+		t.Fatalf("missing task/tool instructions: %s", msg.Content)
+	}
+	if err = s.waitWorkflowNode(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], WorkflowWait{Kind: "clarification", Reason: "确认范围"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Complete(conv.ID, msg.ID, "completed", ""); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	r, _ = s.WorkflowRun(c, r.ID)
+	if r.Status != "waiting" {
+		t.Fatalf("wait not preserved: %s", r.Status)
+	}
+	_, err = s.Submit(c, Input{UserID: r.Owner, ConversationID: conv.ID, Message: "只处理当前范围", RequestID: "answer-v2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, reply, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.ID != conv.ID {
+		t.Fatal("reply replaced native conversation")
+	}
+	if err = s.handoffWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], HandoffInput{Target: r.Definition.Edges[0].Target, Summary: "已完成当前范围"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Complete(next.ID, reply.ID, "completed", ""); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	r, _ = s.WorkflowRun(c, r.ID)
+	if r.Seq != 2 {
+		t.Fatalf("handoff did not advance: %+v", r)
+	}
+	// Reject incompatible configuration instead of silently throwing user text away.
+	w := r.Definition
+	w.Nodes[0].Prompt = "old task"
+	if err = validateWorkflow(w); err == nil {
+		t.Fatal("silently accepted removed prompt field")
+	}
+	w.Nodes[0].Prompt = ""
+	w.Nodes[0].AgentID = ""
+	w.Nodes[0].Agent = &Agent{Executor: "codex", SeedDir: "/node-template"}
+	if err = validateWorkflow(w); err == nil {
+		t.Fatal("accepted a node workspace template despite the Run owning the workspace")
+	}
 }
 func TestWorkflowMarkdownSeparatesRoleAndTask(t *testing.T) {
 	s := testStore(t)
@@ -91,7 +159,7 @@ func TestWorkflowMarkdownPromptValidationAndModes(t *testing.T) {
 	n := w.Nodes[0]
 	for _, prompt := range []string{"missing", "{{handoff}} {{handoff}}", "{{handoff}} {{unknown}}"} {
 		n.Prompt = prompt
-		if _, err := workflowSessionPrompt(w, n); err == nil {
+		if _, err := workflowNodeInstructions(w, n); err == nil {
 			t.Fatalf("accepted invalid placeholder: %s", prompt)
 		}
 	}
@@ -99,7 +167,7 @@ func TestWorkflowMarkdownPromptValidationAndModes(t *testing.T) {
 	w.Edges[0].Mode = "automatic"
 	// Fixture has one completion edge and no remaining handoff edge.
 	w.Edges = w.Edges[:1]
-	text, err := workflowSessionPrompt(w, n)
+	text, err := workflowNodeInstructions(w, n)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +441,7 @@ func TestWorkflowMarkdownUserInputSwitch(t *testing.T) {
 	if !errors.Is(err, ErrForbidden) {
 		t.Errorf("disabled node accepted tool request: %v", err)
 	}
-	prompt, err := workflowSessionPrompt(w, w.Nodes[0])
+	prompt, err := workflowNodeInstructions(w, w.Nodes[0])
 	if err != nil {
 		t.Fatal(err)
 	}

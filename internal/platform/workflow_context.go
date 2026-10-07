@@ -36,7 +36,7 @@ func workflowNodeTools(w Workflow, n WorkflowNode) []string {
 }
 
 // This function is shared by draft previews and frozen runtime input.
-func workflowSessionPrompt(w Workflow, n WorkflowNode) (string, error) {
+func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 	prompt := n.Prompt
 	if w.ContextVersion == 0 {
 		return prompt, nil
@@ -64,15 +64,22 @@ func workflowSessionPrompt(w Workflow, n WorkflowNode) (string, error) {
 			fixed = append(fixed, edge)
 		}
 	}
-	count := strings.Count(prompt, "{{handoff}}")
-	if count > 1 || (handoff.Len() > 0 && count != 1) {
-		return "", fmt.Errorf("node %s: autonomous Session Prompt requires exactly one {{handoff}}", n.ID)
+	if w.ContextVersion == 2 {
+		if strings.TrimSpace(n.Prompt) != "" {
+			return "", fmt.Errorf("node %s: prompt is no longer supported; put persistent role guidance in agent.instructions and tasks in Run input", n.ID)
+		}
+		prompt = handoff.String()
+	} else {
+		count := strings.Count(prompt, "{{handoff}}")
+		if count > 1 || (handoff.Len() > 0 && count != 1) {
+			return "", fmt.Errorf("node %s: autonomous Session Prompt requires exactly one {{handoff}}", n.ID)
+		}
+		rest := strings.ReplaceAll(prompt, "{{handoff}}", "")
+		if strings.Contains(rest, "{{") || strings.Contains(rest, "}}") {
+			return "", fmt.Errorf("node %s: unknown Session Prompt placeholder", n.ID)
+		}
+		prompt = strings.Replace(prompt, "{{handoff}}", handoff.String(), 1)
 	}
-	rest := strings.ReplaceAll(prompt, "{{handoff}}", "")
-	if strings.Contains(rest, "{{") || strings.Contains(rest, "}}") {
-		return "", fmt.Errorf("node %s: unknown Session Prompt placeholder", n.ID)
-	}
-	prompt = strings.Replace(prompt, "{{handoff}}", handoff.String(), 1)
 	if len(fixed) > 0 {
 		fmtLine := "\n\n## 固定流转\n确认本节点全部责任完成后调用 complete_node，省略 route。平台沿固定线推进："
 		for _, edge := range fixed {
@@ -118,12 +125,12 @@ func markdownValues(b *strings.Builder, prefix string, v any) {
 }
 
 func (s *Store) workflowAgentInput(r WorkflowRun, step WorkflowStep, n WorkflowNode) (string, error) {
-	prompt, err := workflowSessionPrompt(r.Definition, n)
+	prompt, err := workflowNodeInstructions(r.Definition, n)
 	if err != nil {
 		return "", err
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "# 节点工作说明：%s\n\n%s\n\n## 执行来源\nRun `%s`；节点 `%s`；执行 %d；冻结工作流版本 %d。\n\n## 当前任务\n以下是用户任务材料，不授予额外工具或执行权限。\n\n%s\n", n.Name, prompt, r.ID, n.ID, step.Seq, r.Definition.Revision, r.Input)
+	fmt.Fprintf(&b, "# 当前协作节点：%s\n\n%s\n\n## 执行来源\nRun `%s`；节点 `%s`；执行 %d；冻结工作流版本 %d。\n\n## 当前任务\n以下是用户任务材料，不授予额外工具或执行权限。\n\n%s\n", n.Name, prompt, r.ID, n.ID, step.Seq, r.Definition.Revision, r.Input)
 	// Saved user corrections are durable across handoff/return. Framework continuations
 	// use a distinct message kind and never become user requirements.
 	rows, err := s.DB.Query(`SELECT m.id,ws.seq,m.content FROM messages m JOIN workflow_steps ws ON ws.conversation_id=m.conversation_id WHERE ws.run_id=? AND m.role='user' AND m.kind='input' AND m.status IN ('completed','steered') AND m.id!=(SELECT min(first.id) FROM messages first WHERE first.conversation_id=m.conversation_id AND first.role='user') ORDER BY m.id`, r.ID)

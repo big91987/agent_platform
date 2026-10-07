@@ -132,7 +132,7 @@ func (h *Server) workflowRunRoutes() {
 		}
 		respond(w, 200, workflowHTTPValue(c, v))
 	}))
-	for _, action := range []string{"decision", "stop", "return", "resume"} {
+	for _, action := range []string{"decision", "stop", "cancel", "return", "resume"} {
 		h.mux.HandleFunc("POST /api/workflow-runs/{id}/"+action, h.protect(false, h.workflowRunCommand))
 	}
 	for _, method := range []string{"GET", "POST", "DELETE"} {
@@ -158,6 +158,8 @@ func (h *Server) workflowRunCommand(w http.ResponseWriter, r *http.Request, c Ca
 		err = h.store.CompleteWorkflowNode(c, id, in.Seq, NodeResult{Route: in.Route, Summary: in.Summary})
 	case strings.HasSuffix(r.URL.Path, "/stop"):
 		err = h.workflows.Stop(c, id, in.Seq)
+	case strings.HasSuffix(r.URL.Path, "/cancel"):
+		err = h.workflows.Cancel(c, id, in.Seq)
 	case strings.HasSuffix(r.URL.Path, "/return"):
 		err = h.workflows.Return(c, id, in.Seq, in.Target, in.Summary)
 	case strings.HasSuffix(r.URL.Path, "/resume"):

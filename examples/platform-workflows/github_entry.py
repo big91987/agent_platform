@@ -89,6 +89,8 @@ def event_input(config, env, event):
     if kind == "issues" and event.get("action") == "opened":
         if issue.get("user", {}).get("login") != owner:
             raise ValueError("Issue author is not authorized")
+        if platform_output(issue.get("body")):
+            return None
         return issue["number"], 0
     if kind == "issue_comment" and event.get("action") == "created":
         comment = event["comment"]
@@ -224,6 +226,11 @@ def forward(config, client, number, comment_id=0):
         or issue["user"]["login"] != owner
     ):
         raise ValueError("Expected an owner-authored product Issue")
+    if platform_output(issue.get("body")):
+        raise ValueError(
+            "This Issue is output of an existing platform Run; continue from that Run's page, "
+            "or create a new Issue for new work. It cannot start a second Run."
+        )
     key = f"github:{repo}:issue:{issue['id']}"
     state = Path(config["state_root"]).resolve()
     workspace_root = Path(config["workspace_root"]).resolve()
@@ -271,7 +278,7 @@ def forward(config, client, number, comment_id=0):
                         fresh_status = client.workflow_run(current["id"])["status"]
                     except (APIError, ConnectionError, ValueError, KeyError):
                         fresh_status = "unknown"
-                    if fresh_status == "completed":
+                    if fresh_status in ("completed", "cancelled"):
                         guidance = f"{run_link} 已结束，不能继续或回退。新增研发工作请创建关联原 Run/PR 的新 Issue；重试此评论不会重新打开原 Run。"
                     elif fresh_status in ("stopped", "failed"):
                         guidance = f"请从 {run_link} 核对效果并继续/回退，再在 Actions 用原评论 ID 重试。"

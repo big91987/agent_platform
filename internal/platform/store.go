@@ -553,7 +553,7 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 			return conv, m, err
 		}
 	}
-	if workflow.ContextVersion == 1 {
+	if workflow.ContextVersion >= 1 {
 		token := newID() + newID()
 		if conv.Snapshot.Env == nil {
 			conv.Snapshot.Env = map[string]*string{}

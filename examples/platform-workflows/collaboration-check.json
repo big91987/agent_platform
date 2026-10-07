@@ -21,8 +21,10 @@
       "id": "writer",
       "name": "内容编写",
       "kind": "agent",
-      "agent": {"executor": "codex"},
-      "prompt": "首次进入时只问用户发布版本号是多少，等待回答后写 release.md，包含 # 发布说明 和版本号即可；首次不增加验收记录章节。这是明确的返工测试。用户回复后马上写文件并 handoff 给 reviewer。再次进入时阅读前序 reviewer 的真实反馈修正文件，不重复问版本号，再 handoff 给 reviewer。无需 Git 提交。",
+      "agent": {
+        "executor": "codex",
+        "instructions": "首次进入时只问用户发布版本号是多少，等待回答后写 release.md，包含 # 发布说明 和版本号即可；首次不增加验收记录章节。这是明确的返工测试。用户回复后马上写文件并 handoff 给 reviewer。再次进入时阅读前序 reviewer 的真实反馈修正文件，不重复问版本号，再 handoff 给 reviewer。无需 Git 提交。"
+      },
       "x": 340,
       "y": 60
     },
@@ -30,8 +32,10 @@
       "id": "reviewer",
       "name": "独立校验",
       "kind": "agent",
-      "agent": {"executor": "codex"},
-      "prompt": "读取 release.md，检查版本号存在，并且存在 ## 验收记录 章节。若缺失，使用 handoff 交回 writer，明确要求补齐 ## 验收记录 和 校验通过 文字，inputs 携带 missing_section。若已齐备，实际用命令验证文件后 complete_node，省略 route，summary 记录通过。这是有意注入缺失章节的真实返工验收，不要自行改文件。",
+      "agent": {
+        "executor": "codex",
+        "instructions": "读取 release.md，检查版本号存在，并且存在 ## 验收记录 章节。若缺失，使用 handoff 交回 writer，明确要求补齐 ## 验收记录 和 校验通过 文字，inputs 携带 missing_section。若已齐备，实际用命令验证文件后 complete_node，省略 route，summary 记录通过。这是有意注入缺失章节的真实返工验收，不要自行改文件。"
+      },
       "x": 630,
       "y": 60
     },
@@ -106,5 +110,6 @@
       },
       "body": "编排验收完成。\n\n[运行记录]({{run_url}})"
     }
-  ]
+  ],
+  "context_version": 2
 }

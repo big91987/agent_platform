@@ -83,11 +83,11 @@ test('edge choices survive export/import and invalid fixed Agent branches are re
  assert.throws(()=>G.import(JSON.stringify({...g.value,edges:[{source:a.id,target:b.id,route:'next',mode:'guess'}]})),/连线/);
 });
 
-test('new Agent drafts use session inputs while opening legacy graphs preserves their protocol',()=>{
+test('new Agent drafts use task inputs without a separate session prompt while opening legacy graphs preserves their protocol',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0);
  g.connect(a.id,'done',b.id,'handoff','完成后交接');
- assert.equal(g.value.context_version,1);
- assert.equal(a.prompt,'{{handoff}}');
+ assert.equal(g.value.context_version,2);
+ assert.equal(a.prompt,undefined);
  assert.equal(a.continuation_limit,3);
  assert.equal(a.execution_timeout_seconds,14400);
  assert.doesNotThrow(()=>g.validateAgent(a));
@@ -109,7 +109,7 @@ test('changing handoff targets edits the graph edge and invalid edits leave its 
 });
 
 test('session prompt validation distinguishes autonomous fixed and mixed legacy paths',()=>{
- const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,180);
+ const G=model(),g=new G();g.value.context_version=1;const a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,180);
  g.connect(a.id,'done',b.id,'handoff');
  a.prompt='完成工作';assert.throws(()=>g.validateAgent(a),/handoff/);
  a.prompt='{{handoff}} {{handoff}}';assert.throws(()=>g.validateAgent(a),/handoff/);

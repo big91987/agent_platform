@@ -373,7 +373,7 @@ class Client:
 
     def workflow_command(self, run_id, action, *, seq, **values):
         """Explicit run control; callers must inspect state after uncertain errors."""
-        if action not in ("stop", "resume", "return", "decision"):
+        if action not in ("stop", "cancel", "resume", "return", "decision"):
             raise ValueError("unsupported workflow command")
         if set(values) - {"message", "summary", "target", "route"}:
             raise ValueError("unsupported workflow command fields")
@@ -382,7 +382,7 @@ class Client:
         )
 
     def wait_workflow(self, run_id, *, timeout=600, poll_interval=2):
-        """Observe until waiting/failed/stopped/completed, never resume implicitly."""
+        """Observe until waiting/failed/stopped/cancelled/completed, never resume implicitly."""
         if timeout < 0 or poll_interval <= 0:
             raise ValueError("invalid wait bounds")
         deadline = time.monotonic() + timeout

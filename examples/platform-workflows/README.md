@@ -44,7 +44,7 @@ python3 examples/platform-workflows/install.py \
 
 `--base <branch>` 同时指定准备分支与草稿 PR 的目标基线，默认 main；适用于非 main 主线或隔离验收分支。升级时保持原基线参数，避免意外改回默认值。
 
-安装不会启动 Agent 或创建 Issue。打开返回的流程链接，点击“运行”，输入普通需求和根目录内的**独立、干净 checkout**。每个独立 Run 必须使用不同 checkout，避免交叉修改。引擎拒绝占用未结束 Run 的同目录、父子目录或符号链接别名；停止／失败仍保留占用，因为之后可以恢复。完成后才释放。浏览器工具证据目录在工作区外，便于保留诊断；交付截图与报告仍写到项目的验证目录。
+安装不会启动 Agent 或创建 Issue。打开返回的流程链接，点击“运行”，输入普通需求和根目录内的**独立、干净 checkout**。每个独立 Run 必须使用不同 checkout，避免交叉修改。引擎拒绝占用未结束 Run 的同目录、父子目录或符号链接别名；停止／失败仍保留占用，因为之后可以恢复。完成或正式取消后释放。浏览器工具证据目录在工作区外，便于保留诊断；交付截图与报告仍写到项目的验证目录。
 
 ## 日常操作
 
@@ -194,6 +194,8 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
 
 当前信任边界与旧方案相同：只接受仓库 Owner 本人创建的 Issue 和评论，Actions 原触发者及重跑者都须为 Owner；不是面向匿名公共仓库的自动执行服务。普通 Issue 评论转发到当前 Agent。平台回写带受识别标记，不触发输入回环。GitHub API 再读取 Issue/评论校验归属，不把 PR 当 Issue，不执行事件文本里的命令。
 
+平台通过网页运行创建的 Issue 也是既有 Run 的输出。正文中的 `<!-- agent-platform:` / `<!-- agent-platform-hook:` 是保留协议标记，opened 事件忽略此类 Issue；手动 dispatch 再读取真实 Issue 后同样拒绝创建第二条 Run。此类任务从原 Run 页面继续；新需求使用新 Issue，不复制这些标记。标记只用于识别平台输出，不能代替上述身份与仓库授权校验。
+
 Actions 完成只表示事件已交给平台；研发进度在原 Issue 和 Run。必要澄清可在原 Issue 评论回复。无法接收的评论返回明确失败通知，并重新读取Run状态给出恢复指引：交接或停止中先等待并核对可接收输入的Agent节点；停止/失败时先按页面继续或回退，再在Actions输入原Issue和`comment_id`重试。已完成Run不能重新打开，新增研发工作应创建关联原Run/PR的新Issue；状态查询失败时只提示核对，不建议重放或重建。对已接收评论的重试返回原回执；修改旧评论不产生新指令，需要新增评论。 若交接时已有入队补充，平台拒绝提前交接并自动在同一会话接续；Agent 应正常结束当前轮，处理补充后重试交接，不要求用户重发，也不循环调用交接工具。该恢复提示随平台二进制升级生效，旧冻结图与会话仍沿用原身份。首次接单/评论的快照与锁由适配器保存在私有 state_root，未知响应通过稳定事件键找回原 Run。恢复时保留这些状态文件及平台数据库，不能删除它们来绕过去重。
 
 SDK 的 `start_workflow`、`workflow_by_request`、`workflow_run(s)`、`workflow_message`、`workflow_command` 与 `wait_workflow` 均复用公开 API；企业微信、钉钉以后实现各自的身份与事件适配即可，当前未实现这两类渠道。平台参数为有界字符串映射，固定命令通过 stdin 获取，不进行 shell 插值。
@@ -247,11 +249,13 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 准备工具使用POSIX文件锁，当前运行契约为macOS/Linux。中断后在下一次同Run准备中清理失去执行者的临时目录；并发重试不会删除仍在下载的内容。已验证材料始终复验，不自动覆盖。
 
-## 角色指令、Session Prompt 与持续推进
+## 角色指令、任务输入与持续推进
 
-正式安装器生成 `context_version=1` 工作流：节点 `agent.instructions` 保存稳定角色，节点 `prompt` 保存工作说明。新建自主节点的 Session Prompt 必须恰有一个 `{{handoff}}`；固定节点可省略，存在时展开为空。目标与策略编辑现有连线；同一自主目标只有一条策略，多个条件合并在策略文本中。旧协议保留原路由兼容，不在升级时改写旧 Run。
+正式安装器生成 `context_version=2` 工作流：节点 `agent.instructions` 保存角色、阶段职责和共同协作约定，具体任务、资料、修正通过入口 User Input 和 handoff 传递。Agent 节点不配置独立 `prompt`，不使用 `{{handoff}}` 占位符；交接工具说明直接根据连线和策略生成。人工确认节点仍可配置确认内容。
 
-进入节点设置可编辑独立执行配置、Session Prompt、交接目标与策略，并预览展开内容。Run 每个 Agent 执行可查看冻结的实际角色、原生项目规则发现来源、已注册工具与首轮输入。Codex 原生发现工作目录的 AGENTS.md；平台不复制或追加角色到仓库规则文件。
+独立智能体与节点复用同一配置表单；节点额外配置交接、等待和自动继续。Run 每个 Agent 执行可查看冻结角色、原生项目规则发现来源、工具与首轮输入。所有节点使用启动时的 `workspace_path`，Codex 原生读取其 AGENTS.md，平台不重复拼接该文件，也不引入通用变量页。
+
+原 manifest 加 `--upgrade` 会重建维护源拥有的角色配置并升级工作流版本；人工编辑漂移仍拒绝覆盖。冻结 v0/v1 Run、旧 Agent、原生会话与消息保持原样。自建旧图不会自动丢弃非空 prompt：长期规则转入角色指令，任务内容改由启动输入提供后，才能明确采用 v2。
 
 正常回复结束不代表节点完成。必须调用合法 `handoff` 或 `complete_node`。确需用户回答时使用 `wait_for_input(kind=clarification, reason=具体问题)`，真实外部阻塞使用 `kind=blocked`；再向用户说明。无需等待且未完成的正常收尾，会在同一原生会话追加继续指令，默认最多 3 次，持续推进期限为节点开始后的 14400 秒。失败或用户停止不自动续跑；达到上限显示具体原因，保留现场。新的用户回复解除旧等待声明，不重置该节点的续跑预算。
 
@@ -260,3 +264,9 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 详见 [输入设计](../../docs/02-architecture/workflow-session-input.md) 和 [用户指南](../../docs/04-guides/agent-platform-user-guide.md)。
 
 标准节点显式配置 `allow_user_input: true`，可在节点设置关闭；关闭后不注册 wait_for_input，服务端也拒绝调用。manifest 升级比较保留显式 false：人工关闭与字段缺失不是同一配置，外部改动会被报告，不能由安装器静默重新开放。已启动 Run 的定义与停止状态保持冻结。
+
+## 取消不再需要的运行
+
+先 `POST /api/workflow-runs/{id}/stop` 并等待 stopped，再 `POST /api/workflow-runs/{id}/cancel`，两次均传页面/GET 返回的当前 `seq`。网页 Run 控制区和 Python `workflow_command(run_id, "cancel", seq=seq)` 使用同一路径。failed 且进程已退出也可取消；运行中/停止中和过期 seq 返回冲突。
+
+取消保留文件、消息与外部回执，关闭当前会话，释放工作区；无法继续或回退。重新工作须建新的任务/Run。研发准备步骤仍拒绝脏目录，需先明确保留和交接已有成果，不能手改数据库或删除入口状态文件绕过去重。GitHub 旧 Issue 的重复事件仍关联原已取消 Run，不自动重启；新工作使用引用原 Issue/Run 的新 Issue。

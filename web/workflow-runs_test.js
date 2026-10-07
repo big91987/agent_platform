@@ -50,14 +50,14 @@ test('run delivery shows only verified deployment links and warns when PR head c
  assert.doesNotMatch(vm.runInContext('workflowDeliveryHTML(delivery)',ctx),/href="javascript:/);
 });
 
-test('actual input drawer reads frozen step context and explains legacy input',async()=>{
+test('actual input drawer reads frozen step context including legacy input',async()=>{
  const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',setAttribute(){},focus(){}});return elements.get(id)};
  const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,esc:x=>String(x??''),toast(){},api:async path=>{assert.equal(path,'/api/workflow-runs/run1/steps/2/context');return {role_instructions:'角色正文',project_instructions:['AGENTS.md'],tools:['complete_node'],input:'冻结输入',context_version:0,workflow_revision:7}}});
  for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
  vm.runInContext("workflowRunPage={id:'run1',run:{id:'run1',definition:{nodes:[{id:'dev',name:'研发',kind:'agent'}]},steps:[{seq:2,node_id:'dev',status:'completed',result:{summary:'完整结果',artifacts:['result.txt']}}]}}",ctx);
  await vm.runInContext("workflowStepContextDialog('run1',2)",ctx);
  const html=el('#wf-step-details').innerHTML+el('#wf-step-input-content').innerHTML;
- assert.match(html,/冻结输入/);assert.match(html,/AGENTS.md/);assert.match(html,/complete_node/);assert.match(html,/旧版/);assert.match(html,/readonly/);
+ assert.match(html,/冻结输入/);assert.match(html,/AGENTS.md/);assert.match(html,/complete_node/);assert.match(html,/readonly/);
  assert.match(html,/role="tablist"/);assert.match(html,/完整结果/);
  el('#wf-step-panel-close').onclick();assert.equal(el('#wf-step-details').hidden,true);
 });

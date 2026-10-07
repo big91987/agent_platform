@@ -424,7 +424,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 // Stopped/failed runs remain resumable and keep their workspace reservation.
 // Starting and returning a completed run both acquire it inside their transaction.
 func workflowWorkspaceAvailable(tx *sql.Tx, path, exceptID string) error {
-	rows, err := tx.Query(`SELECT workspace FROM workflow_runs WHERE status != 'completed' AND id != ?`, exceptID)
+	rows, err := tx.Query(`SELECT workspace FROM workflow_runs WHERE status NOT IN ('completed','cancelled') AND id != ?`, exceptID)
 	if err != nil {
 		return err
 	}
