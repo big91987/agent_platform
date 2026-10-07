@@ -13,7 +13,7 @@
 
 /* Node details are a contextual right panel; the canvas keeps its space. */
 .wf-layout{position:relative;grid-template-columns:112px minmax(0,1fr);gap:12px;height:calc(100dvh - 196px);min-height:560px}
-.wf-content{padding:20px!important}.wf-heading{margin-bottom:16px}.wf-heading h1{font-size:21px;font-weight:650;letter-spacing:-.4px}
+.wf-content{padding:20px!important;max-width:none}.wf-heading{margin-bottom:16px}.wf-heading h1{font-size:21px;font-weight:650;letter-spacing:-.4px}
 .wf-workarea{background:#f6f8fc;border-color:#dce2ed}.wf-palette{border-color:#e2e7f0;border-radius:14px;background:#fcfdff}.wf-palette>button{border-color:transparent;background:transparent;font-weight:550}.wf-palette>button:hover{background:#eef2fc;border-color:#e0e6f5}.wf-palette .hint{font-size:11px;line-height:1.65}
 .wf-node{border-color:#d8dfeb;box-shadow:0 3px 12px #1833560b;border-radius:13px}.wf-node:hover{border-color:#8dacf5;box-shadow:0 5px 18px #27477f17}.wf-node.selected{outline:2px solid #5b78ef;box-shadow:0 5px 20px #496bca20}.wf-node strong{font-size:13px;font-weight:650}.wf-node-type{font-weight:600}.wf-node small{color:#66748a;font-size:11px}
 .wf-detail-panel{display:flex;flex-direction:column;background:#fff;border:1px solid #e0e5ef;border-radius:16px;box-shadow:-8px 10px 32px #172f591a;overflow:hidden;z-index:10;animation:wf-panel-in .16s ease-out}

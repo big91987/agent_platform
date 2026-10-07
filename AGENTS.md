@@ -11,3 +11,13 @@ Use gofmt and go vet. Keep tests small and focused on meaningful behavior: isola
 ## Native output presentation
 
 Display native Agent messages without rewriting, summarizing, or interpreting business fields. Preserve tool calls and results as execution events; do not synthesize narrative progress from them. Platform indicators describe only execution lifecycle, connection, queue and pending tool approval. Externally registered handoff tools use the same presentation and approval path as other tools.
+
+## Product interface style
+
+Organize pages around the user's task, choices, results and next actions. Keep compatibility handling, protocol versions, migration history and implementation commentary in code or maintenance documentation unless the user must act on them.
+
+Show help or warnings only when they explain a current choice, a meaningful consequence or a real problem the user can resolve. Describe settings by their observable behavior in plain language; do not explain tool registration or server enforcement in ordinary field help. Necessary technical configuration can retain precise technical names.
+
+Compatibility must not add routine configuration work. When migration or a conflict requires user action, explain the concrete effect and provide the relevant action at that point. Do not add reassurance about normal behavior or narrate development decisions.
+
+Before delivering interface changes, remove explanations, duplicate status, internal identifiers and controls that do not help the user decide or act. These rules govern platform-authored interface content; preserve native Agent output under the rules above.
