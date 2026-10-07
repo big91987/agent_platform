@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | [CI/CD Runner 直接调用 Agent](runner-direct.md) | Runner 内的 Harness 管理任务并直接启动原生执行器 | 已有历史实践，来源为 he_skeleton |
 | [GitHub CI + Agent Platform](github-agent-platform.md) | GitHub 与外部集成编排阶段，平台管理持续会话和执行 | 当前平台接入实践，维护源为本仓库 |
+| [平台内 Workflow](platform-native.md) | 平台负责定义、节点推进、等待与回退，外部系统提供 Connector 动作 | 新阶段规划与实现中；尚未完成实测 |
 
 [方案比较与选型](comparison.md) 单独维护跨方案的取舍。安装操作应链接各方案的正式指南；具体故障、测试和某次运行状态保留在交付与验证记录中。
 

@@ -356,3 +356,23 @@ func needsToolConfirmation(a Agent) bool {
 	}
 	return false
 }
+
+// Bind only an explicit administrator-configured placeholder to the validated
+// conversation directory. The model cannot supply the tool's workspace root.
+func bindToolWorkspace(a Agent, workspace string) Agent {
+	resolved := make(map[string]ResolvedToolServer, len(a.ResolvedTools))
+	for id, server := range a.ResolvedTools {
+		server.Connection.Args = append([]string(nil), server.Connection.Args...)
+		if server.Connection.Command != "" {
+			for i, arg := range server.Connection.Args {
+				if arg == "{{workspace}}" {
+					server.Connection.Args[i] = workspace
+					server.Connection.CWD = workspace
+				}
+			}
+		}
+		resolved[id] = server
+	}
+	a.ResolvedTools = resolved
+	return a
+}

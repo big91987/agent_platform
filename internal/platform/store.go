@@ -82,6 +82,10 @@ func OpenStore(dir string) (*Store, error) {
 			return nil, e
 		}
 	}
+	if e = s.initWorkflows(); e != nil {
+		s.Close()
+		return nil, e
+	}
 	if e = s.initApprovals(); e != nil {
 		s.Close()
 		return nil, e
@@ -208,7 +212,7 @@ func (s *Store) Authorize(c Caller, id, user string) (Conversation, error) {
 	if e != nil {
 		return v, e
 	}
-	if !c.Admin && (c.UserID == "" || v.UserID != c.UserID || !allowed(c, v.AgentID)) {
+	if !c.Admin && (c.UserID == "" || v.UserID != c.UserID || !conversationAgentAllowed(s.DB, c, v.ID, v.AgentID)) {
 		return v, ErrForbidden
 	}
 	return v, nil
@@ -238,15 +242,33 @@ func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
 		if e != nil {
 			return nil, e
 		}
-		if allowed(c, v.AgentID) {
-			out = append(out, v)
+		out = append(out, v)
+	}
+	err := rows.Err()
+	rows.Close()
+	visible := out[:0]
+	for _, v := range out {
+		if conversationAgentAllowed(s.DB, c, v.ID, v.AgentID) {
+			visible = append(visible, v)
 		}
 	}
-	return out, rows.Err()
+	return visible, err
 }
 func hashText(text string) string { b := sha256.Sum256([]byte(text)); return hex.EncodeToString(b[:]) }
 func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
+	return s.submit(c, in, nil)
+}
+func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string) error) (Receipt, error) {
+	return s.submitConfigured(c, in, prepare, nil)
+}
+
+// Only the workflow engine can supply node settings, with its transaction-bound
+// run/step authorization callback. Public input never accepts an Agent config.
+func (s *Store) submitConfigured(c Caller, in Input, prepare func(*sql.Tx, *Agent, string) error, config *Agent) (Receipt, error) {
 	var out Receipt
+	if config != nil && (prepare == nil || in.AgentID != "" || in.ConversationID != "") {
+		return out, ErrForbidden
+	}
 	if !c.Admin && c.UserID != "" {
 		if in.UserID != "" && in.UserID != c.UserID {
 			return out, ErrForbidden
@@ -284,7 +306,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 				if e = tx.QueryRow(`SELECT user_id,agent_id FROM conversations WHERE id=?`, out.ConversationID).Scan(&owner, &agent); e != nil {
 					return out, ErrNotFound
 				}
-				if owner != c.UserID || !allowed(c, agent) {
+				if owner != c.UserID || !conversationAgentAllowed(tx, c, out.ConversationID, agent) {
 					return out, ErrForbidden
 				}
 			}
@@ -295,6 +317,23 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 			return out, e
 		}
 	}
+	if in.WorkflowRunID != "" {
+		if in.ConversationID != "" || in.AgentID != "" || in.WorkspacePath != "" || in.NetworkAccess != nil || in.UserID != c.UserID || in.RequestID == "" {
+			return out, errors.New("workflow message needs only message, request_id and optional workflow_seq")
+		}
+		run, err := loadWorkflowRun(tx, in.WorkflowRunID)
+		if err != nil {
+			return out, err
+		}
+		if !runAllowed(c, run) {
+			return out, ErrForbidden
+		}
+		step := run.Steps[len(run.Steps)-1]
+		if (run.Status != "running" && run.Status != "waiting") || (in.WorkflowSeq != 0 && in.WorkflowSeq != run.Seq) || step.ConversationID == "" || step.Result != nil {
+			return out, fmt.Errorf("%w: current workflow node cannot accept input; inspect the run before retrying", ErrConflict)
+		}
+		in.ConversationID = step.ConversationID
+	}
 	var conv Conversation
 	if in.ConversationID != "" {
 		if in.NetworkAccess != nil {
@@ -304,7 +343,7 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 		if e != nil {
 			return out, e
 		}
-		if !c.Admin && (conv.UserID != c.UserID || !allowed(c, conv.AgentID)) {
+		if !c.Admin && (conv.UserID != c.UserID || !conversationAgentAllowed(tx, c, conv.ID, conv.AgentID)) {
 			return out, ErrForbidden
 		}
 		if in.AgentID != "" && in.AgentID != conv.AgentID {
@@ -319,27 +358,42 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 				return out, fmt.Errorf("workspace is fixed for this conversation: %w", ErrConflict)
 			}
 		}
+		if e = workflowInputAllowed(tx, conv.ID); e != nil {
+			return out, e
+		}
 		if conv.Status == "closed" {
 			return out, ErrConflict
 		}
 	} else {
 		var a Agent
 		var cfg string
-		e = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, in.AgentID).Scan(&cfg)
-		if errors.Is(e, sql.ErrNoRows) {
-			return out, ErrNotFound
-		}
-		if e != nil {
-			return out, e
-		}
-		if e = json.Unmarshal([]byte(cfg), &a); e != nil {
-			return out, e
-		}
-		if !allowed(c, a.ID) {
-			return out, ErrForbidden
-		}
-		if !a.Enabled {
-			return out, errors.New("Agent is disabled")
+		if config != nil {
+			raw, err := json.Marshal(config)
+			if err != nil {
+				return out, err
+			}
+			if err = json.Unmarshal(raw, &a); err != nil {
+				return out, err
+			}
+			a.ID = ""
+			a.Enabled = true
+		} else {
+			e = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, in.AgentID).Scan(&cfg)
+			if errors.Is(e, sql.ErrNoRows) {
+				return out, ErrNotFound
+			}
+			if e != nil {
+				return out, e
+			}
+			if e = json.Unmarshal([]byte(cfg), &a); e != nil {
+				return out, e
+			}
+			if !allowed(c, a.ID) {
+				return out, ErrForbidden
+			}
+			if !a.Enabled {
+				return out, errors.New("Agent is disabled")
+			}
 		}
 		workspace := ""
 		if in.WorkspacePath != "" {
@@ -373,13 +427,19 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 				a.AllowElevation = false
 			}
 		}
+		conversationID := newID()
+		if prepare != nil {
+			if e = prepare(tx, &a, conversationID); e != nil {
+				return out, e
+			}
+		}
 		snapshot, e := json.Marshal(a)
 		if e != nil {
 			return out, e
 		}
 		cfg = string(snapshot)
 		stamp := now()
-		conv = Conversation{ID: newID(), AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
+		conv = Conversation{ID: conversationID, AgentID: a.ID, Source: c.Source, UserID: in.UserID, Title: string(title), Status: "queued", WorkspacePath: workspace, Snapshot: a, Created: stamp, Updated: stamp}
 		_, e = tx.Exec(`INSERT INTO conversations(id,agent_id,source,user_id,title,status,workspace_path,snapshot,created,updated)VALUES(?,?,?,?,?,?,?,?,?,?)`, conv.ID, a.ID, c.Source, in.UserID, conv.Title, conv.Status, workspace, cfg, stamp, stamp)
 		if e != nil {
 			return out, e
@@ -391,6 +451,11 @@ func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	}
 	mid, e := result.LastInsertId()
 	if e != nil {
+		return out, e
+	}
+	// A newly accepted user correction/reply resolves the current wait declaration.
+	// Framework continuations are inserted separately and never clear user waits.
+	if _, e = tx.Exec(`UPDATE workflow_node_controls SET wait_kind='',wait_reason='',wait_message_id=0 WHERE wait_message_id<? AND (run_id,seq) IN (SELECT ws.run_id,ws.seq FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id AND wr.seq=ws.seq WHERE ws.conversation_id=?)`, mid, conv.ID); e != nil {
 		return out, e
 	}
 	status := conv.Status
@@ -435,7 +500,7 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 		return conv, m, e
 	}
 	defer tx.Rollback()
-	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
 	args := []any{}
 	for _, path := range busyWorkspaces {
 		if path != "" {
@@ -454,9 +519,53 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	if e != nil {
 		return conv, m, e
 	}
+	if conv.AgentID == "" {
+		// Recheck the owner and current grant at dispatch: permissions may have
+		// changed since the message entered the queue.
+		var role string
+		var enabled bool
+		err := tx.QueryRow(`SELECT role,enabled FROM users WHERE user_id=?`, conv.UserID).Scan(&role, &enabled)
+		caller := Caller{UserID: conv.UserID, Admin: role == "admin"}
+		if err != nil || !enabled || !conversationAgentAllowed(tx, caller, conv.ID, "") {
+			if _, e = tx.Exec(`UPDATE messages SET status='failed' WHERE conversation_id=? AND role='user' AND status='queued'; UPDATE conversations SET status='failed',error='Workflow authorization changed before execution',updated=? WHERE id=?`, conv.ID, now(), conv.ID); e != nil {
+				return conv, m, e
+			}
+			if e = tx.Commit(); e != nil {
+				return conv, m, e
+			}
+			return conv, m, ErrForbidden
+		}
+	}
 	_, e = tx.Exec(`UPDATE messages SET status='running' WHERE id=?; UPDATE conversations SET status='running',error='',updated=? WHERE id=?`, m.ID, now(), conv.ID)
 	if e != nil {
 		return conv, m, e
+	}
+	// v1 capabilities belong to a native execution turn. A previous process may
+	// not submit a wait/result into a newer turn of this same conversation.
+	var definition string
+	err := tx.QueryRow(`SELECT wr.definition FROM workflow_runs wr JOIN workflow_steps ws ON ws.run_id=wr.id AND ws.seq=wr.seq WHERE ws.conversation_id=?`, conv.ID).Scan(&definition)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return conv, m, err
+	}
+	var workflow Workflow
+	if err == nil {
+		if err = json.Unmarshal([]byte(definition), &workflow); err != nil {
+			return conv, m, err
+		}
+	}
+	if workflow.ContextVersion == 1 {
+		token := newID() + newID()
+		if conv.Snapshot.Env == nil {
+			conv.Snapshot.Env = map[string]*string{}
+		}
+		conv.Snapshot.Env[workflowTokenEnv] = &token
+		snapshot, err := json.Marshal(conv.Snapshot)
+		if err != nil {
+			return conv, m, err
+		}
+		if _, err = tx.Exec(`UPDATE workflow_steps SET token_hash=? WHERE conversation_id=?; UPDATE conversations SET snapshot=? WHERE id=?`, hashText(token), conv.ID, string(snapshot), conv.ID); err != nil {
+			return conv, m, err
+		}
 	}
 	conv.Status = "running"
 	m.Role = "user"
@@ -509,6 +618,9 @@ func (s *Store) Continue(id string) error {
 		return e
 	}
 	defer tx.Rollback()
+	if e = workflowInputAllowed(tx, id); e != nil {
+		return e
+	}
 	c, e := scanConv(tx.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, id))
 	if e != nil {
 		return e

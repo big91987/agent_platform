@@ -105,6 +105,10 @@ func nativeConfig(a Agent) ([]byte, error) {
 	if a.Sandbox != "" && a.Sandbox != "workspace-write" && a.Sandbox != "read-only" {
 		return nil, errors.New("sandbox must be workspace-write or read-only")
 	}
+	if a.Instructions != "" {
+		previous, _ := cfg["developer_instructions"].(string)
+		cfg["developer_instructions"] = strings.TrimSpace(previous + "\n\n" + a.Instructions)
+	}
 	cfg["approval_policy"] = nativeApprovalPolicy(a)
 	cfg["sandbox_workspace_write"] = map[string]any{"network_access": a.NetworkAccess}
 	cfg["sandbox_mode"] = "workspace-write"
@@ -269,6 +273,7 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 	} else if !os.IsNotExist(e) {
 		return "", "", e
 	}
+	toolWorkspace := workspace
 	parent := filepath.Dir(finalRoot)
 	if e := os.MkdirAll(parent, 0700); e != nil {
 		return "", "", e
@@ -283,22 +288,10 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 		workspace = c.WorkspacePath
 	}
 	marker = filepath.Join(home, "prepared")
-	a := c.Snapshot
+	a := bindToolWorkspace(c.Snapshot, toolWorkspace)
 	cfg, e := nativeConfig(a)
 	if e != nil {
 		return "", "", e
-	}
-	if c.WorkspacePath != "" && a.Instructions != "" {
-		// Keep repository instructions intact; Agent configuration stays in the native home.
-		var options map[string]any
-		if e = toml.Unmarshal(cfg, &options); e != nil {
-			return "", "", e
-		}
-		previous, _ := options["developer_instructions"].(string)
-		options["developer_instructions"] = strings.TrimSpace(previous + "\n\n" + a.Instructions)
-		if cfg, e = toml.Marshal(options); e != nil {
-			return "", "", e
-		}
 	}
 	if e = os.MkdirAll(home, 0700); e != nil {
 		return "", "", e
@@ -308,14 +301,6 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 			return "", "", e
 		}
 		if e = copySeed(a.SeedDir, workspace); e != nil {
-			return "", "", e
-		}
-	}
-	if c.WorkspacePath == "" && a.Instructions != "" {
-		p := filepath.Join(workspace, "AGENTS.md")
-		existing, _ := os.ReadFile(p)
-		body := string(existing) + "\n\n# Agent configuration\n\n" + a.Instructions + "\n"
-		if e = os.WriteFile(p, []byte(body), 0600); e != nil {
 			return "", "", e
 		}
 	}
@@ -382,7 +367,14 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 			return "", "", e
 		}
 		seen[p] = true
-		cfg = append(cfg, []byte(fmt.Sprintf("\n[[skills.config]]\npath = %s\nenabled = %t\n", quote(p), expected[p]))...)
+		// Native config matches the discovered SKILL.md filename. Normalization
+		// is only for comparing administrator-selected identities; resolving the
+		// path here would leave project/symlink Skills enabled unexpectedly.
+		configPath := s.Path
+		if filepath.Base(configPath) != "SKILL.md" {
+			configPath = filepath.Join(configPath, "SKILL.md")
+		}
+		cfg = append(cfg, []byte(fmt.Sprintf("\n[[skills.config]]\npath = %s\nenabled = %t\n", quote(configPath), expected[p]))...)
 	}
 	for p := range expected {
 		if !seen[p] {

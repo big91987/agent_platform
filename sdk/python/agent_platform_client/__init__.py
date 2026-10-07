@@ -295,3 +295,102 @@ class Client:
                 raise ConnectionError(
                     f"Platform file download interrupted: {reason}"
                 ) from None
+
+    @staticmethod
+    def _workflow_path(run_id):
+        if not run_id:
+            raise ValueError("run_id is required")
+        return "/api/workflow-runs/" + urllib.parse.quote(run_id, safe="")
+
+    def start_workflow(
+        self,
+        workflow_id,
+        message,
+        *,
+        workspace_path,
+        request_id,
+        start_node="",
+        parameters=None,
+    ):
+        """Start once per caller event key. No CI stage scheduling is needed."""
+        if not request_id:
+            raise ValueError("A stable request_id is required")
+        body = {
+            "workflow_id": workflow_id,
+            "input": message,
+            "workspace_path": workspace_path,
+            "request_id": request_id,
+        }
+        if start_node:
+            body["start_node"] = start_node
+        if parameters:
+            body["parameters"] = parameters
+        return self._json("/api/workflow-runs", body)
+
+    def workflow_run(self, run_id):
+        return self._json(self._workflow_path(run_id))
+
+    def workflow_command_output(self, run_id, seq, *, offset=0):
+        """Read one retained log page; next_offset/eof bound subsequent reads.
+
+        truncated reports archive overflow, not a successful command. Legacy
+        receipts without log metadata have no recoverable archive (404).
+        """
+        if type(seq) is not int or seq < 1 or type(offset) is not int or offset < 0:
+            raise ValueError("seq must be positive and offset nonnegative integers")
+        return self._json(
+            self._workflow_path(run_id) + f"/steps/{seq}/output?offset={offset}"
+        )
+
+    def workflow_runs(self, *, workflow_id="", before=""):
+        """One page, at most 200 runs. Pass the last ID as before for the next."""
+        return self._json(
+            "/api/workflow-runs?"
+            + urllib.parse.urlencode({"workflow_id": workflow_id, "before": before})
+        )
+
+    def workflow_by_request(self, request_id):
+        """Resolve the caller's original task even after its input was edited."""
+        if not request_id:
+            raise ValueError("request_id is required")
+        return self._json(
+            "/api/workflow-runs/by-request?"
+            + urllib.parse.urlencode({"request_id": request_id})
+        )
+
+    def workflow_message(self, run_id, message, *, request_id, seq=None):
+        """Persist feedback to the current Agent atomically; 409 needs inspection.
+
+        A repeated event returns its original receipt even after handoff. seq,
+        when supplied, refuses to deliver a message to a different execution.
+        """
+        if not request_id:
+            raise ValueError("A stable request_id is required")
+        body = {"message": message, "request_id": request_id}
+        if seq is not None:
+            body["seq"] = seq
+        return self._json(self._workflow_path(run_id) + "/messages", body)
+
+    def workflow_command(self, run_id, action, *, seq, **values):
+        """Explicit run control; callers must inspect state after uncertain errors."""
+        if action not in ("stop", "resume", "return", "decision"):
+            raise ValueError("unsupported workflow command")
+        if set(values) - {"message", "summary", "target", "route"}:
+            raise ValueError("unsupported workflow command fields")
+        return self._json(
+            self._workflow_path(run_id) + "/" + action, {"seq": seq, **values}
+        )
+
+    def wait_workflow(self, run_id, *, timeout=600, poll_interval=2):
+        """Observe until waiting/failed/stopped/completed, never resume implicitly."""
+        if timeout < 0 or poll_interval <= 0:
+            raise ValueError("invalid wait bounds")
+        deadline = time.monotonic() + timeout
+        while True:
+            result = self.workflow_run(run_id)
+            if result["status"] not in ("running", "stopping"):
+                return result
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Still executing workflow " + run_id)
+            time.sleep(min(poll_interval, remaining))

@@ -1,0 +1,297 @@
+{
+  "name": "研发交付 · Agent 自主协作",
+  "enabled": true,
+  "entry": "prepare",
+  "start_nodes": [],
+  "authorized_users": [],
+  "max_steps": 40,
+  "nodes": [
+    {
+      "id": "prepare",
+      "name": "准备任务分支",
+      "kind": "connector",
+      "connector_id": "prepare",
+      "x": 60,
+      "y": 70
+    },
+    {
+      "id": "issue",
+      "name": "记录需求",
+      "kind": "connector",
+      "connector_id": "issue",
+      "connector_input": {
+        "title": "{{input}}",
+        "issue_parameter": "issue_number"
+      },
+      "x": 360,
+      "y": 70
+    },
+    {
+      "id": "intake",
+      "name": "判断任务与起点",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "根据原始任务、用户指定起点和仓库事实选择必要阶段；范围明确的修复可直接交接开发，不需要补造 PRD 或设计。",
+      "x": 660,
+      "y": 70
+    },
+    {
+      "id": "requirements",
+      "name": "需求与验收标准",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 60,
+      "y": 270
+    },
+    {
+      "id": "design",
+      "name": "设计方案",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 360,
+      "y": 270
+    },
+    {
+      "id": "development",
+      "name": "研发实现",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 660,
+      "y": 270
+    },
+    {
+      "id": "qa",
+      "name": "独立 QA",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 360,
+      "y": 470
+    },
+    {
+      "id": "report",
+      "name": "整理交付说明",
+      "kind": "agent",
+      "agent": {"executor": "codex"},
+      "prompt": "执行 整理交付说明 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
+      "x": 660,
+      "y": 470
+    },
+    {
+      "id": "tests",
+      "name": "运行项目测试",
+      "kind": "connector",
+      "connector_id": "tests",
+      "x": 60,
+      "y": 470
+    },
+    {
+      "id": "publish",
+      "name": "提交并推送任务分支",
+      "kind": "connector",
+      "connector_id": "publish",
+      "x": 60,
+      "y": 670
+    },
+    {
+      "id": "pr",
+      "name": "创建草稿 PR",
+      "kind": "connector",
+      "connector_id": "pr",
+      "connector_input": {
+        "title": "{{input}}",
+        "head": "workflow/{{run_id}}",
+        "base": "main",
+        "body_file": "docs/workflow/runs/{{run_id}}/pr.md",
+        "issue_node": "issue"
+      },
+      "x": 360,
+      "y": 670
+    },
+    {
+      "id": "done",
+      "name": "交付完成 · 待人工合并",
+      "kind": "end",
+      "x": 660,
+      "y": 670
+    }
+  ],
+  "edges": [
+    {
+      "source": "prepare",
+      "route": "next",
+      "target": "issue",
+      "mode": "automatic",
+      "description": "成功"
+    },
+    {
+      "source": "issue",
+      "route": "next",
+      "target": "intake",
+      "mode": "automatic",
+      "description": "成功"
+    },
+    {
+      "source": "intake",
+      "route": "requirements",
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "新需求／范围待明确"
+    },
+    {
+      "source": "intake",
+      "route": "design",
+      "target": "design",
+      "mode": "handoff",
+      "description": "需求明确，需要设计"
+    },
+    {
+      "source": "intake",
+      "route": "development",
+      "target": "development",
+      "mode": "handoff",
+      "description": "明确修复，直接开发"
+    },
+    {
+      "source": "requirements",
+      "route": "next",
+      "target": "design",
+      "mode": "handoff",
+      "description": "完成后交接"
+    },
+    {
+      "source": "design",
+      "route": "next",
+      "target": "development",
+      "mode": "handoff",
+      "description": "完成后交接"
+    },
+    {
+      "source": "development",
+      "route": "next",
+      "target": "tests",
+      "mode": "handoff",
+      "description": "完成后交接"
+    },
+    {
+      "source": "tests",
+      "route": "next",
+      "target": "qa",
+      "mode": "automatic",
+      "description": "成功"
+    },
+    {
+      "source": "qa",
+      "route": "next",
+      "target": "report",
+      "mode": "handoff",
+      "description": "完成后交接"
+    },
+    {
+      "source": "report",
+      "route": "next",
+      "target": "publish",
+      "mode": "handoff",
+      "description": "完成后交接"
+    },
+    {
+      "source": "publish",
+      "route": "next",
+      "target": "pr",
+      "mode": "automatic",
+      "description": "成功"
+    },
+    {
+      "source": "pr",
+      "route": "next",
+      "target": "done",
+      "mode": "automatic",
+      "description": "成功"
+    },
+    {
+      "source": "tests",
+      "route": "failed",
+      "target": "development",
+      "mode": "automatic",
+      "description": "失败返工"
+    },
+    {
+      "source": "design",
+      "route": "requirements",
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "development",
+      "route": "requirements",
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "development",
+      "route": "design",
+      "target": "design",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "qa",
+      "route": "requirements",
+      "target": "requirements",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "qa",
+      "route": "design",
+      "target": "design",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "qa",
+      "route": "development",
+      "target": "development",
+      "mode": "handoff",
+      "description": "返回修订"
+    },
+    {
+      "source": "report",
+      "route": "qa",
+      "target": "qa",
+      "mode": "handoff",
+      "description": "返回修订"
+    }
+  ],
+  "hooks": [
+    {
+      "event": "node.started",
+      "connector_id": "comment",
+      "input": {
+        "issue_node": "issue"
+      },
+      "body": "**{{node_name}} 已启动**\n\n[查看 Agent 会话]({{conversation_url}})"
+    },
+    {
+      "event": "agent.reply.completed",
+      "connector_id": "comment",
+      "input": {
+        "issue_node": "issue"
+      },
+      "body": "{{text}}\n\n[在平台继续]({{conversation_url}})"
+    },
+    {
+      "event": "run.completed",
+      "connector_id": "comment",
+      "input": {
+        "issue_node": "issue"
+      },
+      "body": "本次编排已完成。\n\n[查看完整运行与交付记录]({{run_url}})"
+    }
+  ]
+}

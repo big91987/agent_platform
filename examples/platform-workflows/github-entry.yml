@@ -1,0 +1,41 @@
+name: Agent Platform Issue entry
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Original Issue number (retry uses the same Run)
+        type: string
+        required: true
+      comment_id:
+        description: Optional original comment ID to retry
+        type: string
+        default: ''
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: platform-entry-${{ github.repository }}-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+  queue: max
+jobs:
+  forward:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && !github.event.issue.pull_request
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    steps:
+      - name: Submit event through Workflow SDK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_PLATFORM_ROOT: ${{ vars.AGENT_PLATFORM_WORKFLOW_ROOT }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_WORKFLOW_CONFIG }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_ROOT"
+          test -n "$AGENT_PLATFORM_CONFIG"
+          "$AGENT_PLATFORM_ROOT/.data/runner-venv/bin/python" \
+            "$AGENT_PLATFORM_ROOT/examples/platform-workflows/github_entry.py" \
+            --config "$AGENT_PLATFORM_CONFIG"

@@ -43,6 +43,9 @@ func (s *Store) reserveSteering(id string, mid int64) (Message, error) {
 		return m, err
 	}
 	defer tx.Rollback()
+	if err = workflowInputAllowed(tx, id); err != nil {
+		return m, err
+	}
 	err = tx.QueryRow(`SELECT m.id,m.content,active.id FROM messages m
  JOIN conversations c ON c.id=m.conversation_id
  JOIN messages active ON active.conversation_id=c.id AND active.role='user' AND active.status='running'

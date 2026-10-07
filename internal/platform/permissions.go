@@ -82,7 +82,7 @@ func (s *Scheduler) ApplyAgentPermissions(id string) error {
 	if err != nil {
 		return err
 	}
-	a, err := s.store.Agent(c.AgentID)
+	a, err := s.store.conversationAgent(c)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (s *Scheduler) SetConversationNetwork(id string, enabled bool) error {
 	if err != nil {
 		return err
 	}
-	a, err := s.store.Agent(c.AgentID)
+	a, err := s.store.conversationAgent(c)
 	if err != nil {
 		return err
 	}

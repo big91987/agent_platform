@@ -105,3 +105,55 @@ print([tool["name"] for tool in inventory.get("tools", [])])
 然后在智能体配置中选择该服务的具体工具。注册保存的是连接配置，工具代码与参数 Schema 由外部服务提供；平台不安装 Dify 专用插件。Skill 仍选择本机 Skill 目录并由原生执行器加载。
 
 Agent 的工具绑定可配置 `approvals: {"tool_name": "auto"}`（默认）或 `"confirm"`。确认请求从 `conversation(id)["approvals"]` 查询，使用 `decide_tool(id, approval_id, "accept")` 或 `"decline"` 决定本次调用；网页也有同样按钮。完整说明见 [外部工具设计](../../docs/02-architecture/external-tools.md)。
+
+## Workflow entry (0.2.0)
+
+```python
+run = client.start_workflow(
+    "<workflow-id>",
+    "Task text",
+    workspace_path="<dedicated-clean-checkout>",
+    request_id="<stable-source-task-key>",
+    parameters={"issue_number": "42"},  # optional, interpreted by configured connectors
+)
+run = client.workflow_by_request("<stable-source-task-key>")
+receipt = client.workflow_message(
+    run["id"], "Additional requirements", request_id="<stable-source-message-key>"
+)
+state = client.workflow_run(run["id"])
+```
+
+`POST /api/workflow-runs` starts a persisted graph; `GET /api/workflow-runs/by-request?request_id=...` resolves only the caller's event key. Parameters are optional and frozen with the Run. Existing callers need no changes. The caller prepares an independent checkout within configured Connector roots; the GitHub adapter does this automatically. GitHub-specific values are not required by the core API.
+
+`POST /api/workflow-runs/{id}/messages` atomically selects the current Agent and saves an input with its event key. A duplicate returns its original message receipt even after handoff. Optional `seq` pins the intended execution. HTTP 409 means the current step cannot safely receive a new message; inspect state and use supported recovery, do not guess a conversation or recreate the Run.
+
+`workflow_runs(workflow_id=..., before=...)` returns one page (at most 200); use its last ID for the next cursor. `workflow_command(run_id, action, seq=..., ...)` supports stop/resume/return/decision. Control commands are explicit and are not automatically replayed after an unknown transport result. `wait_workflow` returns when waiting, failed, stopped or completed; waiting may mean clarification, not task success. CI can return immediately after the start/message receipt; native execution continues on the platform.
+
+
+Retained command diagnostics: `client.workflow_command_output(run_id, seq, offset=0)` returns one page with `output`, `next_offset`, `eof`, and `truncated`. Follow offsets until `eof`; `truncated` still means the 8 MiB archive cap omitted later output. The Run owner's token is required. A legacy receipt without `log` metadata has no archive and returns 404. This read never reruns a command and does not interpret its exit status. Requires a platform version with command log archives; upgrading the SDK alone cannot recover old omitted logs.
+
+### 版本化工作流材料
+
+使用已经安装材料校验工具的研发交付模板时，可通过已有参数接口传入一个ZIP材料描述：
+
+```python
+import json
+
+run = client.start_workflow(
+    workflow_id,
+    "按已确定的PRD与交互材料实施",
+    workspace_path=workspace_path,
+    request_id="<channel>:<stable-event-id>",
+    parameters={
+        "material": json.dumps(
+            {
+                "url": "https://api.github.com/repos/<owner>/<repository>/releases/assets/<asset-id>",
+                "sha256": "<actual-64-hex-zip-sha256>",
+                "version": "<material-version>",
+            }
+        )
+    },
+)
+```
+
+SDK只传递参数；支持来源、安全下载、ZIP和manifest校验、输入保留及恢复属于受信模板的prepare工具。客户端不直接上传文件、不把个人机器文件路径或localhost预览地址当远端材料。成功以实际prepare回执为准，不能以start_workflow返回就判断材料已接收。完整契约见 `examples/platform-workflows/README.md` 的“带原型和文档的Issue输入”；旧冻结模板需标准升级后才能获得该能力。

@@ -61,7 +61,10 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	server := &http.Server{Handler: platform.NewServer(s, scheduler, x, password, *base), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, BaseContext: func(net.Listener) context.Context { return ctx }}
+	handler := platform.NewServer(s, scheduler, x, password, *base)
+	workflowDone := make(chan struct{})
+	go func() { defer close(workflowDone); handler.RunWorkflows(ctx) }()
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, BaseContext: func(net.Listener) context.Context { return ctx }}
 	log.Printf("Agent Platform: %s", *base)
 	log.Printf("Administrator account: admin; existing account passwords are preserved")
 	log.Printf("Data: %s; local execution capacity: %d", s.Dir, *concurrency)
@@ -75,6 +78,8 @@ func main() {
 		}
 		cancel()
 	}
+	cancel()
+	<-workflowDone
 	scheduler.Close()
 	shutdown, c := context.WithTimeout(context.Background(), 10*time.Second)
 	defer c()

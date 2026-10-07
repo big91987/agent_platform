@@ -40,6 +40,8 @@ type Caller struct {
 	Agents   []string
 }
 type Input struct {
+	WorkflowRunID  string `json:"workflow_run_id,omitempty"`
+	WorkflowSeq    int    `json:"workflow_seq,omitempty"`
 	NetworkAccess  *bool  `json:"network_access,omitempty"`
 	AgentID        string `json:"agent_id"`
 	UserID         string `json:"user_id"`

@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 )
 
 type Server struct {
+	workflows     *WorkflowEngine
 	store         *Store
 	scheduler     *Scheduler
 	codex         *Codex
@@ -85,6 +87,9 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 	h.mux.HandleFunc("GET /api/conversations/{id}/events", h.protect(false, h.events))
 	h.mux.HandleFunc("GET /api/conversations/{id}/artifacts", h.protect(false, h.artifacts))
 	h.mux.HandleFunc("GET /api/conversations/{id}/file", h.protect(false, h.file))
+	h.workflowRoutes()
+	h.workflows = NewWorkflowEngine(s, sched, h.base)
+	h.workflowRunRoutes()
 	h.mux.HandleFunc("GET /", h.static)
 	return h
 }
@@ -350,7 +355,13 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	respond(w, 200, map[string]any{"conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]bool{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation}})
+	var workflowRunID string
+	workflowInputOpen := true
+	if e = h.store.DB.QueryRow(`SELECT s.run_id,(s.seq=r.seq AND s.result='' AND r.status IN ('running','waiting')) FROM workflow_steps s JOIN workflow_runs r ON r.id=s.run_id WHERE s.conversation_id=?`, v.ID).Scan(&workflowRunID, &workflowInputOpen); e != nil && !errors.Is(e, sql.ErrNoRows) {
+		fail(w, e)
+		return
+	}
+	respond(w, 200, map[string]any{"workflow_run_id": workflowRunID, "workflow_input_open": workflowInputOpen, "conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]bool{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation}})
 }
 func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, ok := h.authorize(w, r, c)
@@ -388,6 +399,15 @@ func (h *Server) remove(w http.ResponseWriter, r *http.Request, c Caller) {
 	}
 	if v.Status != "closed" {
 		fail(w, errors.New("close this conversation before deleting its history and files"))
+		return
+	}
+	var linked int
+	if e := h.store.DB.QueryRow(`SELECT count(*) FROM workflow_steps WHERE conversation_id=?`, v.ID).Scan(&linked); e != nil {
+		fail(w, e)
+		return
+	}
+	if linked != 0 {
+		fail(w, errors.New("workflow conversation history is retained with its run"))
 		return
 	}
 	h.scheduler.mu.Lock()
@@ -521,12 +541,8 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 }
 func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")
-	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "tools" || name == "integrations" || name == "users" || name == "api-docs" {
+	if name == "" || strings.HasPrefix(name, "conversations/") || name == "agents" || name == "tools" || name == "integrations" || name == "users" || name == "api-docs" || name == "workflows" || strings.HasPrefix(name, "workflows/") || strings.HasPrefix(name, "workflow-runs/") {
 		name = "index.html"
-	}
-	if name != "index.html" && name != "app.js" && name != "request.js" && name != "style.css" && name != "markdown.js" && name != "transcript.js" && name != "favicon.svg" {
-		http.NotFound(w, r)
-		return
 	}
 	b, e := web.Files.ReadFile(name)
 	if e != nil {

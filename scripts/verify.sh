@@ -5,6 +5,12 @@ test -z "$(gofmt -l cmd internal web examples/pipeline-tool)"
 for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-tooling.sh; do
   bash -n "$script"
 done
+node --check web/workflow-model.js
+node --check web/connectors.js
+node --check web/workflows.js
+node --check web/workflow-runs.js
+node --test web/workflow-runs_test.js
+node --test web/workflow-model_test.js
 node --check web/app.js
 node --check web/markdown.js
 node --check web/transcript.js
@@ -15,6 +21,8 @@ ruff format --check sdk/python examples
 PYTHONPATH=sdk/python python3 -m unittest discover -s sdk/python/tests -v
 PYTHONPATH=sdk/python:examples/github .data/runner-venv/bin/python -m unittest discover -s examples/github -p '*_test.py' -v
 python3 -m unittest discover -s examples/github/local-preview/tests -p '*_test.py' -v
+python3 -m unittest discover -s examples/github/model-relay-preview/tests -p '*_test.py' -v
+PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
 go vet ./...
 go test -race ./... -timeout 120s
 go build -o bin/agent-platform ./cmd/agent-platform
