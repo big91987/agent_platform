@@ -3,7 +3,7 @@
 globalThis.WorkflowGraph = class WorkflowGraph {
   static kinds = {agent:'Agent', approval:'人工确认', connector:'Connector', end:'结束'};
   constructor(value) {
-    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
+    this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,context_version:1,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
     this.value.authorized_users ||= [];
     this.value.start_nodes ||= [];
   }
@@ -16,6 +16,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     x=Math.max(0,Math.min(10000,Math.round(x)));y=Math.max(0,Math.min(10000,Math.round(y)));
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
+    if(kind==='agent'){n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
     return n;
@@ -38,8 +39,33 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(this.value.edges.some(e=>e.source===source&&e.route===route))throw new Error('这个节点已经有同名路由');
     mode ||= n.kind==='agent'?'handoff':'automatic';
     if(!['handoff','automatic'].includes(mode)||mode==='handoff'&&n.kind!=='agent')throw new Error('连线决策方式无效');
-    if(mode==='automatic'&&n.kind==='agent'&&this.value.edges.some(e=>e.source===source&&e.mode==='automatic'))throw new Error('Agent 只能有一条固定完成线');
+    if(this.value.context_version===1&&mode==='handoff'&&this.value.edges.some(e=>e.source===source&&e.target===target&&this.edgeMode(e)==='handoff'))throw new Error('同一自主交接目标只能配置一条策略，请合并策略内容');
+    if(mode==='automatic'&&n.kind==='agent'&&this.value.edges.some(e=>e.source===source&&this.edgeMode(e)==='automatic'))throw new Error('Agent 只能有一条固定完成线');
     this.value.edges.push({source,route,target,mode,description});
+  }
+  agentMode(id) {
+    const modes=new Set(this.value.edges.filter(e=>e.source===id).map(e=>this.edgeMode(e)));
+    return modes.size>1?'mixed':modes.has('handoff')?'handoff':'automatic';
+  }
+  nextRoute(source) { let i=1;while(this.value.edges.some(e=>e.source===source&&e.route==='target_'+i))i++;return 'target_'+i; }
+  removeEdge(index) { this.value.edges.splice(index,1); }
+  updateEdge(index,changes) {
+    const old=this.value.edges[index];if(!old)throw new Error('连线不存在');
+    const next={...old,...changes},backup=this.value.edges.slice();
+    try {
+      this.value.edges.splice(index,1);
+      this.connect(next.source,next.route,next.target,next.mode,next.description);
+      const updated=this.value.edges.pop();this.value.edges.splice(index,0,updated);
+    } catch(error) {this.value.edges=backup;throw error;}
+  }
+  validateAgent(node) {
+    if(this.value.context_version!==1||node.kind!=='agent')return;
+    const prompt=node.prompt||'',tokens=prompt.match(/{{[\s\S]*?}}/g)||[];
+    if(tokens.some(t=>t!=='{{handoff}}'))throw new Error('Session Prompt 包含未知占位符；仅支持 {{handoff}}');
+    const handoff=this.value.edges.some(e=>e.source===node.id&&this.edgeMode(e)==='handoff');
+    if(tokens.length>1||handoff&&tokens.length!==1)throw new Error('自主交接的 Session Prompt 必须恰好包含一个 {{handoff}}');
+    if(!Number.isInteger(node.continuation_limit??0)||(node.continuation_limit??0)<0||(node.continuation_limit??0)>10)throw new Error('自动继续次数必须是 0–10 的整数');
+    if(!Number.isInteger(node.execution_timeout_seconds??0)||(node.execution_timeout_seconds??0)<0||(node.execution_timeout_seconds??0)>86400)throw new Error('持续推进期限必须是 0–86400 秒的整数');
   }
   static import(text) {
     if(text.length>512*1024)throw new Error('文件超过 512 KB');

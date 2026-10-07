@@ -939,3 +939,47 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 管理员cookie按request键查询404是该接口按调用者owner隔离；改用原CI身份的SDK `workflow_by_request`实际返回上述同一Run，没有重建。页面通过原工作流的“运行记录”列表实际进入新Run详情，同列表保留旧暂停任务。原生intake与requirements各1个sessions JSONL的turn_context均记录model=gpt-6.1-sol、session_meta provider=platform_http；该证据证明原生会话选用模型，不推断供应商最终推理实现。原生证据仅私有归档身份字段，无认证文件。
 
 自动审批拒绝运行中的workflow_dispatch重放，理由是可能重复或并发接单，保留现场约束优先；未绕过拒绝或重复提交，待本Run终结后再验证正式同事件重试。当前只完成真实材料准备、接单与一次交接，需求/设计/实现/固定tests/独立QA/PR/合并部署未完成，本轮整体仍In Progress/No-Go。
+
+## 2026-10-07：角色、会话输入、交接预览与有界持续推进
+
+**结论：本轮框架改造验收通过；产品/全部用户旅程目标仍 In Progress/No-Go。** 改造依据 [输入设计](../02-architecture/workflow-session-input.md)，实施记录见 [计划](workflow-session-input-plan.md)。真实执行器为 Codex，三个阶段原生 turn_context 均为 gpt-6.1-sol；未验证其他候选执行器或真实供应商。
+
+### 维护源与安装
+
+原业务 Run `2f589073fb909da91a3e6f76a8ba5430` 于 seq6 空闲等待，无执行进程，通过正式 stop API 冻结为 stopped。其工作区未改，已有快照/原生会话和冻结定义保留；原 manifest、运行二进制与 SQLite 在线只读一致备份已保存私有证据目录。仅重启开发实例，其他实例监听 PID 保持。新二进制/源码版本以本节交付提交和私有构建摘要为准，health 的通用 0.1.0 字段不代表此次提交。
+
+正式原 manifest `--upgrade` 保留六个业务 Agent、全部 Connector 和工作流 ID；新工作流 revision5、context_version1、默认续跑3次/期限14400秒。需求/设计/研发/QA/报告/intake 预览全部实际通过。重启第一轮遗漏既有 HTTPS_PROXY 引用，由 Connector check 明确拒绝；从原 manifest 恢复同一已记录引用后沿同一升级恢复，未创建业务对象。原业务 Run 完整 JSON 与正式冻结后快照一致。
+
+另通过明确命名的安装验收 manifest 新装完整模板；无 Issue/业务 Run/分支/PR 创建。实际重复升级发现 API 保存空 env_refs 为 null，旧 helper 不兼容，先 RED 后修复维护源 `proxy_env_refs`；同一 manifest 恢复、再次升级对象 ID/工作流 JSON 均不变，验收定义完成后停用。新安装和已有安装均获得角色/Session Prompt 分离及同一新协议。
+
+### 页面与真实原生执行
+
+[用户页面启动的 Run](http://127.0.0.1:8792/workflow-runs/e31cf26268c945cb4e4269f35e286441) 首次走需求→设计→研发→结束，seq4完成。需求故意正常收尾且未交接，平台在原会话追加一次 `workflow_continue`；原生同一 Session 连续3个 turn（初轮、自动继续、用户澄清），没有创建替代会话。第二轮真实调用 wait_for_input，明确问题后保持 idle/waiting，不继续循环。页面从 Run 进入会话回复 v2.1/CNY，修正原始美元默认；三个实际产物通过真实命令核对。设计和研发首轮实际输入都收到用户修正，而非仅靠模型猜测摘要。
+
+需求/设计自主工具只有 handoff、wait_for_input、read_command_output；研发固定模式无 handoff，仅 complete_node、wait_for_input、read_command_output。角色实际 developer 中没有任务或 Run，每个会话原生项目规则正文仅注入一次，角色标记一次；三个已准备工作区的 AGENTS.md 摘要不变。默认托管工作区另用正式 invoke 调用真实 Codex，角色/项目双标记出现，seed AGENTS 字节保持，证明默认和外部路径共同生效。未读取原生私有推理。
+
+同一 Run 完成后经正式 return 回需求（seq5）保留人工纠正；页面正式停止后未自动继续，正式 resume 沿同 Run/seq/原生会话接续。新用户要求更新 v2.2/CNY，需求→设计→研发再次真实产出并于seq8完成；旧 v2.1 只作为历史，三个产物采用v2.2。等待声明在接受用户输入/节点结果时清理，当前节点不再显示已解决问题。首次旧构建保留的历史等待记录显示为历史，不改写旧回执。
+
+[真实有界续跑演练](http://127.0.0.1:8792/workflow-runs/19afcd9b38d15bae7822e7841bcc993a) 配置一次续跑，两个真实正常 turn 后明确 waiting/limit，continuations=1、无节点 Result，未推进结束。观察并保存后通过正式 stop 停止演练。节点时间期限另有真实1秒计时的引擎回归（原生turn结束后不再续跑）；未做4小时实等演练，不将次数证明替代时间边界实等证据。
+
+[真实门禁失败与独立 QA 回退 Run](http://127.0.0.1:8792/workflow-runs/d63da2df56ad471ca3b13131d5c566d2) 使用独立测试工作区、真实文件与固定命令，故意安排缺项，不是产品成品验收。固定命令实际退出1→研发收到失败回执并修复→退出0→独立只读 QA 发现第二缺项→handoff 回研发（seq5）携带缺项和文件摘要→修复后命令退出0→独立 QA 实际核验通过→seq9完成。QA 两次独立会话使用 read-only 原生沙箱，无实现写入；最终真实文件摘要 `0cd059d12f5bf596c8ccfdef2d2d4a7def3aafbefdf428fa0f9fd2ce9c02d72e`。
+
+### 修复与回归
+
+原缺陷 RED→GREEN：角色混入任务、未完成正常 turn 无续跑。独立评审两项 Important 均有真实引擎 RED→GREEN：重复自主目标无法仅凭target选择，正式 stopped/Return 丢人工反馈。新协议同一目标只允许一条策略，旧协议路线兼容保持；回退读取取消执行的实际反馈。模板旧等待说明按误续跑风险提高为 Important，正式安装生成路径 RED→GREEN。实测又发现用户回复后旧等待声明残留及新安装 null 引用，均先 RED 后修正式事务/安装源。
+
+最终受影响全套：Go race 全包通过、go vet通过；Node31项通过；平台工作流Python56项通过；Ruff全SDK/examples检查与格式通过、diff检查通过。Go链接器有既有Darwin LC_DYSYMTAB非致命警告，测试退出0。既有停止、授权、重复交接、迟到结果、重启与Connector恢复回归保留，没有删除门禁或以文字扫描替代完成。
+
+| AC | 证据与边界 |
+| --- | --- |
+| 01–03 | 三节点实际输入/原生来源核对、默认与外部规则共存；无累计 previous_results JSON |
+| 04 | 正式六节点预览，页面展开，图模型/UI同步回归，未知/重复占位符及重复目标拒绝 |
+| 05 | 实际工具列表及两次固定完成；旧模式兼容回归 |
+| 06–07 | 同原生会话澄清；v2.1→v2.2人工回退/停止恢复；真实命令失败与独立QA回退 |
+| 08 | 新协议真实停止/恢复、原生重启后回退，既有去重/迟到/授权/外部恢复回归；本轮没有额外制造GitHub网络未知副作用 |
+| 09 | 真实未完成续跑、明确澄清、用户停止及一次预算达到；4小时实等未测 |
+| 10 | Run的实际输入窗口从权限API读取冻结角色/来源/工具/输入；不返回env、native配置或bearer；既有凭据脱敏逻辑复用 |
+| 11 | 原manifest升级及独立新安装/同manifest恢复重复验证；旧Run冻结JSON不变 |
+| 12 | 两条真实Codex链路与默认工作区；其他执行器/真实供应商未测 |
+
+旧业务 Run仍正式 stopped，未静默升级其冻结协议或声称已自动恢复产品研发。升级后旧协议尚未进入的新业务节点直到发布的连续交付未复验，不能用本轮独立验收替代它。当前改造不新增其他供应商适配器，不恢复定时任务，不合并平台源 main。

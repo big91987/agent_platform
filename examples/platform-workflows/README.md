@@ -244,3 +244,15 @@ ZIP根目录必须有UTF-8 `manifest.json`，包含version和files；每个文�
 SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(description)})`；平台JSON API使用同一个parameters字段，不新增上传服务或依赖SDK专用附件状态。真实退出要求见 `docs/02-architecture/workflow-materials.md`；本地ZIP回归不等于正式Issue→Run→Agent→部署通过。
 
 准备工具使用POSIX文件锁，当前运行契约为macOS/Linux。中断后在下一次同Run准备中清理失去执行者的临时目录；并发重试不会删除仍在下载的内容。已验证材料始终复验，不自动覆盖。
+
+## 角色指令、Session Prompt 与持续推进
+
+正式安装器生成 `context_version=1` 工作流：Agent 保存稳定角色，节点 `prompt` 保存工作说明。新建自主节点的 Session Prompt 必须恰有一个 `{{handoff}}`；固定节点可省略，存在时展开为空。目标与策略编辑现有连线；同一自主目标只有一条策略，多个条件合并在策略文本中。旧协议保留原路由兼容，不在升级时改写旧 Run。
+
+进入节点设置可查看共享角色、编辑 Session Prompt、交接目标与策略，并预览展开内容。Run 每个 Agent 执行可查看冻结的实际角色、原生项目规则发现来源、已注册工具与首轮输入。Codex 原生发现工作目录的 AGENTS.md；平台不复制或追加角色到仓库规则文件。
+
+正常回复结束不代表节点完成。必须调用合法 `handoff` 或 `complete_node`。确需用户回答时使用 `wait_for_input(kind=clarification, reason=具体问题)`，真实外部阻塞使用 `kind=blocked`；再向用户说明。无需等待且未完成的正常收尾，会在同一原生会话追加继续指令，默认最多 3 次，持续推进期限为节点开始后的 14400 秒。失败或用户停止不自动续跑；达到上限显示具体原因，保留现场。新的用户回复解除旧等待声明，不重置该节点的续跑预算。
+
+安装升级仍使用原 manifest 和 `--upgrade`。安装器要求关联在途 Run 完成或正式停止；先保护在途会话与工作区，不能通过重建 Run 或修改数据库绕过检查。升级后新 Run 使用新协议，旧冻结图和已准备的原生会话保留旧语义。
+
+详见 [输入设计](../../docs/02-architecture/workflow-session-input.md) 和 [用户指南](../../docs/04-guides/agent-platform-user-guide.md)。

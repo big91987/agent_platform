@@ -24,6 +24,9 @@ type NodeResult struct {
 	Artifacts []string          `json:"artifacts,omitempty"`
 }
 type WorkflowStep struct {
+	WaitKind            string            `json:"wait_kind,omitempty"`
+	WaitReason          string            `json:"wait_reason,omitempty"`
+	Continuations       int               `json:"continuations,omitempty"`
 	ConnectorDispatched bool              `json:"connector_dispatched,omitempty"`
 	Receipt             *ConnectorReceipt `json:"connector_receipt,omitempty"`
 	Seq                 int               `json:"seq"`
@@ -89,6 +92,7 @@ func (s *Store) initWorkflowRuns() error {
  conversation_id TEXT NOT NULL DEFAULT '',token_hash TEXT NOT NULL DEFAULT '',result TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(run_id,seq));
  CREATE TABLE IF NOT EXISTS workflow_run_parameters(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),parameters TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS workflow_node_controls(run_id TEXT NOT NULL,seq INTEGER NOT NULL,wait_kind TEXT NOT NULL DEFAULT '',wait_reason TEXT NOT NULL DEFAULT '',wait_message_id INTEGER NOT NULL DEFAULT 0,continuations INTEGER NOT NULL DEFAULT 0,last_message_id INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(run_id,seq),FOREIGN KEY(run_id,seq) REFERENCES workflow_steps(run_id,seq));
  CREATE UNIQUE INDEX IF NOT EXISTS workflow_conversation ON workflow_steps(conversation_id) WHERE conversation_id!='';`)
 	return e
 }
@@ -136,7 +140,7 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	if e != nil {
 		return r, e
 	}
-	rows, e := tx.Query(`SELECT s.seq,s.node_id,s.status,s.conversation_id,s.result,s.error,s.created,s.updated,COALESCE(a.receipt,''),a.request IS NOT NULL FROM workflow_steps s LEFT JOIN workflow_connector_actions a ON a.run_id=s.run_id AND a.seq=s.seq WHERE s.run_id=? ORDER BY s.seq`, id)
+	rows, e := tx.Query(`SELECT s.seq,s.node_id,s.status,s.conversation_id,s.result,s.error,s.created,s.updated,COALESCE(a.receipt,''),a.request IS NOT NULL,COALESCE(c.wait_kind,''),COALESCE(c.wait_reason,''),COALESCE(c.continuations,0) FROM workflow_steps s LEFT JOIN workflow_connector_actions a ON a.run_id=s.run_id AND a.seq=s.seq LEFT JOIN workflow_node_controls c ON c.run_id=s.run_id AND c.seq=s.seq WHERE s.run_id=? ORDER BY s.seq`, id)
 	if e != nil {
 		return r, e
 	}
@@ -145,7 +149,7 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	for rows.Next() {
 		var step WorkflowStep
 		var result, receipt string
-		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated, &receipt, &step.ConnectorDispatched); e != nil {
+		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated, &receipt, &step.ConnectorDispatched, &step.WaitKind, &step.WaitReason, &step.Continuations); e != nil {
 			return r, e
 		}
 		if receipt != "" {
@@ -542,6 +546,9 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 	}
 	_, e = tx.Exec(`UPDATE workflow_steps SET result=?,updated=? WHERE run_id=? AND seq=?`, string(raw), now(), id, seq)
 	if e != nil {
+		return e
+	}
+	if _, e = tx.Exec(`UPDATE workflow_node_controls SET wait_kind='',wait_reason='',wait_message_id=0 WHERE run_id=? AND seq=?`, id, seq); e != nil {
 		return e
 	}
 	return tx.Commit()

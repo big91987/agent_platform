@@ -1,12 +1,15 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func TestEnvironmentSupportsInheritanceOverrideAndClear(t *testing.T) {
@@ -215,5 +218,77 @@ for line in sys.stdin:
 	_, _, err := x.prepare(context.Background(), Conversation{ID: "scope", WorkspacePath: workspace, Snapshot: Agent{Executor: "codex"}})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPreparationKeepsProjectRulesSeparateFromRole(t *testing.T) {
+	for _, external := range []bool{false, true} {
+		for _, hasRules := range []bool{false, true} {
+			t.Run(fmt.Sprintf("external=%t/rules=%t", external, hasRules), func(t *testing.T) {
+				root := t.TempDir()
+				project, err := filepath.EvalSymlinks(t.TempDir())
+				if err != nil {
+					t.Fatal(err)
+				}
+				projectRules := []byte("# Project rules\r\nKeep this file byte-for-byte.\r\n")
+				if hasRules {
+					if err = os.WriteFile(filepath.Join(project, "AGENTS.md"), projectRules, 0640); err != nil {
+						t.Fatal(err)
+					}
+				}
+				auth := filepath.Join(root, "auth-fixture")
+				if err = os.MkdirAll(auth, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600); err != nil {
+					t.Fatal(err)
+				}
+				x := Codex{Root: filepath.Join(root, "runtime"), AuthHome: auth, Binary: filepath.Join(root, "catalog-fixture")}
+				// Preparation invokes native Skill discovery. Replace only the external
+				// process; keep staging, seed copy, and native config generation real.
+				script := `#!/usr/bin/env python3
+import json, sys
+for line in sys.stdin:
+ p=json.loads(line)
+ if p.get('method')=='initialize': print(json.dumps({'id':p['id'],'result':{}}),flush=True)
+ if p.get('method')=='skills/list': print(json.dumps({'id':p['id'],'result':{'data':[{'skills':[],'errors':[]}]}}),flush=True)
+`
+				if err = os.WriteFile(x.Binary, []byte(script), 0700); err != nil {
+					t.Fatal(err)
+				}
+				c := Conversation{ID: "role", Snapshot: Agent{Executor: "codex", SeedDir: project, Instructions: "Review the project as a requirements analyst.", NativeConfig: "developer_instructions='Existing native guidance'"}}
+				if external {
+					c.WorkspacePath = project
+				}
+				for attempt := 0; attempt < 2; attempt++ {
+					workspace, home, err := x.prepare(context.Background(), c)
+					if err != nil {
+						t.Fatal(err)
+					}
+					rules, err := os.ReadFile(filepath.Join(workspace, "AGENTS.md"))
+					if hasRules {
+						if err != nil {
+							t.Fatal(err)
+						}
+						if !bytes.Equal(rules, projectRules) {
+							t.Errorf("preparation changed project rules: %q", rules)
+						}
+					} else if !os.IsNotExist(err) {
+						t.Errorf("preparation created project rules for role instructions: %q, %v", rules, err)
+					}
+					raw, err := os.ReadFile(filepath.Join(home, "config.toml"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					var config map[string]any
+					if err = toml.Unmarshal(raw, &config); err != nil {
+						t.Fatal(err)
+					}
+					if got := config["developer_instructions"]; got != "Existing native guidance\n\nReview the project as a requirements analyst." {
+						t.Errorf("role and existing native guidance must coexist: %q", got)
+					}
+				}
+			})
+		}
 	}
 }

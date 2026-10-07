@@ -47,3 +47,50 @@ test('edge choices survive export/import and invalid fixed Agent branches are re
  assert.equal(copy.edgeMode(copy.value.edges[1]),'automatic');
  assert.throws(()=>G.import(JSON.stringify({...g.value,edges:[{source:a.id,target:b.id,route:'next',mode:'guess'}]})),/连线/);
 });
+
+test('new Agent drafts use session inputs while opening legacy graphs preserves their protocol',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0);
+ g.connect(a.id,'done',b.id,'handoff','完成后交接');
+ assert.equal(g.value.context_version,1);
+ assert.equal(a.prompt,'{{handoff}}');
+ assert.equal(a.continuation_limit,3);
+ assert.equal(a.execution_timeout_seconds,14400);
+ assert.doesNotThrow(()=>g.validateAgent(a));
+ const legacy=new G({nodes:[{id:'old',kind:'agent',prompt:'原说明'}],edges:[]});
+ assert.equal(legacy.value.context_version,undefined);
+ assert.equal(legacy.node('old').prompt,'原说明');
+});
+
+test('changing handoff targets edits the graph edge and invalid edits leave its original path intact',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,180);
+ g.connect(a.id,'done',b.id,'handoff','完成');
+ g.updateEdge(0,{target:c.id,description:'检查通过'});
+ assert.equal(g.value.edges.length,1);
+ assert.equal(g.value.edges[0].target,c.id);
+ assert.equal(g.value.edges[0].description,'检查通过');
+ assert.throws(()=>g.updateEdge(0,{target:'missing'}),/不存在/);
+ assert.equal(g.value.edges[0].target,c.id);
+ g.removeEdge(0);assert.equal(g.value.edges.length,0);
+});
+
+test('session prompt validation distinguishes autonomous fixed and mixed legacy paths',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,180);
+ g.connect(a.id,'done',b.id,'handoff');
+ a.prompt='完成工作';assert.throws(()=>g.validateAgent(a),/handoff/);
+ a.prompt='{{handoff}} {{handoff}}';assert.throws(()=>g.validateAgent(a),/handoff/);
+ a.prompt='{{other}} {{handoff}}';assert.throws(()=>g.validateAgent(a),/占位符/);
+ a.prompt='{{handoff}}';a.continuation_limit=0;a.execution_timeout_seconds=0;assert.doesNotThrow(()=>g.validateAgent(a));
+ a.continuation_limit=11;assert.throws(()=>g.validateAgent(a),/继续/);a.continuation_limit=3;
+ a.execution_timeout_seconds=86401;assert.throws(()=>g.validateAgent(a),/期限/);a.execution_timeout_seconds=14400;
+ g.updateEdge(0,{mode:'automatic'});a.prompt='完成后提交结果';assert.doesNotThrow(()=>g.validateAgent(a));
+ g.connect(a.id,'revise',c.id,'handoff');assert.equal(g.agentMode(a.id),'mixed');
+ assert.equal(g.value.edges.length,2,'mixed compatibility must not drop either outgoing edge');
+});
+test('target-only handoff rejects duplicate targets but keeps legacy route graphs',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',400,0);
+ g.connect(a.id,'target_1',b.id,'handoff','第一策略');
+ assert.throws(()=>g.connect(a.id,'target_2',b.id,'handoff','第二策略'),/同一.*目标/);
+ g.value.context_version=0;
+ g.connect(a.id,'target_2',b.id,'handoff','旧版不同route');
+ assert.equal(g.value.edges.length,2);
+});

@@ -338,8 +338,6 @@ class ForwardTest(unittest.TestCase):
                     self.assertFalse((root / "state/comment-11-receipt.json").exists())
 
 
-
-
 class MaterialEntryTest(unittest.TestCase):
     def test_explicit_material_is_checked_and_old_issues_are_compatible(self):
         import json

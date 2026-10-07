@@ -223,8 +223,6 @@ class RepositoryTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 repo.remote_repository(value)
 
-
-
     def test_material_drift_blocks_publish_and_private_inputs_never_enter_commit(self):
         import hashlib
         import json

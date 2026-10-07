@@ -186,3 +186,7 @@ GitHub 入口原安装器 `--upgrade` 返回 Unchanged，仓库变量仍引用�
 研究中同步手册的实测步骤和当前能力边界；只读Agent、QA和Code Review、图结束和部署分别说明。模板缺陷先维护源修复，原manifest安全升级；在途任务保留定义/现场。不得把一次临时救援写成用户标准流程。
 
 U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行；涉及同一运行配置的升级必须等静止窗口。各用户路径用同一验证记录登记输入、操作、版本、结果与恢复，不再另建同内容状态表。当前计划自查结论Ready with Non-blocking Gaps：U1已分发并有真实输入证据，U2初版可审阅；专用Review、上游可运行原型及最终成品仍未验，不能标Accepted。
+
+## 当前框架改造：角色与会话输入
+
+已接受设计见 [会话输入](../02-architecture/workflow-session-input.md)，实施与回归见 [实施计划](workflow-session-input-plan.md)。维护源先修复角色/项目规则分离、Markdown Session Prompt/交接预览、明确等待及有界续跑，再沿原 manifest 升级。旧产品 Run 正式冻结，未修改其工作区或冻结输入。原产品质量与用户旅程目标继续 In Progress/No-Go，不能将这一框架验收切片称为产品全链通过。

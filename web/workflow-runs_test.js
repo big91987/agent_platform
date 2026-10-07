@@ -49,3 +49,10 @@ test('run delivery shows only verified deployment links and warns when PR head c
  ctx.delivery.deployments[0].url='javascript:alert(1)';
  assert.doesNotMatch(vm.runInContext('workflowDeliveryHTML(delivery)',ctx),/href="javascript:/);
 });
+
+test('actual input dialog reads frozen step context and explains legacy input',async()=>{
+ const rendered=[];const ctx=vm.createContext({esc:x=>String(x??''),dialog:html=>rendered.push(html),api:async path=>{assert.equal(path,'/api/workflow-runs/run1/steps/2/context');return {role_instructions:'角色正文',project_instructions:['AGENTS.md'],tools:['complete_node'],input:'冻结输入',context_version:0,workflow_revision:7}}});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ await vm.runInContext("workflowStepContextDialog('run1',2)",ctx);
+ assert.match(rendered.at(-1),/冻结输入/);assert.match(rendered.at(-1),/AGENTS.md/);assert.match(rendered.at(-1),/complete_node/);assert.match(rendered.at(-1),/旧版/);assert.match(rendered.at(-1),/readonly/);
+});

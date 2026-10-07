@@ -19,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 
 
 def proxy_env_refs(previous, environment):
+    previous = previous or {}
     names = ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
     return {
         **{key: previous[key] for key in names if key in previous},
@@ -56,6 +57,14 @@ def repository_command(role, repository, base, test_command):
     if role == "tests":
         command += ["--test-command", json.dumps(test_command)]
     return command
+
+
+def stage_prompts(role, common, command_label):
+    roles = json.loads((HERE / "prompts/roles.json").read_text())
+    instructions = roles[role]
+    session = common + "\n\n" + (HERE / f"prompts/{role}.md").read_text()
+    session = session.replace("{{verification_command}}", command_label)
+    return instructions, session + "\n\n{{handoff}}"
 
 
 class API:
@@ -455,7 +464,9 @@ def main():
                 "authorized_users": args.authorized_user,
                 "sandbox": "workspace-write",
                 "inherit_env": False,
-                "instructions": "专用编排验收：只完成当前节点指令。使用真实文件及平台注册工具，不模拟交接。需要用户回答时提问并结束本轮，不交接。其他时候自主继续。无需读取其他仓库。",
+                "instructions": stage_prompts("collaboration", common, command_label)[
+                    0
+                ],
                 "skills": [],
                 "env": {
                     key: os.environ[key]
@@ -481,9 +492,7 @@ def main():
             "authorized_users": args.authorized_user,
             "sandbox": "workspace-write",
             "inherit_env": False,
-            "instructions": (
-                common + "\n" + (HERE / f"prompts/{role}.md").read_text()
-            ).replace("{{verification_command}}", command_label),
+            "instructions": stage_prompts(role, common, command_label)[0],
             "skills": [str(path.resolve()) for path in skills.get(role, [])],
             "env": {
                 **installation.data["objects"]
@@ -557,11 +566,20 @@ def main():
         ]
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
     graph = json.loads((HERE / (args.template + ".json")).read_text())
+    graph["context_version"] = 1
     graph["name"] = args.prefix + " · " + graph["name"]
     graph["authorized_users"] = args.authorized_user
     for node in graph["nodes"]:
         if node["kind"] == "agent":
-            node["agent_id"] = agents[node["agent_id"]]
+            role = node["agent_id"]
+            node["agent_id"] = agents[role]
+            node["prompt"] = (
+                node.get("prompt", "")
+                + "\n\n"
+                + stage_prompts(role, common, command_label)[1]
+            )
+            node["continuation_limit"] = 3
+            node["execution_timeout_seconds"] = 14400
         if node["kind"] == "connector":
             role = node["connector_id"]
             node["connector_id"] = connectors[role]

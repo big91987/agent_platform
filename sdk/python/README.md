@@ -144,11 +144,15 @@ run = client.start_workflow(
     "按已确定的PRD与交互材料实施",
     workspace_path=workspace_path,
     request_id="<channel>:<stable-event-id>",
-    parameters={"material": json.dumps({
-        "url": "https://api.github.com/repos/<owner>/<repository>/releases/assets/<asset-id>",
-        "sha256": "<actual-64-hex-zip-sha256>",
-        "version": "<material-version>",
-    })},
+    parameters={
+        "material": json.dumps(
+            {
+                "url": "https://api.github.com/repos/<owner>/<repository>/releases/assets/<asset-id>",
+                "sha256": "<actual-64-hex-zip-sha256>",
+                "version": "<material-version>",
+            }
+        )
+    },
 )
 ```
 

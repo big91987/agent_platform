@@ -15,6 +15,9 @@ spec.loader.exec_module(install)
 
 
 class ProxyUpgradeTest(unittest.TestCase):
+    def test_api_null_env_references_upgrade_like_empty(self):
+        self.assertEqual(install.proxy_env_refs(None, {}), {})
+
     def test_fresh_direct_install_needs_no_proxy_environment(self):
         self.assertEqual(install.proxy_env_refs({}, {}), {})
         self.assertEqual(
@@ -183,8 +186,6 @@ class UpgradeRunSafetyTest(unittest.TestCase):
             install.retire_project_browser(installation.api, installation)
 
 
-
-
 class MaterialInstallCommandTest(unittest.TestCase):
     def test_every_fixed_delivery_command_is_installed_from_source(self):
         prepare = install.repository_command(
@@ -271,6 +272,27 @@ class MaterialManifestUpgradeTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "edited outside"):
                 same.apply("connectors", "connector-tests", new)
             self.assertEqual(api.writes, 2)
+
+
+class SessionPromptTest(unittest.TestCase):
+    def test_role_is_stable_and_node_session_owns_task_policy(self):
+        role, session = install.stage_prompts(
+            "development", "公共节点工作说明", "make verify"
+        )
+        self.assertNotIn("公共节点工作说明", role)
+        self.assertNotIn("make verify", role)
+        self.assertIn("公共节点工作说明", session)
+        self.assertIn("make verify", session)
+        self.assertEqual(session.count("{{handoff}}"), 1)
+
+
+class WaitingSOPTest(unittest.TestCase):
+    def test_installed_sop_has_one_explicit_wait_contract(self):
+        common = Path(__file__).with_name("prompts").joinpath("common.md").read_text()
+        _, session = install.stage_prompts("development", common, "make verify")
+        self.assertNotIn("正常输出问题并等待即可", session)
+        self.assertNotIn("outgoing_edges", session)
+        self.assertIn("wait_for_input", session)
 
 
 if __name__ == "__main__":

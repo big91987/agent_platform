@@ -15,6 +15,7 @@ import (
 // Workflow is a saved graph. A running instance will own its definition snapshot.
 // Node names and routes have no built-in business-stage semantics.
 type Workflow struct {
+	ContextVersion  int            `json:"context_version,omitempty"`
 	Hooks           []WorkflowHook `json:"hooks,omitempty"`
 	ID              string         `json:"id"`
 	Name            string         `json:"name"`
@@ -29,15 +30,17 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
-	ID             string         `json:"id"`
-	Name           string         `json:"name"`
-	Kind           string         `json:"kind"`
-	AgentID        string         `json:"agent_id,omitempty"`
-	ConnectorID    string         `json:"connector_id,omitempty"`
-	ConnectorInput ConnectorInput `json:"connector_input,omitempty"`
-	Prompt         string         `json:"prompt,omitempty"`
-	X              float64        `json:"x"`
-	Y              float64        `json:"y"`
+	ContinuationLimit       int            `json:"continuation_limit,omitempty"`
+	ExecutionTimeoutSeconds int            `json:"execution_timeout_seconds,omitempty"`
+	ID                      string         `json:"id"`
+	Name                    string         `json:"name"`
+	Kind                    string         `json:"kind"`
+	AgentID                 string         `json:"agent_id,omitempty"`
+	ConnectorID             string         `json:"connector_id,omitempty"`
+	ConnectorInput          ConnectorInput `json:"connector_input,omitempty"`
+	Prompt                  string         `json:"prompt,omitempty"`
+	X                       float64        `json:"x"`
+	Y                       float64        `json:"y"`
 }
 type WorkflowEdge struct {
 	Mode        string `json:"mode,omitempty"`
@@ -58,6 +61,9 @@ func validateWorkflow(w Workflow) error {
 	}
 	if w.MaxSteps < 1 || w.MaxSteps > 1000 {
 		return errors.New("max_steps must be between 1 and 1000")
+	}
+	if w.ContextVersion < 0 || w.ContextVersion > 1 {
+		return errors.New("unsupported context_version")
 	}
 	nodes := map[string]WorkflowNode{}
 	for _, n := range w.Nodes {
@@ -90,6 +96,9 @@ func validateWorkflow(w Workflow) error {
 			}
 		default:
 			return fmt.Errorf("unsupported node kind: %s", n.Kind)
+		}
+		if n.ContinuationLimit < 0 || n.ContinuationLimit > 10 || n.ExecutionTimeoutSeconds < 0 || n.ExecutionTimeoutSeconds > 86400 {
+			return fmt.Errorf("invalid continuation limits for node %s", n.ID)
 		}
 		nodes[n.ID] = n
 	}
@@ -169,6 +178,15 @@ func validateWorkflow(w Workflow) error {
 		}
 		if !canFinish[n.ID] {
 			return fmt.Errorf("node %s has no path to an end", n.ID)
+		}
+	}
+	if w.ContextVersion == 1 {
+		for _, n := range w.Nodes {
+			if n.Kind == "agent" {
+				if _, err := workflowSessionPrompt(w, n); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return validateWorkflowHooks(w)

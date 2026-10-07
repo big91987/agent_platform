@@ -33,3 +33,6 @@
 - [近期维护与恢复证据](validation/2026-10-04-maintenance-and-resume.md)
 
 验证文档中的 Issue、PR 和 run 状态是记录时的快照；判断当前可否推进需查询实时状态。历史实验的未测范围不得被后续文档省略或转述为已通过。
+
+- [工作流会话输入设计](02-architecture/workflow-session-input.md)
+- [执行器输入映射](02-architecture/executor-session-input.md)

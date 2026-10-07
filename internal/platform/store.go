@@ -426,6 +426,11 @@ func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string)
 	if e != nil {
 		return out, e
 	}
+	// A newly accepted user correction/reply resolves the current wait declaration.
+	// Framework continuations are inserted separately and never clear user waits.
+	if _, e = tx.Exec(`UPDATE workflow_node_controls SET wait_kind='',wait_reason='',wait_message_id=0 WHERE wait_message_id<? AND (run_id,seq) IN (SELECT ws.run_id,ws.seq FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id AND wr.seq=ws.seq WHERE ws.conversation_id=?)`, mid, conv.ID); e != nil {
+		return out, e
+	}
 	status := conv.Status
 	if status == "idle" {
 		status = "queued"

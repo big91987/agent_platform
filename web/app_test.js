@@ -216,3 +216,13 @@ test('tool catalog leads with currently assigned shared connection and folds una
  assert.match(content.innerHTML,/<details[^>]*>\s*<summary>未分配给当前 Agent 的连接（2）<\/summary>/);
  assert.match(content.innerHTML,/<summary>未分配给当前 Agent 的连接（2）<\/summary>[\s\S]*旧项目 A 浏览器[\s\S]*旧项目 B 浏览器/);
 });
+
+test('saving a shared Agent can return to the calling workflow without navigating to the Agent list',async()=>{
+ const {context,node}=conversationPage({});
+ vm.runInContext("api=async(path,method)=>path==='/api/agents'?[]:[];collectToolChoices=()=>[];toast=message=>{savedMessage=message};let returned=false;agentsView=async()=>{throw Error('unexpected navigation')};",context);
+ node('#dialog').showModal=()=>{};node('#dialog').close=()=>{};context.document.querySelectorAll=()=>[];
+ await vm.runInContext("editAgent({id:'a1',name:'角色',instructions:'职责',env:{},skills:[]},async()=>{returned=true})",context);
+ for(const [id,value]of Object.entries({'#agent-name':'角色','#agent-model':'','#agent-instructions':'职责','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'{}','#agent-sandbox':'workspace-write'}))node(id).value=value;
+ await node('#agent-form').onsubmit({preventDefault(){}});
+ assert.equal(vm.runInContext('returned',context),true);
+});
