@@ -19,7 +19,7 @@ func (h *Server) workflowRunRoutes() {
 			fail(w, e)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/by-request", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, err := h.store.WorkflowRunByRequest(c, r.URL.Query().Get("request_id"))
@@ -27,7 +27,7 @@ func (h *Server) workflowRunRoutes() {
 			fail(w, err)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("POST /api/workflow-runs/{id}/messages", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		var in struct {
@@ -45,7 +45,7 @@ func (h *Server) workflowRunRoutes() {
 			return
 		}
 		v.ConversationURL = h.base + "/conversations/" + v.ConversationID
-		respond(w, 202, v)
+		respond(w, 202, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("GET /api/workflow-run-groups", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		groups, err := h.store.WorkflowRunGroups(c)
@@ -66,7 +66,7 @@ func (h *Server) workflowRunRoutes() {
 			fail(w, e)
 			return
 		}
-		respond(w, 201, v)
+		respond(w, 201, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.WorkflowRun(c, r.PathValue("id"))
@@ -74,7 +74,7 @@ func (h *Server) workflowRunRoutes() {
 			fail(w, e)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}/steps/{seq}/output", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		run, err := h.store.WorkflowRun(c, r.PathValue("id"))
@@ -130,7 +130,7 @@ func (h *Server) workflowRunRoutes() {
 			fail(w, err)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	for _, action := range []string{"decision", "stop", "return", "resume"} {
 		h.mux.HandleFunc("POST /api/workflow-runs/{id}/"+action, h.protect(false, h.workflowRunCommand))
@@ -174,7 +174,7 @@ func (h *Server) workflowRunCommand(w http.ResponseWriter, r *http.Request, c Ca
 		fail(w, err)
 		return
 	}
-	respond(w, 202, v)
+	respond(w, 202, workflowHTTPValue(c, v))
 }
 func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -220,7 +220,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 				return nil, nil, e
 			}
 			node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
-			if current.Seq == seq && !allowed(owner, node.AgentID) {
+			if current.Seq == seq && !nodeAgentAllowed(owner, node) {
 				return nil, nil, ErrForbidden
 			}
 			if e = h.store.completeWorkflowNode(Caller{}, id, seq, token, in); e != nil {
@@ -246,7 +246,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			if current.Seq != seq {
 				return nil, nil, ErrConflict
 			}
-			if !allowed(owner, node.AgentID) {
+			if !nodeAgentAllowed(owner, node) {
 				return nil, nil, ErrForbidden
 			}
 			if e = h.store.handoffWorkflowNode(id, seq, token, in); e != nil {
@@ -268,7 +268,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			if _, err = h.store.Workflow(owner, run.WorkflowID); err != nil {
 				return nil, nil, err
 			}
-			if !allowed(owner, run.Definition.node(run.Steps[len(run.Steps)-1].NodeID).AgentID) {
+			if !nodeAgentAllowed(owner, run.Definition.node(run.Steps[len(run.Steps)-1].NodeID)) {
 				return nil, nil, ErrForbidden
 			}
 			if err = h.store.waitWorkflowNode(id, seq, token, in); err != nil {
@@ -300,7 +300,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 		if step.Status != "running" || step.Result != nil || in.Seq >= seq {
 			return nil, nil, ErrConflict
 		}
-		if !allowed(owner, node.AgentID) {
+		if !nodeAgentAllowed(owner, node) {
 			return nil, nil, ErrForbidden
 		}
 		page, e := h.store.connectorOutput(current, in.Seq, in.Offset)

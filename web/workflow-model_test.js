@@ -7,6 +7,41 @@ function model() {
  vm.runInContext(fs.readFileSync(__dirname + '/workflow-model.js', 'utf8'), context);
  return context.WorkflowGraph;
 }
+test('new Agent nodes save independent execution config without any shared Agent',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('agent',300,0);
+ const saved=JSON.parse(JSON.stringify(g.value));
+ assert.equal(saved.nodes[0].agent.executor,'codex');
+ assert.equal(saved.nodes[0].agent.sandbox,'workspace-write');
+ assert.equal(saved.nodes[0].agent.network_access,false);
+ assert.equal(saved.nodes[0].agent.inherit_env,true);
+ assert.equal(saved.nodes[0].agent_id,undefined);
+ a.agent.env.TASK='first';assert.equal(b.agent.env.TASK,undefined);
+});
+test('legacy migration takes only execution fields and isolates node and source changes',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0);
+ g.connect(a.id,'done',b.id,'handoff','核验');a.prompt='本节点工作 {{handoff}}';a.agent_id='legacy';delete a.agent;
+ const source={id:'source',name:'共享',enabled:true,authorized_users:['u1'],resolved_tools:[{secret:'private'}],executor:'codex',model:'m1',instructions:'角色',skills:['/skill'],tool_servers:[{server_id:'tools',tools:['read'],approvals:{read:'confirm'}}],env:{MODE:'one'}};
+ a.agent=G.agentConfig(source);delete a.agent_id;
+ const saved=JSON.parse(JSON.stringify(g.value));
+ assert.equal(saved.nodes[0].agent_id,undefined);
+ assert.deepEqual(Object.keys(saved.nodes[0].agent).sort(),['env','executor','instructions','model','skills','tool_servers']);
+ source.skills.push('/other');source.tool_servers[0].approvals.read='auto';a.agent.env.MODE='two';
+ assert.equal(a.agent.skills.length,1);assert.equal(a.agent.tool_servers[0].approvals.read,'confirm');assert.equal(source.env.MODE,'one');
+ assert.equal(a.prompt,'本节点工作 {{handoff}}');assert.equal(g.value.edges[0].description,'核验');
+});
+test('loading a legacy reference does not migrate it and mutually exclusive sources are rejected',()=>{
+ const G=model(),g=new G({nodes:[{id:'old',kind:'agent',agent_id:'shared',prompt:'旧工作'}],edges:[]});
+ assert.equal(g.node('old').agent,undefined);assert.equal(g.node('old').agent_id,'shared');
+ g.node('old').agent={executor:'codex'};assert.throws(()=>g.validateAgent(g.node('old')),/同时/);
+});
+test('import rejects malformed execution settings before opening the node drawer',()=>{
+ const G=model(),g=new G();g.add('agent',0,0);
+ for(const [changes,message]of [[{skills:{}},/Skill/],[{tool_servers:{}},/工具/],[{tool_servers:[{server_id:'x',tools:{}}]},/工具/],[{env:[]},/环境/]]){
+  const value=JSON.parse(JSON.stringify(g.value));Object.assign(value.nodes[0].agent,changes);
+  assert.throws(()=>G.import(JSON.stringify(value)),message);
+ }
+ const both=JSON.parse(JSON.stringify(g.value));both.nodes[0].agent_id='old';assert.throws(()=>G.import(JSON.stringify(both)),/同时/);
+});
 test('moving and deleting a node preserves other nodes and removes dangling routes',()=>{
  const G=model(),g=new G();
  const a=g.add('approval',25,40),b=g.add('end',380,40);

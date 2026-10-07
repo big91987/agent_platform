@@ -344,6 +344,9 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 			connectors[v.ID] = v
 		}
 		if n.Kind == "agent" {
+			if n.Agent != nil {
+				continue
+			}
 			var cfg string
 			var a Agent
 			if e = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, n.AgentID).Scan(&cfg); e != nil {

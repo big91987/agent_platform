@@ -2,6 +2,10 @@
 // The editable graph is separate from DOM state; API validation remains authoritative.
 globalThis.WorkflowGraph = class WorkflowGraph {
   static kinds = {agent:'Agent', approval:'人工确认', connector:'Connector', end:'结束'};
+  static agentConfig(source) {
+    const fields=['executor','model','instructions','skills','tool_servers','sandbox','network_access','allow_elevation','native_config','trust_hooks','inherit_env','env','seed_dir'];
+    return JSON.parse(JSON.stringify(Object.fromEntries(fields.filter(key=>Object.hasOwn(source,key)).map(key=>[key,source[key]]))));
+  }
   constructor(value) {
     this.value = value ? JSON.parse(JSON.stringify(value)) : {id:'',name:'新智能体编排',revision:0,context_version:1,enabled:true,authorized_users:[],entry:'',start_nodes:[],max_steps:100,nodes:[],edges:[]};
     this.value.authorized_users ||= [];
@@ -16,7 +20,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     x=Math.max(0,Math.min(10000,Math.round(x)));y=Math.max(0,Math.min(10000,Math.round(y)));
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
-    if(kind==='agent'){n.allow_user_input=true;n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
+    if(kind==='agent'){n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
     return n;
@@ -59,6 +63,16 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     } catch(error) {this.value.edges=backup;throw error;}
   }
   validateAgent(node) {
+    if(node.kind==='agent'&&node.agent&&node.agent_id)throw new Error('节点不能同时使用独立配置和共享 Agent 引用');
+    if(node.kind==='agent'&&node.agent!=null){
+      const a=node.agent,object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value),strings=value=>Array.isArray(value)&&value.every(v=>typeof v==='string');
+      if(!object(a))throw new Error('节点执行配置必须是对象');
+      if(a.skills!=null&&!strings(a.skills))throw new Error('Skill 配置必须是目录字符串数组');
+      if(a.tool_servers!=null&&(!Array.isArray(a.tool_servers)||a.tool_servers.some(b=>!object(b)||typeof b.server_id!=='string'||!strings(b.tools)||b.approvals!=null&&(!object(b.approvals)||Object.values(b.approvals).some(v=>!['auto','confirm'].includes(v))))))throw new Error('工具配置必须是包含服务、工具名称数组与审批设置的数组');
+      if(a.env!=null&&(!object(a.env)||Object.values(a.env).some(v=>v!==null&&typeof v!=='string')))throw new Error('环境配置必须是对象，变量值使用字符串或 null');
+      for(const key of ['executor','model','instructions','sandbox','native_config','seed_dir'])if(a[key]!=null&&typeof a[key]!=='string')throw new Error('节点配置 '+key+' 必须是字符串');
+      for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
+    }
     if(this.value.context_version!==1||node.kind!=='agent')return;
     const prompt=node.prompt||'',tokens=prompt.match(/{{[\s\S]*?}}/g)||[];
     if(tokens.some(t=>t!=='{{handoff}}'))throw new Error('Session Prompt 包含未知占位符；仅支持 {{handoff}}');
@@ -80,6 +94,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     for(const e of value.edges)if(!e||!ids.has(e.source)||!ids.has(e.target)||typeof e.route!=='string'||e.mode&&!['handoff','automatic'].includes(e.mode))throw new Error('文件包含无效的连线');
     // Imported definitions are new copies; source identity and user grants do not transfer.
     const graph=new WorkflowGraph({...value,id:'',revision:0,authorized_users:[],updated_at:''});
+    for(const node of graph.value.nodes)graph.validateAgent(node);
     return graph;
   }
 };

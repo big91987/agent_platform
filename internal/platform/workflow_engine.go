@@ -223,7 +223,7 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		if err != nil {
 			return err
 		}
-		if !allowed(caller, conv.AgentID) {
+		if !conversationAgentAllowed(e.store.DB, caller, conv.ID, conv.AgentID) {
 			return ErrForbidden
 		}
 		if conv.Status == "failed" || conv.Status == "stopped" || conv.Status == "closed" {
@@ -280,7 +280,21 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 		}
 	}
 	token := newID() + newID()
-	_, err := e.store.submit(c, Input{AgentID: node.AgentID, UserID: r.Owner, Message: input, WorkspacePath: r.WorkspacePath, RequestID: "workflow:" + r.ID + ":" + fmt.Sprint(step.Seq)}, func(tx *sql.Tx, a *Agent, conversationID string) error {
+	_, err := e.store.submitConfigured(c, Input{AgentID: node.AgentID, UserID: r.Owner, Message: input, WorkspacePath: r.WorkspacePath, RequestID: "workflow:" + r.ID + ":" + fmt.Sprint(step.Seq)}, func(tx *sql.Tx, a *Agent, conversationID string) error {
+		var definition string
+		if err := tx.QueryRow(`SELECT definition FROM workflows WHERE id=?`, r.WorkflowID).Scan(&definition); err != nil {
+			return err
+		}
+		var current Workflow
+		if err := json.Unmarshal([]byte(definition), &current); err != nil {
+			return err
+		}
+		if !workflowAllowed(c, current) || !runAllowed(c, r) {
+			return ErrForbidden
+		}
+		if node.Agent != nil {
+			a.Name = node.Name
+		}
 		var state, nodeState string
 		var seq int
 		if err := tx.QueryRow(`SELECT r.status,r.seq,s.status FROM workflow_runs r JOIN workflow_steps s ON s.run_id=r.id AND s.seq=r.seq WHERE r.id=?`, r.ID).Scan(&state, &seq, &nodeState); err != nil {
@@ -305,7 +319,7 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 		}
 		_, err := tx.Exec(`UPDATE workflow_steps SET status='running',conversation_id=?,token_hash=?,updated=? WHERE run_id=? AND seq=?`, conversationID, hashText(token), now(), r.ID, step.Seq)
 		return err
-	})
+	}, node.Agent)
 	return err
 }
 func (e *WorkflowEngine) Stop(c Caller, id string, seq int) error {

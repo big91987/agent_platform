@@ -96,7 +96,7 @@ func (s *Store) continueWorkflowNode(id string, seq int) error {
 	if c.Status != "idle" {
 		return ErrConflict
 	}
-	if !allowed(owner, c.AgentID) {
+	if !conversationAgentAllowed(tx, owner, c.ID, c.AgentID) {
 		return ErrForbidden
 	}
 	var pending int

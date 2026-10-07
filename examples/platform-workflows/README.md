@@ -7,7 +7,7 @@
 - `software-delivery.json`：准备分支 → Issue → 任务判断 → 必要的需求／设计 → 研发 → 项目测试 → 独立 QA → 交付说明 → 提交推送 → 草稿 PR。测试失败回研发；QA 可回需求、设计或研发；关键问题留在当前 Agent 会话澄清。所有回路保留在同一个 Run 中。
 - `qa-rework.json`：从已有产物的独立 QA 开始，发现问题返回需求／设计／研发，修复后重新测试和 QA；不创建 Issue、分支或 PR，最后由验收人员选择结束或继续返工。
 - `prompts/`：阶段指令，复用 Harness Skill，按项目规模裁剪。普通选择记录推荐并继续；用户明确要求、关键歧义和高风险操作才等待确认。阶段不适用时说明依据再交接。
-- `install.py`：使用公开管理 API 注册 Agent、stdio MCP、Connector 和图；安装清单用于重入与升级，不操作数据库。
+- `install.py`：使用公开管理 API 注册 stdio MCP、Connector 和带节点独立执行配置的图；安装清单用于重入与升级，不操作数据库，也不为阶段注册共享 Agent。
 - `repository.py`：固定的准备分支／提交推送命令。每个 Run 使用 `workflow/<run_id>` 分支；拒绝接管脏工作区、错误仓库、错误分支和明显凭据文件；不 reset、不强推、不合并。
 - `browser_tool.py`：复用 `../github/tooling/full_harness/browser` 的锁定浏览器运行时；只借用浏览器能力，不使用其 CI 控制器。检查 app 或设计原型，保存真实截图／检查结果；支持页面内受限检查脚本。
 
@@ -15,9 +15,9 @@
 
 ## 安装
 
-需要运行中的平台（含 Workflow/Connector API）、Python 3.11+、Node/npm、Git、可用的原生 Codex，以及独立项目 checkout。平台账户必须有管理权限。GitHub Token 放在平台服务环境中，至少能访问指定仓库的 Issue、内容与 PR；本例不需要 Actions 管理权限。
+需要运行中的平台（含节点 `agent` 内联配置及 Workflow/Connector API）、Python 3.11+、Node/npm、Git、可用的原生 Codex，以及独立项目 checkout。先升级平台二进制，再运行本版安装器；旧平台不支持内联配置。平台账户必须有管理权限。GitHub Token 放在平台服务环境中，至少能访问指定仓库的 Issue、内容与 PR；本例不需要 Actions 管理权限。
 
-Skill 是独立资产：指定包含 `defining-platform-products-cn`、`platform-architecture-cn`、`managing-engineering-delivery-cn` 的目录，并单独指定 `validating-platform-releases-cn`。所有目录必须在平台主机可读。安装器继承基础 Agent 的 executor/model，按本例重新配置阶段指令与权限；不继承其任意 native_config、Hooks 或整份环境。
+Skill 是独立资产：指定包含 `defining-platform-products-cn`、`platform-architecture-cn`、`managing-engineering-delivery-cn` 的目录，并单独指定 `validating-platform-releases-cn`。所有目录必须在平台主机可读。节点直接配置 executor/model，按本例设置阶段指令、Skill、工具和权限。新安装默认 executor 为 codex、model 为空（使用原生执行器默认模型），也可显式传入以下参数。
 
 在平台主机从源码 checkout 运行（将占位符替换为实际路径；安装清单与证据不要提交）：
 
@@ -28,7 +28,7 @@ Skill 是独立资产：指定包含 `defining-platform-products-cn`、`platform
 # 在当前终端安全设置 PLATFORM_ADMIN_PASSWORD，然后执行：
 python3 examples/platform-workflows/install.py \
   --platform-url <platform-url> \
-  --base-agent <existing-agent-id> \
+  --executor codex --model <native-model> \
   --repository <owner>/<repository> \
   --workspace-root <dedicated-workspace-root> \
   --skill-root <harness-skill-directory> \
@@ -38,7 +38,9 @@ python3 examples/platform-workflows/install.py \
   --prepare-browser
 ```
 
-`--prepare-browser` 通过已有 package-lock 执行 npm ci、安装 Chromium 并检查真实启动。若使用代理，需在安装器与平台服务环境中配置相同的 HTTP(S)_PROXY/NO_PROXY。仅这些显式代理值复制到阶段 Agent；GitHub Token 不传给 Agent。安装清单存配置和 ID，不存登录 Cookie/密码；不要在代理 URL 内嵌凭据。
+`--prepare-browser` 通过已有 package-lock 执行 npm ci、安装 Chromium 并检查真实启动。若使用代理，需在安装器与平台服务环境中配置相同的 HTTP(S)_PROXY/NO_PROXY。仅这些显式代理值写入节点环境；GitHub Token 不传给 Agent。安装清单存配置和 ID，不存登录 Cookie/密码；不要在代理 URL 内嵌凭据。
+
+原命令中的 `--base-agent` 为兼容保留，仅在没有历史配置时提供 executor/model 初始值；新安装无需该参数或任何共享 Agent。升级默认保留原 manifest 中各节点或旧阶段 Agent 的 executor/model 和已记录环境，显式 `--executor` / `--model` 才覆盖对应模型设置。已有节点配置后不再读取基础 Agent，其后续改动不影响节点。
 
 `--base <branch>` 同时指定准备分支与草稿 PR 的目标基线，默认 main；适用于非 main 主线或隔离验收分支。升级时保持原基线参数，避免意外改回默认值。
 
@@ -56,7 +58,7 @@ python3 examples/platform-workflows/install.py \
 
 升级维护源后，用同一清单及相同目标参数重跑，并加 `--upgrade`。安装器逐对象记录成功，重复安装无变更时不创建新对象／版本；API 返回的空默认字段不应触发伪升级。平台外编辑过的已安装对象会被拒绝覆盖，应先对照清单和当前配置合并改动，再选择维护方式。不可丢弃清单后盲目安装，否则可能无法确认已有对象归属；同名冲突会明确报错。
 
-图和 Connector 配置对 Run 冻结；Agent 会话创建时冻结 Agent 配置，尚未创建的阶段读取当时的 Agent 定义。升级阶段指令前应完成／停止受影响的在途任务，或用另一个 prefix 安装新版本。**脚本和 Skill 的磁盘内容不受数据库快照冻结**：生产安装应使用不可变版本目录，并在新安装配置中引用新路径，保留旧目录直至相关 Run 结束。
+图、节点内联 Agent 与 Connector 配置对 Run 冻结。旧 manifest 使用原命令加 `--upgrade`，在原工作流的新版本中迁移阶段配置；原工作流和 Connector ID 保留，旧共享 Agent 不修改、不停用、不删除，已启动 Run 和已有会话不改写。旧 `agent_id` 冻结图继续按旧兼容规则执行。安装器同时按工作流 ID 和旧 Agent 引用检查在途 Run，running／waiting／stopping 时拒绝升级；请先完成或正式停止。旧阶段 Agent 或节点配置存在外部编辑时仍拒绝覆盖。**脚本和 Skill 的磁盘内容不受数据库快照冻结**：生产安装应使用不可变版本目录，并在新安装配置中引用新路径，保留旧目录直至相关 Run 结束。
 
 命令执行被中断时，其副作用可能已经发生，平台不会自动重放；检查仓库和回执后通过正式停止／返回入口重新执行。准备分支可以识别同一 Run 已创建的分支；提交推送仅在正确分支上执行，重复无改动发布不会造空提交。GitHub 接口响应丢失时按 Run/节点标记核对已创建资源，不能凭空补成功状态。
 
@@ -74,7 +76,7 @@ ruff format --check examples/platform-workflows
 
 ## 已有产物的返工验收
 
-用上述安装参数和原安装清单追加 `--template qa-rework`，注册独立的返工图，保留原交付图。此模板复用原阶段 Agent、浏览器工具及测试 Connector；启动前选择已有需求、设计和实现的独立 checkout。不要选用另一个未结束 Run 占用的工作区。需升级配置时仍使用 `--upgrade`，不绕过漂移检查。
+用上述安装参数和原安装清单追加 `--template qa-rework`，注册带独立节点配置的返工图，保留原交付图，复用浏览器工具及测试 Connector；启动前选择已有需求、设计和实现的独立 checkout。不要选用另一个未结束 Run 占用的工作区。需升级配置时仍使用 `--upgrade`，不绕过漂移检查。
 
 从返回的图页面启动，输入验收范围。QA 根据实际证据选择回退目标；研发修复后通过项目测试返回独立 QA。末端人工节点用于检查返工证据，测试执行者可自行操作；它不表示正常交付模板需要额外的形式审批。故障注入只用于专用测试分支，保留原交付分支和失败证据。
 
@@ -143,7 +145,7 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 
 该模板故意不把研发节点放进 start_nodes：那个通用参数表示直接从指定节点启动，会略过分支和 Issue 准备。需要绕过业务阶段时用上述入口路由；已有工作区的 QA 返工使用 qa-rework 模板。
 
-用原清单加 --upgrade 安装此次更新，会注册任务判断 Agent 并升级模板和阶段策略。在途 Run 的图不变；先完成或停止受影响任务，再升级共享 Agent 定义。新仓库用相同安装入口即可获得短路径，不需手改运行数据。
+用原清单加 --upgrade 安装此次更新，会配置任务判断节点并升级模板和阶段策略。在途 Run 的图不变；先完成或停止受影响任务，再升级工作流。新仓库用相同安装入口即可获得短路径，不需手改运行数据。
 
 启动脚本等任务需要监听本地端口时，开发 Agent 的原生沙箱可能不具备该能力。该模板由管理员配置项目测试 Connector 在宿主执行固定验证入口：开发节点提交实现、测试和沙箱失败证据，随后由项目测试节点实际执行，失败回研发，成功再进独立 QA。确认稳定的沙箱环境限制后，不因代码或文档变化重复运行必然在相同限制处退出的命令；保留失败命令、代码版本及受限范围，完成可运行检查并交接当前代码，由宿主完整验证。代码、用例和依赖错误不能当作环境限制跳过；相关执行环境改变后须重新核验。QA 独立核对用例和真实回执，有缺口继续返工。不得修改测试为恒通过或临时放开 Agent 权限。这不授权任意未配置的宿主命令；其他测试入口由管理员配置相应 Connector。
 
@@ -247,9 +249,9 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 ## 角色指令、Session Prompt 与持续推进
 
-正式安装器生成 `context_version=1` 工作流：Agent 保存稳定角色，节点 `prompt` 保存工作说明。新建自主节点的 Session Prompt 必须恰有一个 `{{handoff}}`；固定节点可省略，存在时展开为空。目标与策略编辑现有连线；同一自主目标只有一条策略，多个条件合并在策略文本中。旧协议保留原路由兼容，不在升级时改写旧 Run。
+正式安装器生成 `context_version=1` 工作流：节点 `agent.instructions` 保存稳定角色，节点 `prompt` 保存工作说明。新建自主节点的 Session Prompt 必须恰有一个 `{{handoff}}`；固定节点可省略，存在时展开为空。目标与策略编辑现有连线；同一自主目标只有一条策略，多个条件合并在策略文本中。旧协议保留原路由兼容，不在升级时改写旧 Run。
 
-进入节点设置可查看共享角色、编辑 Session Prompt、交接目标与策略，并预览展开内容。Run 每个 Agent 执行可查看冻结的实际角色、原生项目规则发现来源、已注册工具与首轮输入。Codex 原生发现工作目录的 AGENTS.md；平台不复制或追加角色到仓库规则文件。
+进入节点设置可编辑独立执行配置、Session Prompt、交接目标与策略，并预览展开内容。Run 每个 Agent 执行可查看冻结的实际角色、原生项目规则发现来源、已注册工具与首轮输入。Codex 原生发现工作目录的 AGENTS.md；平台不复制或追加角色到仓库规则文件。
 
 正常回复结束不代表节点完成。必须调用合法 `handoff` 或 `complete_node`。确需用户回答时使用 `wait_for_input(kind=clarification, reason=具体问题)`，真实外部阻塞使用 `kind=blocked`；再向用户说明。无需等待且未完成的正常收尾，会在同一原生会话追加继续指令，默认最多 3 次，持续推进期限为节点开始后的 14400 秒。失败或用户停止不自动续跑；达到上限显示具体原因，保留现场。新的用户回复解除旧等待声明，不重置该节点的续跑预算。
 

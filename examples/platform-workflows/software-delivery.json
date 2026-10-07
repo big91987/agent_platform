@@ -30,7 +30,7 @@
       "id": "intake",
       "name": "判断任务与起点",
       "kind": "agent",
-      "agent_id": "intake",
+      "agent": {"executor": "codex"},
       "prompt": "根据原始任务、用户指定起点和仓库事实选择必要阶段；范围明确的修复可直接交接开发，不需要补造 PRD 或设计。",
       "x": 660,
       "y": 70
@@ -39,7 +39,7 @@
       "id": "requirements",
       "name": "需求与验收标准",
       "kind": "agent",
-      "agent_id": "requirements",
+      "agent": {"executor": "codex"},
       "prompt": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
       "x": 60,
       "y": 270
@@ -48,7 +48,7 @@
       "id": "design",
       "name": "设计方案",
       "kind": "agent",
-      "agent_id": "design",
+      "agent": {"executor": "codex"},
       "prompt": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
       "x": 360,
       "y": 270
@@ -57,7 +57,7 @@
       "id": "development",
       "name": "研发实现",
       "kind": "agent",
-      "agent_id": "development",
+      "agent": {"executor": "codex"},
       "prompt": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
       "x": 660,
       "y": 270
@@ -66,7 +66,7 @@
       "id": "qa",
       "name": "独立 QA",
       "kind": "agent",
-      "agent_id": "qa",
+      "agent": {"executor": "codex"},
       "prompt": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
       "x": 360,
       "y": 470
@@ -75,7 +75,7 @@
       "id": "report",
       "name": "整理交付说明",
       "kind": "agent",
-      "agent_id": "report",
+      "agent": {"executor": "codex"},
       "prompt": "执行 整理交付说明 节点，按已挂载的阶段指令和 Skill 完成对应产物。",
       "x": 660,
       "y": 470

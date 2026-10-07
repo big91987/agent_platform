@@ -212,7 +212,7 @@ func (s *Store) Authorize(c Caller, id, user string) (Conversation, error) {
 	if e != nil {
 		return v, e
 	}
-	if !c.Admin && (c.UserID == "" || v.UserID != c.UserID || !allowed(c, v.AgentID)) {
+	if !c.Admin && (c.UserID == "" || v.UserID != c.UserID || !conversationAgentAllowed(s.DB, c, v.ID, v.AgentID)) {
 		return v, ErrForbidden
 	}
 	return v, nil
@@ -242,18 +242,33 @@ func (s *Store) Conversations(c Caller, user string) ([]Conversation, error) {
 		if e != nil {
 			return nil, e
 		}
-		if allowed(c, v.AgentID) {
-			out = append(out, v)
+		out = append(out, v)
+	}
+	err := rows.Err()
+	rows.Close()
+	visible := out[:0]
+	for _, v := range out {
+		if conversationAgentAllowed(s.DB, c, v.ID, v.AgentID) {
+			visible = append(visible, v)
 		}
 	}
-	return out, rows.Err()
+	return visible, err
 }
 func hashText(text string) string { b := sha256.Sum256([]byte(text)); return hex.EncodeToString(b[:]) }
 func (s *Store) Submit(c Caller, in Input) (Receipt, error) {
 	return s.submit(c, in, nil)
 }
 func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string) error) (Receipt, error) {
+	return s.submitConfigured(c, in, prepare, nil)
+}
+
+// Only the workflow engine can supply node settings, with its transaction-bound
+// run/step authorization callback. Public input never accepts an Agent config.
+func (s *Store) submitConfigured(c Caller, in Input, prepare func(*sql.Tx, *Agent, string) error, config *Agent) (Receipt, error) {
 	var out Receipt
+	if config != nil && (prepare == nil || in.AgentID != "" || in.ConversationID != "") {
+		return out, ErrForbidden
+	}
 	if !c.Admin && c.UserID != "" {
 		if in.UserID != "" && in.UserID != c.UserID {
 			return out, ErrForbidden
@@ -291,7 +306,7 @@ func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string)
 				if e = tx.QueryRow(`SELECT user_id,agent_id FROM conversations WHERE id=?`, out.ConversationID).Scan(&owner, &agent); e != nil {
 					return out, ErrNotFound
 				}
-				if owner != c.UserID || !allowed(c, agent) {
+				if owner != c.UserID || !conversationAgentAllowed(tx, c, out.ConversationID, agent) {
 					return out, ErrForbidden
 				}
 			}
@@ -328,7 +343,7 @@ func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string)
 		if e != nil {
 			return out, e
 		}
-		if !c.Admin && (conv.UserID != c.UserID || !allowed(c, conv.AgentID)) {
+		if !c.Admin && (conv.UserID != c.UserID || !conversationAgentAllowed(tx, c, conv.ID, conv.AgentID)) {
 			return out, ErrForbidden
 		}
 		if in.AgentID != "" && in.AgentID != conv.AgentID {
@@ -352,21 +367,33 @@ func (s *Store) submit(c Caller, in Input, prepare func(*sql.Tx, *Agent, string)
 	} else {
 		var a Agent
 		var cfg string
-		e = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, in.AgentID).Scan(&cfg)
-		if errors.Is(e, sql.ErrNoRows) {
-			return out, ErrNotFound
-		}
-		if e != nil {
-			return out, e
-		}
-		if e = json.Unmarshal([]byte(cfg), &a); e != nil {
-			return out, e
-		}
-		if !allowed(c, a.ID) {
-			return out, ErrForbidden
-		}
-		if !a.Enabled {
-			return out, errors.New("Agent is disabled")
+		if config != nil {
+			raw, err := json.Marshal(config)
+			if err != nil {
+				return out, err
+			}
+			if err = json.Unmarshal(raw, &a); err != nil {
+				return out, err
+			}
+			a.ID = ""
+			a.Enabled = true
+		} else {
+			e = tx.QueryRow(`SELECT config FROM agents WHERE id=?`, in.AgentID).Scan(&cfg)
+			if errors.Is(e, sql.ErrNoRows) {
+				return out, ErrNotFound
+			}
+			if e != nil {
+				return out, e
+			}
+			if e = json.Unmarshal([]byte(cfg), &a); e != nil {
+				return out, e
+			}
+			if !allowed(c, a.ID) {
+				return out, ErrForbidden
+			}
+			if !a.Enabled {
+				return out, errors.New("Agent is disabled")
+			}
 		}
 		workspace := ""
 		if in.WorkspacePath != "" {
@@ -491,6 +518,23 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	conv, e = scanConv(tx.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, m.ConversationID))
 	if e != nil {
 		return conv, m, e
+	}
+	if conv.AgentID == "" {
+		// Recheck the owner and current grant at dispatch: permissions may have
+		// changed since the message entered the queue.
+		var role string
+		var enabled bool
+		err := tx.QueryRow(`SELECT role,enabled FROM users WHERE user_id=?`, conv.UserID).Scan(&role, &enabled)
+		caller := Caller{UserID: conv.UserID, Admin: role == "admin"}
+		if err != nil || !enabled || !conversationAgentAllowed(tx, caller, conv.ID, "") {
+			if _, e = tx.Exec(`UPDATE messages SET status='failed' WHERE conversation_id=? AND role='user' AND status='queued'; UPDATE conversations SET status='failed',error='Workflow authorization changed before execution',updated=? WHERE id=?`, conv.ID, now(), conv.ID); e != nil {
+				return conv, m, e
+			}
+			if e = tx.Commit(); e != nil {
+				return conv, m, e
+			}
+			return conv, m, ErrForbidden
+		}
 	}
 	_, e = tx.Exec(`UPDATE messages SET status='running' WHERE id=?; UPDATE conversations SET status='running',error='',updated=? WHERE id=?`, m.ID, now(), conv.ID)
 	if e != nil {

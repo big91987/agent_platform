@@ -1030,3 +1030,22 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 独立只读评审发现 Connector 专用参数未同步导致草稿丢失，以及旧/失败预览响应覆盖新内容，均补充真实 RED→GREEN 回归并修复；同时修正历史等待提示和刷新打断阅读。41 项 Node 回归全部通过，Go 全包测试及 vet 通过，嵌入资产构建、JavaScript 语法与 diff 检查通过。没有新增 Run、Issue、PR 或业务执行，也未用本轮 UI 验证替代原业务链路验收。
 
 升级使用原开发实例 CLI 和维护源二进制路径，升级前确认无在途执行，核对备份与冻结记录；旧 stopped Run 完整 JSON 不变，8788 实例不变。UI 资产随标准 Go embed 构建交付，标准新安装及既有实例更新二进制即可获得；本轮未重跑独立新安装（manifest 未变），此前安装/升级证据仍按原版本保留。已验二进制 SHA256：`1d107e5893056c86da5efec38ca0accd403d957810f8a56065384763f8a662f6`。源码草稿 PR #5 保持 Open/Draft，不合并 main。
+
+
+## 节点独立配置与会话授权（2026-10-07）
+
+工作流节点直接持有执行器、模型、角色指令、Skill、工具、权限、原生配置与环境。没有复制共享智能体入口，也没有新增模板库。旧引用图保留读取兼容，编辑保存及原manifest升级转为内嵌配置；旧Agent和已有Run不改写。普通调用方读取Workflow/Run时不返回管理配置。用户明确授权独立节点会话按当前工作流授权与Run所有者校验，旧共享Agent维持原规则。
+
+后端红控复现无共享Agent无法启动，以及撤权后排队消息仍被Claim的问题。修复后，创建与步骤绑定同事务，读取、重复请求、回复、自动接续、MCP与恢复沿相同边界；Claim调度前再次检查账户与当前授权，撤权队列标失败。测试覆盖配置冻结、无隐藏Agent、跨用户及撤权、未关联空agent_id拒绝、非法配置、HTTP敏感字段、等待/停止/同会话恢复、冻结权限重置。前端修复删除节点遗留环境草稿、导出泄漏及非法导入；安装器比较完整执行字段，旧manifest遗漏但后加的工具也作为漂移拒绝。独立代码复审无剩余Critical/Important。
+
+验证分层：
+
+- 自动化：`go test ./... -timeout 120s`、`go test -race ./internal/platform -timeout 180s`、`go vet ./...`通过；完整前端55项与标准工作流安装器69项通过；Ruff、格式、diff检查通过。测试中的模拟API只证明对应隔离契约。
+- 标准升级：先核验无在途Run/会话，备份数据库、二进制、manifest和API定义，再升级开发实例。原manifest把工作流 `fbdbfd95ea6c6992bf45bf697b0769e9` 从版本6升到7，六个节点内嵌配置，模型保持 `gpt-6.1-sol`；全部输入预览通过，重复升级图和revision不变。原共享Agent完整响应及旧停止Run `2f589073fb909da91a3e6f76a8ba5430` 完整JSON保持不变，另一实例监听进程未变。
+- 新安装：原标准安装器创建独立验收安装，工作流 `b8ff315919e1de285bba9ce22da5343c`，不指定base Agent，显式指定模型；新增共享Agent为0，重复安装保持同一图。仅安装验证，未运行其产品交付流程。
+- 页面：独立验收图 `d0d93ed62fb93431619374282f8e2109` 右侧直接配置，关闭详情保留名称草稿，保存版本2并刷新后仍存在；由页面运行按钮启动唯一Run `bff43a2d7a7f5718ebd6483613c74429`。原项目图版本7也实开研发节点，直接显示Codex、模型和角色配置。
+- 真实执行：上述Run使用 `gpt-6.1-sol`，正式wait_for_input进入等待澄清；页面停止到stopped，再经继续原节点提交版本号。全程会话 `206e8dac89cf04a66049a15faefcea87` 未变，agent_id为空。Codex实际创建release.md，cat/sed/test/grep校验标题与版本 `v0.7.0-node-config`，命令exit0，scoped complete_node接受，Run完成。API与实际文件交叉核验，已有31个共享Agent没有新增或变更。
+
+开发实例二进制SHA256：`5b67f10b0a8985f49cb92a487257c8de14d5f46a62451506eaeff8607ee2da78`。私有备份及API快照位于忽略的 `.data/workflow-evidence/node-agent-upgrade/`。页面入口：`<platform-url>/workflows/fbdbfd95ea6c6992bf45bf697b0769e9`；实测Run入口：`<platform-url>/workflow-runs/bff43a2d7a7f5718ebd6483613c74429`。
+
+范围限制：本次通过节点配置独立、安装升级、等待和同会话恢复小任务；普通用户权限由真实Store/HTTP自动化覆盖，未另做普通账号浏览器旅程。本次未重跑完整GitHub→研发→QA→PR→部署链路，不改变既有整体验收结论。源改动交付现有草稿PR，不合并源main，不恢复定时任务。

@@ -37,6 +37,7 @@ type WorkflowNode struct {
 	Name                    string         `json:"name"`
 	Kind                    string         `json:"kind"`
 	AgentID                 string         `json:"agent_id,omitempty"`
+	Agent                   *Agent         `json:"agent,omitempty"`
 	ConnectorID             string         `json:"connector_id,omitempty"`
 	ConnectorInput          ConnectorInput `json:"connector_input,omitempty"`
 	Prompt                  string         `json:"prompt,omitempty"`
@@ -84,15 +85,15 @@ func validateWorkflow(w Workflow) error {
 		}
 		switch n.Kind {
 		case "agent":
-			if n.AgentID == "" || n.ConnectorID != "" {
+			if (n.AgentID == "") == (n.Agent == nil) || n.ConnectorID != "" {
 				return fmt.Errorf("node %s requires one agent", n.ID)
 			}
 		case "connector":
-			if n.ConnectorID == "" || n.AgentID != "" {
+			if n.ConnectorID == "" || n.AgentID != "" || n.Agent != nil {
 				return fmt.Errorf("node %s requires one connector", n.ID)
 			}
 		case "approval", "end":
-			if n.AgentID != "" || n.ConnectorID != "" {
+			if n.AgentID != "" || n.ConnectorID != "" || n.Agent != nil {
 				return fmt.Errorf("node %s cannot reference an executor", n.ID)
 			}
 		default:
@@ -293,6 +294,12 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 			}
 		}
 		if n.Kind == "agent" {
+			if n.Agent != nil {
+				if err := validateWorkflowAgent(tx, *n.Agent); err != nil {
+					return w, fmt.Errorf("node %s: %w", n.ID, err)
+				}
+				continue
+			}
 			var count int
 			if e = tx.QueryRow(`SELECT count(*) FROM agents WHERE id=?`, n.AgentID).Scan(&count); e != nil {
 				return w, e
@@ -343,7 +350,7 @@ func (h *Server) workflowRoutes() {
 			fail(w, e)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	h.mux.HandleFunc("GET /api/workflows/{id}", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.Workflow(c, r.PathValue("id"))
@@ -351,7 +358,7 @@ func (h *Server) workflowRoutes() {
 			fail(w, e)
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 200, workflowHTTPValue(c, v))
 	}))
 	save := h.protect(true, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		var v Workflow
@@ -380,7 +387,7 @@ func (h *Server) workflowRoutes() {
 		if r.Method == "POST" {
 			code = 201
 		}
-		respond(w, code, v)
+		respond(w, code, workflowHTTPValue(c, v))
 	})
 	h.mux.HandleFunc("POST /api/workflows", save)
 	h.mux.HandleFunc("PUT /api/workflows/{id}", save)

@@ -16,6 +16,23 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+AGENT_EXECUTION_FIELDS = frozenset(
+    (
+        "executor",
+        "model",
+        "instructions",
+        "skills",
+        "tool_servers",
+        "sandbox",
+        "network_access",
+        "allow_elevation",
+        "native_config",
+        "trust_hooks",
+        "inherit_env",
+        "env",
+        "seed_dir",
+    )
+)
 
 
 def proxy_env_refs(previous, environment):
@@ -119,6 +136,16 @@ def projection(value, keys):
     return {key: value.get(key) for key in keys}
 
 
+def execution_config(value):
+    # Omitted optional fields and Go zero values represent the same defaults.
+    # Normalize only whole fields: an env entry set to "" or null is meaningful.
+    return {
+        key: value[key]
+        for key in AGENT_EXECUTION_FIELDS
+        if value.get(key) not in (None, "", False, [], {})
+    }
+
+
 class Installation:
     def __init__(self, api, path, identity, upgrade=False):
         self.api, self.path, self.upgrade = api, path, upgrade
@@ -139,21 +166,37 @@ class Installation:
         tmp.chmod(0o600)
         tmp.replace(self.path)
 
+    def check(self, collection, key, inventory=None):
+        saved = self.data["objects"].get(key)
+        if not saved:
+            return None
+        if inventory is None:
+            inventory = self.api.call("GET", "/api/" + collection)
+        current = next((obj for obj in inventory if obj["id"] == saved["id"]), None)
+        if not current:
+            raise ValueError(
+                f"Installed {key} was removed; inspect before reinstalling"
+            )
+        previous = saved["spec"]
+        fields = previous.keys()
+        execution_drift = False
+        if collection == "agents":
+            fields = fields - AGENT_EXECUTION_FIELDS
+            execution_drift = execution_config(current) != execution_config(previous)
+        if execution_drift or projection(current, fields) != projection(
+            previous, fields
+        ):
+            raise ValueError(
+                f"Installed {key} was edited outside this installer; reconcile before upgrading"
+            )
+        return current
+
     def apply(self, collection, key, spec):
         route = "/api/" + collection
         saved = self.data["objects"].get(key)
         inventory = self.api.call("GET", route)
         if saved:
-            current = next((obj for obj in inventory if obj["id"] == saved["id"]), None)
-            if not current:
-                raise ValueError(
-                    f"Installed {key} was removed; inspect before reinstalling"
-                )
-            previous = saved["spec"]
-            if projection(current, previous) != previous:
-                raise ValueError(
-                    f"Installed {key} was edited outside this installer; reconcile before upgrading"
-                )
+            current = self.check(collection, key, inventory)
             if canonical(projection(current, spec)) == canonical(spec):
                 return current
             if not self.upgrade:
@@ -248,14 +291,22 @@ def workflow_runs(api):
 
 def check_upgrade_runs(api, installation):
     agents = installed_agent_ids(installation)
-    if not installation.upgrade or not agents:
+    workflows = {
+        obj["id"]
+        for obj in installation.data["objects"].values()
+        if "nodes" in obj["spec"]
+    }
+    if not installation.upgrade or not (agents or workflows):
         return
     for run in workflow_runs(api):
-        if run["status"] in ("running", "waiting", "stopping") and any(
-            node.get("agent_id") in agents for node in run["definition"]["nodes"]
+        if run["status"] in ("running", "waiting", "stopping") and (
+            run.get("workflow_id") in workflows
+            or any(
+                node.get("agent_id") in agents for node in run["definition"]["nodes"]
+            )
         ):
             raise ValueError(
-                "Installed Agents are in an active Run; finish or stop it before upgrading: "
+                "Installed workflow or legacy Agents are in an active Run; finish or stop it before upgrading: "
                 + run["id"]
             )
 
@@ -313,7 +364,15 @@ def main():
     )
     parser.add_argument("--skill-root", required=True, type=Path)
     parser.add_argument("--qa-skill", required=True, type=Path)
-    parser.add_argument("--base-agent", required=True)
+    parser.add_argument(
+        "--base-agent", help="Legacy compatibility: initial executor/model defaults"
+    )
+    parser.add_argument(
+        "--executor", help="Native executor; defaults to prior config or codex"
+    )
+    parser.add_argument(
+        "--model", help="Native model; defaults to prior config or executor default"
+    )
     parser.add_argument("--token-env", default="WORKFLOW_GITHUB_TOKEN")
     parser.add_argument(
         "--authorized-user",
@@ -421,9 +480,13 @@ def main():
         },
         args.upgrade,
     )
-    prior_graph = installation.data["objects"].get("workflow", {}).get("spec", {})
+    workflow_key = "workflow" if args.template == "software-delivery" else args.template
+    prior_graph = installation.data["objects"].get(workflow_key, {}).get("spec", {})
     if args.authorized_user is None:
-        args.authorized_user = prior_graph.get("authorized_users", [])
+        authorization_graph = prior_graph or installation.data["objects"].get(
+            "workflow", {}
+        ).get("spec", {})
+        args.authorized_user = authorization_graph.get("authorized_users", [])
     prior_entry = installation.data.get("github_entry")
     if prior_entry and not args.github_config:
         args.github_config = Path(prior_entry["path"])
@@ -432,11 +495,30 @@ def main():
     if args.git_proxy is None:
         args.git_proxy = (prior_entry or {}).get("config", {}).get("git_proxy", "")
     check_upgrade_runs(api, installation)
-    base = next(
-        (a for a in api.call("GET", "/api/agents") if a["id"] == args.base_agent), None
-    )
-    if not base:
-        parser.error("base Agent not found")
+    installation.check("workflows", workflow_key)
+    graph = json.loads((HERE / (args.template + ".json")).read_text())
+    previous_nodes = {node["id"]: node for node in prior_graph.get("nodes", [])}
+    prior_configs = {}
+    for node in graph["nodes"]:
+        if node["kind"] != "agent":
+            continue
+        role = "collaboration" if args.template == "collaboration-check" else node["id"]
+        previous = previous_nodes.get(node["id"], {})
+        prior = previous.get("agent")
+        if prior is None:
+            saved = installation.data["objects"].get(role)
+            if saved:
+                installation.check("agents", role)
+                prior = saved["spec"]
+        prior_configs[node["id"]] = prior or {}
+    base = {}
+    if args.base_agent and any(not prior for prior in prior_configs.values()):
+        base = next(
+            (a for a in api.call("GET", "/api/agents") if a["id"] == args.base_agent),
+            None,
+        )
+        if not base:
+            parser.error("base Agent not found")
     if args.browser_evidence.resolve().is_relative_to(root):
         parser.error("browser evidence must be outside task workspaces")
     browser = install_shared_browser(
@@ -452,54 +534,24 @@ def main():
         + command_label
         + "`。阶段实现和 QA 以此命令的真实结果为依据。\n"
     )
-    agents = {}
-    if args.template == "collaboration-check":
-        agents["collaboration"] = installation.apply(
-            "agents",
-            "collaboration",
-            {
-                "name": args.prefix + " · 协作验收",
-                "executor": base["executor"],
-                "model": base["model"],
-                "enabled": True,
-                "authorized_users": args.authorized_user,
-                "sandbox": "workspace-write",
-                "inherit_env": False,
-                "instructions": stage_prompts("collaboration", common, command_label)[
-                    0
-                ],
-                "skills": [],
-                "env": {
-                    key: os.environ[key]
-                    for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
-                    if key in os.environ
-                },
-                "network_access": False,
-                "allow_elevation": False,
-                "trust_hooks": False,
-                "native_config": "",
-                "seed_dir": "",
-            },
-        )["id"]
-    roles = ["requirements", "design", "development", "qa", "report"]
-    if args.template == "software-delivery":
-        roles.insert(0, "intake")
-    for role in roles:
-        spec = {
-            "name": args.prefix + " · " + role,
-            "executor": base["executor"],
-            "model": base["model"],
-            "enabled": True,
-            "authorized_users": args.authorized_user,
+    for node in graph["nodes"]:
+        if node["kind"] != "agent":
+            continue
+        role = "collaboration" if args.template == "collaboration-check" else node["id"]
+        prior = prior_configs[node["id"]]
+        node["agent"] = {
+            "executor": args.executor
+            or prior.get("executor")
+            or base.get("executor", "codex"),
+            "model": args.model
+            if args.model is not None
+            else prior.get("model", base.get("model", "")),
             "sandbox": "workspace-write",
             "inherit_env": False,
             "instructions": stage_prompts(role, common, command_label)[0],
             "skills": [str(path.resolve()) for path in skills.get(role, [])],
             "env": {
-                **installation.data["objects"]
-                .get(role, {})
-                .get("spec", {})
-                .get("env", {}),
+                **(prior.get("env") or {}),
                 **{
                     key: os.environ[key]
                     for key in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY")
@@ -513,14 +565,21 @@ def main():
             "seed_dir": "",
         }
         if role in ("design", "development", "qa"):
-            spec["tool_servers"] = [
+            node["agent"]["tool_servers"] = [
                 {
                     "server_id": browser["id"],
                     "tools": ["check"],
                     "approvals": {"check": "auto"},
                 }
             ]
-        agents[role] = installation.apply("agents", role, spec)["id"]
+        node["prompt"] = (
+            node.get("prompt", "")
+            + "\n\n"
+            + stage_prompts(role, common, command_label)[1]
+        )
+        node["allow_user_input"] = True
+        node["continuation_limit"] = 3
+        node["execution_timeout_seconds"] = 14400
     connectors = {}
     for role in ("prepare", "issue", "tests", "publish", "pr", "comment"):
         spec = {
@@ -566,22 +625,10 @@ def main():
             "id"
         ]
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
-    graph = json.loads((HERE / (args.template + ".json")).read_text())
     graph["context_version"] = 1
     graph["name"] = args.prefix + " · " + graph["name"]
     graph["authorized_users"] = args.authorized_user
     for node in graph["nodes"]:
-        if node["kind"] == "agent":
-            role = node["agent_id"]
-            node["agent_id"] = agents[role]
-            node["prompt"] = (
-                node.get("prompt", "")
-                + "\n\n"
-                + stage_prompts(role, common, command_label)[1]
-            )
-            node["allow_user_input"] = True
-            node["continuation_limit"] = 3
-            node["execution_timeout_seconds"] = 14400
         if node["kind"] == "connector":
             role = node["connector_id"]
             node["connector_id"] = connectors[role]
@@ -591,7 +638,7 @@ def main():
         hook["connector_id"] = connectors[hook["connector_id"]]
     workflow = installation.apply(
         "workflows",
-        "workflow" if args.template == "software-delivery" else args.template,
+        workflow_key,
         graph,
     )
     if args.github_config:
