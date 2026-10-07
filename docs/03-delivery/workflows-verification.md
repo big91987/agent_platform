@@ -983,3 +983,38 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 | 12 | 两条真实Codex链路与默认工作区；其他执行器/真实供应商未测 |
 
 旧业务 Run仍正式 stopped，未静默升级其冻结协议或声称已自动恢复产品研发。升级后旧协议尚未进入的新业务节点直到发布的连续交付未复验，不能用本轮独立验收替代它。当前改造不新增其他供应商适配器，不恢复定时任务，不合并平台源 main。
+
+## 2026-10-07：节点用户输入权限与生命周期补齐
+
+结论：本节生命周期场景通过；整个测试产品与全部用户旅程继续 No-Go。复用上节真实证据，只补节点开关、迟到等待、上限呈现、原生 Hook 协同和真实请求失败。所有新增 Run 使用独立测试工作区，没有恢复旧 stopped 产品 Run、创建 GitHub Issue/业务交付或触发部署。
+
+新增节点字段 allow_user_input 在页面、预览、冻结定义、MCP 注册和服务端事务一致。新节点/模板明确 true；旧新版定义缺失字段兼容之前开放语义，false 明确关闭。仅保留 wait_for_input 一个公开工具。轮次工具凭据在 Claim 原事务更新，旧原生进程不能向新轮提交等待/完成；有排队或 steering 回复时不能恢复旧等待。明确丢弃及投递不确定消息不作为下游需求，保留审计。manifest canonical 保留权限的 false，外部人工关闭不能被升级比较忽略。
+
+### 新增真实路径
+
+[节点权限/提问/回复 Run](http://127.0.0.1:8792/workflow-runs/8dab0ffd0a6e00cc3dcaaaab4c284f15)：从用户工作流页面启动，研发节点工具列表无 wait_for_input，明确缺少账单周期，真实 handoff 到允许提问的澄清节点。澄清真实 wait_for_input，Run 显示“请选择账单周期：按月或按年”。页面进入原会话回答按月，沿同一 native_record 继续，实际 billing.txt 为“账单周期：按月”，命令读取核对后 complete_node，seq3 completed。研发一条原始输入，澄清原始输入加真实回复，均无 workflow_continue；不是手写回执或模型口述推断。
+
+[原生 Stop 与平台检查协同 Run](http://127.0.0.1:8792/workflow-runs/c04efb77dd0819bad777ec30fd064f63)：明确受信的独立验收 Hook 第一轮真实返回 decision:block，第二次 stop_hook_active=true 返回允许结束。Hook 两次日志属于同一 native turn；Agent 接续后真实 complete_node。平台队列只有一条原始用户输入，自动继续数为0，seq2 completed，不发生双方各排队一轮或重复推进。平台未注册原生 Hook 的普通 Codex 路径已有真实有界接续证据。本测试 Hook 不构成正式产品质量门禁或任何供应商通用适配保证。
+
+[真实执行请求失败与正式恢复 Run](http://127.0.0.1:8792/workflow-runs/4803e87d1612960343f93cc9b386f3c6)：测试角色明确配置不可用本地端点，实际 native turn failed、请求错误502，节点 failed、无 Result、自动继续数0。保存失败事实后，通过正式 Agent 编辑修正配置；核对失败无文件/外部业务副作用，正式 stop→return 同一 worker，沿同一 Run/工作区的新 seq2 执行。旧失败执行保留为 cancelled，人工回退原因进入新的真实输入；Codex 实际写入并读取 recovery.txt，再 complete_node，seq3 completed。不是自动重放不确定请求，不创建替代 Run。
+
+### LC 验证矩阵
+
+| LC | 结果与证据层级 |
+| --- | --- |
+| 01 | 通过：上节真实自然收尾→同会话 workflow_continue；本轮引擎未完成去重回归继续通过 |
+| 02 | 通过：真实 handoff/complete_node；重复完成只接受同结果、迟到等待不能盖已接受结果，Go事务回归 |
+| 03 | 通过：本节真实节点提问、页面回答、同 native_record 完成；无多余平台消息 |
+| 04 | 通过：真实关闭节点无工具并合法交回澄清；服务端拒绝false回归；无出口时具体阻塞/上限保留现场的SOP与页面语义，不声称已演练全部无出口业务 |
+| 05 | 通过：上节页面停止→正式resume；本轮重启核对 stopped业务及上限演练仍stopped，Go停止/重启回归 |
+| 06 | 通过：本节真实native请求失败→正式编辑/停止/回退恢复；上节固定命令失败和独立QA回退。GitHub网络未知副作用未在本轮重复制造 |
+| 07 | 通过：上节真实次数达到，Go真实1秒时限；本轮UI上限不再写等待澄清，不标完成。4小时实等未测 |
+| 08 | 通过：Go真实Store事务测试覆盖排队回复、跨轮迟到等待/完成、完成后迟到等待、重复tick、丢弃补充、失败/停止恢复；既有原生重启及本轮真实多轮工具证据。未做高并发压力演练 |
+| 09 | 通过：本节受信原生Hook真实接续一次、平台不重复排队；无Hook普通Codex遵循平台检查。其他执行器未测 |
+| 10 | 通过：页面关闭/预览、真实工具列表；当前模板独立新装及原manifest升级，字段/ID/重复安装一致。旧冻结业务Run完整JSON保持，独立安装测试对象停用 |
+
+新增缺陷均先 RED→正式源修复→GREEN：关闭工具仍暴露/接受；排队回复和旧轮等待盖回；丢弃补充进入下游；预算上限误称澄清；manifest 忽略 explicit false。执行失败与重复当前结果等已经满足的场景补回归，不将其伪称新增 RED。最后全包 Go race/vet、34项 Node、58项平台模板 Python、全 SDK/examples Ruff格式与diff检查通过；独立只读评审未发现新增Critical/Important/Minor。Darwin既有链接器警告不影响测试退出0。
+
+新安装需先准备已存在的工作区根；第一次缺该目录被安装器拒绝且未创建对象，准备独立根后用同一manifest继续。页面运行同样需要已存在目录，缺目录时未创建Run；准备后从原页面成功提交一次。没有绕过这些检查。
+
+交付维护源接续提交 `fix: enforce node input permissions and isolate lifecycle callbacks`（继898e426之后）；开发工作流revision6，最终二进制SHA256 `d4479ad8c01e6e77ae5db56bb339cc338d66a3a4811ea0cf7c5320b6c75318d1`，源码草稿PR #5保留Open/Draft，未合并。

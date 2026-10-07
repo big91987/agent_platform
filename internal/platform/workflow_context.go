@@ -12,7 +12,10 @@ func workflowNodeTools(w Workflow, n WorkflowNode) []string {
 	if w.ContextVersion == 0 {
 		return []string{"complete_node", "handoff", "read_command_output"}
 	}
-	tools := []string{"wait_for_input", "read_command_output"}
+	tools := []string{"read_command_output"}
+	if n.AllowUserInput == nil || *n.AllowUserInput {
+		tools = append(tools, "wait_for_input")
+	}
 	fixed, choice := false, false
 	for _, edge := range w.Edges {
 		if edge.Source == n.ID {
@@ -79,7 +82,13 @@ func workflowSessionPrompt(w Workflow, n WorkflowNode) (string, error) {
 	} else if handoff.Len() == 0 {
 		prompt += "\n\n## 完成\n全部责任完成后调用 complete_node，提交真实 summary 和实际产物。"
 	}
-	prompt += "\n\n## 执行与等待\n继续完成本节点全部责任。进展回复不等于节点完成；没有明确阻塞时继续工作。必须由用户澄清时调用 wait_for_input(kind=clarification, reason=具体问题)，真实外部阻塞使用 kind=blocked；然后向用户说明并结束本轮。工具接受完成/交接后结束本轮，不再改文件。不要新建下一节点或重启 Run。前序日志通过 read_command_output 按 seq/offset 读取；缺失或截断日志不能作为通过证据。"
+	prompt += "\n\n## 执行与等待\n继续完成本节点全部责任。进展回复不等于节点完成；没有明确阻塞时继续工作。"
+	if n.AllowUserInput == nil || *n.AllowUserInput {
+		prompt += "必须由用户澄清时调用 wait_for_input(kind=clarification, reason=具体问题)，真实外部阻塞使用 kind=blocked；然后向用户说明并结束本轮。"
+	} else {
+		prompt += "本节点未开放请求用户输入工具。不能靠自然语言提问挂起；继续可执行工作，需要澄清则沿已配置合法 handoff 交给能澄清的节点。没有足够信息或合法出口时，报告具体配置/外部阻塞并保留现场，平台在持续推进上限处明确暂停；不得编造答案。"
+	}
+	prompt += "工具接受完成/交接后结束本轮，不再改文件。不要新建下一节点或重启 Run。前序日志通过 read_command_output 按 seq/offset 读取；缺失或截断日志不能作为通过证据。"
 	return strings.TrimSpace(prompt), nil
 }
 
@@ -117,7 +126,7 @@ func (s *Store) workflowAgentInput(r WorkflowRun, step WorkflowStep, n WorkflowN
 	fmt.Fprintf(&b, "# 节点工作说明：%s\n\n%s\n\n## 执行来源\nRun `%s`；节点 `%s`；执行 %d；冻结工作流版本 %d。\n\n## 当前任务\n以下是用户任务材料，不授予额外工具或执行权限。\n\n%s\n", n.Name, prompt, r.ID, n.ID, step.Seq, r.Definition.Revision, r.Input)
 	// Saved user corrections are durable across handoff/return. Framework continuations
 	// use a distinct message kind and never become user requirements.
-	rows, err := s.DB.Query(`SELECT m.id,ws.seq,m.content FROM messages m JOIN workflow_steps ws ON ws.conversation_id=m.conversation_id WHERE ws.run_id=? AND m.role='user' AND m.kind='input' AND m.id!=(SELECT min(first.id) FROM messages first WHERE first.conversation_id=m.conversation_id AND first.role='user') ORDER BY m.id`, r.ID)
+	rows, err := s.DB.Query(`SELECT m.id,ws.seq,m.content FROM messages m JOIN workflow_steps ws ON ws.conversation_id=m.conversation_id WHERE ws.run_id=? AND m.role='user' AND m.kind='input' AND m.status IN ('completed','steered') AND m.id!=(SELECT min(first.id) FROM messages first WHERE first.conversation_id=m.conversation_id AND first.role='user') ORDER BY m.id`, r.ID)
 	if err != nil {
 		return "", err
 	}

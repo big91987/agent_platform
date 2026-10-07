@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -301,5 +302,165 @@ func TestWorkflowMarkdownContinuationTimeLimit(t *testing.T) {
 	r, _ = s.WorkflowRun(c, r.ID)
 	if r.Status != "waiting" || r.Steps[0].WaitKind != "limit" || r.Steps[0].Continuations != 0 || !strings.Contains(r.Steps[0].WaitReason, "时间") {
 		t.Fatal("elapsed continuation deadline did not retain unfinished waiting state")
+	}
+}
+
+func TestWorkflowMarkdownDoesNotForwardDiscardedQueuedCorrection(t *testing.T) {
+	s := testStore(t)
+	c, r := markdownRun(t, s)
+	engine := NewWorkflowEngine(s, nil, "http://localhost")
+	engine.Tick(context.Background())
+	r, _ = s.WorkflowRun(c, r.ID)
+	cid := r.Steps[0].ConversationID
+	receipt, err := s.Submit(c, Input{UserID: r.Owner, ConversationID: cid, Message: "DISCARDED_CORRECTION must never become downstream requirements", RequestID: "discarded-correction"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.HaltExpected(cid, "stopped", "", receipt.MessageID, true); err != nil {
+		t.Fatal(err)
+	}
+	if err = engine.Stop(c, r.ID, r.Seq); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	if err = engine.Return(c, r.ID, r.Seq, r.Definition.Nodes[0].ID, "按原任务继续"); err != nil {
+		t.Fatal(err)
+	}
+	engine.Tick(context.Background())
+	r, _ = s.WorkflowRun(c, r.ID)
+	msgs, err := s.Messages(r.Steps[len(r.Steps)-1].ConversationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msgs) != 1 || strings.Contains(msgs[0].Content, "DISCARDED_CORRECTION") {
+		t.Fatal("explicitly discarded queue input was promoted to downstream requirements")
+	}
+}
+
+func TestWorkflowMarkdownUserInputSwitch(t *testing.T) {
+	s := testStore(t)
+	c, r := markdownRun(t, s)
+	w := r.Definition
+	raw, _ := json.Marshal(w)
+	var v map[string]any
+	json.Unmarshal(raw, &v)
+	v["nodes"].([]any)[0].(map[string]any)["allow_user_input"] = false
+	raw, _ = json.Marshal(v)
+	json.Unmarshal(raw, &w)
+	// Stop initial fixture and start from the saved, explicitly disabled node.
+	e := NewWorkflowEngine(s, nil, "http://localhost")
+	e.Stop(c, r.ID, r.Seq)
+	e.Tick(context.Background())
+	w, err := s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err = s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "disabled input test", WorkspacePath: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.Tick(context.Background())
+	conv, _, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range conv.Snapshot.ResolvedTools[workflowToolServer].Tools {
+		if tool == "wait_for_input" {
+			t.Error("disabled node exposes user input tool")
+		}
+	}
+	err = s.waitWorkflowNode(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], WorkflowWait{Kind: "clarification", Reason: "请选择币种"})
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("disabled node accepted tool request: %v", err)
+	}
+	prompt, err := workflowSessionPrompt(w, w.Nodes[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(prompt, "调用 wait_for_input") {
+		t.Error("disabled prompt directs unavailable tool")
+	}
+}
+func TestWorkflowMarkdownReplyRejectsLateWaitInBothTurns(t *testing.T) {
+	s := testStore(t)
+	c, r := markdownRun(t, s)
+	e := NewWorkflowEngine(s, nil, "http://localhost")
+	e.Tick(context.Background())
+	conv, msg, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldToken := *conv.Snapshot.Env[workflowTokenEnv]
+	if err = s.waitWorkflowNode(r.ID, 1, oldToken, WorkflowWait{Kind: "clarification", Reason: "请选择币种"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Submit(c, Input{UserID: r.Owner, ConversationID: conv.ID, Message: "使用CNY", RequestID: "queued-reply"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.waitWorkflowNode(r.ID, 1, oldToken, WorkflowWait{Kind: "clarification", Reason: "已经过期的问题"}); err == nil {
+		t.Error("late wait overwrites queued answer")
+	}
+	s.Complete(conv.ID, msg.ID, "completed", "")
+	next, _, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.waitWorkflowNode(r.ID, 1, oldToken, WorkflowWait{Kind: "clarification", Reason: "上一轮迟到问题"}); err == nil {
+		t.Error("previous turn token overwrites current turn")
+	}
+	if err = s.waitWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], WorkflowWait{Kind: "clarification", Reason: "请选择账单周期"}); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestWorkflowMarkdownFailedExecutionNeverContinues(t *testing.T) {
+	s := testStore(t)
+	c, r := markdownRun(t, s)
+	e := NewWorkflowEngine(s, nil, "http://localhost")
+	e.Tick(context.Background())
+	conv, msg, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Complete(conv.ID, msg.ID, "failed", "executor disconnected"); err != nil {
+		t.Fatal(err)
+	}
+	e.Tick(context.Background())
+	NewWorkflowEngine(s, nil, "http://localhost").Tick(context.Background())
+	r, _ = s.WorkflowRun(c, r.ID)
+	msgs, _ := s.Messages(conv.ID)
+	if r.Status != "failed" || len(msgs) != 1 || r.Steps[0].Result != nil {
+		t.Fatal("executor failure became continuation or completion")
+	}
+}
+func TestWorkflowMarkdownPreviousTurnCannotCompleteNewTurn(t *testing.T) {
+	s := testStore(t)
+	_, r := markdownRun(t, s)
+	e := NewWorkflowEngine(s, nil, "http://localhost")
+	e.Tick(context.Background())
+	conv, msg, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := *conv.Snapshot.Env[workflowTokenEnv]
+	s.Complete(conv.ID, msg.ID, "completed", "")
+	e.Tick(context.Background())
+	next, _, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, old, NodeResult{Route: "done", Summary: "old turn result"}); err == nil {
+		t.Fatal("old turn completed current execution")
+	}
+	route := r.Definition.Edges[0].Route
+	result := NodeResult{Route: route, Summary: "current turn result"}
+	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.waitWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], WorkflowWait{Kind: "clarification", Reason: "late wait after completion"}); err == nil {
+		t.Fatal("wait covered accepted result")
 	}
 }

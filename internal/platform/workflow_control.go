@@ -30,6 +30,10 @@ func (s *Store) waitWorkflowNode(id string, seq int, token string, in WorkflowWa
 		return ErrConflict
 	}
 	step := r.Steps[len(r.Steps)-1]
+	node := r.Definition.node(step.NodeID)
+	if node.AllowUserInput != nil && !*node.AllowUserInput {
+		return ErrForbidden
+	}
 	var hash, status string
 	var mid int64
 	if err = tx.QueryRow(`SELECT s.token_hash,c.status FROM workflow_steps s JOIN conversations c ON c.id=s.conversation_id WHERE s.run_id=? AND s.seq=?`, id, seq).Scan(&hash, &status); err != nil {
@@ -38,8 +42,18 @@ func (s *Store) waitWorkflowNode(id string, seq int, token string, in WorkflowWa
 	if hash != hashText(token) || status != "running" || step.Result != nil {
 		return ErrConflict
 	}
-	if err = tx.QueryRow(`SELECT COALESCE(MAX(id),0) FROM messages WHERE conversation_id=? AND role='user' AND status IN ('running','completed','steered')`, step.ConversationID).Scan(&mid); err != nil {
+	if err = tx.QueryRow(`SELECT COALESCE(MAX(id),0) FROM messages WHERE conversation_id=? AND role='user' AND status='running'`, step.ConversationID).Scan(&mid); err != nil {
 		return err
+	}
+	var pending int
+	if mid == 0 {
+		return ErrConflict
+	}
+	if err = tx.QueryRow(`SELECT COUNT(*) FROM messages WHERE conversation_id=? AND role='user' AND status IN ('queued','steering','steered') AND id>?`, step.ConversationID, mid).Scan(&pending); err != nil {
+		return err
+	}
+	if pending > 0 {
+		return ErrConflict
 	}
 	_, err = tx.Exec(`INSERT INTO workflow_node_controls(run_id,seq,wait_kind,wait_reason,wait_message_id) VALUES(?,?,?,?,?) ON CONFLICT(run_id,seq) DO UPDATE SET wait_kind=excluded.wait_kind,wait_reason=excluded.wait_reason,wait_message_id=excluded.wait_message_id`, id, seq, in.Kind, strings.TrimSpace(in.Reason), mid)
 	if err != nil {
@@ -141,7 +155,13 @@ func (s *Store) continueWorkflowNode(id string, seq int) error {
 		if last >= mid {
 			return ErrConflict
 		}
-		text := "平台执行检查：本轮已经结束，但本节点尚无完成或交接回执，也没有明确等待信号。请沿用当前会话和工作区，继续完成已授权的节点责任；不用重读整份首轮输入。全部完成后调用已配置完成/交接工具。确需用户回答或真实外部阻塞，调用 wait_for_input 说明具体原因后等待。不要重复创建业务对象，不将局部完成当作完整交付。"
+		text := "平台执行检查：本轮已经结束，但本节点尚无完成或交接回执，也没有明确等待信号。请沿用当前会话和工作区，继续完成已授权的节点责任；不用重读整份首轮输入。全部完成后调用已配置完成/交接工具。"
+		if n.AllowUserInput == nil || *n.AllowUserInput {
+			text += "确需用户回答或真实外部阻塞，调用 wait_for_input 说明具体问题/原因后等待。"
+		} else {
+			text += "本节点未开放请求用户输入；需要澄清沿合法交接出口处理。无可执行工作且无合法出口，明确报告阻塞，保留现场，不编造输入；达到上限时平台暂停。"
+		}
+		text += "不要重复创建业务对象，不将局部完成当作完整交付。"
 		_, err = tx.Exec(`INSERT INTO messages(conversation_id,role,content,kind,status,created) VALUES(?,'user',?,'workflow_continue','queued',?)`, c.ID, text, now())
 		if err == nil {
 			_, err = tx.Exec(`INSERT INTO workflow_node_controls(run_id,seq,continuations,last_message_id) VALUES(?,?,1,?) ON CONFLICT(run_id,seq) DO UPDATE SET continuations=continuations+1,last_message_id=excluded.last_message_id,wait_kind='',wait_reason='',wait_message_id=0`, id, seq, mid)

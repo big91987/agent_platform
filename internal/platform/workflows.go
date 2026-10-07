@@ -30,6 +30,7 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
+	AllowUserInput          *bool          `json:"allow_user_input,omitempty"`
 	ContinuationLimit       int            `json:"continuation_limit,omitempty"`
 	ExecutionTimeoutSeconds int            `json:"execution_timeout_seconds,omitempty"`
 	ID                      string         `json:"id"`

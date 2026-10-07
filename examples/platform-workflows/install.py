@@ -107,7 +107,8 @@ def canonical(value):
         return {
             key: canonical(item)
             for key, item in value.items()
-            if canonical(item) not in (None, "", 0, False, [], {})
+            if key == "allow_user_input"
+            or canonical(item) not in (None, "", 0, False, [], {})
         }
     if isinstance(value, list):
         return [canonical(item) for item in value]
@@ -578,6 +579,7 @@ def main():
                 + "\n\n"
                 + stage_prompts(role, common, command_label)[1]
             )
+            node["allow_user_input"] = True
             node["continuation_limit"] = 3
             node["execution_timeout_seconds"] = 14400
         if node["kind"] == "connector":

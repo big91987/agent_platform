@@ -2,7 +2,7 @@
 let workflowRunTimer=null;
 let workflowRunPage=null;
 function leaveWorkflowRun(){if(workflowRunTimer)clearInterval(workflowRunTimer);workflowRunTimer=null;workflowRunPage=null;}
-const workflowStatus={pending:'待开始',running:'执行中',waiting:'等待输入',stopping:'正在停止',stopped:'已停止',failed:'需处理',completed:'已完成',cancelled:'已回退'};
+const workflowStatus={pending:'待开始',running:'执行中',waiting:'等待处理',stopping:'正在停止',stopped:'已停止',failed:'需处理',completed:'已完成',cancelled:'已回退'};
 async function startWorkflowDialog(w){
  if(!w.id)throw new Error('请先保存智能体编排');
  const entries=[...new Set([w.entry,...w.start_nodes])];
@@ -12,7 +12,7 @@ async function startWorkflowDialog(w){
 }
 async function workflowRunsList(workflowID,runs){
  runs=runs||await api('/api/workflow-runs?workflow_id='+encodeURIComponent(workflowID));
- return `<section class="wf-runs-list"><h2>运行记录</h2><p class="hint">点击任务查看节点进度、执行记录和当前 Agent 会话。</p>${runs.length?runs.map(r=>`<a data-nav class="wf-run-row" href="/workflow-runs/${esc(r.id)}"><span><strong>${esc(r.definition.name)}</strong><small>${esc(r.input.slice(0,100))}</small></span><span class="wf-run-status status-${esc(r.status)}">${esc(workflowStatus[r.status]||r.status)} · 查看进度 →</span></a>`).join(''):'<p class="muted">此工作流还没有运行。打开编排，输入任务即可开始。</p>'}</section>`;
+ return `<section class="wf-runs-list"><h2>运行记录</h2><p class="hint">点击任务查看节点进度、执行记录和当前 Agent 会话。</p>${runs.length?runs.map(r=>`<a data-nav class="wf-run-row" href="/workflow-runs/${esc(r.id)}"><span><strong>${esc(r.definition.name)}</strong><small>${esc(r.input.slice(0,100))}</small></span><span class="wf-run-status status-${esc(r.status)}">${esc(workflowStateLabel(r.status,r.steps?.at(-1)?.wait_kind))} · 查看进度 →</span></a>`).join(''):'<p class="muted">此工作流还没有运行。打开编排，输入任务即可开始。</p>'}</section>`;
 }
 async function workflowRunsView(id){
  const runs=await api('/api/workflow-runs?workflow_id='+encodeURIComponent(id));
@@ -58,8 +58,8 @@ async function refreshWorkflowRun(id){
  const notices=await api('/api/workflow-runs/'+id+'/notifications');if(workflowRunPage?.id!==id)return;
  const signature=JSON.stringify([r,notices]);if(workflowRunPage.signature===signature)return;workflowRunPage.signature=signature;
  const step=r.steps.at(-1),node=r.definition.nodes.find(n=>n.id===step.node_id),active=['running','waiting','stopping'].includes(r.status);
- $('#wf-run-header').innerHTML=`<div class="wf-heading"><div><a data-nav href="/workflows/${esc(r.workflow_id)}/runs" class="muted small">← 运行记录</a><h1>${esc(r.definition.name)} <span class="wf-run-status status-${esc(r.status)}">${esc(workflowStatus[r.status]||r.status)}</span></h1><span class="muted small">版本 ${r.definition.revision} · 第 ${r.seq} 次节点执行</span></div></div><p class="wf-run-input">${esc(r.input)}</p>${r.error?`<div class="callout" role="alert">${esc(r.error)}</div>`:''}`;
- $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3>${esc(n?.name||s.node_id)}</h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStatus[s.status]||s.status)}</span></div>${s.result?`<p>${esc(s.result.summary)}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<details><summary>调用回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</summary><pre>${esc(JSON.stringify(s.connector_receipt,null,2))}</pre></details>`:''}${s.connector_receipt?.log?`<a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(r.id)}/steps/${s.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${s.connector_receipt.log.truncated?"（已达保留上限）":""} ↗</a>`:''}${s.wait_reason?`<p class="callout">${s.result||['completed','cancelled'].includes(s.status)?'历史等待记录 · ':''}${esc(workflowWaitLabel(s.wait_kind))}：${esc(s.wait_reason)}</p>`:''}${n?.kind==='agent'?`<p class="hint">自动继续 ${s.continuations||0} 次</p><button class="quiet" data-step-context="${s.seq}">查看实际会话输入</button>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
+ $('#wf-run-header').innerHTML=`<div class="wf-heading"><div><a data-nav href="/workflows/${esc(r.workflow_id)}/runs" class="muted small">← 运行记录</a><h1>${esc(r.definition.name)} <span class="wf-run-status status-${esc(r.status)}">${esc(workflowStateLabel(r.status,r.steps?.at(-1)?.wait_kind))}</span></h1><span class="muted small">版本 ${r.definition.revision} · 第 ${r.seq} 次节点执行</span></div></div><p class="wf-run-input">${esc(r.input)}</p>${r.error?`<div class="callout" role="alert">${esc(r.error)}</div>`:''}`;
+ $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3>${esc(n?.name||s.node_id)}</h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStateLabel(s.status,s.wait_kind))}</span></div>${s.result?`<p>${esc(s.result.summary)}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<details><summary>调用回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</summary><pre>${esc(JSON.stringify(s.connector_receipt,null,2))}</pre></details>`:''}${s.connector_receipt?.log?`<a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(r.id)}/steps/${s.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${s.connector_receipt.log.truncated?"（已达保留上限）":""} ↗</a>`:''}${s.wait_reason?`<p class="callout">${s.result||['completed','cancelled'].includes(s.status)?'历史等待记录 · ':''}${esc(workflowWaitLabel(s.wait_kind))}：${esc(s.wait_reason)}</p>`:''}${n?.kind==='agent'?`<p class="hint">自动继续 ${s.continuations||0} 次</p><button class="quiet" data-step-context="${s.seq}">查看实际会话输入</button>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
  document.querySelectorAll('[data-step-context]').forEach(button=>button.onclick=()=>workflowStepContextDialog(id,Number(button.dataset.stepContext)));
  if(notices.length){$('#wf-run-history').insertAdjacentHTML('beforeend',`<section class="card wf-run-step"><h3>通知记录</h3><p class="hint">通知失败独立处理，不会重跑 Agent 或交接。结果未知时只查询外部回执。</p>${notices.map(n=>`<div class="wf-hook-row"><strong>${esc(workflowHookEvents[n.event]||n.event)} · ${esc(r.definition.nodes.find(v=>v.id===n.node)?.name||n.node)}</strong><small>${esc({pending:'待发送',sending:'发送中',succeeded:'已发送',failed:'准备失败',unknown:'结果未知，需核对'}[n.status]||n.status)}</small>${n.error?`<p class="hint">${esc(n.error)}</p>`:''}${n.receipt?.url?`<a class="wf-link" href="${esc(n.receipt.url)}" target="_blank" rel="noopener noreferrer">查看通知 ↗</a>`:''}${['failed','unknown'].includes(n.status)?`<button data-notice-retry="${esc(n.id)}">${n.status==='unknown'?'核对外部结果':'重试通知'}</button>`:''}</div>`).join('')}</section>`);document.querySelectorAll('[data-notice-retry]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/api/workflow-runs/'+id+'/notifications/'+b.dataset.noticeRetry+'/retry','POST',{});await refreshWorkflowRun(id)}catch(e){toast(e.message);b.disabled=false}})}
  const latestPR=r.steps.filter(s=>s.connector_receipt?.kind==='github.pull_request').at(-1);
@@ -76,7 +76,7 @@ async function refreshWorkflowRun(id){
  if(node.kind==='approval'&&['running','waiting'].includes(r.status)&&!step.result){controls+=`<form id="wf-decision-form"><div class="field"><label for="wf-decision-note">说明或修改意见</label><textarea id="wf-decision-note" rows="4"></textarea></div><div class="wf-actions">${r.definition.edges.filter(e=>e.source===node.id).map(e=>`<button type="submit" name="route" value="${esc(e.route)}">${esc(e.route)} → ${esc(r.definition.nodes.find(n=>n.id===e.target)?.name)}</button>`).join('')}</div></form>`;}
  else if(step.result&&active){controls+=`<p class="hint">${node.kind==='agent'?'交接已保存，等待当前 Agent 结束后继续。':'决定已保存，正在推进下一节点。'}</p>`}
  else if(node.kind==='connector'&&active){controls+='<p class="hint">外部操作执行中，完成后保存回执并推进。</p>'}
- else if(node.kind==='agent'&&active){controls+=`<p class="hint">${r.status==='waiting'?'Agent 正在等待输入。进入会话继续澄清；它提交交接后会自动推进。':'Agent 正在处理。可以进入会话查看消息和工具调用。'}</p>`}
+ else if(node.kind==='agent'&&active){controls+=`<p class="hint">${r.status==='waiting'?workflowWaitHelp(step.wait_kind):'Agent 正在处理。可以进入会话查看消息和工具调用。'}</p>`}
  if(active&&r.status!=='stopping')controls+='<button id="wf-stop" class="quiet">停止当前运行</button>';
  if(['stopped','failed'].includes(r.status)){
   if(r.status==='failed')controls+='<button id="wf-stop" class="quiet">停止并选择回退节点</button>';
@@ -94,6 +94,13 @@ async function refreshWorkflowRun(id){
  if($('#wf-resume-form'))$('#wf-resume-form').onsubmit=e=>{e.preventDefault();command('resume',{message:$('#wf-resume-message').value})};
 }
 
+function workflowStateLabel(status,kind){return status==='waiting'&&kind?workflowWaitLabel(kind):(workflowStatus[status]||status)}
+function workflowWaitHelp(kind){
+ if(kind==='clarification')return '进入会话回答已列出的具体问题；回复沿原会话继续，提交交接后自动推进。';
+ if(kind==='blocked')return '先核对并解除已列出的外部阻塞，再进入会话说明恢复依据。节点尚未完成。';
+ if(kind==='limit'||kind==='disabled')return '自动继续已暂停，节点尚未完成。检查现场后进入会话给出继续说明，或停止后回退；这不是需要回答的新问题。';
+ return '节点尚未交付。进入会话核对执行记录与可用下一步；自然语言回复不代表节点完成。';
+}
 function workflowWaitLabel(kind){return {clarification:'等待澄清',blocked:'等待解除阻塞',limit:'已达到自动继续上限',disabled:'自动继续已关闭'}[kind]||'等待输入'}
 async function workflowStepContextDialog(id,seq){
  try{

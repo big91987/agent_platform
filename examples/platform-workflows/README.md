@@ -256,3 +256,5 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 安装升级仍使用原 manifest 和 `--upgrade`。安装器要求关联在途 Run 完成或正式停止；先保护在途会话与工作区，不能通过重建 Run 或修改数据库绕过检查。升级后新 Run 使用新协议，旧冻结图和已准备的原生会话保留旧语义。
 
 详见 [输入设计](../../docs/02-architecture/workflow-session-input.md) 和 [用户指南](../../docs/04-guides/agent-platform-user-guide.md)。
+
+标准节点显式配置 `allow_user_input: true`，可在节点设置关闭；关闭后不注册 wait_for_input，服务端也拒绝调用。manifest 升级比较保留显式 false：人工关闭与字段缺失不是同一配置，外部改动会被报告，不能由安装器静默重新开放。已启动 Run 的定义与停止状态保持冻结。

@@ -16,7 +16,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     x=Math.max(0,Math.min(10000,Math.round(x)));y=Math.max(0,Math.min(10000,Math.round(y)));
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
-    if(kind==='agent'){n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
+    if(kind==='agent'){n.allow_user_input=true;n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
     return n;
@@ -64,6 +64,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(tokens.some(t=>t!=='{{handoff}}'))throw new Error('Session Prompt 包含未知占位符；仅支持 {{handoff}}');
     const handoff=this.value.edges.some(e=>e.source===node.id&&this.edgeMode(e)==='handoff');
     if(tokens.length>1||handoff&&tokens.length!==1)throw new Error('自主交接的 Session Prompt 必须恰好包含一个 {{handoff}}');
+    if(node.allow_user_input!=null&&typeof node.allow_user_input!=='boolean')throw new Error('用户输入开关必须是布尔值');
     if(!Number.isInteger(node.continuation_limit??0)||(node.continuation_limit??0)<0||(node.continuation_limit??0)>10)throw new Error('自动继续次数必须是 0–10 的整数');
     if(!Number.isInteger(node.execution_timeout_seconds??0)||(node.execution_timeout_seconds??0)<0||(node.execution_timeout_seconds??0)>86400)throw new Error('持续推进期限必须是 0–86400 秒的整数');
   }

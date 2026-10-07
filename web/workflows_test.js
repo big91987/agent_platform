@@ -54,3 +54,12 @@ test('editing a Session Prompt keeps its current draft when a target is changed 
  assert.match(el('#wf-inspector').innerHTML,/修改后的说明/);
  assert.equal(vm.runInContext('graph.value.edges[0].target',ctx),'node_3');
 });
+test('node user input permission is visible and unsaved preview respects disabling it',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ assert.match(el('#wf-inspector').innerHTML,/wf-allow-user-input/);
+ for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-agent':'agent1','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ el('#wf-allow-user-input').checked=false;
+ ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push(body);return {session_prompt:'预览',input:'输入'}}",ctx);
+ await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
+ assert.equal(ctx.requests[0].workflow.nodes[0].allow_user_input,false);
+});

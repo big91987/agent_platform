@@ -64,3 +64,18 @@ Files：examples/platform-workflows/install.py、prompts、模板、README.md、
 - 实测补充修复：真实回复接受后清等待状态（RED→GREEN）；API空env_refs=null升级兼容（RED→GREEN）。
 - Task 4 complete：实际页面/原生链路、默认工作区、真实上限、同Run停止恢复、命令失败与独立只读QA回退、新安装/重复manifest升级均保存证据；Go race/vet、31Node、56Python、Ruff/diff通过。
 - 明确边界：未重新演练GitHub网络未知副作用；4小时实等/其他执行器/供应商Not Run；旧产品Run冻结未恢复；整体产品目标不完成。
+
+## 节点生命周期补齐（LC-01～LC-10）
+
+依照已确认的补充契约在现有设计内继续，不新增并行状态框架或同义工具。
+
+- [x] 缺口复现：节点关闭工具仍可请求等待；排队回复/跨轮迟到等待盖回；明确丢弃的补充被传给下游。对应 Go 测试 RED 后修正式源并 GREEN。
+- [x] allow_user_input 在图编辑、预览、工具注册、服务端与模板一致；UI/模型 RED→GREEN；旧字段缺失兼容原开放行为，false 冻结关闭。
+- [x] 上限界面误引导继续澄清 RED→GREEN；节点未完成、暂停原因和正式下一步明确。
+- [x] manifest 比较保留显式 false，升级不忽略人工关闭；Python RED→GREEN。
+- [x] 正式运行补验并完成 LC 验证矩阵、源码草稿交付及开发实例版本核对。
+
+Ruling：保留 wait_for_input 一个工具，新增节点布尔开关；缺失字段兼容已经发布的新协议开放语义。代价：旧定义须显式保存 false 才关闭，不能在升级时静默减少或增加权限。
+Ruling：复用节点凭据在 Claim 事务按原生执行轮换；不新增轮次对象或凭据表。代价：外部缓存上一轮 bearer 必须重新发现工具；旧协议不轮换，维持冻结兼容。
+
+生命周期补齐 complete：三条真实Codex路径（节点权限/页面澄清、原生Stop协同、执行器请求失败正式恢复），当前模板新安装/原manifest升级与重复安装；34 Node、58平台Python、Go race/vet、Ruff通过。独立只读评审未发现新增严重或次要问题，验证范围保留在LC矩阵。

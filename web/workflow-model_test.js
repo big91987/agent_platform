@@ -94,3 +94,10 @@ test('target-only handoff rejects duplicate targets but keeps legacy route graph
  g.connect(a.id,'target_2',b.id,'handoff','旧版不同route');
  assert.equal(g.value.edges.length,2);
 });
+test('new nodes expose a typed user input switch and preserve explicit disabled settings on import',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0);
+ assert.equal(a.allow_user_input,true);
+ a.allow_user_input=false;
+ assert.equal(G.import(JSON.stringify(g.value)).node(a.id).allow_user_input,false);
+ a.allow_user_input='false';assert.throws(()=>g.validateAgent(a),/用户输入/);
+});

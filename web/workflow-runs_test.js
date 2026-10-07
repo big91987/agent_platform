@@ -56,3 +56,13 @@ test('actual input dialog reads frozen step context and explains legacy input',a
  await vm.runInContext("workflowStepContextDialog('run1',2)",ctx);
  assert.match(rendered.at(-1),/冻结输入/);assert.match(rendered.at(-1),/AGENTS.md/);assert.match(rendered.at(-1),/complete_node/);assert.match(rendered.at(-1),/旧版/);assert.match(rendered.at(-1),/readonly/);
 });
+test('continuation budget is paused for inspection and does not invent a user question',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
+ const run={id:'run',workflow_id:'workflow',status:'waiting',seq:1,input:'task',definition:{name:'预算验收',revision:1,nodes:[{id:'dev',name:'研发',kind:'agent',prompt:'执行'}],edges:[]},steps:[{seq:1,node_id:'dev',status:'waiting',wait_kind:'limit',wait_reason:'已达到2次上限',continuations:2,conversation_id:'conv'}]};
+ const ctx=vm.createContext({esc:x=>String(x??''),$:el,document:{querySelectorAll:()=>[]},api:async path=>path.endsWith('/notifications')?[]:run});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run'}",ctx);await vm.runInContext("refreshWorkflowRun('run')",ctx);
+ assert.match(el('#wf-run-header').innerHTML,/自动继续上限/);
+ assert.match(el('#wf-run-controls').innerHTML,/节点尚未完成/);
+ assert.doesNotMatch(el('#wf-run-controls').innerHTML,/继续澄清/);
+});

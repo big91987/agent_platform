@@ -496,6 +496,33 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	if e != nil {
 		return conv, m, e
 	}
+	// v1 capabilities belong to a native execution turn. A previous process may
+	// not submit a wait/result into a newer turn of this same conversation.
+	var definition string
+	err := tx.QueryRow(`SELECT wr.definition FROM workflow_runs wr JOIN workflow_steps ws ON ws.run_id=wr.id AND ws.seq=wr.seq WHERE ws.conversation_id=?`, conv.ID).Scan(&definition)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return conv, m, err
+	}
+	var workflow Workflow
+	if err == nil {
+		if err = json.Unmarshal([]byte(definition), &workflow); err != nil {
+			return conv, m, err
+		}
+	}
+	if workflow.ContextVersion == 1 {
+		token := newID() + newID()
+		if conv.Snapshot.Env == nil {
+			conv.Snapshot.Env = map[string]*string{}
+		}
+		conv.Snapshot.Env[workflowTokenEnv] = &token
+		snapshot, err := json.Marshal(conv.Snapshot)
+		if err != nil {
+			return conv, m, err
+		}
+		if _, err = tx.Exec(`UPDATE workflow_steps SET token_hash=? WHERE conversation_id=?; UPDATE conversations SET snapshot=? WHERE id=?`, hashText(token), conv.ID, string(snapshot), conv.ID); err != nil {
+			return conv, m, err
+		}
+	}
 	conv.Status = "running"
 	m.Role = "user"
 	m.Kind = "input"

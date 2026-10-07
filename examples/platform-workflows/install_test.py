@@ -295,5 +295,47 @@ class WaitingSOPTest(unittest.TestCase):
         self.assertIn("wait_for_input", session)
 
 
+class UserInputPermissionTest(unittest.TestCase):
+    def test_false_permission_is_not_equivalent_to_absent_default(self):
+        self.assertNotEqual(
+            install.canonical({"allow_user_input": False}), install.canonical({})
+        )
+        self.assertEqual(
+            install.canonical({"allow_user_input": False})["allow_user_input"], False
+        )
+
+    def test_upgrade_does_not_reopen_a_manually_disabled_node(self):
+        import tempfile
+
+        class API:
+            def __init__(self):
+                self.items = []
+                self.writes = 0
+
+            def call(self, method, path, body=None):
+                if method == "GET":
+                    return self.items
+                self.writes += 1
+                result = {**body, "id": "workflow-1"}
+                self.items = [result]
+                return result
+
+        with tempfile.TemporaryDirectory() as tmp:
+            api = API()
+            path = Path(tmp) / "manifest.json"
+            original = {"name": "test", "nodes": [{"id": "dev"}]}
+            installation = install.Installation(api, path, {"repository": "o/r"})
+            installation.apply("workflows", "workflow", original)
+            api.items[0]["nodes"][0]["allow_user_input"] = False
+            upgraded = install.Installation(api, path, {"repository": "o/r"}, True)
+            desired = {
+                "name": "test",
+                "nodes": [{"id": "dev", "allow_user_input": True}],
+            }
+            with self.assertRaisesRegex(ValueError, "edited outside"):
+                upgraded.apply("workflows", "workflow", desired)
+            self.assertEqual(api.writes, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
