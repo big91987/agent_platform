@@ -18,6 +18,10 @@
 - [平台内研发交付模板：安装与升级](../examples/platform-workflows/README.md)
 - [方案比较与选型](02-architecture/workflows/comparison.md)
 
+## 用户操作
+
+- [研发任务接入与交付使用手册](04-guides/agent-platform-user-guide.md)：从头开发、已有原型接续、Bug、Code Review、部署、平台配置与GitHub入口。
+
 ## 接入与验证
 
 - [GitHub 完整接入](../examples/github/GETTING_STARTED.md)
