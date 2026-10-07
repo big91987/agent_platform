@@ -1087,3 +1087,9 @@ GitHub双向入口实测发现：平台建立的测试Issue #22又被opened入�
 平台实现已提交 `1830f81` 并推送 [草稿 PR #6](https://github.com/big91987/agent_platform/pull/6)，base为已封版 `codex/platform-workflows`；源main未合并。产品Run已通过intake进入requirements，当前结果仍不能替代最终交付。
 
 用户随后纠正：Platform 此阶段只在新分支开发，不需要创建PR。上述PR #6（`codex/workflow-node-config-ui` → `codex/platform-workflows`）已关闭，未合并、未删除分支或提交。后续平台改动直接提交/推送当前开发分支；测试仓研发流程的PR、授权合并和部署要求保持。
+
+### 产品回归：材料与接单幂等补证
+
+原Run `713a325b560ddc53be37ff3a0bbc5014` 已完成requirements，实际产物为本Run的product-definition.md、acceptance-matrix.md、g1-review.md；矩阵完整保留AC01–AC18/H01–H08，明确产品项待实现/待验证。G1只判Ready for Architecture，未冒充产品Go。设计节点seq5正在执行；原生进程存活，已落architecture.md/runtime-contracts.md，阶段尚未完成，不预判设计验收。
+
+真实重跑[原Issue #24入站Actions 37615595429 attempt2](https://github.com/big91987/model-relay/actions/runs/37615595429)成功，正式API查询issue_number=24仍仅一个Run、ID不变；没有重新创建工作区/Run或替换当前阶段。接单、需求、设计三节点分别通过正式context API与原生turn_context交叉核对，配置和实际模型均为gpt-6.1-sol，执行器Codex，冻结revision8/context_version2。原生记录分别为01a11629-dc4b-7890-82f1-c0e8038eb015、01a1162b-f34a-79f1-99d8-a7aad51e567e、01a11632-c6b6-7090-80f9-d7ef1acf2ee5；输入SHA256和原生身份另存私有product-model-input-evidence.json。这些是材料承接/幂等/执行身份的分项证据，研发、QA和发布仍未通过。
