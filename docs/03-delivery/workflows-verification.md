@@ -1018,3 +1018,15 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 新安装需先准备已存在的工作区根；第一次缺该目录被安装器拒绝且未创建对象，准备独立根后用同一manifest继续。页面运行同样需要已存在目录，缺目录时未创建Run；准备后从原页面成功提交一次。没有绕过这些检查。
 
 交付维护源接续提交 `fix: enforce node input permissions and isolate lifecycle callbacks`（继898e426之后）；开发工作流revision6，最终二进制SHA256 `d4479ad8c01e6e77ae5db56bb339cc338d66a3a4811ea0cf7c5320b6c75318d1`，源码草稿PR #5保留Open/Draft，未合并。
+
+## 2026-10-07：画布与 Run 的右侧节点详情
+
+本节仅验收节点信息呈现改造，整套产品与全部用户旅程仍 No-Go。参考 [Coze 官方节点开发说明](https://github.com/coze-dev/coze-studio/wiki/10.-Add-new-workflow-node-types-%28frontend%29) 的画布摘要/侧栏完整表单分工和 [Dify 官方面板实现](https://github.com/langgenius/dify/blob/main/web/app/components/workflow/panel/index.tsx) 的选中节点右侧面板；未复制其源码。
+
+维护源新增一个仅负责呈现的共用面板，编辑器默认关闭，点击节点显示配置、交接及适用的输入预览。Run 的节点标题打开输入、结果、日志与记录；完整摘要与结构化回执收进详情，列表保留摘要。预览及冻结输入复用原正式 API 和权限，不改变工作流协议、安装 manifest 或运行状态。
+
+真实浏览器验证主工作流 revision6 与已完成权限验收 Run：节点点击、页签、预览展开、关闭/重开草稿、方向键及 Esc、桌面与窄屏右侧布局、真实冻结输入、完整结果及原会话日志入口。Connector 来源分支在未保存草稿修改后关闭/重开仍保留；随后恢复原值并丢弃本页草稿，未保存业务定义，未执行 Connector。浏览器自动化在两次导航时超时，通过同浏览器新页继续核对；不将超时描述为产品操作成功。
+
+独立只读评审发现 Connector 专用参数未同步导致草稿丢失，以及旧/失败预览响应覆盖新内容，均补充真实 RED→GREEN 回归并修复；同时修正历史等待提示和刷新打断阅读。41 项 Node 回归全部通过，Go 全包测试及 vet 通过，嵌入资产构建、JavaScript 语法与 diff 检查通过。没有新增 Run、Issue、PR 或业务执行，也未用本轮 UI 验证替代原业务链路验收。
+
+升级使用原开发实例 CLI 和维护源二进制路径，升级前确认无在途执行，核对备份与冻结记录；旧 stopped Run 完整 JSON 不变，8788 实例不变。UI 资产随标准 Go embed 构建交付，标准新安装及既有实例更新二进制即可获得；本轮未重跑独立新安装（manifest 未变），此前安装/升级证据仍按原版本保留。已验二进制 SHA256：`1d107e5893056c86da5efec38ca0accd403d957810f8a56065384763f8a662f6`。源码草稿 PR #5 保持 Open/Draft，不合并 main。

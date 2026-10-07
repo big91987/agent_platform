@@ -24,7 +24,7 @@ async function workflowRunsView(id){
 }
 async function workflowRunView(id){
  workflowRunPage={id,signature:'',delivery:null,deliveryRequested:false};
- $('#content').innerHTML='<div id="wf-run-header"></div><div class="wf-run-layout"><section id="wf-run-history"></section><aside id="wf-run-controls" class="card"></aside></div>';
+ $('#content').innerHTML='<div id="wf-run-header"></div><div class="wf-run-layout"><section id="wf-run-history"></section><aside id="wf-run-controls" class="card"></aside></div><aside id="wf-step-details" class="wf-detail-panel wf-step-details" aria-label="节点执行详情" hidden></aside>';
  await refreshWorkflowRun(id);
  workflowRunTimer=setInterval(()=>{if(workflowRunPage?.id===id&&!document.hidden)refreshWorkflowRun(id).catch(e=>toast(e.message))},1500);
 }
@@ -57,9 +57,11 @@ async function refreshWorkflowRun(id){
  const r=await api('/api/workflow-runs/'+id);if(workflowRunPage?.id!==id)return;
  const notices=await api('/api/workflow-runs/'+id+'/notifications');if(workflowRunPage?.id!==id)return;
  const signature=JSON.stringify([r,notices]);if(workflowRunPage.signature===signature)return;workflowRunPage.signature=signature;
+ workflowRunPage.run=r;
  const step=r.steps.at(-1),node=r.definition.nodes.find(n=>n.id===step.node_id),active=['running','waiting','stopping'].includes(r.status);
  $('#wf-run-header').innerHTML=`<div class="wf-heading"><div><a data-nav href="/workflows/${esc(r.workflow_id)}/runs" class="muted small">← 运行记录</a><h1>${esc(r.definition.name)} <span class="wf-run-status status-${esc(r.status)}">${esc(workflowStateLabel(r.status,r.steps?.at(-1)?.wait_kind))}</span></h1><span class="muted small">版本 ${r.definition.revision} · 第 ${r.seq} 次节点执行</span></div></div><p class="wf-run-input">${esc(r.input)}</p>${r.error?`<div class="callout" role="alert">${esc(r.error)}</div>`:''}`;
- $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3>${esc(n?.name||s.node_id)}</h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStateLabel(s.status,s.wait_kind))}</span></div>${s.result?`<p>${esc(s.result.summary)}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<details><summary>调用回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</summary><pre>${esc(JSON.stringify(s.connector_receipt,null,2))}</pre></details>`:''}${s.connector_receipt?.log?`<a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(r.id)}/steps/${s.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${s.connector_receipt.log.truncated?"（已达保留上限）":""} ↗</a>`:''}${s.wait_reason?`<p class="callout">${s.result||['completed','cancelled'].includes(s.status)?'历史等待记录 · ':''}${esc(workflowWaitLabel(s.wait_kind))}：${esc(s.wait_reason)}</p>`:''}${n?.kind==='agent'?`<p class="hint">自动继续 ${s.continuations||0} 次</p><button class="quiet" data-step-context="${s.seq}">查看实际会话输入</button>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
+ $('#wf-run-history').innerHTML=r.steps.map(s=>{const n=r.definition.nodes.find(n=>n.id===s.node_id);return `<article class="card wf-run-step ${s.seq===r.seq?'current':''}"><div class="wf-step-heading"><span class="wf-step-number">${s.seq}</span><h3><button class="wf-step-select" data-step-details="${s.seq}" aria-label="${esc(n?.name||s.node_id)} · 查看节点详情">${esc(n?.name||s.node_id)} <span>↗</span></button></h3><span class="wf-run-status status-${esc(s.status)}">${esc(workflowStateLabel(s.status,s.wait_kind))}</span></div>${s.result?`<p class="wf-step-summary">${esc(s.result.summary.slice(0,120))}${s.result.summary.length>120?'…':''}</p><div class="hint">交接路径：${esc(s.result.route)}</div>${s.result.artifacts?.length?`<ul>${s.result.artifacts.map(a=>`<li>${/^https:\/\//.test(a)?`<a href="${esc(a)}" target="_blank" rel="noopener noreferrer">${esc(a)}</a>`:esc(a)}</li>`).join('')}</ul>`:''}`:''}${s.connector_receipt?`<p class="hint">外部回执${s.connector_receipt.exit_code!=null?' · 退出码 '+s.connector_receipt.exit_code:''}${s.connector_receipt.recovered?' · 已核对外部结果':''}</p>`:''}${s.connector_receipt?.log?`<a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(r.id)}/steps/${s.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${s.connector_receipt.log.truncated?"（已达保留上限）":""} ↗</a>`:''}${s.wait_reason?`<p class="callout">${s.result||['completed','cancelled'].includes(s.status)?'历史等待记录 · ':''}${esc(workflowWaitLabel(s.wait_kind))}：${esc(s.wait_reason)}</p>`:''}${n?.kind==='agent'?`<p class="hint">自动继续 ${s.continuations||0} 次</p><button class="quiet" data-step-context="${s.seq}">查看实际会话输入</button>`:''}${s.error?`<p class="hint">${esc(s.error)}</p>`:''}${s.conversation_id?`<a class="wf-link" data-nav href="/conversations/${esc(s.conversation_id)}">${s.seq===r.seq&&active?'进入 Agent 会话':'查看会话记录'} ↗</a>`:''}</article>`}).join('');
+ document.querySelectorAll('[data-step-details]').forEach(button=>button.onclick=()=>workflowStepDetails(id,Number(button.dataset.stepDetails),'result'));
  document.querySelectorAll('[data-step-context]').forEach(button=>button.onclick=()=>workflowStepContextDialog(id,Number(button.dataset.stepContext)));
  if(notices.length){$('#wf-run-history').insertAdjacentHTML('beforeend',`<section class="card wf-run-step"><h3>通知记录</h3><p class="hint">通知失败独立处理，不会重跑 Agent 或交接。结果未知时只查询外部回执。</p>${notices.map(n=>`<div class="wf-hook-row"><strong>${esc(workflowHookEvents[n.event]||n.event)} · ${esc(r.definition.nodes.find(v=>v.id===n.node)?.name||n.node)}</strong><small>${esc({pending:'待发送',sending:'发送中',succeeded:'已发送',failed:'准备失败',unknown:'结果未知，需核对'}[n.status]||n.status)}</small>${n.error?`<p class="hint">${esc(n.error)}</p>`:''}${n.receipt?.url?`<a class="wf-link" href="${esc(n.receipt.url)}" target="_blank" rel="noopener noreferrer">查看通知 ↗</a>`:''}${['failed','unknown'].includes(n.status)?`<button data-notice-retry="${esc(n.id)}">${n.status==='unknown'?'核对外部结果':'重试通知'}</button>`:''}</div>`).join('')}</section>`);document.querySelectorAll('[data-notice-retry]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/api/workflow-runs/'+id+'/notifications/'+b.dataset.noticeRetry+'/retry','POST',{});await refreshWorkflowRun(id)}catch(e){toast(e.message);b.disabled=false}})}
  const latestPR=r.steps.filter(s=>s.connector_receipt?.kind==='github.pull_request').at(-1);
@@ -92,6 +94,10 @@ async function refreshWorkflowRun(id){
  if($('#wf-decision-form'))$('#wf-decision-form').onsubmit=e=>{e.preventDefault();command('decision',{route:e.submitter.value,summary:$('#wf-decision-note').value})};
  if($('#wf-return-form'))$('#wf-return-form').onsubmit=e=>{e.preventDefault();command('return',{target:$('#wf-return-target').value,summary:$('#wf-return-reason').value})};
  if($('#wf-resume-form'))$('#wf-resume-form').onsubmit=e=>{e.preventDefault();command('resume',{message:$('#wf-resume-message').value})};
+ if(workflowRunPage.selectedStep){
+  const selected=r.steps.find(s=>s.seq===workflowRunPage.selectedStep);
+  if(selected){renderWorkflowStepDetails(workflowRunPage,selected,r.definition.nodes.find(n=>n.id===selected.node_id));if(workflowRunPage.stepTab==='input')loadWorkflowStepInput(workflowRunPage,selected)}
+ }
 }
 
 function workflowStateLabel(status,kind){return status==='waiting'&&kind?workflowWaitLabel(kind):(workflowStatus[status]||status)}
@@ -103,8 +109,55 @@ function workflowWaitHelp(kind){
 }
 function workflowWaitLabel(kind){return {clarification:'等待澄清',blocked:'等待解除阻塞',limit:'已达到自动继续上限',disabled:'自动继续已关闭'}[kind]||'等待输入'}
 async function workflowStepContextDialog(id,seq){
+ return workflowStepDetails(id,seq,'input');
+}
+function closeWorkflowStepDetails(){
+ if(!workflowRunPage)return;
+ const seq=workflowRunPage.selectedStep;workflowRunPage.selectedStep=null;
+ $('#wf-step-details').hidden=true;
+ document.querySelector?.('[data-step-details="'+seq+'"]')?.focus();
+}
+if(typeof window!=='undefined')window.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&!$('#dialog')?.open&&workflowRunPage?.selectedStep){event.preventDefault();closeWorkflowStepDetails()}
+});
+function workflowStepInputHTML(context){
+ return `<p class="hint">冻结版本 ${esc(context.workflow_revision)} · 输入协议 ${esc(context.context_version||0)}</p>${context.context_version!==1?'<p class="callout">旧版冻结输入协议：保留原始定义与输入；当前编辑器不会改写这次执行。</p>':''}<details><summary>角色指令</summary><textarea id="wf-actual-role" rows="8" readonly>${esc(context.role_instructions||'')}</textarea></details><details><summary>项目规则与可用工具</summary><h3>项目规则来源</h3><ul>${(context.project_instructions||[]).map(source=>`<li>${esc(source)}</li>`).join('')||'<li>未记录来源</li>'}</ul><p class="hint">由原生执行器发现工作区规则。</p><h3>可用工具</h3><ul>${(context.tools||[]).map(tool=>`<li>${esc(tool)}</li>`).join('')||'<li>无已记录工具</li>'}</ul></details><div class="field"><label for="wf-actual-input">首轮 User Input</label><textarea id="wf-actual-input" rows="22" readonly>${esc(context.input||'')}</textarea></div>`;
+}
+async function workflowStepDetails(id,seq,active='result'){
+ const page=workflowRunPage;if(!page||page.id!==id)return;
+ const run=page.run,step=run?.steps.find(s=>s.seq===seq);if(!step)return;
+ const node=run.definition.nodes.find(n=>n.id===step.node_id);
+ page.selectedStep=seq;page.stepTab=active;
+ renderWorkflowStepDetails(page,step,node);
+ if(active==='input'&&node?.kind==='agent')await loadWorkflowStepInput(page,step);
+}
+function renderWorkflowStepDetails(page,step,node){
+ if(workflowRunPage!==page||page.selectedStep!==step.seq)return;
+ const panel=$('#wf-step-details'),scroll=panel.querySelector?.('.wf-panel-body')?.scrollTop||0;
+ const focus=panel.contains?.(document.activeElement)?document.activeElement?.id:null;
+ const expanded=Array.from(panel.querySelectorAll?.('details[open]')||[],el=>el.querySelector('summary')?.textContent);
+ const textareas=Array.from(panel.querySelectorAll?.('textarea[id]')||[],el=>({id:el.id,scroll:el.scrollTop,start:el.selectionStart,end:el.selectionEnd}));
+ const input=node?.kind==='agent'?`<div id="wf-step-input-content">${page.contexts?.[step.seq]?workflowStepInputHTML(page.contexts[step.seq]):'<p class="hint" role="status">正在读取冻结会话输入…</p>'}</div>`:`<h3>冻结节点说明</h3><p>${esc(node?.prompt||'无额外说明')}</p><h3>当前任务</h3><p>${esc(page.run.input||'')}</p>`;
+ const result=`<p><span class="wf-run-status status-${esc(step.status)}">${esc(workflowStateLabel(step.status,step.wait_kind))}</span></p>${step.wait_reason?`<p class="callout">${step.result||['completed','cancelled'].includes(step.status)?'历史等待记录 · ':''}${esc(workflowWaitLabel(step.wait_kind))}：${esc(step.wait_reason)}</p>`:''}${step.error?`<p class="callout">${esc(step.error)}</p>`:''}${step.result?`<h3>交付结论</h3><p class="wf-detail-text">${esc(step.result.summary)}</p><h3>交接与产物</h3><dl class="wf-detail-facts"><dt>路径</dt><dd>${esc(step.result.route||'固定完成')}</dd>${Object.entries(step.result.inputs||{}).map(([key,value])=>`<dt>${esc(key)}</dt><dd>${esc(value)}</dd>`).join('')}</dl>${step.result.artifacts?.length?`<ul class="wf-artifact-list">${step.result.artifacts.map(path=>`<li>${/^https:\/\//.test(path)?workflowExternalLink(path,path):`<code>${esc(path)}</code>`}</li>`).join('')}</ul>`:'<p class="hint">未提交产物引用</p>'}<details><summary>原始交接回执</summary><pre>${esc(JSON.stringify(step.result,null,2))}</pre></details>`:(node?.kind==='end'&&step.status==='completed'?'<p class="hint">已到达结束节点，本次运行完成。</p>':'<p class="hint">本节点尚无已接受的完成/交接结果。</p>')}${step.connector_receipt?`<details><summary>外部调用回执${step.connector_receipt.exit_code!=null?' · 退出码 '+step.connector_receipt.exit_code:''}</summary><pre>${esc(JSON.stringify(step.connector_receipt,null,2))}</pre></details>`:''}`;
+ const logs=`<p class="hint">原生消息、工具调用与审批保留在原会话；固定命令日志使用本次执行留存的记录。</p>${step.conversation_id?`<p><a data-nav class="wf-link" href="/conversations/${esc(step.conversation_id)}">打开原会话与工具记录 ↗</a></p>`:''}${step.connector_receipt?.log?`<p><a class="wf-link" href="/api/workflow-runs/${encodeURIComponent(page.id)}/steps/${step.seq}/output?format=text" target="_blank" rel="noopener noreferrer">查看命令日志${step.connector_receipt.log.truncated?'（已达保留上限）':''} ↗</a></p>`:'<p class="hint">没有本次固定命令日志；缺失日志不代表验证通过。</p>'}<dl class="wf-detail-facts"><dt>节点</dt><dd>${esc(step.node_id)}</dd><dt>执行</dt><dd>${step.seq}</dd><dt>开始</dt><dd>${esc(step.created_at||'未记录')}</dd><dt>更新</dt><dd>${esc(step.updated_at||'未记录')}</dd></dl>`;
+ const tabs=[{key:'input',label:'输入',body:input},{key:'result',label:'结果',body:result},{key:'logs',label:'日志与记录',body:logs}];
+ const markup=workflowPanelMarkup('wf-step',node?.name||step.node_id,'节点执行 '+step.seq,tabs,page.stepTab);
+ panel.hidden=false;if(page.stepDetailsMarkup===markup)return;
+ page.stepDetailsMarkup=markup;panel.innerHTML=markup;
+ bindWorkflowPanel('wf-step',tabs,page.stepTab,key=>{page.stepTab=key;if(key==='input'&&node?.kind==='agent')loadWorkflowStepInput(page,step)},closeWorkflowStepDetails);
+ const body=panel.querySelector?.('.wf-panel-body');if(body)body.scrollTop=scroll;
+ for(const el of panel.querySelectorAll?.('details')||[])el.open=expanded.includes(el.querySelector('summary')?.textContent);
+ for(const saved of textareas){const el=panel.querySelector?.('#'+saved.id);if(el){el.scrollTop=saved.scroll;el.setSelectionRange(saved.start,saved.end);}}
+ if(focus)$('#'+focus)?.focus();
+}
+async function loadWorkflowStepInput(page,step){
+ if(page.contexts?.[step.seq]||page.contextRequest?.seq===step.seq)return;
+ const request={seq:step.seq};page.contextRequest=request;
  try{
-  const context=await api('/api/workflow-runs/'+encodeURIComponent(id)+'/steps/'+seq+'/context');
-  dialog(`<div class="dialog-head"><h2>实际会话输入 · 节点执行 ${seq}</h2><button type="button" data-close>✕</button></div><div class="dialog-body"><p class="hint">冻结版本 ${esc(context.workflow_revision)} · 输入协议 ${esc(context.context_version||0)}。以下是本次节点执行使用的配置和首轮输入。</p>${context.context_version!==1?'<p class="callout">旧版冻结输入协议：保留原始定义与输入；当前编辑器的 Session Prompt 不会改写这次执行。</p>':''}<div class="field"><label for="wf-actual-role">角色指令</label><textarea id="wf-actual-role" rows="7" readonly>${esc(context.role_instructions||'')}</textarea></div><h3>项目规则来源</h3><ul>${(context.project_instructions||[]).map(source=>`<li>${esc(source)}</li>`).join('')||'<li>未记录项目规则来源</li>'}</ul><p class="hint">由原生执行器发现工作区规则；来源列表不代表平台复制了规则正文。</p><h3>可用工具</h3><ul>${(context.tools||[]).map(tool=>`<li>${esc(tool)}</li>`).join('')||'<li>无已记录工具</li>'}</ul><div class="field"><label for="wf-actual-input">首轮 User Input</label><textarea id="wf-actual-input" rows="16" readonly>${esc(context.input||'')}</textarea></div></div><div class="dialog-footer"><button data-close>关闭</button></div>`);
- }catch(error){toast('无法读取实际会话输入：'+error.message)}
+  const context=await api('/api/workflow-runs/'+encodeURIComponent(page.id)+'/steps/'+step.seq+'/context');
+  if(workflowRunPage!==page||page.selectedStep!==step.seq||page.contextRequest!==request)return;
+  page.contexts||={};page.contexts[step.seq]=context;
+  $('#wf-step-input-content').innerHTML=workflowStepInputHTML(context);
+ }catch(error){if(workflowRunPage===page&&page.selectedStep===step.seq&&page.contextRequest===request)$('#wf-step-input-content').innerHTML='<p class="callout" role="alert">'+esc(error.message)+'</p>'}
+ finally{if(page.contextRequest===request)page.contextRequest=null}
 }

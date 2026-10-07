@@ -4,9 +4,9 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 function editorPage(){
  const elements=new Map();
- const el=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',disabled:false,querySelectorAll:()=>[],classList:{add(){}}});return elements.get(id)};
+ const el=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',disabled:false,querySelectorAll:()=>[],classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){}});return elements.get(id)};
  const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,state:{agents:[],me:{admin:true}},esc:x=>String(x??''),connectorKinds:{},dialog:html=>{el('#dialog').innerHTML=html;el('#dialog').close=()=>{}},toast:message=>{el('#toast').textContent=message}});
- for(const file of ['workflow-model.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
+ for(const file of ['workflow-model.js','workflow-panel.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
  vm.runInContext("const graph=new WorkflowGraph();const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
  return {ctx,el};
 }
@@ -28,8 +28,9 @@ test('preview uses unsaved visible session prompt without mutating or saving the
  assert.equal(ctx.requests[0].path,'/api/workflows/preview');
  assert.equal(ctx.requests[0].body.workflow.nodes[0].prompt,'实时草稿 {{handoff}}');
  assert.equal(vm.runInContext('a.prompt',ctx),'{{handoff}}');
- assert.match(el('#dialog').innerHTML,/展开后的工作说明/);
- assert.match(el('#dialog').innerHTML,/readonly/);
+ assert.match(el('#wf-preview-content').innerHTML,/展开后的工作说明/);
+ assert.match(el('#wf-preview-content').innerHTML,/readonly/);
+ assert.equal(vm.runInContext('editor.panelTab',ctx),'preview');
 });
 test('mixed Agent paths expose compatibility warning while keeping both editable edges',()=>{
  const {ctx,el}=editorPage();vm.runInContext("graph.connect(a.id,'fixed',c.id,'automatic');renderWorkflowInspector(editor)",ctx);
@@ -62,4 +63,50 @@ test('node user input permission is visible and unsaved preview respects disabli
  ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push(body);return {session_prompt:'预览',input:'输入'}}",ctx);
  await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
  assert.equal(ctx.requests[0].workflow.nodes[0].allow_user_input,false);
+});
+
+test('click-selected node opens right tabs and closing retains unsaved draft',()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ assert.match(el('#wf-inspector').innerHTML,/role="tablist"/);
+ assert.match(el('#wf-inspector').innerHTML,/wf-pane-config/);
+ assert.match(el('#wf-inspector').innerHTML,/wf-pane-handoff/);
+ assert.match(el('#wf-inspector').innerHTML,/wf-pane-preview/);
+ for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-agent':'agent1','#wf-node-prompt':'未保存输入 {{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ el('#wf-node-prompt').oninput();el('#wf-tab-handoff').onclick();
+ assert.equal(vm.runInContext('editor.panelTab',ctx),'handoff');
+ el('#wf-panel-close').onclick();
+ assert.equal(vm.runInContext('editor.selected',ctx),null);
+ assert.equal(el('#wf-inspector').hidden,true);
+ assert.equal(vm.runInContext('a.prompt',ctx),'未保存输入 {{handoff}}');
+});
+test('late preview of a previous node cannot replace current drawer details',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-agent':'agent1','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ ctx.resolvePreview=null;vm.runInContext("api=()=>new Promise(resolve=>resolvePreview=resolve);pending=previewWorkflowNode(editor,a)",ctx);
+ vm.runInContext('editor.selected=c.id;renderWorkflowInspector(editor)',ctx);
+ ctx.resolvePreview({session_prompt:'上一个节点过期预览',input:'过期输入'});await vm.runInContext('pending',ctx);
+ assert.doesNotMatch(el('#wf-preview-content').innerHTML,/过期预览/);
+});
+test('closing a Connector drawer keeps its specific unsaved parameters',()=>{
+ const {ctx,el}=editorPage();vm.runInContext("a.kind='connector';a.connector_id='c1';editor.connectors=[{id:'c1',kind:'github.pull_request'}];",ctx);
+ vm.runInContext(fs.readFileSync(__dirname+'/connectors.js','utf8'),ctx);vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-connector':'c1','#wf-node-x':'0','#wf-node-y':'0','#wf-c-head':'new-source-branch'}))el(id).value=value;
+ el('#wf-panel-close').onclick();
+ assert.equal(vm.runInContext('a.connector_input?.head',ctx),'new-source-branch');
+ assert.equal(vm.runInContext('editor.dirty',ctx),true);
+});
+test('a late failed preview cannot overwrite a newer successful preview',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-agent':'agent1','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ ctx.requests=[];vm.runInContext("api=()=>new Promise((resolve,reject)=>requests.push({resolve,reject}));old=previewWorkflowNode(editor,a);fresh=previewWorkflowNode(editor,a)",ctx);
+ ctx.requests[1].resolve({session_prompt:'NEW SUCCESS',input:'new'});await vm.runInContext('fresh',ctx);
+ ctx.requests[0].reject(new Error('OLD ERROR'));await vm.runInContext('old',ctx);
+ assert.match(el('#wf-preview-content').innerHTML,/NEW SUCCESS/);assert.doesNotMatch(el('#wf-preview-content').innerHTML,/OLD ERROR/);
+});
+test('changing the same node outgoing paths invalidates its in-flight preview',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-agent':'agent1','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ ctx.resolveOld=null;vm.runInContext("api=()=>new Promise(resolve=>resolveOld=resolve);old=previewWorkflowNode(editor,a);graph.removeEdge(0);workflowChanged(editor);renderWorkflowInspector(editor)",ctx);
+ ctx.resolveOld({session_prompt:'REMOVED TARGET',input:'old'});await vm.runInContext('old',ctx);
+ assert.doesNotMatch(el('#wf-preview-content').innerHTML,/REMOVED TARGET/);
 });

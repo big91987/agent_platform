@@ -50,11 +50,16 @@ test('run delivery shows only verified deployment links and warns when PR head c
  assert.doesNotMatch(vm.runInContext('workflowDeliveryHTML(delivery)',ctx),/href="javascript:/);
 });
 
-test('actual input dialog reads frozen step context and explains legacy input',async()=>{
- const rendered=[];const ctx=vm.createContext({esc:x=>String(x??''),dialog:html=>rendered.push(html),api:async path=>{assert.equal(path,'/api/workflow-runs/run1/steps/2/context');return {role_instructions:'角色正文',project_instructions:['AGENTS.md'],tools:['complete_node'],input:'冻结输入',context_version:0,workflow_revision:7}}});
- vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+test('actual input drawer reads frozen step context and explains legacy input',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',setAttribute(){},focus(){}});return elements.get(id)};
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,esc:x=>String(x??''),toast(){},api:async path=>{assert.equal(path,'/api/workflow-runs/run1/steps/2/context');return {role_instructions:'角色正文',project_instructions:['AGENTS.md'],tools:['complete_node'],input:'冻结输入',context_version:0,workflow_revision:7}}});
+ for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run1',run:{id:'run1',definition:{nodes:[{id:'dev',name:'研发',kind:'agent'}]},steps:[{seq:2,node_id:'dev',status:'completed',result:{summary:'完整结果',artifacts:['result.txt']}}]}}",ctx);
  await vm.runInContext("workflowStepContextDialog('run1',2)",ctx);
- assert.match(rendered.at(-1),/冻结输入/);assert.match(rendered.at(-1),/AGENTS.md/);assert.match(rendered.at(-1),/complete_node/);assert.match(rendered.at(-1),/旧版/);assert.match(rendered.at(-1),/readonly/);
+ const html=el('#wf-step-details').innerHTML+el('#wf-step-input-content').innerHTML;
+ assert.match(html,/冻结输入/);assert.match(html,/AGENTS.md/);assert.match(html,/complete_node/);assert.match(html,/旧版/);assert.match(html,/readonly/);
+ assert.match(html,/role="tablist"/);assert.match(html,/完整结果/);
+ el('#wf-step-panel-close').onclick();assert.equal(el('#wf-step-details').hidden,true);
 });
 test('continuation budget is paused for inspection and does not invent a user question',async()=>{
  const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
@@ -65,4 +70,26 @@ test('continuation budget is paused for inspection and does not invent a user qu
  assert.match(el('#wf-run-header').innerHTML,/自动继续上限/);
  assert.match(el('#wf-run-controls').innerHTML,/节点尚未完成/);
  assert.doesNotMatch(el('#wf-run-controls').innerHTML,/继续澄清/);
+});
+test('open result drawer follows a newly accepted result on the same node execution',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[],setAttribute(){},focus(){}});return elements.get(id)};
+ const run={id:'run',workflow_id:'wf',status:'running',seq:1,input:'task',definition:{name:'测试',revision:1,nodes:[{id:'dev',name:'研发',kind:'agent'}],edges:[]},steps:[{seq:1,node_id:'dev',status:'running',conversation_id:'conv'}]};
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},esc:x=>String(x??''),$:el,api:async path=>path.endsWith('/notifications')?[]:run});
+ for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run'}",ctx);await vm.runInContext("refreshWorkflowRun('run')",ctx);await vm.runInContext("workflowStepDetails('run',1,'result')",ctx);
+ assert.match(el('#wf-step-details').innerHTML,/尚无已接受/);
+ run.steps[0].result={summary:'已接受的最新结果'};run.steps[0].status='completed';
+ await vm.runInContext("refreshWorkflowRun('run')",ctx);
+ assert.match(el('#wf-step-details').innerHTML,/已接受的最新结果/);
+});
+
+test('completed node labels previous waiting as history and unchanged refresh preserves the drawer DOM',()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',setAttribute(){},focus(){}});return elements.get(id)};
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},esc:x=>String(x??''),$:el});
+ for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run',selectedStep:2,stepTab:'result',run:{input:'task'}};step={seq:2,node_id:'dev',status:'completed',wait_kind:'input',wait_reason:'账单周期',result:{summary:'已交付'}};node={id:'dev',name:'研发',kind:'agent'};renderWorkflowStepDetails(workflowRunPage,step,node)",ctx);
+ assert.match(el('#wf-step-details').innerHTML,/历史等待记录 · /);
+ el('#wf-step-details').innerHTML+='<!-- reading state -->';
+ vm.runInContext('renderWorkflowStepDetails(workflowRunPage,step,node)',ctx);
+ assert.match(el('#wf-step-details').innerHTML,/reading state/);
 });
