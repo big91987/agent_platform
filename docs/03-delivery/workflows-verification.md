@@ -927,3 +927,15 @@ seq10独立QA给出No-Go并沿原development边返回：R01–R04为强制场景
 更新草案design-v0.1.1-draft，18文件、233983字节，SHA-256 `ffe8bb1ccbf0a4e3cb77a6765b1a1c184fb0d5bf9f3ad06ac9c9e2cc9d3569be`；重复打包相同，ZIP与manifest/源文件逐项核对，原v0.1.0发布ZIP摘要仍相同，新包未发布到GitHub。包内baseline-review.md明确G1自查NOT READY：开发者应用/Key分配与成员退出规则、账单结账/更正入口与权限、失败/未知多尝试的租户收费口径还需在需求阶段闭合。没有将自查当独立QA，不删除P0范围。
 
 已集中询问用户是否以A工作台、内部多租户成本分账、API/已有端点管理、USD测试计价作为方向；该问题是待确认业务基线，与已解决的执行器选择分开。真实Issue材料交接和本轮实施、QA、合并部署未发生，目标继续未完成。
+
+### 2026-10-07：用户授权自主冻结，真实Issue材料路径启动
+
+用户明确允许设计负责人自行衡量测试原型，不再等待运营方式/布局批准。本轮design-v0.2.0冻结A工作台、内部成本分账、供应商API/已有推理端点、USD测试计价，PRD闭合开发者Key诊断分配/退出、平台管理员结账/追加更正、全部dispatch已知用量收费/未知待确认保守预留。原型补账单结账与更正、Key诊断成员编辑：实际浏览器验证当前周期/有未知用量拒绝结账、已结束无未知正常结账、-0.07更正保留原1661.58和调整周期，收回Key诊断范围保留已用842.32/预算1200且秘密不回显；JS语法、页面error/warn通过。这里只是原型证据，不是后端权限/精度/结算通过。
+
+新包19文件、261636字节、SHA-256 `5f51d35fdc15ed7214749f9413879b4238097f1d6b6bbe2cc0d508d8e103cef7`，本地ZIP/manifest/源逐项核对后发布私有仓库prerelease [design-v0.2.0](https://github.com/big91987/model-relay/releases/tag/design-v0.2.0)。正式资产ID617014535、GitHub摘要和大小一致，原草案包保持原摘要。真实 [Issue #21](https://github.com/big91987/model-relay/issues/21) 引用精确REST资产URL、版本/SHA和全部AC01–AC18/H01–H08。原#20旧Run继续stopped，独立新Issue工作区不会并发写旧现场。
+
+[Issues Actions37550125713](https://github.com/big91987/model-relay/actions/runs/37550125713)实际成功：原model-relay-local Runner通过维护源SDK正式入口接单，唯一新[Run2f589073fb909da91a3e6f76a8ba5430](http://127.0.0.1:8792/workflow-runs/2f589073fb909da91a3e6f76a8ba5430)。正式prepare seq1 exit0、保留日志845字节/truncated=false，回执实际下载核验19文件至该Run独立`.workflow-input`，材料版本/SHA与Issue相同；不是维护者手塞包或传输探针。seq2关联原Issue；seq3真实intake读取manifest、PRD/交互/AC/决定及最终整改，核对摘要并沿requirements交接，明确不得删产品范围或把旧AGENTS首轮范围覆盖新委托。seq4需求阶段正在执行。
+
+管理员cookie按request键查询404是该接口按调用者owner隔离；改用原CI身份的SDK `workflow_by_request`实际返回上述同一Run，没有重建。页面通过原工作流的“运行记录”列表实际进入新Run详情，同列表保留旧暂停任务。原生intake与requirements各1个sessions JSONL的turn_context均记录model=gpt-6.1-sol、session_meta provider=platform_http；该证据证明原生会话选用模型，不推断供应商最终推理实现。原生证据仅私有归档身份字段，无认证文件。
+
+自动审批拒绝运行中的workflow_dispatch重放，理由是可能重复或并发接单，保留现场约束优先；未绕过拒绝或重复提交，待本Run终结后再验证正式同事件重试。当前只完成真实材料准备、接单与一次交接，需求/设计/实现/固定tests/独立QA/PR/合并部署未完成，本轮整体仍In Progress/No-Go。
