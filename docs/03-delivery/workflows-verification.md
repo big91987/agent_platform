@@ -1598,3 +1598,16 @@ GitHub只读Open PR初次TLS超时，已有7897代理一次有界重查为空；
 **Harness分层结论。** 已有8793典型实测覆盖自主handoff、complete_node不合Schema拒绝/纠正后接受、真实布尔/整数/数组/嵌套对象固定消费、命令失败返工、QA返工、澄清/等待态停止与原thread继续、完成后人工回退、Issue去重和跨所有者拒绝。当前主Run的新失败也正确返回development，无已观察跳错/重复派发。统一配置/两出口、停止与取消语义、覆盖式节点抽屉、有界继续和授权恢复都已在维护源交付；40次预算耗尽后的正式显式恢复60、历史/工作区保持、无在途标准升级和幂等安装有真实证据。不能把这些证据外推为当前版本所有权限/在途进程强停重启/外部未知响应/最终部署异常已全验；native实际model字段证据缺口仍保留。平台页面/跳转体验后续优化尚未全面完成。
 
 外部只读核对Open PR0，37738944460/37737849943/37737604474/37736226292均旧main的Issue entry success，并非部署。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5仍旧部署；最新实现仍在当前Run工作区，没有正式PR、合并、Actions激活或新页面版本一致证据。部署Workflow/在线Runner/控制器已备好，不重新部署旧main冒充最新。真实供应商、支付/外部身份等未验范围保持。后续关键路径仍为当前driver修复→原完整tests→独立QA→report/publish/pr→授权合并→正式Actions/health/页面对账；此次停止定时后不自动执行这些协调者动作。原现场在忽略目录`.data/fresh-8793/check-stop-summary/`，没有手改DB/检查点/回执或新增权限。
+
+
+## 即时授权部署两项最新版本：平台已是最新功能，产品门禁在途（2026-10-08 15:17）
+
+用户停止定时任务后再次明确要求部署Agent Platform与Model Relay，后者必须走最新正式部署Pipeline，完成后通知。本轮作为即时任务继续，heartbeat保持PAUSED，不自动恢复。用户此前“不替Harness”要求保持：产品实现/固定tests/独立QA/report/publish/pr由原Run完成；协调者核验正式产物后处理已有授权的测试仓合并/正式Actions。
+
+平台当前PID27655仅8793，binary SHA d926462e50e118de886a990cf60d6c1b6e29e21c4226df63f44afcb2f765f905与标准升级receipt一致。维护源HEAD1287e36到实际代码commit abe0dd6仅三份交付文档变更，无功能/模板变更；agent-config.js/workflow-model.js/workflows.js/workflow-runs.js实际HTTP200且逐字节匹配最新维护源。真实登录API与在途Run继续正常，故最新功能已经部署，不为文档commit重启在途Agent。无源main合并/新Platform PR/8788变更。
+
+原seq52 candidate editor-readback-route-r1正式交tests53，133文件指纹6b6564c93b0c15bfefcd33955c3affd852fb8716963dea08e9600004a67b4bab。seq53完整make verify exit2、98085bytes/truncated=false，维护者正式output三页读到eof。前端187项、原Go/build/迁移/旧UI/多上游分项继续通过，新增console-editor-interruption1280真实controlled_get_hold=true/new_editor_save_enabled=true/service_posts1/canceled_editor_posts0，越过seq51漏分页匹配断点；之后console.mjs:90报route.continue Route is already handled，完整三视口/全部新摘要及独立QA未通过。seq54 development active，原生实际说明清理时并行撤路由引发重复继续，拟先结清受控请求再撤路由，原断言保持；当前只是返工，尚无原层新完整通过。QA47-01/P1、QA47-02/P2保持Open，未放宽门禁或代改测试。
+
+正式GitHub Owner big91987、main deploy-local.yml blob434407b…核验，preview/validation安装控制器均SHA782d4861…与维护源一致，activation stage均committed。旧preview/validation仍9851177/schema2；只读SQLite基线preview models0/requests0、validation models2/requests4，原列摘要保存在ignored，用于实际CLI升级/恢复对账，不替代UI/API验收。尝试preview既有initial-password正式登录HTTP401，未读业务API/未重置密码/未改业务数据；后续保留现有凭据，不以初始化文件有效性替代实际登录。CUA inventory超时，未据此编造页面核验。需要实际部署后再核对health与页面，可沿受支持浏览器入口。
+
+Model Relay本轮尚无Open PR或新Deployment；最近Actions仍Issue entry/旧main，不能触发旧main并称最新效果。待当前完整测试与QA通过，经原Connector产物、授权合并后使用同一正式Actions先在隔离环境验证非空升级/失败恢复，再发布preview并核对版本/实际页面。平台验证/产品原log/基线/Controller核验在ignored `.data/fresh-8793/check-deploy-both/`，没有手改DB/检查点/收据或新权限。

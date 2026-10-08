@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 14:51）：用户要求停止定时任务并汇报，model-relay heartbeat已通过正式工具置PAUSED并从保存配置复核；当前Pipeline未取消。seq51第21次原完整make verify exit2/98283bytes，同133文件5b0822a0…指纹，187Node/全仓race/build/迁移/旧UI/多上游分项通过，新editor-held-readback-1280回归失败后正式返seq52研发。测试分页请求未被精确URL拦截的边界已有锁版本matcher证据，修复仍待宿主复验；QA47-01 P1/AC01 Fail与QA47-02 P2仍Open。Task5/U1 Active，Open PR0，正式最新合并/部署未发生，5545仍9851177/schema2。已有部署要求message9179完成处理并随原交接传递；停止定时检查不绕过QA或代替Harness。源开发分支提交/推送，不建Platform PR/合main；详证见统一验证记录。
+当前状态（2026-10-08 15:17）：用户即时要求部署最新Agent平台与Model Relay，定时任务仍PAUSED，本轮按即时授权推进。8793运行binary d926462e…与标准升级回执一致，最新功能源码abe0dd6后只有交付文档修改，四项实际HTTP前端资源逐字节与维护源一致，平台已运行最新功能版本，无需中断在途任务。Model Relay seq53原完整tests exit2/98085bytes，真实1280编辑器中断场景已通过，随后route.continue重复处理错误；正确返seq54研发处理清理时序。QA47 P1/P2仍Open，最新PR/合并/部署未发生，已有部署要求沿原Run传递。正式Actions/Owner/两安装控制器版本与已闭合状态核对完成，隔离旧安装2模型4历史请求只读对账基线保留；候选通过完整门禁/独立QA后再正式验证升级/恢复及发布。Task5/U1 Active，不代替Harness产品实现、不部署旧main冒充最新、不重启在途8793。详证见统一验证记录。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
