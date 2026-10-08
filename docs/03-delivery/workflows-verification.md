@@ -1835,3 +1835,14 @@ pipeline自然进入QA21/ca57395d6cb44be7adb749ec59717783 running，原生正在
 新诊断复审已重核147件f8befd源戳：原唯一行/列存在/值相同断言及原error重抛保持，无新等待/重试/操作改变，诊断仅白名单计数/布尔和启用停用other，不泄漏原值/异常/凭据；无新增Critical/Important。该静态结果亦不关闭旧18间歇失败。正式QA21仍running、其原生“可进入精确发布”进度自报不代最终handoff/报告与遗留评估；后续须核Owner新增input是否正式承接后才按最终结果推进。
 
 正式conversation回读：Owner遗留评估input id16161/user/queued，QA仍running；现有“可进入精确发布”进度消息关联初始parent16072，尚不能认定已处理新增input。不重复投递，等待原生排队接续及最终QA报告/工具handoff后核评估结果。未在queued状态自行合并或改检查点。
+
+
+### 2026-10-09 04:10 精确候选合并并进入正式部署
+
+实时Run completed/error空/25步。QA21已处理queued Owner input，summary-assessment正式保留R28-04 Open/P2根因未知，仅已证当次验收延期、未实证产品持续错状态/P1。源码save缺post-write刷新代次屏障只是静态解释，既没有把一次20绿标成修复，也没有虚造用户已接受风险；QA建议Go with known issues进入精确正式prepare，任一后续门禁红必须No-Go、按实际GET hold/release/同scope DOM提交契约最小重现，实证核心结果错误须升P1返研发。动态独立browser仍Blocked、供应商Not Run。报告22公开同边界并只改交付文档；publish23 exit0、pr24确认PR29及head7f0b2e72b442332fd48a3b86982fae5e834f45a2，已attach当前chat，不恢复旧Run25或旧PR27。
+
+维护者在published HEAD通过git ls-tree/cat-file --batch按tests/evidence同库存重算147件源f8befd158a543afeb1ba77778e4caf72e876f6e4b0b988dd4e6ab73de5e5eaab，每件git对象与工作树原字节一致、树干净；QA报告/summary评估/host20state也与发布对象字节一致。GitHub实际mergeable/CLEAN/GitGuardian成功，同源新诊断/调度/runner各审查无新增Critical/Important。按既有测试仓合并授权ready PR29并PUT merge以精确sha约束，返回merged=true/main9bf6ecaf53758ca2258498968b830c535e02e1c0。Platform未提PR/合main。Issue28随Closes关闭不表示Deployment已完成，发布页面/存量升级/原密码保持仍要实际验证。
+
+正式Actions：push prepare37837649432（20:12:03Z）in_progress，Owner workflow375348269 dispatch deploy=true/target=preview/main触发37837659544（20:12:07Z）pending，同新main9bf6ecaf。不重复触发或协调者代执行make/activate。prepare job Verify and prepare exact main commit尚执行；旧preview health200/version9851177维持，未宣布新服务上线。若成功ready复用不应假装第二次verify；失败完整日志/状态应保留，再红须按QA契约诊断/受支持新阶段，而非盲试/增限。
+
+通用controller真实集成首证据：安装SHA2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79，实际新日志verify-9bf6ecaf53758ca2258498968b830c535e02e1c0-adk17kh_.log mode0600/当时147832bytes；唯一实际attempt文件由正式prepare创建，旧verify-cd413b5….log与先前私有归档逐字节相同/SHA1fcb76adac11cd22cb06f92a7787750d64fecddf6e132cd3d769ec210adf94fc。这证明真实入口新日志命名/权限与旧证据保留，尚不证明当前完整verify、后续激活成功或连续两个正式失败复验。此前源码红绿/60项测试及标准install upgrade保持历史，不新增手工补丁或重跑已通过测试。

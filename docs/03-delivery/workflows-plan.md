@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 03:40）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests20正式完整冷make verify exit0/310815bytes/truncated=false，output API十页读至EOF，147件f8befd158a543afeb1ba77778e4caf72e876f6e4b0b988dd4e6ab73de5e5eaab源前后不变；真实冷开始/结束UTC、完整runner日志摘要、自有组清理、三视口J01–J07/summary/visual与候选Playwright/Chromium最终probe闭合。QA21/ca57395d6cb44be7adb749ec59717783独立审查进行中。development19仅加摘要诊断、未修同步；旧18摘要切换断言失败根因尚未知，已Owner正式UserInput HTTP202要求QA单独分级/评估发布影响，不将一次绿冒称已修问题。新诊断同源静态复审无新增Critical/Important且原断言保持；正式新QA结论/PR/合并/部署尚待，旧版本保持。预算100/30分钟ACTIVE、阶段1Active；动态独立QA与controller实际下一Actions证据仍待。
+当前状态（2026-10-09 04:10）：Issue28/Run3e7496815b9922704072482cf44e73e2已25步completed；QA21处理Owner遗留input后Go with known issues，旧18摘要间歇断言R28-04保持Open/P2/根因未知，不阻当前精确prepare但任何再红须返研发。Pipeline正式publish23/pr24创建PR29/head7f0b2e72b442332fd48a3b86982fae5e834f45a2；维护者147件git对象逐字节匹配完整冷tests20/QA21的f8befd…且树干净、GitGuardian成功，已按测试仓授权ready及精确merge main9bf6ecaf53758ca2258498968b830c535e02e1c0。正式push prepare37837649432正在验证，Owner dispatch37837659544 pending；没有手工部署替代。实际新controller日志唯一后缀/0600、安装摘要2d456…及旧失败字节保持已核，完整prepare/activate/Deployment/新health-schema3/admin/存量身份未闭合，5545仍旧9851177健康。不重复dispatch/复活旧Run；若再红按QA最小原层重现契约返新阶段。预算100/ACTIVE30分钟/阶段1继续；动态独立QA/供应商仍Blocked/NotRun。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
