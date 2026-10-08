@@ -164,3 +164,6 @@
 
 
 2026-10-08 15:30按用户纠正完成“较新版本可看”目标：8793平台最新功能binary/四项实际资源一致，真实管理员页面可打开；Model Relay最近已合并PR19/main9851177经正式Owner deploy Pipeline37743445224 success，Already deployed同版本核验/未重复激活，5545 health/deployed精确同SHA/schema2，真实登录页可打开。不是design-v0.2.0整改版本验收/发布，原QA47/Task5/U1未完成事实保持。PR合main仅prepare，不是每个PR自动发布；定时保持PAUSED，原Run继续，不代替Harness或执行新候选隔离故障。详证见统一验证记录。
+
+
+2026-10-08 15:48用户查看在研版：Issue25 Open/最近Hook回写6055263862与Run seq57 tests running一致。seq55完整失败经原路由返56修J06日志详情driver，193Node/静态局部绿，新134文件fb4066fa…正在正式完整复验；QA47 P1/P2、新PR与部署未闭合。10/6 PR19只有早期六项网关管理，实际页面与当前多租户控制台产品目标差距很大，不用旧版或候选自报冒称产品化完成。用户查看入口和证据见统一验证记录，定时仍PAUSED，不新增任务或代写产品。

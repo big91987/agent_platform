@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 15:30）：用户明确接受较新的已合并Model Relay版本用于查看，不等待研发中的新版。本次查看交付完成：Agent平台8793运行最新功能源码，实际资源/二进制核验一致；Model Relay选最近已合并PR19/main9851177（2026-10-06），正式Owner deployment workflow_dispatch deploy=true/preview，Actions37743445224 success，日志Already deployed，同SHA不重复切换，实际5545 health200/schema2/精确SHA和deployed.json一致，真实浏览器管理登录页可打开。当前在研design-v0.2.0/QA47整改仍未验收，不冒充本次部署版本；原Run继续，定时保持PAUSED。PR合main只自动prepare，正式激活须显式deploy，非每个PR自动发布。Task5/U1仍Active，源分支仅文档提交/推送，无新Platform PR/main合并。详证见统一验证记录。
+当前状态（2026-10-08 15:48）：用户查看开发版Issue与进展。正式Issue25 Open，最新回写与Run一致；当前seq57 tests running/预算60，seq55原完整exit2/103324bytes后正确返seq56，修J06日志详情驱动入口，193Node/静态局部检查绿，134文件fb4066fa…候选正式复验中。QA47-01 P1与QA47-02 P2仍Open，开发版尚无新PR/合并/部署；10/6 PR19展示版不能代表design-v0.2.0完成。次新查看交付已完成：平台8793最新功能，Model Relay5545/PR19经Owner Actions37743445224同版核验success。用户当前页面旧版仅网关概览/上游/模型/Key/调用/记录，正式开发Issue范围为多租户管理工作台，差距明确，不冒称两者相近或新版本已产品化。定时保持PAUSED，原Run继续，Task5/U1 Active。详证见统一验证记录。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 

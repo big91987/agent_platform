@@ -1624,3 +1624,14 @@ Owner big91987通过正式`deploy-local.yml` workflow_dispatch ref=main/deploy=t
 Agent平台8793最新功能源码abe0dd6已部署；后来HEAD只交付文档。binary d926462e…/维护源四项HTTP资源一致，真实Playwright管理员登录成功进入主编排页，标题和节点页面实际可查；第一次匿名api/me401是正常未登录，不当页面故障。平台保持当前8793，不为文档commit重启在途Run。源码只开发分支提交/推送、不建Platform PR、不合main。
 
 本次两个查看入口已核对：[Agent平台](http://127.0.0.1:8793/workflows/8f497228b60a8ea46b7d37be59ebe578)、[Model Relay PR19版](http://127.0.0.1:5545/admin/)。当前在研design-v0.2.0/QA47仍属于未交付的原Run，不把次新发布核验当其Go/合并部署；Task5/U1保持Active。按新查看目标不再等新版发布，也不执行此前为schema3新候选拟定的隔离故障部署。定时保持PAUSED，原Pipeline不取消，协调者本轮没有代写产品/造QA/手改DB或新增权限。证据在ignored check-deploy-both，原失败/基线/尝试全部保留。
+
+
+## 用户查看旧版差距与在研Issue进展（2026-10-08 15:48）
+
+用户认为10/6版与当前目标差距很大，随后要求看在研版本Issue和进展。实际读取用户当前5545/admin/#overview：运行9851177，六项导航概览/上游/模型/应用密钥/调用测试/调用记录；上游未配置、模型0/Key0，下一步向导与技术说明占主要区域。它是早期团队网关，不能作为完整多租户管理控制台产品化效果。当前Issue25设计明确承接A明亮管理后台、稳定侧栏、紧凑表格、统一编辑/详情，六类多租户/身份/模型/Key/共享资源/计费用量/账单/迁移功能；有实现候选不等于最终产品化验收。
+
+正式[Issue25](https://github.com/big91987/model-relay/issues/25) Open，title“全新 Pipeline：在 8793 新编排完成 design-v0.2.0 研发交付”；latest公共Hook comment6055263862/07:47:53UTC与正式Run seq57测试一致。seq55原make verify exit2/103324bytes，seq56正式handoff明确三视口编辑中断清理/console已过，continuous1280 J01–J05/J07过，在J06日志页误用仅call页存在按钮，响应等待未处理拒绝超时；此为当前正式交接/Agent恢复结论，本轮尚未另读seq55完整原日志，不把该分项升级成独立维护者完整复验。
+
+seq56 candidate records-detail-entry-r1只修驱动为精确Request ID行详情/同时观察响应与点击，保留30s/200/ID/原始未知和确认3/4/CSV/账单守恒及全部门禁；定向17/20红→20/20绿，193Node/vet/build等局部绿、同19件材料摘要。134文件fb4066fa37d1e7865d3a18f72dd78fef98ae79bde17e20875af373b24771c3a6正式交seq57原完整tests，当前running/dispatched，预算60/冻结40，无error。新完整通过和QA47-01/P1、QA47-02/P2关闭均待实际证据；无开发版新PR/合并/Deployment，不能拿PR19页面作新成果。
+
+用户可查看本Issue、[实际Run](http://127.0.0.1:8793/workflow-runs/4cd62ced6a4f98f50e3cca6f7596eb06)、[最近研发会话](http://127.0.0.1:8793/conversations/53745b666e3dbfb5992ce61ea267925e)。尝试在IAB打开GitHubIssue超时，未宣称已展示；GitHub正式API内容与链接已核对。没有新增任务、User Input、Issue评论、产品改动或恢复动作；定时保持PAUSED、原Run继续。核对现场在ignored check-development-progress/。
