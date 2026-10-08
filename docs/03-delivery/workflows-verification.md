@@ -1846,3 +1846,20 @@ pipeline自然进入QA21/ca57395d6cb44be7adb749ec59717783 running，原生正在
 正式Actions：push prepare37837649432（20:12:03Z）in_progress，Owner workflow375348269 dispatch deploy=true/target=preview/main触发37837659544（20:12:07Z）pending，同新main9bf6ecaf。不重复触发或协调者代执行make/activate。prepare job Verify and prepare exact main commit尚执行；旧preview health200/version9851177维持，未宣布新服务上线。若成功ready复用不应假装第二次verify；失败完整日志/状态应保留，再红须按QA契约诊断/受支持新阶段，而非盲试/增限。
 
 通用controller真实集成首证据：安装SHA2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79，实际新日志verify-9bf6ecaf53758ca2258498968b830c535e02e1c0-adk17kh_.log mode0600/当时147832bytes；唯一实际attempt文件由正式prepare创建，旧verify-cd413b5….log与先前私有归档逐字节相同/SHA1fcb76adac11cd22cb06f92a7787750d64fecddf6e132cd3d769ec210adf94fc。这证明真实入口新日志命名/权限与旧证据保留，尚不证明当前完整verify、后续激活成功或连续两个正式失败复验。此前源码红绿/60项测试及标准install upgrade保持历史，不新增手工补丁或重跑已通过测试。
+
+
+### 2026-10-09 04:40 正式部署成功与下一管理操作迭代
+
+正式push37837649432 success；Owner部署37837659544 success，prepare20:23:33–42Z、deploy20:23:47–56Z，activate日志实际Deployed9bf6ecaf53758ca2258498968b830c535e02e1c0/URL5545admin。GitHub Deployment6945948215/local-preview于20:23:58Z状态success/environment_url http://127.0.0.1:5545/admin/。actual health5545=200/statusok/storage_schema3/version同新main；隔离5546=200/旧9851177/schema2保持，没碰8788或其它工作树。
+
+真实prepare单独verify-9bf6ecaf…-adk17kh_.log0600/331922bytes/SHA b1056a7cf52e1cd9886eab614288ee56db1b46ec3bd0ab2ca14e126ee4496689，实际全文读取197Node/预算UTC迁移历史分类器/全Go race/全部migration/legacy/routing/console/full-console阶段及三视口summary visual和最终Chromium探针绿，CLEAN_END0/源不变。Owner prepare在ready复用分支9秒结束，不造第二次verify绿。此为controller标准升级后真实正式入口成功集成，旧cd413b5失败log字节保持；未实测两个正式失败或强杀断电持久性。
+
+activation stagecommitted，正式回滚backup113152bytes/SHA与journal匹配，master.key摘要与升级前相同。只读旧schema2备份与current schema3逐表旧列行比较：admin1→1全列相同（含凭据行），app_keys/requests/upstream/models/route_candidates/upstream_checks/request_attempts/request_route_decisions均原0→0相同；不把空表比较冒称非空业务升级全面验收。曾尝试内存deserialize读取备份遇SQLite WAL格式unable to open，未成功写任何live数据；改用私有0600暂存原备份字节、immutable只读旧副本及mode=ro/query_only当前库，确认后删除私有DB副本，仅保存计数/相等布尔，未导出密码/密钥或修改数据库。此证明既有行/凭据存储保持，不替实际账号登录功能或复杂非空迁移。
+
+CUA getState两次30秒timeout/kernel reset，停止重试。已安装npx/PlaywrightCLI受支持入口打开真实5545/admin，title Model Relay管理工作台；显示账号admin/登录表单，未提交旧密码/重置数据。401/api/session属于独立未登录context；favicon404保留观察，未误当核心部署失败。保存ignored output/playwright/model-relay-9bf6ecaf-login.png后关闭独立会话；实际用户已登录后的管理操作仍Not Run，不能用部署health或受控hostUI替代。
+
+长期阶段2正式新Issue30“修复模型保存后的页面刷新完成同步契约”已创建，链接 https://github.com/big91987/model-relay/issues/30 ，当前main9bf6ecaf，原materialdesign-v0.2.0不改。输入要求R28-04真实GEThold/release最小归因、同scope post-write DOM完成屏障、双向启停/窄屏/读失败/迟到scope及错误状态负例，原固定门禁/独立QA/精确新发布保持；不由协调者代写产品或恢复完成Run28，旧未完成验收Issue仅历史不复刻。自动Issue入站Actions37842267940 success，唯一新Run2574d6be275f9eb630f8738837507e1e/workspacegithub-issue-5768698365从新main：prepare1 exit0/issue2确认原30，然后intake3/conversation8b1f6454489fabc4f4633af3a7548883 serverOverloaded/Selected model is at capacity失败，原始错误保存，尚无产品副作用。
+
+Owner一次正式resume(seq3/message保持原Codex/gpt-6.1-sol/原任务)HTTP202，fresh回读Run running/error空/intake3running，同conversation，原前两步/definition逐值相等/max100保持。没有额外dispatch/新Run/换模型/临时权限/预算增加；容量恢复是否实际完成由新原生消息/结果后续核，不将running排程单独称故障根治。当前下一动作核新intake真实承接→最小原层回归研发，不永远停在旧完成Run；若外部容量再失败保留边界有界恢复，不循环盲试。
+
+最后fresh回读：intake3同会话已真实完成回复并正式handoff development4/b106c858ccb3f8b0ca53d308648e099e running。核已部署main、干净workspace/材料一致，无新需求/架构决策，沿Bug短路径直接研发；旧同步假设仍待真实hold/release。证明本次serverOverloaded有界resume已在原生实际完成接续，不只排程running；未来容量稳定性不扩大。

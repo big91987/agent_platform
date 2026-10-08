@@ -256,3 +256,8 @@
 
 
 2026-10-09 04:10：Owner补充input通过原生排队接续被QA21正式处理并写独立summary评估，未被handoff丢失；Run经report22→publish23→pr24→done25真实完成，file-level artifacts发布未再撞目录门禁。测试仓PR29精确147件源码与QA/完整冷门禁相同，经授权合并main9bf6ecaf，正式部署而非手工替代。平台日志覆盖修复的下一真实Actions已有首证据：新verify-9bf6ecaf…-adk17kh_.log唯一attempt后缀、0600，已安装controller与维护源2d456…同摘要、旧cd413b5失败log字节保持；实际验证尚运行，未据此声称prepare/activation绿或两次实际失败都保留。动态Go独立QA仍维护源待办，QA证据审查/宿主UI/正式部署各自报告。
+
+
+2026-10-09 04:40：controller日志修复的正式运行全程复验成功，单独0600 verify日志331922bytes/SHA b1056a7cf52e1cd9886eab614288ee56db1b46ec3bd0ab2ca14e126ee4496689含197Node/全Go/全部browser阶段绿，Owner后续prepare用ready约9秒结束未重跑验证。旧失败log保持，真实升级/activate/health到schema3完成；不同于源码夹具或手动替代服务。未实测两个实际失败attempt/强杀断电，不扩大声称。CUA真实浏览器连接两次30秒超时，PlaywrightCLI支持入口补完成实际登录页；这不是已登录实操或动态独立QA工具修复，后者仍待平台维护源。
+
+阶段2Issue30由原正式Actions自动进入唯一新Run，从已部署main9bf6ecaf承接同步契约问题。首次intake3原生serverOverloaded/模型at capacity，无产品执行，prepare/原Issue成功回执已核；一次正式resume同conversation HTTP202，原前两步/冻结图与max100保持，未重放已成功副作用、切模型或扩权限。后续容量若再失败保留原层状态不连续盲试，是外部失败恢复边界而非业务故障；恢复后自然推进待真实原生输出核验。
