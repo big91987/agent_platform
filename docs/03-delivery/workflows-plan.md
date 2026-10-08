@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 01:40）：Issue28/Run3e7496815b9922704072482cf44e73e2已将固定make verify接入独立冷执行器；tests10在npm前置exit2/239bytes，自动返development11，真实npm同/dev/null重复加载复现并修两个空配置及诊断，当前144件4d484086…候选尚未完整验收。新入口只读复审发现3项Important/P2待实测：父目录symlink复制越界、辅助命令失败stderr缺失、Git/源码/探针未接有界取消。准备输入时已进入tests12，未发送消息；已正式stop12（exit-1/61016bytes，Node193通过但Go全量中断），state清理未闭合，不冒充完整通过。Owner return到development13待派发，要求产品Agent最小原层复现/修复/新摘要后完整冷门禁与QA；前11步/冻结图/中断回执保持，不改权限/预算100。旧142件seq5绿与QA6 No-Go保留历史，新PR/正式部署仍未发生，5545旧9851177/schema2健康。通用controller标准日志升级已应用，真实下一Actions日志复验和独立动态QA工具缺口仍待完成。长期阶段1Active，定时任务ACTIVE30分钟依实时状态推进。
+当前状态（2026-10-09 02:10）：Issue28/Run3e7496815b9922704072482cf44e73e2的development13已完成三项验证工具P2真实最小红→绿及定向race/SIGTERM回归；144件新候选dc73ac404db4daaf7e264552c0940abb294b2b1b48684e792eec90822b6eb665，正式tests14自18:06:06Z running。新入口实际冷起点无node_modules/npm cache、NODE_PATH unset及辅助进程组消失状态已记录；完整门禁、结束源码/日志/清理状态及新独立QA尚未完成，仍No-Go。新候选独立只读复审确认三项P2静态闭合、无新增Critical/Important；不以静态或定向结果代完整冷门禁与QA。原tests10失败、12中断与cleanup未闭合保持历史；没有新PR/正式部署，5545/5546实际health200旧9851177，预算100不变。通用controller标准日志升级已应用，真实下一Actions日志复验和独立动态QA工具缺口仍待完成。长期阶段1Active，定时任务ACTIVE30分钟依实时状态推进。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 

@@ -1787,3 +1787,14 @@ Owner return8→development HTTP202，Run running/seq9，原生87226f924596c3a75
 Owner stop12 HTTP202→stopped，exit-1/61016bytes/truncated=false、原错误effects may be partial，output API读至EOF；193Node通过、Go race启动后中断不算全量绿。执行器ignored state 20261008T174328Z-4124892975仍cleanup=not_started/log_bytes0，不能用外层stopped补造内层完成；先保留状态与源版本。只读ps探针因非UTF8进程文本首次失败，容错解码后含model-relay-verify/clean目录参数匹配空；这只是有范围的观察，不证明全部无路径子进程/端口已净，无广泛kill。5545实际health200/9851177/schema2保持，没有Git发布或activate副作用。
 
 Owner return12→development HTTP202，Run running/seq13 pending/error空；管理员同调用者前11步/冻结definition逐值保持、seq12 connector_receipt逐值不变。反馈同时包含3项静态发现及复现要求、state未闭合和其原因未确定边界；源码真实修复、辅助失败/取消回归、下一完整冷门禁与独立QA均待实际结果。所有普通选择与测试仓新PR/合并/正式部署授权保持，未扩权限/预算或重建任务。当前工作不是产品上线，禁止以旧seq5或仅夹具绿放行新入口。
+
+
+### 2026-10-09 02:10 三项P2整改进入新完整冷门禁
+
+正式API：development13 completed，tests14 running/connector_dispatched=true，自2026-10-08T18:06:06Z，Run running/error空/max_steps100。144件新源码戳dc73ac404db4daaf7e264552c0940abb294b2b1b48684e792eec90822b6eb665，main.go a57141093ee44755e7f138bdf9a0cf90889a6bce2fe74ff390ce546a9d344126、main_test.go a3a2040ae4f5d2c9d7bdff35b05600b4581063d8305d253e9462a89b0db42cdc。读取研发remediation-development-13及原层记录：父目录链接复制红、辅助stdout/stderr失败丢诊断红、50ms取消仍等待约1.0375s红均有真实最小复现。实现os.Root/逐层校验、共用execute捕获/解析分离、辅助ctx/两分钟有界监督；定向两包race、真实SIGTERM与三次取消重复绿。中间旧格式断言失败和测试自身跨goroutine读取Cmd.Process竞态失败保留，后从就绪文件获取归属PID整改；不将这些定向结果当冷安装/完整HTTP/browser/供应商验收。
+
+实际新runner目录test-results/verification/20261008T180607Z-863663337开始state记录clean_start_measured=true、node_modules_before/npm_cache_before=false、NODE_PATH unset、manual_preinstall none及dc73ac候选源戳；前置Git/evidence/version命令exit0/owned_group_absent=true。运行中finished_utc空/cleanup not_started等只是尚未完成状态，不当失败或清理已完成。私有实时日志尾部193Node通过、Go race仍执行，不能代完整正式Connector回执。待正式completed后经output API至EOF，核对新source before/after/完整日志摘要/所有结束清理状态及原全部门禁，再新独立QA。旧seq5/10/12结果不放行此候选。新候选已发既有reviewer独立只读复审，结论尚待。
+
+GitHub实际Open PR为空，尚无新publish/merge/activate。5545/5546实际health200/version98511771871cf0951ecef716bbb55deb13e18da5；未替代部署Pipeline或修改产品工作树。唯一Run继续自然执行，原预算100不扩大。平台源仅更新既有计划/证据，旧controller安装版本与其实际下一Actions复验待办保持。
+
+新候选复审结果：审查前后main.go/main_test.go摘要与development13指定dc73ac候选一致。三项P2在当前源码及回归中静态闭合，未发现新增Critical/Important。reviewer未跑测试/修改文件；HOME继承、历史或脱离当前组的进程不在该证明内、强杀可能留未完成receipt等限制保持。正式tests14仍running，独立QA尚未开始，不据此宣布完整通过或部署。
