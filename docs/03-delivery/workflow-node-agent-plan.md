@@ -261,3 +261,9 @@
 2026-10-09 04:40：controller日志修复的正式运行全程复验成功，单独0600 verify日志331922bytes/SHA b1056a7cf52e1cd9886eab614288ee56db1b46ec3bd0ab2ca14e126ee4496689含197Node/全Go/全部browser阶段绿，Owner后续prepare用ready约9秒结束未重跑验证。旧失败log保持，真实升级/activate/health到schema3完成；不同于源码夹具或手动替代服务。未实测两个实际失败attempt/强杀断电，不扩大声称。CUA真实浏览器连接两次30秒超时，PlaywrightCLI支持入口补完成实际登录页；这不是已登录实操或动态独立QA工具修复，后者仍待平台维护源。
 
 阶段2Issue30由原正式Actions自动进入唯一新Run，从已部署main9bf6ecaf承接同步契约问题。首次intake3原生serverOverloaded/模型at capacity，无产品执行，prepare/原Issue成功回执已核；一次正式resume同conversation HTTP202，原前两步/冻结图与max100保持，未重放已成功副作用、切模型或扩权限。后续容量若再失败保留原层状态不连续盲试，是外部失败恢复边界而非业务故障；恢复后自然推进待真实原生输出核验。
+
+
+2026-10-09 05:40：Issue30 development4原生serverOverloaded/at capacity再次失败；这次已有诊断文件和native受限测试，恢复前已核工作区与会话，未把失败当无副作用或重复intake。Owner一次正式resume4 HTTP202，同conversation/冻结definition/原前3步/max100保持，排程running仅说明恢复已受理，尚不等于Agent已交接或外部容量故障修复。不换模型、不扩权限、不建立重复Run；再阻断须记录并有界处理，不能连续盲试。平台本轮无代码/安装升级，动态Go独立QA工具缺口仍待。
+
+
+同次fresh回读：恢复input17494已running，原生新progress17495/parent17494于21:43:56Z明确承接“核对现有诊断与失败回执、补归档和源码戳，不重放写入/重跑完整门禁”。这证明同会话恢复后原生实际接续，仍未证明最终handoff或宿主目标复现完成。

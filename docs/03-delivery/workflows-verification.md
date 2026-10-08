@@ -1863,3 +1863,15 @@ CUA getState两次30秒timeout/kernel reset，停止重试。已安装npx/Playwr
 Owner一次正式resume(seq3/message保持原Codex/gpt-6.1-sol/原任务)HTTP202，fresh回读Run running/error空/intake3running，同conversation，原前两步/definition逐值相等/max100保持。没有额外dispatch/新Run/换模型/临时权限/预算增加；容量恢复是否实际完成由新原生消息/结果后续核，不将running排程单独称故障根治。当前下一动作核新intake真实承接→最小原层回归研发，不永远停在旧完成Run；若外部容量再失败保留边界有界恢复，不循环盲试。
 
 最后fresh回读：intake3同会话已真实完成回复并正式handoff development4/b106c858ccb3f8b0ca53d308648e099e running。核已部署main、干净workspace/材料一致，无新需求/架构决策，沿Bug短路径直接研发；旧同步假设仍待真实hold/release。证明本次serverOverloaded有界resume已在原生实际完成接续，不只排程running；未来容量稳定性不扩大。
+
+
+### 2026-10-09 05:40 Issue30研发容量失败与同会话恢复
+
+实时API：Run failed/seq4 development failed，conversation b106c858ccb3f8b0ca53d308648e099e updated2026-10-08T21:03:19Z，serverOverloaded/Selected model is at capacity。原生progress已记录静态诊断切片、监听限制与尚无实际Chromium结论；实际工作树新增model-save-readback.mjs/test.mjs，journeys挂接和workspace-contracts及本Run文档，没有产品workspace.js改动或commit/push/新PR。不能把静态同步假设当原历史18实证归因。
+
+native-verify-04-state.json源149件a47fd28fc07b82e7fc9f2f15d610084c864f5cddf678c4448956e18cf19c58cf，起止20:57:56.730301Z–20:58:24.150854Z，原make verify冷副本；实际完整日志148817bytes/SHA071064bd7defc9013482d0c637461c3608184bbdd599e2c7bb9f099bec4adec4与state重核一致。historical HTTP rejected: historical listener unavailable; not business red，gate_exit2/exit1、自有groups absent/candidate removed、source unchanged。不是宿主tests Connector完成或浏览器早返回证据；诊断目标尚未运行，不伪报红绿。
+
+Owner fresh确认同seq4容量失败后一次POST resume HTTP202，沿同会话/原任务续归档与正式handoff；前3步及definition逐值不变，预算100/模型配置保持。实际新API running/error空仅排程状态，后续须检查原生真实新消息和handoff，不把受理等同恢复完成，不循环追加resume。具体私有API/恢复回执见ignored .data/fresh-8793/check-20261009-0540。GitHub Issue30仍Open/Open PR为空；actual5545health200/version9bf6ecaf/schema3，5546旧9851177/schema2健康；新版本未发布，旧Run28不复活。
+
+
+同次fresh回读：恢复input17494已running，原生新progress17495/parent17494于21:43:56Z明确承接“核对现有诊断与失败回执、补归档和源码戳，不重放写入/重跑完整门禁”。这证明同会话恢复后原生实际接续，仍未证明最终handoff或宿主目标复现完成。

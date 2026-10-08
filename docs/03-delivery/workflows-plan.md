@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 04:40）：Model Relay PR29/main9bf6ecaf53758ca2258498968b830c535e02e1c0已由正式push prepare37837649432与Owner dispatch37837659544成功部署，Deployment6945948215 success/local-preview/http://127.0.0.1:5545/admin/，actual health200/version同main/storage_schema3。新独立0600 verify日志完整原门禁及三视口绿；Owner prepare复用ready未假称第二次重跑，activation committed/有效113152byte回滚备份/主密钥保持/旧schema2各表既有行及admin凭据行只读比对相同。真实Playwright登录页已打开并截图（未登录），已登录管理操作独立验收仍待，不重置原密码；CUA连接两次超时已记录。阶段2已创建唯一Issue30/Run2574d6be275f9eb630f8738837507e1e，从新main修保存后页面刷新同步契约，自动入站37842267940 success；首次intake3因原生serverOverloaded容量失败，无产品副作用，一次Owner正式resume HTTP202后intake同会话完成并直接handoff研发4/b106c858ccb3f8b0ca53d308648e099e running，前两步/原图/预算100保持，不改Codex/gpt-6.1-sol、不重复建任务。旧Issue28/Run25completed不复活；R28-04仍Open/P2根因未知，新阶段须最小真实GET屏障确认后修复。ACTIVE30分钟；动态独立QA/供应商仍Blocked/NotRun。
+当前状态（2026-10-09 05:40）：正式部署5545仍health200/version9bf6ecaf53758ca2258498968b830c535e02e1c0/schema3，5546旧9851177/schema2保持。Issue30/唯一Run2574d6be275f9eb630f8738837507e1e研发4于21:03:19Z再次因原生serverOverloaded容量失败；已有副作用仅修前GET hold/release诊断与文档，产品未改，无host Chromium复现、新PR或发布。native固定门禁因historical listener unavailable停止，149件a47fd28f…/148817bytes日志与state摘要重核匹配，不能认作业务红或通过。核原会话和工作树后，Owner一次正式resume4 HTTP202，同conversation b106c858ccb3f8b0ca53d308648e099e running、前3步/definition逐值保持、max100未变；原生实际接续与tests handoff待回读，不自动反复恢复或换模型。R28-04仍Open/P2未知根因，旧Issue28已完成不复活。部署已登录实操与动态独立QA仍待，供应商NotRun；30分钟持续推进。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
@@ -302,3 +302,11 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 
 
 用户最新要求恢复持续定期推进（2026-10-08）：通过原automation_update更新model-relay为ACTIVE，保留原30分钟频率、当前thread和通知策略；同步长期阶段、PR27/研发63返工、新旧测试版本及QA浏览器边界进任务prompt，不创建重复定时任务。配置正式回读ACTIVE。当前同Run seq63 development running，原生会话a61735cc14d2675688203cc090f2e44f，自报“内进程已复现两项缺陷；继续补重启、期限和窗口守恒回归”；这是Agent执行进展，不等于原完整宿主测试或独立QA通过，PR27仍待修复版重新验证再合并。定期检查先核实时态再推进受支持入口，卡点记录并诊断修复；重要结果/问题通知，正常未变保持安静。此前PAUSED记录是历史，不代表当前自动任务状态。
+
+
+### 2026-10-09 05:40 原生容量失败的有界接续
+
+Issue30研发4已完成诊断切片但在归档/交接前容量失败，未完成目标复现或产品修复。一次Owner正式resume保留原节点、会话及前序副作用，不重启Run/重放写入；后续应沿原handoff进入tests，固定make verify首次真实诊断红需返研发最小归因，不能预期红即Done或重复全套求绿。当前服务保持正式9bf6ecaf健康，未新发布。
+
+
+同次fresh回读：恢复input17494已running，原生新progress17495/parent17494于21:43:56Z明确承接“核对现有诊断与失败回执、补归档和源码戳，不重放写入/重跑完整门禁”。这证明同会话恢复后原生实际接续，仍未证明最终handoff或宿主目标复现完成。
