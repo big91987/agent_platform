@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 06:10）：Issue30/唯一Run2574d6be275f9eb630f8738837507e1e正式tests5完成exit2/329434bytes/truncated=false，output十一页至EOF；149件ba8816e8…原层冷源不变、runner329252bytes/SHAa5a3c4b…与state及原文件匹配、清理闭合。真实Go/Chromium受控GET hold/release四case（1280/390×启用/停用）均证明旧save在本次tenants/catalog读回被暂停时已返回，旧状态或空表仍在；释放后最终状态全部正确，不能把瞬态旧读作持久数据错误或倒推旧18精确根因。自动failed→development6/f6164fa7fc573c1e4d7fab6eb8dfe769 running，150件0384f115…只读审查候选（47a199/d187为归档中途）修现有编辑/读取epoch及operation完成屏障、读失败/busy/迟到范围回归，同源独立只读复审无新增Critical/Important；新完整冷门禁/QA/PR/上线尚未发生。上一容量resume4已真实归档/handoff，不再追加恢复或重建任务。正式5545仍9bf6ecaf/schema3健康，5546旧版本保持；部署已登录实操/动态独立QA/供应商边界未变。
+当前状态（2026-10-09 06:40）：Issue30/Run2574d6be275f9eb630f8738837507e1e新候选150件0384f115…正式tests7完整冷make verify exit0/337132bytes/truncated=false，11页至EOF；原层runner337036bytes/SHA9197fff5…、冷起点/源码前后/归属清理/候选Playwright1.59.1与Chromium147均核证。三视口每套4组保存/8暂停阶段均不早返回，6个GET503故障恢复及3个迟到scope/相反第二写通过，原213Node/全Go race/真实HTTP/历史分类器预算UTC迁移/J01–07/summary/visual绿。QA8正式Go with known issues并handoff report9/4798281a4474b1226cc842adc454736a running，维护者独立重算同150源并核26件归档摘要/原文件字节一致。R30-SYNC-01已证完成契约缺口关闭，旧R28-04 Open/P2精确历史根因未知；动态独立QA Blocked，供应商/Owner登录预览NotRun保持。尚无新PR/合并/部署；5545仍正式9bf6ecaf/schema3健康，5546旧版本保持。等待Pipeline publish/pr形成精确新提交后再核证授权合并及正式Actions部署，不重复任务或代产品实现。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
@@ -321,3 +321,8 @@ Issue30研发4已完成诊断切片但在归档/交接前容量失败，未完�
 
 
 同次独立只读复审完成：22:14:02Z按tests/evidence库存算法重算150件0384f115adbbd545e8ce01021f238010ba66c89eb06e6acea08ce872ce0fa474，22:14:13Z candidate-06-after同戳；47a199/d187均为归档中途，重点6代码/spec SHA两次读取完全一致。复用既有operation/epoch与busy、读失败独立提示、旧epoch不释放新锁、secret/invite分离、严格断言及错误身份保持，未见新增Critical/Important。reviewer未运行测试，静态结果仅允许下一正式门禁，不等于新宿主/QA绿或可发布。最终fresh研发6仍running；下一tests需以实际冻结源戳核验，不预报handoff。
+
+
+### 2026-10-09 06:40 同源完整验证与独立QA完成
+
+原层修前tests5红转新tests7完整冷绿，独立QA8关闭已证R30完成契约缺口并保留旧R28-04边界。正式report9进行中，下一出口仍是Pipeline publish/pr精确源绑定、授权合并及Owner Actions，当前服务未更新。已登录预览/动态独立QA和供应商未测不写成通过，不创建重复Issue或恢复旧Run。
