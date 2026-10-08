@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 03:14）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests18已在时限内完成失败回执（exit2/307458bytes/truncated=false），正式API十页至EOF；147件28571f…源不变、实际冷起点/结束清理闭合。迁移/旧页面/路由/基础console阶段均完成，continuous-console1280的summary-model-context-toggle/form-submit出现assertion，HTTP last_status200并不足以证明UI通过；后续视口未全完，仍No-Go。累计耗时诊断后的包内parallel4改善已在受支持入口观察到，静态复审无重要问题，原race/count1/断言/权限/时限保持；新故障根因待研发19/c436887a5bd5a1f60da22b514693595e自动返工定位，不能猜是产品还是驱动/等待。无新完整绿/QA/PR/部署，旧5545 health200/version9851177。预算100/30分钟ACTIVE/长期阶段1继续，平台动态独立QA和controller下一Actions实证待完成。
+当前状态（2026-10-09 03:40）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests20正式完整冷make verify exit0/310815bytes/truncated=false，output API十页读至EOF，147件f8befd158a543afeb1ba77778e4caf72e876f6e4b0b988dd4e6ab73de5e5eaab源前后不变；真实冷开始/结束UTC、完整runner日志摘要、自有组清理、三视口J01–J07/summary/visual与候选Playwright/Chromium最终probe闭合。QA21/ca57395d6cb44be7adb749ec59717783独立审查进行中。development19仅加摘要诊断、未修同步；旧18摘要切换断言失败根因尚未知，已Owner正式UserInput HTTP202要求QA单独分级/评估发布影响，不将一次绿冒称已修问题。新诊断同源静态复审无新增Critical/Important且原断言保持；正式新QA结论/PR/合并/部署尚待，旧版本保持。预算100/30分钟ACTIVE、阶段1Active；动态独立QA与controller实际下一Actions证据仍待。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
