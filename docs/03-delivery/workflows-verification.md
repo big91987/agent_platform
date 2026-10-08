@@ -1901,3 +1901,12 @@ Run当前running/error空/max100。development6 completed/正式handoff tests7�
 QA8/850f0b1bf32914d2273f5382c658d5a5 closed/正式next/handoff report9，reply18113及result.qa_decision明确Go with known issues仅精确候选。独立75Node契约、材料19件摘要、源码前后/实际回执/三张安全模型页截图检查；维护者核26个archive-index具体产物bytes/SHA/原文件全相等。已证R30-SYNC-01完成契约缺口Closed，但旧R28-04 Open/P2精确根因仍未知，不以新成功倒推旧失败已根治。顶层ClockRecoveryWorker明确skip/NotRun，父InProcess及ActualHTTP子进程CLOCK_RECOVERY_PASS为实际同轮恢复门槛，不把skip改Pass。native独立动态QA Blocked，供应商/支付/身份/Owner登录预览/新正式部署NotRun分列；没有扩大权限或虚造用户风险接受。
 
 当前report9/4798281a4474b1226cc842adc454736a running；GitHub Open PR空，尚无新提交/合并/部署。旧5545health200/version9bf6ecaf/schema3、5546旧9851177/schema2健康，不冒称当前main已含修复。等待Pipeline原publish/pr产生精确提交，与QA/host150件逐git对象核对后授权merge/Owner正式Actions/Deployment及实际health页面；任何新红或源不同须No-Go，不循环全套求绿。平台本轮仅三份进度证据，无代码/配置升级。
+
+
+### 2026-10-09 07:10 PR31精确已验提交合并并正式部署
+
+实时Run completed/error空/max100/12步，report9完成后publish10 Connector exit0/124bytes/truncatedfalse、pr11实际URL https://github.com/big91987/model-relay/pull/31 、done12；PR已attach当前chat。GitHub新head8c8b155c007686311706ee1f8cec8262a1258bb9/base main9bf6ecaf、Draft、MERGEABLE/CLEAN，GitGuardian Security Checks SUCCESS。维护者git ls-tree/cat-file --batch按tests/evidence相同库存对150blob重算0384f115adbbd545e8ce01021f238010ba66c89eb06e6acea08ce872ce0fa474，每件git对象与工作树字节相同；26QA归档对象bytes/SHA/原文件全部匹配，QA报告/矩阵/缺陷/pr.md发布对象字节一致、工作树干净。远端GitHub head tree不截断，15新增任务分支完整URL目标均非空；旧评估链接为原已存在基线。不用当前main旧HEAD当候选。
+
+按用户测试仓合并授权ready31、PUT merge明确sha8c8b155…，返回mergedtrue/main3f9cee1615e87e002a2c2300f2d29778072ec3f5。未自行创建Platform PR或合源main。现PR/Issue关闭仅表示版本Git发布事实，未宣布部署/页面全面验收。正式push prepare37858024406/23:11:31Z in_progress，Owner375348269 dispatch deploytrue/targetpreview/main37858041523/23:11:42Z pending，同main3f9cee；原入口已触发一次，不重复dispatch或协调者代跑make/activate。
+
+实际controller源码安装仍2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79，prepare已建verify-3f9cee1615e87e002a2c2300f2d29778072ec3f5-jt63zgxe.log/mode600/当时155654bytes，是独立实际attempt但尚无完整成功/激活证据；旧日志不作新attempt。health5545仍200/9bf6ecaf/schema3，5546旧9851177/schema2健康，未碰8788。后续需实际正式Actions完整log/ready或reuse、Deployment及新health/version/schema3/页面一致，不把运行中局部记录当完成；任何新红保留唯一首日志再最小实证，不连续盲重试。旧R28-04未知根因与native动态QA Blocked/供应商Owner登录NotRun不因合并改Pass。当前私有证据ignored check-20261009-0710，原失败/QA/冷验历史保持。

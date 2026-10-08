@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 06:40）：Issue30/Run2574d6be275f9eb630f8738837507e1e新候选150件0384f115…正式tests7完整冷make verify exit0/337132bytes/truncated=false，11页至EOF；原层runner337036bytes/SHA9197fff5…、冷起点/源码前后/归属清理/候选Playwright1.59.1与Chromium147均核证。三视口每套4组保存/8暂停阶段均不早返回，6个GET503故障恢复及3个迟到scope/相反第二写通过，原213Node/全Go race/真实HTTP/历史分类器预算UTC迁移/J01–07/summary/visual绿。QA8正式Go with known issues并handoff report9/4798281a4474b1226cc842adc454736a running，维护者独立重算同150源并核26件归档摘要/原文件字节一致。R30-SYNC-01已证完成契约缺口关闭，旧R28-04 Open/P2精确历史根因未知；动态独立QA Blocked，供应商/Owner登录预览NotRun保持。尚无新PR/合并/部署；5545仍正式9bf6ecaf/schema3健康，5546旧版本保持。等待Pipeline publish/pr形成精确新提交后再核证授权合并及正式Actions部署，不重复任务或代产品实现。
+当前状态（2026-10-09 07:10）：Issue30/Run2574d6be275f9eb630f8738837507e1e已12步completed，report9→publish10 exit0→pr11 PR31→done12真实完成。PR31/head8c8b155c007686311706ee1f8cec8262a1258bb9经维护者150件Git对象与tests7/QA8源码0384f115…逐字节及26QA归档SHA/bytes核证、树干净、GitGuardian成功；15任务分支证据链接远端非空。已按授权ready并精确SHA合并main3f9cee1615e87e002a2c2300f2d29778072ec3f5。正式push prepare37858024406 in_progress、Owner dispatch37858041523 pending（preview/main3f9cee），不要重复合并/触发或复活完成Run。controller2d456…仍标准安装，新600私有verify-3f9cee…-jt63zgxe.log由真实prepare创建但尚未完整结束；目前5545仍9bf6ecaf/schema3健康，5546旧9851177/schema2保持，未新部署。下一步核实际Actions/Deployment/新health/page；若新红保留首回执最小归因不盲试。R30完成契约候选已测/QA通过，旧R28-04 Open/P2与动态独立QA/供应商/登录未测保持；成功部署后推进长期阶段2其他P3，不停留完成Run。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
@@ -284,7 +284,7 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 | 顺序/阶段结果 | 当前可执行任务及负责人 | 依赖/进入条件 | 验收退出条件 | 状态 |
 |---|---|---|---|---|
 | 1 当前多租户控制台真实上线 | 现有Issue25/PR27：只读合并前复审、精确head授权合并、正式main prepare/Owner preview deploy；协调者/Connector负责发布核验 | seq57+QA58同134文件源戳，现有授权；复审无未修Critical/Important | PR/merge/Actions/Deployment环境URL、health version/schema3同版，旧schema2经正式升级保留数据和身份，实际登录页面验收；T001仍In Review至发布事实闭合 | 已正式部署9bf6ecaf/schema3；已登录后独立实操待 |
-| 2 管理页面可理解、操作连续 | 依据QA58-01 P3做术语/窄列/状态文案完善；补独立self_hosted首次网页分支、真实管理入口与错误恢复；产品Agent实现，独立QA验收 | 阶段1已合并版本；QA原编号和截图；问题输入已有明确AC，复杂偏差返需求/设计 | 从页面完整完成平台管理员与租户管理员主要旅程，三视口、键盘/弹层/范围/错态可用；完整make verify与新独立QA、PR和正式部署；不改费用/权限口径来换界面绿 | Active，Issue30从已部署9bf6ecaf修同步契约；其他P3待后续 |
+| 2 管理页面可理解、操作连续 | 依据QA58-01 P3做术语/窄列/状态文案完善；补独立self_hosted首次网页分支、真实管理入口与错误恢复；产品Agent实现，独立QA验收 | 阶段1已合并版本；QA原编号和截图；问题输入已有明确AC，复杂偏差返需求/设计 | 从页面完整完成平台管理员与租户管理员主要旅程，三视口、键盘/弹层/范围/错态可用；完整make verify与新独立QA、PR和正式部署；不改费用/权限口径来换界面绿 | Active，Issue30/PR31同步修复已精确合并3f9cee，正式部署在途；其他P3为后续切片 |
 | 3 商用基本能力按用户旅程补齐 | 先在需求节点沿已有商用五层矩阵核对接入/模型/路由/Key/团队/预算/费用/日志；明确已支持、已验证和真正缺口，一次选一个可发布纵向切片，由设计/研发接力 | 官方公开参考与本产品实测，不复制本机New API资料；新承诺由正式需求/AC明确 | 新用户能够接入→授权→调用→诊断→对账；适用故障切换/限流/成员生命周期等能力各有确定语义、页面和同版验证；新增范围独立版本化，不改冻结v0.2.0 | Planned，缺口排序输入待需求节点 |
 | 4 升级、恢复及运行可维护 | 正式validation目标上的非空升级/失败恢复、备份/旧数据守恒、重启未知请求和费用处理；性能/容量目标先测量再立基线；产品Agent及受支持运维流程负责 | 阶段1真实schema3部署；影响故障演练只用已授权隔离目标，不对preview做破坏实验 | 标准新装/升级/回滚步骤可复现，源记录不被预检查改写，恢复后Key/历史/账本守恒，故障证据明确RPO；已证明的容量/边界和告警动作可定位 | Planned |
 | 5 外部联调与运营能力按需要扩展 | 真实供应商/已有推理端点联调；外部身份、支付充值等先由需求明确场景和边界，再设计实现 | 凭据、外部账号/费用授权或受信维护者输入实际存在；缺失时其他阶段继续 | 实际请求/报价/身份/支付回执与页面一致，失败和权限反例有证据；没有真实事实继续Not Run，不把受控上游当商业联调 | Planned，外部依赖条件未满足 |
@@ -326,3 +326,8 @@ Issue30研发4已完成诊断切片但在归档/交接前容量失败，未完�
 ### 2026-10-09 06:40 同源完整验证与独立QA完成
 
 原层修前tests5红转新tests7完整冷绿，独立QA8关闭已证R30完成契约缺口并保留旧R28-04边界。正式report9进行中，下一出口仍是Pipeline publish/pr精确源绑定、授权合并及Owner Actions，当前服务未更新。已登录预览/动态独立QA和供应商未测不写成通过，不创建重复Issue或恢复旧Run。
+
+
+### 2026-10-09 07:10 精确发布合并与正式部署在途
+
+Pipeline完成PR31，不复活已completed Run；已验150源及26QA文件精确发布映射、远端任务分支证据可访问，授权合并main3f9cee后由既有Owner Actions启动preview，prepare尚执行/dispatch pending。完整实际结果与health版本仍待，现网9bf6ecaf保持；下一长期阶段待本次部署闭合后按已有QA58-01 P3正式Issue入口承接，不停旧Run或重复功能。
