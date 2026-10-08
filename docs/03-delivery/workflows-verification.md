@@ -1910,3 +1910,6 @@ QA8/850f0b1bf32914d2273f5382c658d5a5 closed/正式next/handoff report9，reply18
 按用户测试仓合并授权ready31、PUT merge明确sha8c8b155…，返回mergedtrue/main3f9cee1615e87e002a2c2300f2d29778072ec3f5。未自行创建Platform PR或合源main。现PR/Issue关闭仅表示版本Git发布事实，未宣布部署/页面全面验收。正式push prepare37858024406/23:11:31Z in_progress，Owner375348269 dispatch deploytrue/targetpreview/main37858041523/23:11:42Z pending，同main3f9cee；原入口已触发一次，不重复dispatch或协调者代跑make/activate。
 
 实际controller源码安装仍2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79，prepare已建verify-3f9cee1615e87e002a2c2300f2d29778072ec3f5-jt63zgxe.log/mode600/当时155654bytes，是独立实际attempt但尚无完整成功/激活证据；旧日志不作新attempt。health5545仍200/9bf6ecaf/schema3，5546旧9851177/schema2健康，未碰8788。后续需实际正式Actions完整log/ready或reuse、Deployment及新health/version/schema3/页面一致，不把运行中局部记录当完成；任何新红保留唯一首日志再最小实证，不连续盲重试。旧R28-04未知根因与native动态QA Blocked/供应商Owner登录NotRun不因合并改Pass。当前私有证据ignored check-20261009-0710，原失败/QA/冷验历史保持。
+
+
+合并树补充复核：PR head与main合并提交的真实commit.tree.sha均4d16c018fda3d7ab59ad81bf93842a0a12260c84。初次将GitHub git/trees端点以commit alias请求返回的sha8c8b155…误与真实tree SHA比较，布尔false是不同字段口径，非源变更；立即改两个commit.tree.sha同口径核对true，证据merge-tree-check.json保留，不伪称曾发生源码不一致。
