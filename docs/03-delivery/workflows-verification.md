@@ -1759,3 +1759,16 @@ Issue28当前正式API：intake3 completed→development4/93e40ccfc93d89bd4400be
 tests5尚运行时output API offset0返回404 record not found，无新完整命令回执；未读取私有临时输出伪装正式回执、不盲重试或代跑make。待正式completed再读完整日志至EOF，检查冷入口、142件指纹、旧全部回归及三视口，然后独立QA。额外候选只读合并前复审已交既有reviewer，结论待返回，不代Pipeline测试。GitHub暂无open PR、新正式部署；最近两次cd413b5 prepare/dispatch仍failure历史，预览尚未更新。不因定时检查自动启动副本或扩大预算。
 
 候选只读复审结果：无Critical/Important，frontend-test/browser消费者前锁定安装、失败停止成立；同一次make共享phony前置目标，verify递归步骤串行。verify顺序安装两次的缓存开销保留，不与自身测试并发；同目录独立多make进程无跨进程安装锁，当前正式串行入口不触发，未扩大声称并行支持。reviewer未跑产品测试，尚不能据此放行，tests5仍running/无完整回执。
+
+
+### 2026-10-09 01:10 固定门禁通过但干净环境证据未放行
+
+正式API：tests5 completed exit0/111871bytes/truncated=false，维护者read output offset0/32768/65536/98304至111871 EOF，原make verify保留193Node/Go预算UTC迁移/三视口J01–J07/十页绿。142件8e82aaa…与QA6同版。QA6真实Blocked/发布No-Go：缺宿主开始时独立候选/无node_modules/NODE_PATH unset/无预装的原层证明，历史完整日志只有平台回执与审查投影，原生完整入口监听失败仍保持受限；没有把安装后已有依赖倒推冷启动。
+
+QA已通过handoff返回development7，研发只新增本Run临时隔离采集脚本host-clean-verify.sh，建议宿主执行bash该文件，未改固定Makefile；随后tests8自17:05:37Z running。维护者只读核 frozen tests Connector argv仍repository.py verify --test-command [make,verify]，run_tests直接执行原固定命令，既有development模板也已要求必要诊断进入原入口。交接字段中的建议命令不会改变授权argv，因此tests8仍测试已有依赖工作区，无法关闭冷安装AC；并非工具应执行任意Agent推荐脚本的缺陷。
+
+计划最小正式恢复：保存seq5实际完整回执与新限制作证据，停止当前无发布副作用的tests8，待Connector quiet后Owner return development。要求产品Agent将必要隔离/前后环境和完整日志采集落实到项目可复用固定make verify入口，保留所有原门禁；不能让协调者临时运行脚本/装包、改冻结Connector或权限、单独硬编码本Issue作为交付。新的记录不得伪造seq5开始状态或完整文件副本；过去日志可继续以实际平台全文出口引用，冷安装新证据须实际产生。固定命令接口不需要放宽，按既有源模板和受支持恢复纠正Agent交接；停止/再测试结果待回读。
+
+正式恢复结果：Owner stop8 HTTP202→stopped，connector_receipt exit-1/log102563bytes/truncated=false，error command interrupted/effects may be partial，维护者通过output API读取至EOF。末段证明热入口Go/Node/部分CLI迁移和browser1280/390在中断前执行，不是完整通过；没有commit/push/activate节点，5545实际health200旧9851177/schema2保持。测试资源仍属于临时受控夹具，停止回执不证明所有外部残留已清理，已要求下一研发检查自己现场、不盲杀他进程。
+
+Owner return8→development HTTP202，Run running/seq9，原生87226f924596c3a7559de78d37116e6c running/error空；管理员同调用者前7步/冻结definition逐值不变，seq8中断receipt逐值保留、正式回退记cancelled原因。原tests5出口全文URL及read_command_output页是真实可追踪历史，不虚构其开始状态/仓库副本；新完整冷证据需实际固定入口生成。没有新增权限、预算、重复Run或产品手工修改。阶段9新代码/实际冷门禁/QA再审和正式PR部署均待真实结果，仍No-Go。

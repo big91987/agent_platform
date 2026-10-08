@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 00:40）：Issue28/Run3e7496815b9922704072482cf44e73e2研发4已完成最小依赖入口候选，正式tests5 running/error空（00:33起）。基线main cd413b5，142件源码摘要8e82aaa123df25a4758a1939fb2d018713831507aee337e18dfa6100c49f619e；新工作区原无node_modules、NODE_PATH unset，旧frontend真实红192/191/1及顺序回归红保留。产品Makefile共享verification-deps前置frontend-test/browser，锁定版本未改，正式宿主已产生node_modules，但完整门禁/干净安装绿灯/独立QA尚未完成，未有新PR/部署，不拿安装存在当通过。PR27已合并的原候选与00:10部署失败为历史；5545仍旧9851177/schema2。通用controller日志修复789cc90/安装摘要2d456ca5…已通过60项回归、复审及原安装器两目标升级，下一真实Actions日志复验待产品候选；原生QA动态浏览器缺口仍未解决。长期阶段1继续Active，model-relay ACTIVE每30分钟核对新锚点，不重放已完成Run/重复测试或扩大权限。
+当前状态（2026-10-09 01:10）：Issue28/Run3e7496815b9922704072482cf44e73e2原142件8e82aaa…候选tests5原完整make verify exit0/111871bytes/truncated=false，193Node/Go预算UTC迁移/三视口旅程绿；维护者读取至EOF。但QA6发布No-Go，未有宿主开始时独立冷环境证明。development7仅写本Run隔离采集脚本，未进入实际固定make verify，tests8无法执行交接推荐命令且重跑已有依赖工作区。已记录并正式stop8（exit-1/102563bytes，完整中断回执保持）→return development9/87226f924596c3a7559de78d37116e6c running，要求产品Agent把可复用冷准备与真实完整日志落实到授权固定入口后重新门禁/QA；不由协调者临时执行脚本、不改冻结Connector/权限/预算100。新源码若变化须更新摘要，旧通过不代新冷安装验收；未新PR/部署，5545仍旧9851177/schema2健康。原PR27合并与旧部署失败保留历史，长期阶段1Active。通用日志控制器标准升级已应用，下一真实Actions复验仍待新候选；原生QA动态浏览器缺口未解决。自动任务ACTIVE每30分钟依实时锚点推进。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
