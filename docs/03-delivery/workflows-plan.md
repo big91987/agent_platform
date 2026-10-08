@@ -263,3 +263,13 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 
 
 2026-10-08 13:18：seq44当前周期UI活动真实通过，采集到limits-editor后因按钮在heading、旧driver限于content导致timeout，正式返seq45最小修locator owner，所有原门槛/生产业务保持。当前129文件7e0b20dd…seq46第十九次原完整make verify真实exit0/104299 bytes，182Node、全仓race、原三视口故障及21主旅程、新十页三视口全部通过；维护者独立核验新63PNG引用/SHA一致，人工查看两张实际图。已进入seq47独立QA；正在判断模型/租户主要信息与冻结设计是否齐全，当前无正式最终结论，QA38-01仍Open，不以采集绿代设计验收。Harness原失败返工→tests绿→QA正常，无新平台故障；U1/Task5/新PR合并部署未完成，旧5545健康/schema2版本9851177不变，Open PR0，近期Actions本轮读取失败未知。证据与候选/已测/QA在途层级见统一验证记录。
+
+
+2026-10-08 本轮 Issue25 实时核对：QA58已正式完成，产品候选Go with known issues；QA47-01 P1与QA47-02 P2原层Closed，新增QA58-01 P3技术枚举/窄列断词Open非阻断。seq57完整make verify exit0/106669 bytes/truncated=false；report59完成，publish60正式Connector exit0，真实提交66f1328ada75ea90e5638fbf2bd58663ac86347e已推送workflow/4cd62ced6a4f98f50e3cca6f7596eb06。维护者独立逐件git对象核对134文件与QA58清单及fb4066fa37d1e7865d3a18f72dd78fef98ae79bde17e20875af373b24771c3a6源戳完全一致；GitHub远端ref及固定提交QA报告可访问。
+
+实际卡点：有效预算60耗尽，Run failed/seq60，error为maximum node executions reached；pr尚未派发、Open PR0，不是产品回归失败。检查冻结边publish→pr→done及正式已推送回执，余下为两个明确节点，无返工循环；准备按已有自主接续和测试仓PR授权通过Owner正式return(seq60,target=pr,max_steps=64)，不重放已成功publish、不新建Run/Agent、不改冻结图/历史/DB/权限。恢复结果待后续真实API回读记录。5545仍旧9851177/schema2，无新合并部署；H及真实供应商/支付/外部身份边界继续未验，定时任务保持PAUSED。
+
+
+正式恢复回执（2026-10-08 19:39 Asia/Shanghai）：Owner return HTTP202，seq60→61 pr，有效max_steps64。原始60步及冻结definition经管理员正式API深比较完全不变；CI return响应含调用者权限相关配置脱敏，与管理员响应不可直接作为同字段比较，先前核对脚本误报AssertionError已通过同Caller回读排除。pr61由正式github.pull_request Connector创建草稿PR27，head_sha66f1328ada75ea90e5638fbf2bd58663ac86347e；URL https://github.com/big91987/model-relay/pull/27 ，已附到当前会话。done62完成，Run completed/error空，不重放publish。Run completed仅表示编排已交付PR，不等于用户部署目标完成；PR尚未合并、正式新Actions部署/health/schema3/实际用户页面未完成，旧5545版本保持。产品Go with known issues与P3保留，定时仍PAUSED。
+
+用户询问预算和Web验证方式：原Run冻结40，协调者上次恢复设60，本轮明确检查只余pr→done后正式设64；是节点执行总次数，包含Agent/Connector/结束节点和返工，不是模型消息或工具调用次数。当前通用模板100，未因此改写老Run预算。seq57宿主make verify经go run ./tests/browser启动真实Go/隔离SQLite/受控HTTP-SSE上游并用Playwright浏览器执行实际UI；1280/1440/390全部J01–J07通过。QA58自身未重新操作浏览器全链：独立核验版本源戳/固定完整回执、设计比对30页+8关键图，独立193Node/5非监听Go race，关闭原层缺陷。区分宿主UI-E2E、独立证据/视觉验收和未完成的正式部署UI，不能声称QA亲自完整复跑或供应商联调已验。
