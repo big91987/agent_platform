@@ -1561,3 +1561,22 @@ seq45只修console-visual.mjs/test及既有Trellis契约：limits editor按声�
 **Harness。** 有界恢复后原failed→研发→tests→独立QA路由及同Run预算实际正常，无跳错/重复派发或新的通用缺陷。源开发分支a96aa9d干净、8793 binary仍d926462e…；本轮只更新现有证据，不重跑已通过平台完整检查、不重启在途服务。底层实际模型/在途重启/完整新发布等原未验边界保持，不以产品门禁绿外推所有Harness异常场景通过。
 
 GitHub本轮正式Open PR0；Actions读取TLS timeout，当前近期Actions未知，不沿用旧入口成功作发布证明。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，仍旧部署，新产品未PR/合并/正式Actions部署。Task5/U1 Active；当前关键路径为独立逐页QA→必要返工或报告发布→测试仓授权合并/正式部署/health和页面一致。真实供应商/支付/外部身份及冻结外商业功能仍未验证/后续缺口。现场、两份完整原日志、当前review、63文件摘要、QA原生事件及health在忽略目录`.data/fresh-8793/check-20261008-1318/`，没有必须用户介入事项。
+
+
+## 最新效果部署请求：正式Pipeline已存在，独立QA返工继续（2026-10-08 13:48～14:21）
+
+用户明确要求通过Model Relay部署Pipeline查看最新效果，并要求协调者不要替Harness做实现。本次核对现有正式Actions `Deploy Model Relay locally`（workflow ID375348269，`.github/workflows/deploy-local.yml`）active；main push只准备，Owner workflow_dispatch设置deploy=true才激活，preview固定5545，validation隔离5546。Runner model-relay-local online/busy=false，标签self-hosted/macOS/ARM64/he-full；四项部署变量已有配置。无需重复创建部署Workflow、修改产品源码或启动演示服务。已有模板/控制器schema3支持及标准安装证据保持；真实本轮产品schema3联合/Actions升级与最终页面仍待验，不能用旧控制器夹具绿替代。
+
+**测试仓正式结论。** QA47对seq46同7e0b20dd…指纹、原完整104299bytes/exit0及75件宿主产物（含63PNG）独立审核，正式No-Go并于13:31:27沿handoff返seq48 development。QA38-01 Closed仅表示十页三视口采集缺口闭合；新的QA47-01 P1/AC01 Fail是实际冻结PRD§7/interactions要求的主要管理信息缺失：模型来源/当前价/延迟与上下文操作、租户负责人/授权模型/Key/预算摘要、服务模型关联/核验时间、工作台模型状态。既有采集断言只按当前实现字段选取，没有覆盖这些冻结结果；不是新增高级商业范围或像素风格争议。QA47-02 P2 Open是同Request ID分析确认3+4、日志未标明口径的Token总量未知，需区分不可变原始上游事实与核对计费用量；不判账本错误、不单独阻断。QA35-01/QA22-01指定范围/QA22-02旧关闭事实保留。
+
+产品Agent seq48已形成management-summaries-r1：只读scope内聚合+正式UI摘要/上下文操作，原始与确认用量分列/详情/CSV；没有新表、迁移或账本写入修改。133文件新指纹2b1297e865a8b595af98cd7594900d4a6c0506729c0e46de5ba3a05640a2a962，19件冻结材料一致，184Node及定向Go/静态局部检查通过。新真实ActualHTTP/三视口management-summary/J06对账接原固定入口；源码存在与局部通过不能关QA47。
+
+**新完整回归仍失败。** seq49原make verify/900s exit2，维护者正式output四页0→32768→65536→98304→98848/eof，truncated=false。实际全仓race（relay444.647s/browser11.153s/health-history5.976s）、build、原schema迁移/旧UI/多上游及1280 console-faults/console-real-go-ui通过；后续console.mjs:97 service-create等待upstreams POST响应30s超时，尚未完成全部新摘要/连续/visual三视口。不复用seq46绿放行新版本。原failed边正确返seq50。
+
+seq50恢复原失败后定位编辑器Save锁生命周期：旧提交已确认后render/sync被导航epoch替换，旧finally不能解锁，新编辑器又未重置disabled。实际生产函数VM红绿复现新弹层遗留disabled及旧finally不能解锁后一个提交；候选只修锁所有权/原测试等待，187Node和静态检查局部通过。新增真实宿主三视口有界回归拟hold同步GET，在真实201后导航、开下一编辑器断言Save enabled/写POST仍1；当前尚无新完整宿主通过，不能把VM当原超时浏览器追溯证据或保证唯一根因。产品源码/测试由Pipeline Agent负责，协调者未代改。
+
+**用户部署要求已进入Harness。** 当前Run正式POST messages经CI Owner收到HTTP202，稳定request_id=model-relay-deploy-latest-20261008-user、message9179、原seq50 conversation25e95df704ec0858380f2c3ca6c56ce1、duplicate=false。要求携真实版本/门禁/QA、部署步骤、页面与首次登录指引，经原report→publish→pr交接；协调者只核验、按已有授权合并并触发正式部署。接收不等于Agent处理完毕；不重建Run或重复投递，也不重新部署旧main冒充最新。未改冻结输入或质量门禁。
+
+**Harness状态与边界。** 原QA No-Go→研发→tests failed→研发路由及有限预算60/冻结40正常，本轮没有跳错、重复派发或新的通用平台缺陷。当前8793 binary仍d926462e…，无需重启或补丁；源760f5be之后仅更新交付记录。Harness完整未验负向、实际原生模型H03-runtime、在途升级等继续分层未验；新部署请求不能成为绕过门禁/临时权限的理由。
+
+GitHub只读Open PR初次TLS超时，已有7897代理一次有界重查为空；Actions37732816702/37732810774/37731316170均旧main Issue entry success，非部署。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，仍旧版本。Task5/U1 Active；当前关键路径为seq50→原完整tests→独立QA→正式report/publish/pr→授权合并→Actions隔离/正式preview→health与实际页面一致。真实供应商/支付/外部身份仍未验，无需新增用户输入。原QA与attempt48/50证据保留，维护者Run/完整seq49日志、部署Input回执在忽略目录`.data/fresh-8793/check-deploy-request/`；13:48原核对在check-20261008-1348。
