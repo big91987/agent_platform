@@ -1504,3 +1504,19 @@ Harness正式development→tests接受/派发正常，本轮无跳错或新通�
 本轮维护源唯一源码、手册、模板、升级路径与实际Run恢复已对应；未改测试仓产品、手工回执、DB或检查点，未增加权限或切换模型。现有8792/8788不动。源开发分支包含此前completion Schema/统一配置WIP及本次修复，完整检查覆盖当前代码；不新Platform PR或合main。运行新节点沿冻结图原策略执行，与新模板配置分层。
 
 12:11 GitHub正式Actions只读返回37726214624/37721532229/37719369766均Issue entry success、旧main9851177，非新产品部署。Open PR本轮读取TLS超时，当前数量未知，不沿用11:17的0。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，新候选未合并部署；8793未提供/healthz（404），其就绪与升级以真实登录、Run API、页面和原生执行证明，不造health版本。U1/Task5仍Active，整链发布与平台其余未测负向继续保持未验。完整现场/红绿/检查/备份/标准升级/正式恢复收据在忽略目录`.data/fresh-8793/check-20261008-1147/`。
+
+
+## 半小时检查：诊断回执候选已实现，原门槛保持（2026-10-08 12:18）
+
+正式API核对同Run seq41 development仍running，原生会话842bbd6702fd65a920ecac1a8630c848 running，无error/等待/已接受结果；有效上限60、冻结40保持，没有重复投递输入/新任务/原命令。恢复后的Agent已实际读取seq40完整101576字节并归档原continuous/visual失败，确认404属于J06且当前采集具体失败断言不可归因。无需新增用户输入。
+
+**测试仓。** 新visual-boundary-r1诊断候选只修`console-visual.mjs`失败留证责任：导航前pending_capture、断言前安全DOM事实/实际尺寸/空态分类/角色scope/字段动作布尔值；监听精确overview GET，只留资源白名单、status和scope匹配（最多16条），不存URL/query/body/凭据；保存准确check/固定断言消息，导航失败facts=null，退出移除监听。原ready拒绝.empty及所有角色/范围/字段/操作/宽度/秘密/行数门槛均保持，生产workspace.js/Go/API/账本/测试钟本轮未改，Makefile原门禁保持。当前空态仍是合理假设，不能把Contract人工facts当seq40真实DOM或宣布采集修复完成。
+
+维护者只读核对源码、attempt-41/checks.md和host-retest.md及原生实际事件：41721 frontend175/175 exit0，41747最终176/176 exit0（原173保留，新增3项实际失败留证/导航失败脱敏/HTTP白名单Contract），41731/41767 modules/vet/build等exit0。129文件新指纹 `fb766c0aca5f33fbb0960e13286a13461d20999485e93a19a841eb51114f92a4`、HEAD9851177、Go1.25.6；19材料/原archive核验一致。局部检查通过只是诊断候选，尚无该指纹原完整宿主门禁、新十页PNG/独立QA、PR合并发布；QA38-01仍Open/No-Go，旧关闭事实按旧版本范围保留。关键路径为真实宿主获得准确边界→有证据最小修复（必要时）→原完整门禁→独立逐页QA，产品Agent沿原handoff到tests，不放宽断言或改冻结输入。
+
+**Harness。** 已推送开发分支提交abe0dd6f9c6ad91254b00eed515eb1c440330d1f，源码工作树干净；8793当前binarySHA d926462e…，真实恢复seq41正常，未发现新路由/权限/等待故障。前轮完整平台检查、无在途升级、两次标准安装幂等及原40步深比较证据保持，不重复运行这些已通过检查。本次诊断不是新平台通用缺陷；尚未实测的在途重启、实际模型或完整发布边界继续未验，不因恢复生效宣称所有流程无问题。首次源码push明确网络超时，远端只读仍9931ff6后经已有7897代理一次有界重试成功，远端tracking与本地abe0dd6一致，无Platform PR/main合并。
+
+GitHub本轮正式Open PR读取为0；Actions首次TLS timeout，近期状态暂未知，不用旧Issue entry成功证明本轮部署，未循环重试。源平台和产品资产/回执保持原范围，无需用户介入；现场及原生事件保存在忽略目录`.data/fresh-8793/check-20261008-1218/`。Task5/U1 Active。
+
+
+本轮结束核验：seq41已completed，原生handoff事件41905正式accepted=true/target=tests，新seq42第十七次原完整make verify running且connector_dispatched=true，无error/当前结果；未手动追加测试、Run或输入。交接携当前fb766c0a…诊断指纹、真实旧失败、host-retest及QA38原返工依据，明确保留门槛，不能预期诊断回合一定绿。5545本轮health200/schema2/version9851177仍旧部署，Open PR0。后续等待seq42正式完整结果，再按准确安全事实归因；不把正常派发当已修复或通过。
