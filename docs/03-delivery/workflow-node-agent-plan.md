@@ -248,3 +248,5 @@
 2026-10-09 03:10：原层诊断使tests16累计时限可归因：internal/relay race450.421秒、首browser约519秒；149调用已完成/0pending，不把父终止后routing Error写作产品断言失效。自动返研发17在产品原Go测试入口调度独立fixture，parallel4/原race/count1和断言不改；新tests18仍正式冷验，无平台权限/时限变更。首browser提前约144.629秒是局部真实改善，非完整绿；要求复审共享状态和父/子cleanup生命周期、宿主race/真实HTTP继续验。平台本轮只维护证据，无新增源码/安装升级或手工救援，动态独立QA与正式controller Actions实证仍待。
 
 同源并行隔离复审无新增重要问题；每例fixture/cleanup独立、无全局环境/client修改。parallel4是包内槽上限，不应在展示/文档外推全宿主进程限制；实际宿主race/HTTP和全程时长仍由当前固定门禁验证。
+
+03:14固定tests18已在期限内到连续console具体断言失败，自动failed→development19正常。完整回执/源码/冷环境/本轮清理均可审查；未全部绿即不进入QA/publish。失败阶段summary-model-context-toggle不是凭HTTP200可消除，产品Agent继续原层诊断/最小修复；没有协调者代Harness修UI或流程权限变更。
