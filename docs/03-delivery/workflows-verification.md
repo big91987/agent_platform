@@ -1702,3 +1702,14 @@ seq64完成（2026-10-08 22:44）：原make verify timeout900s实际exit0，1108
 有界恢复实际闭合（2026-10-08 22:45）：Owner return(seq64,target=qa,max_steps100) HTTP202，管理员回读Run running/seq65/max_steps100/error空；原64步及冻结definition逐值完全相等。独立QA原生会话09572eed8c075180d4e8b4492aeb7a4f running，已明确核对当前候选与完整宿主回执再形成独立结论，无新正式QA结果。恢复没有重放成功测试或创建Run、修改冻结配置/产品源码/权限。新总预算100有界且对齐当前标准模板，检查依据是有效新候选、明确完整绿门禁和有限QA/report/publish/同PR/done剩余路径，不因定时触发自动增限。
 
 修复候选额外只读合并前复审已交同reviewer，检查零软预算/持久UTC/初始化及恢复/锁排队/事务边界，禁止代产品测试或修代码，结论待返回。正式PR27目前旧head66f1328仍未合并，修复候选尚未publish，不进行Actions新部署。下一步等待QA65及修复复审；缺陷再经原development返工，只有同版门禁与独立验收成立才report→更新同PR→授权合并→正式部署。自动任务prompt已同步当前QA65/预算100/新门禁，30分钟频率及ACTIVE保持。
+
+
+### 2026-10-08 23:10 修复候选独立QA与合并前复审
+
+正式API回读：QA65 completed，原生09572eed8c075180d4e8b4492aeb7a4f closed；report66/a5800bfff49d592e0c115b16d16b0783 running，Run running/error空，总预算100。QA65 acceptance-report-65/matrix-65/report-handoff-65及attempt-65/integrity、host-seq64-review均为正式产物。维护者独立按QA65 source_files逐项核对140文件字节数与SHA，重算源戳ca8ec50aa168cf16ac2e24edfe214aa44d06a05846c34deadbc3c7cb6c02904a匹配；当前源码未代改或代测。19件冻结材料及archive仍匹配。
+
+独立QA产品结论Go with known issues：零软预算与过期未retire代际回拨复活Closed，无新增P0/P1；亲自六组非监听race24.750s exit0和193Node通过，原完整seq64回执110897bytes读至EOF。宿主当前ActualHTTP、跨进程/CLI备份恢复、三视口J01–J07及十页证据复核成立；51件当前UI文件留存并核摘要，QA亲自查看3件PNG，错误历史截图选择明确拒绝，不声称逐页亲自浏览或把证据审查标独立浏览器实操。原生QA UI仍Blocked；QA58-01 P3非阻断，独立self_hosted首次UI、真实供应商/支付/外部身份、H02/H03/H04/H08及正式部署H07保留Not Run。
+
+既有合并前reviewer对修复工作树追加只读复审：显式非NULL零预算独立拒绝、NULL/正软预算语义保留；持久max(previous,wall)有效UTC经正常schema3 init/Open加载，锁后及dispatch前刷新，时钟事务先于业务事务、失败返回503，没有发现新的Critical/Important或反向锁依赖。该结论只读且限140件ca8ec50a…候选；未重跑测试、未证明吞吐，不能放行旧PR27 head66f1328本身。
+
+GitHub正式回读PR27 open/Draft/head66f1328ada75ea90e5638fbf2bd58663ac86347e，尚不含修复；报告节点正在更新原公共进度和本Run pr.md，等待正式publish/pr，再核对新提交与QA65一致后授权合并和verified-main Actions部署。产品5545仍9851177/schema2，未上线新候选；不重放测试、不建重复Run/PR、不改回执或权限。私有核对记录在ignored .data/fresh-8793/check-20261008-2310，公共记录只写结论和可追踪正式产物。
