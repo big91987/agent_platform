@@ -1798,3 +1798,14 @@ Owner return12→development HTTP202，Run running/seq13 pending/error空；管�
 GitHub实际Open PR为空，尚无新publish/merge/activate。5545/5546实际health200/version98511771871cf0951ecef716bbb55deb13e18da5；未替代部署Pipeline或修改产品工作树。唯一Run继续自然执行，原预算100不扩大。平台源仅更新既有计划/证据，旧controller安装版本与其实际下一Actions复验待办保持。
 
 新候选复审结果：审查前后main.go/main_test.go摘要与development13指定dc73ac候选一致。三项P2在当前源码及回归中静态闭合，未发现新增Critical/Important。reviewer未跑测试/修改文件；HOME继承、历史或脱离当前组的进程不在该证明内、强杀可能留未完成receipt等限制保持。正式tests14仍running，独立QA尚未开始，不据此宣布完整通过或部署。
+
+
+### 2026-10-09 02:40 完整冷入口内层时限失败与原层诊断
+
+正式APItests14 completed/route failed/exit2/log249788bytes/truncated=false，18:18:11Z结束。维护者通过output API offset0/32768/65536/98304/131072/163840/196608/229376至249788 EOF，私有完整保存，不用工具截断投影声称全文。产品已归档原runner verify.log249576bytes/SHA256 e37932ca114a297ca2e0cd69b8ca3efb6fbe1d14f1d5a866d478e5c7cb616e5e，维护者实际重算与state一致，两种日志长度/范围不混同。state始18:06:07.567014Z、终18:18:11.700773Z，冷起点无node_modules/npm cache/NODE_PATH unset/未预装，144件dc73ac源码前后不变，gate_exit=-1/exit_code1，全部辅助及gate owned_group_absent=true，candidate_removed。末段signal terminated/context deadline exceeded与源码12分钟withTimeout一致，不是原缺包/Owner stop；三视口J01–J07/十页未全完，不能Pass。当前本轮清理证据不反写旧8/12或宣称所有全局进程已净。
+
+历史分类器、193Node/Go/race/build及部分迁移/浏览器路由已执行；390视口failover阶段的泛化routing Error出现在父期限终止后，不能倒推产品断言先失败。选择日志153条仅证明当时选项/焦点边界，不证明后续请求/记录/冷却结束；累计冷构建/正常浏览器总耗时、动作阻塞或产品异步状态尚未归因。Pipeline自动failed→development15 completed→tests16 running，自18:33:16Z，原预算100。研发15新增BROWSER_PHASE UTC/elapsed、routing_call各原生边界durations及一次pending观测，147件候选24725bbb7833cfc2665d44b67de4982cc045aa375ad5ec65c68c6c7d6f2b044e；未改12min/Connector900秒、原门禁/断言/动作/请求次数/31秒冷却/SSE、业务/DB/锁。局部194Node（原193加诊断1）、Go阶段及两包race/static绿只证明诊断本身，不证明新浏览器机制或冷全绿。新诊断只读复审待结果。
+
+当前tests16真实新目录test-results/verification/20261008T183317Z-269232865，开始同147件源戳和冷状态，尚缺正常结束完整回执；未将实时局部日志当正式通过。再次失败应携阶段UTC/耗时/调用边界数据返工，先最小归因再修，不增限盲试、删依赖/手装包、执行推荐脚本或协调者代写产品。GitHub实际Open PR空，未发布/合并/activate；完整冷门禁、新独立QA与正式部署仍待，旧preview未冒称最新。
+
+诊断候选只读复审已核同147件24725bbb源码戳，Makefile及runner未变，无新增Critical/Important。动作一次/await原返回与异常、先注册响应再press再等待、请求次数/31秒恢复/SSE与原断言均保留；timer仅白名单输出且finally清理，没有重试/增限。当前实时原层BROWSER_PHASE migration在18:41:56Z开始、18:42:09Z结束（13139ms），相对18:33:17Z新冷入口到首browser阶段约8分39秒；这是新诊断的实际耗时观察，尚不能认定单步卡住或所有剩余旅程的根因。需最终全阶段数据，不把局部时间改写为通过或先行放宽。

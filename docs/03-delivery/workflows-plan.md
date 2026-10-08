@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 02:10）：Issue28/Run3e7496815b9922704072482cf44e73e2的development13已完成三项验证工具P2真实最小红→绿及定向race/SIGTERM回归；144件新候选dc73ac404db4daaf7e264552c0940abb294b2b1b48684e792eec90822b6eb665，正式tests14自18:06:06Z running。新入口实际冷起点无node_modules/npm cache、NODE_PATH unset及辅助进程组消失状态已记录；完整门禁、结束源码/日志/清理状态及新独立QA尚未完成，仍No-Go。新候选独立只读复审确认三项P2静态闭合、无新增Critical/Important；不以静态或定向结果代完整冷门禁与QA。原tests10失败、12中断与cleanup未闭合保持历史；没有新PR/正式部署，5545/5546实际health200旧9851177，预算100不变。通用controller标准日志升级已应用，真实下一Actions日志复验和独立动态QA工具缺口仍待完成。长期阶段1Active，定时任务ACTIVE30分钟依实时状态推进。
+当前状态（2026-10-09 02:40）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests14独立冷验证在内层12分钟期限退出（exit2/249788bytes/truncated=false），正式API八页至EOF、runner完整249576bytes及state摘要一致；源码不变/自有进程组消失/候选移除已记录，本轮非缺包或Owner stop，但浏览器三视口未完整，仍No-Go。自动返研发15加入阶段UTC/耗时及routing调用边界诊断，未改动作/断言/门禁/时限；147件24725bbb7833cfc2665d44b67de4982cc045aa375ad5ec65c68c6c7d6f2b044e候选的tests16自18:33:16Z running，用实际新诊断区分累计耗时与单步卡住后再修，不盲目增限或重复。原三P2在development13复审静态闭合；新诊断复审核同147件源戳、无新增Critical/Important且原动作/断言/时限保持；完整冷绿及独立QA仍待完成。无新PR/正式部署，旧preview版本保持；通用controller实际下一Actions日志复验和动态独立QA仍待完成，长期阶段1Active，预算100/定时ACTIVE30分钟。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
