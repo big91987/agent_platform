@@ -1635,3 +1635,16 @@ Agent平台8793最新功能源码abe0dd6已部署；后来HEAD只交付文档。
 seq56 candidate records-detail-entry-r1只修驱动为精确Request ID行详情/同时观察响应与点击，保留30s/200/ID/原始未知和确认3/4/CSV/账单守恒及全部门禁；定向17/20红→20/20绿，193Node/vet/build等局部绿、同19件材料摘要。134文件fb4066fa37d1e7865d3a18f72dd78fef98ae79bde17e20875af373b24771c3a6正式交seq57原完整tests，当前running/dispatched，预算60/冻结40，无error。新完整通过和QA47-01/P1、QA47-02/P2关闭均待实际证据；无开发版新PR/合并/Deployment，不能拿PR19页面作新成果。
 
 用户可查看本Issue、[实际Run](http://127.0.0.1:8793/workflow-runs/4cd62ced6a4f98f50e3cca6f7596eb06)、[最近研发会话](http://127.0.0.1:8793/conversations/53745b666e3dbfb5992ce61ea267925e)。尝试在IAB打开GitHubIssue超时，未宣称已展示；GitHub正式API内容与链接已核对。没有新增任务、User Input、Issue评论、产品改动或恢复动作；定时保持PAUSED、原Run继续。核对现场在ignored check-development-progress/。
+
+
+## 发布后Issue清点与冻结原型截图（2026-10-08 16:00）
+
+用户要求核对10/6后创建Issue、哪个仍开发，并查看design原型截图。以PR19 merge时间2026-10-06 18:54:22 Shanghai为起点，真实仓库过滤非PR并核对created_at，共Issue20–26七个；20于10/6 19:23创建，其余六个均10/7创建。产品任务20访问生命周期、21完整design-v0.2.0、24新版编排回归、25全新8793 Pipeline四个；22/23/26为Harness澄清/返工/通知验收自动输出三件，不是七个独立产品版本。
+
+只读8792正式API，不恢复或改旧运行：20 cancelled/seq13，21 cancelled/seq6，24 waiting/seq10旧服务待验；22/23 completed/seq6，26前轮completed/seq8且GitHub已closed。GitHub20–25仍Open，不能据Open数宣称多个产品并行开发；旧Issue收尾状态与实际Run并未全部同步。本次未擅自关闭Issue或取消24。当前只有25在新服务实际推进，22/23/26不再执行产品源码。
+
+本轮实际Run25已进入seq58 qa。seq57原完整make verify真实exit0/106669bytes/truncated=false，维护者四页0→32768→65536→98304→106669/eof完整读取；134文件fb4066fa37d1e7865d3a18f72dd78fef98ae79bde17e20875af373b24771c3a6，193Node/0fail/0skip。三视口编辑中断与清理、J01–J07、visual-current-period、management-summary（2模型/2租户/1服务/5Key、api_values_match/context_actions true）、十页console-visual都正式通过；受控HTTP仍不是供应商联调。QA47 P1/P2只能由当前独立QA关闭，尚无Go/新PR/合并/部署，不拿这次绿灯改写旧失败或商用整体完成。
+
+当前design architecture-r1实际承接prepare冻结包design-v0.2.0/SHA5f51…，没有重新生成一份UI原型。正式manifest原件docs/screenshots/overview.jpg、tenant.jpg、keys.jpg、billing-baseline.png均存在，逐件bytes/SHA匹配后仅复制到ignored check-issue-history/prototype/供用户查看；工作台/租户详情/Key三图已人工检查，保留设计演示数据与原型标识，不改图、不当已实现页面或真实费用。设计包内原型静态角标仍含早期v0.1文本，包版本和原件摘要以manifest为准，不改冻结内容。实际设计阶段产物为architecture/implementation-contract/migration-and-operations/verification-design/g2-review，原型来自权威输入。
+
+用户可从Issue25、现Run和[design-v0.2.0发布材料](https://github.com/big91987/model-relay/releases/tag/design-v0.2.0)查看。原照片与正式seq57原日志、Run snapshot在ignored check-issue-history/。定时PAUSED、旧Run不恢复/原工作区不读写、不新增Issue或新输入；本轮只清点/核验/展示原件与更新既有三份记录。
