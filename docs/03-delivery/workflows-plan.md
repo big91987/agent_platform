@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 05:40）：正式部署5545仍health200/version9bf6ecaf53758ca2258498968b830c535e02e1c0/schema3，5546旧9851177/schema2保持。Issue30/唯一Run2574d6be275f9eb630f8738837507e1e研发4于21:03:19Z再次因原生serverOverloaded容量失败；已有副作用仅修前GET hold/release诊断与文档，产品未改，无host Chromium复现、新PR或发布。native固定门禁因historical listener unavailable停止，149件a47fd28f…/148817bytes日志与state摘要重核匹配，不能认作业务红或通过。核原会话和工作树后，Owner一次正式resume4 HTTP202，同conversation b106c858ccb3f8b0ca53d308648e099e running、前3步/definition逐值保持、max100未变；原生实际接续与tests handoff待回读，不自动反复恢复或换模型。R28-04仍Open/P2未知根因，旧Issue28已完成不复活。部署已登录实操与动态独立QA仍待，供应商NotRun；30分钟持续推进。
+当前状态（2026-10-09 06:10）：Issue30/唯一Run2574d6be275f9eb630f8738837507e1e正式tests5完成exit2/329434bytes/truncated=false，output十一页至EOF；149件ba8816e8…原层冷源不变、runner329252bytes/SHAa5a3c4b…与state及原文件匹配、清理闭合。真实Go/Chromium受控GET hold/release四case（1280/390×启用/停用）均证明旧save在本次tenants/catalog读回被暂停时已返回，旧状态或空表仍在；释放后最终状态全部正确，不能把瞬态旧读作持久数据错误或倒推旧18精确根因。自动failed→development6/f6164fa7fc573c1e4d7fab6eb8dfe769 running，150件0384f115…只读审查候选（47a199/d187为归档中途）修现有编辑/读取epoch及operation完成屏障、读失败/busy/迟到范围回归，同源独立只读复审无新增Critical/Important；新完整冷门禁/QA/PR/上线尚未发生。上一容量resume4已真实归档/handoff，不再追加恢复或重建任务。正式5545仍9bf6ecaf/schema3健康，5546旧版本保持；部署已登录实操/动态独立QA/供应商边界未变。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
@@ -310,3 +310,14 @@ Issue30研发4已完成诊断切片但在归档/交接前容量失败，未完�
 
 
 同次fresh回读：恢复input17494已running，原生新progress17495/parent17494于21:43:56Z明确承接“核对现有诊断与失败回执、补归档和源码戳，不重放写入/重跑完整门禁”。这证明同会话恢复后原生实际接续，仍未证明最终handoff或宿主目标复现完成。
+
+
+### 2026-10-09 06:10 页面同步契约取得原层证据
+
+真实修前hold/release四case证明完成判断缺口，正式固定tests5失败后自然返development6最小修复，不将预期红当通过。新候选须完整冷门禁和独立QA，既有服务保持已部署9bf6ecaf，未发新PR/部署；旧R28-04精确历史断言原因继续未知，不倒推闭合。
+
+
+同轮候选材料变动后candidate-06-after为150件d187194806f62af8628b4f68216a509ec0d6240fa0474ddc71aaf6475cc54c89；47a199为中途版本，不混成新宿主通过。development6仍running、归档及handoff待，既有首红自动返工保持。
+
+
+同次独立只读复审完成：22:14:02Z按tests/evidence库存算法重算150件0384f115adbbd545e8ce01021f238010ba66c89eb06e6acea08ce872ce0fa474，22:14:13Z candidate-06-after同戳；47a199/d187均为归档中途，重点6代码/spec SHA两次读取完全一致。复用既有operation/epoch与busy、读失败独立提示、旧epoch不释放新锁、secret/invite分离、严格断言及错误身份保持，未见新增Critical/Important。reviewer未运行测试，静态结果仅允许下一正式门禁，不等于新宿主/QA绿或可发布。最终fresh研发6仍running；下一tests需以实际冻结源戳核验，不预报handoff。

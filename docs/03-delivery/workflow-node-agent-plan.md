@@ -267,3 +267,12 @@
 
 
 同次fresh回读：恢复input17494已running，原生新progress17495/parent17494于21:43:56Z明确承接“核对现有诊断与失败回执、补归档和源码戳，不重放写入/重跑完整门禁”。这证明同会话恢复后原生实际接续，仍未证明最终handoff或宿主目标复现完成。
+
+
+2026-10-09 06:10：上次原生容量resume4真实完成归档及正式handoff，宿主tests5实际原make verify得到目标浏览器红，自动failed→development6正常。十一页output直到329434EOF，Runner和Connector字节数分别核验，回执里的定向故障/取消夹具红不混成主Pipeline红；实际主失败是保存过早返回严格状态断言。四case真实GEThold/release与释放后正确DOM完整证据可评审，不依赖协调者推荐脚本/手工安装/改Connector。产品同步修复由Pipeline实现，源平台本轮无代码/权限/配置升级；动态独立QA工具缺口仍待。
+
+
+同轮候选材料变动后candidate-06-after为150件d187194806f62af8628b4f68216a509ec0d6240fa0474ddc71aaf6475cc54c89；47a199为中途版本，不混成新宿主通过。development6仍running、归档及handoff待，既有首红自动返工保持。
+
+
+同次独立只读复审完成：22:14:02Z按tests/evidence库存算法重算150件0384f115adbbd545e8ce01021f238010ba66c89eb06e6acea08ce872ce0fa474，22:14:13Z candidate-06-after同戳；47a199/d187均为归档中途，重点6代码/spec SHA两次读取完全一致。复用既有operation/epoch与busy、读失败独立提示、旧epoch不释放新锁、secret/invite分离、严格断言及错误身份保持，未见新增Critical/Important。reviewer未运行测试，静态结果仅允许下一正式门禁，不等于新宿主/QA绿或可发布。最终fresh研发6仍running；下一tests需以实际冻结源戳核验，不预报handoff。
