@@ -1611,3 +1611,16 @@ GitHub只读Open PR初次TLS超时，已有7897代理一次有界重查为空；
 正式GitHub Owner big91987、main deploy-local.yml blob434407b…核验，preview/validation安装控制器均SHA782d4861…与维护源一致，activation stage均committed。旧preview/validation仍9851177/schema2；只读SQLite基线preview models0/requests0、validation models2/requests4，原列摘要保存在ignored，用于实际CLI升级/恢复对账，不替代UI/API验收。尝试preview既有initial-password正式登录HTTP401，未读业务API/未重置密码/未改业务数据；后续保留现有凭据，不以初始化文件有效性替代实际登录。CUA inventory超时，未据此编造页面核验。需要实际部署后再核对health与页面，可沿受支持浏览器入口。
 
 Model Relay本轮尚无Open PR或新Deployment；最近Actions仍Issue entry/旧main，不能触发旧main并称最新效果。待当前完整测试与QA通过，经原Connector产物、授权合并后使用同一正式Actions先在隔离环境验证非空升级/失败恢复，再发布preview并核对版本/实际页面。平台验证/产品原log/基线/Controller核验在ignored `.data/fresh-8793/check-deploy-both/`，没有手改DB/检查点/收据或新权限。
+
+
+## 用户接受较新已合并版本：查看入口核验完成（2026-10-08 15:30）
+
+用户纠正“必须等最新在研版”的理解，明确较新版本也可，只要部署后能看效果。本次查看目标按此指令完成，不等待design-v0.2.0整改，也不放宽其质量门禁。GitHub正式API查全状态PR：最近已合并为PR19（2026-10-06 18:54:22 Asia/Shanghai），多上游/有限故障切换控制台，merge/main SHA98511771871cf0951ecef716bbb55deb13e18da5；PR17及更早也已合并，没有当前在研版本的新PR。main commit核验相同，用户本次接受的“较新可部署版本”就是PR19。
+
+Owner big91987通过正式`deploy-local.yml` workflow_dispatch ref=main/deploy=true/target=preview触发一次，[Actions37743445224](https://github.com/big91987/model-relay/actions/runs/37743445224) completed/success。prepare及Verify and prepare exact main commit成功，原日志明确Already deployed:9851177；deploy job skipped，因为既有实际binary/pointer/health同版已经成立。不能称本轮重新构建、重新跑make verify或激活新版本；正式Pipeline完成同版本核验并保留既有部署，未停止服务/迁移数据/换密码。最近PR并非每次自动发布：main push只prepare，显式Owner deploy才激活。
+
+实际5545 `/healthz` HTTP200，status=ok/storage_schema2/version完整9851177，`deployed.json`同SHA/schema2，binarySHA5255e42b9e8ec617b6794eaa18654d61ec73c65b5f3250ede997a11df745a116；`/admin/`HTTP200。真实Playwright新标签Page Title Model Relay/Page URL5545/admin，管理登录页可呈现；未登录现有生产账户，不冒充authenticated十页UI验收。初始密码文件此前HTTP401事实保持，不重置用户密码。CLI结果有延迟但已实际返回，未强杀服务或浏览器。Codex打开该URL工具返回queued，用户可直接用链接打开，不把queued当已展示。
+
+Agent平台8793最新功能源码abe0dd6已部署；后来HEAD只交付文档。binary d926462e…/维护源四项HTTP资源一致，真实Playwright管理员登录成功进入主编排页，标题和节点页面实际可查；第一次匿名api/me401是正常未登录，不当页面故障。平台保持当前8793，不为文档commit重启在途Run。源码只开发分支提交/推送、不建Platform PR、不合main。
+
+本次两个查看入口已核对：[Agent平台](http://127.0.0.1:8793/workflows/8f497228b60a8ea46b7d37be59ebe578)、[Model Relay PR19版](http://127.0.0.1:5545/admin/)。当前在研design-v0.2.0/QA47仍属于未交付的原Run，不把次新发布核验当其Go/合并部署；Task5/U1保持Active。按新查看目标不再等新版发布，也不执行此前为schema3新候选拟定的隔离故障部署。定时保持PAUSED，原Pipeline不取消，协调者本轮没有代写产品/造QA/手改DB或新增权限。证据在ignored check-deploy-both，原失败/基线/尝试全部保留。

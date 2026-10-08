@@ -161,3 +161,6 @@
 
 
 2026-10-08 15:17即时部署请求：定时仍PAUSED，用户另行授权当前会话部署两项。平台8793已运行最新功能代码，运行binary/实际四项前端资源与维护源一致，后续HEAD仅文档，不重启在途任务。Model Relay seq53同6b6564c9…完整exit2/98085bytes；真实1280中断回归已通过，随后路由重复continue失败，正确返seq54研发清理时序。产品QA47 P1/P2及新PR/部署未闭合；协调者只核验原Harness交付产物并准备正式Owner Actions、非空隔离升级/恢复与最终preview，不代改产品、不绕门禁。详证见统一验证记录。
+
+
+2026-10-08 15:30按用户纠正完成“较新版本可看”目标：8793平台最新功能binary/四项实际资源一致，真实管理员页面可打开；Model Relay最近已合并PR19/main9851177经正式Owner deploy Pipeline37743445224 success，Already deployed同版本核验/未重复激活，5545 health/deployed精确同SHA/schema2，真实登录页可打开。不是design-v0.2.0整改版本验收/发布，原QA47/Task5/U1未完成事实保持。PR合main仅prepare，不是每个PR自动发布；定时保持PAUSED，原Run继续，不代替Harness或执行新候选隔离故障。详证见统一验证记录。
