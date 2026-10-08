@@ -1750,3 +1750,12 @@ Issue28入站第二次实际结果：Actions37807379538 run_attempt2 success，�
 标准升级与实际状态回读（2026-10-09 00:20后）：部署两目标activation均committed，失败Actions已完成，无在途activate。维护源789cc90原install.py以原参数升级两个私有根，未手改运行副本；source/两controller.py/两controller-install.json SHA均2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79。前后原preview.json/activation stage及尚可得verify-cd413b5…字节摘要完全相等，两health均200/9851177/schema2。安装器未init、部署或start产品、未替换实际数据/密钥。新装/升级回归含在60项中，既有两安装标准升级已应用；新控制器真实Actions尝试尚待产品修复候选，不宣称完整新部署成功或补回首次覆盖日志。源平台只开发分支提交。
 
 Issue28当前正式API：intake3 completed→development4/93e40ccfc93d89bd4400be032eb6947b running/error空，总预算100。已进入原生研发，不是仅创建Issue或说明计划；源码实现/干净固定门禁/独立QA/新PR及最新正式部署仍待真实结果。当前工作锚点切换Issue28/Run3e7496815b9922704072482cf44e73e2，原Issue25/Run72/PR27merged保留历史。
+
+
+### 2026-10-09 00:40 Issue28冷安装候选进入正式固定门禁
+
+实时正式API：development4 completed，tests5 running/connector_dispatched=true，创建时间16:33:28Z，Run running/error空，总预算100。新工作区github-issue-5765183967，基线cd413b5；source-after.json为142件8e82aaa123df25a4758a1939fb2d018713831507aee337e18dfa6100c49f619e。研发候选只改共享verification-deps/README/回归和Trellis说明，package锁未改，不改业务/UTC/预算/平台控制器。维护者只读核clean-before.log：node_modules absent、NODE_PATH unset及Node26/npm11.12.1/Go1.25.6，读原frontend红与顺序回归红/绿记录。原生npm ci受EPERM exit2、测试未开始是真实限制，不记原生完整绿；正式宿主测试自然安装后node_modules当前存在，也不等于完整通过。
+
+tests5尚运行时output API offset0返回404 record not found，无新完整命令回执；未读取私有临时输出伪装正式回执、不盲重试或代跑make。待正式completed再读完整日志至EOF，检查冷入口、142件指纹、旧全部回归及三视口，然后独立QA。额外候选只读合并前复审已交既有reviewer，结论待返回，不代Pipeline测试。GitHub暂无open PR、新正式部署；最近两次cd413b5 prepare/dispatch仍failure历史，预览尚未更新。不因定时检查自动启动副本或扩大预算。
+
+候选只读复审结果：无Critical/Important，frontend-test/browser消费者前锁定安装、失败停止成立；同一次make共享phony前置目标，verify递归步骤串行。verify顺序安装两次的缓存开销保留，不与自身测试并发；同目录独立多make进程无跨进程安装锁，当前正式串行入口不触发，未扩大声称并行支持。reviewer未跑产品测试，尚不能据此放行，tests5仍running/无完整回执。

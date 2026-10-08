@@ -224,3 +224,6 @@
 
 
 日志修复标准集成完成：维护源789cc90，独立复审无Critical/Important，原install.py以原根/仓库/端口/代理参数升级preview5545和validation5546；source/controller/controller-install摘要一致2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79。原配置/activation committed/可得旧失败日志字节保持，两产品health均旧9851177/schema2健康，没有部署或启停新产品。真实新控制器Actions尝试及日志绑定仍待Issue28候选，测试夹具通过不能替正式Pipeline。Issue28当前development4原生93e40ccfc93d89bd4400be032eb6947b running。
+
+
+2026-10-09 00:40：Issue28产品依赖候选142件8e82aaa…已进入正式tests5，工作区最初无node_modules/NODE_PATH unset、旧缺包真实红和安装失败停止回归证据保留；目前未有完整绿或QA。平台本轮未新增代码/升级，不重跑已通过的60项控制器测试。正式测试运行时output API暂无completed回执，404 record not found仅说明暂不能获取完整日志，不解释为测试失败；完成后经支持入口读至EOF。冷安装与热缓存验证的区别继续纳入供应链验收，实际动态QA工具缺口未变。
