@@ -1583,3 +1583,18 @@ GitHub只读Open PR初次TLS超时，已有7897代理一次有界重查为空；
 
 
 部署请求结束核验：message9179由queued→running→completed，原生Agent实际回复已写入原任务/带入下游，seq50正式handoff被接受后进入seq51 tests（connector_dispatched=true/running、无error）。维护者未代替Harness测试、产出PR或启动服务；当前最新候选仍需本轮完整门禁与独立QA，未有可授权激活的新main。旧5545不能作为此次最新效果链接；正式部署Workflow已有，不重复创建。
+
+
+## 用户停止定时任务与整体状态核对（2026-10-08 14:51）
+
+用户明确要求停止定时任务并汇报。通过automation_update正式将model-relay heartbeat置PAUSED，返回status=PAUSED；只读保存automation.toml复核一致，原prompt/30分钟频率/当前thread保持。停止的是协调者定时检查，不取消仍在执行的产品Run，也不关闭8793或产品服务。后续不会定时自动推进；当前请求仅核对、保留现场和汇报。
+
+**测试仓最新事实。** 正式API同Run running/seq52 development，会话f3567dfcd643092a5762fdd0b2d5ab5a，预算60/冻结40、无error/等待。seq51第21次原make verify exit2、900s入口，维护者三页0→32768→65536→98283/eof、truncated=false完整恢复日志；133文件指纹5b0822a01c8d0a92236fdf1a70d5e4e1fe6114782ddb643b86e002c0dee3d836与正式seq50交接一致。187Node/0fail/0skip、全仓race（CLI9.877s、relay440.840s、browser10.876s、health-history5.635s）、build、两种生产schema3迁移三视口、旧UI/多上游继续通过。不能因为这些分项通过将整套exit2改成Pass。
+
+首失败为新增console-real-go-ui的editor-held-readback-1280：实际write_status201、catalog200/members200、page_error0、request_failed1，editor_open=false/save_disabled=false，安全snapshot存在；尚未完成其余新故障/管理摘要/J01–J07/visual门禁。seq52原生正在处理；锁版本Playwright URL matcher原精确/admin/api/tenants只能匹配无query URL，实际分页?page=1&page_size=100&limit=100及cursor均不匹配，修正后这两类匹配且members/tenants-extra继续拒绝。该诊断明确标native_network_execution=false，不当实际宿主新回归通过，也不据此反推旧201服务写入失败或证明唯一产品根因。产品Agent修测试匹配，协调者只读核对，不替代实现或重复运行命令。
+
+上一版seq46完整exit0/63PNG/21主旅程仍是旧7e0b20dd…指纹证据；QA47正式No-Go的主要管理摘要P1与Token口径P2保持Open，seq48/50已有候选实现不替代新完整通过和独立QA关单。当前核心多租户身份/成员、模型服务/路由、Key/共享预算、计费用量/核对结账、十页控制台与迁移已有实现和多层实测；产品未正式验收，不能报商用对齐或完成百分比。
+
+**Harness分层结论。** 已有8793典型实测覆盖自主handoff、complete_node不合Schema拒绝/纠正后接受、真实布尔/整数/数组/嵌套对象固定消费、命令失败返工、QA返工、澄清/等待态停止与原thread继续、完成后人工回退、Issue去重和跨所有者拒绝。当前主Run的新失败也正确返回development，无已观察跳错/重复派发。统一配置/两出口、停止与取消语义、覆盖式节点抽屉、有界继续和授权恢复都已在维护源交付；40次预算耗尽后的正式显式恢复60、历史/工作区保持、无在途标准升级和幂等安装有真实证据。不能把这些证据外推为当前版本所有权限/在途进程强停重启/外部未知响应/最终部署异常已全验；native实际model字段证据缺口仍保留。平台页面/跳转体验后续优化尚未全面完成。
+
+外部只读核对Open PR0，37738944460/37737849943/37737604474/37736226292均旧main的Issue entry success，并非部署。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5仍旧部署；最新实现仍在当前Run工作区，没有正式PR、合并、Actions激活或新页面版本一致证据。部署Workflow/在线Runner/控制器已备好，不重新部署旧main冒充最新。真实供应商、支付/外部身份等未验范围保持。后续关键路径仍为当前driver修复→原完整tests→独立QA→report/publish/pr→授权合并→正式Actions/health/页面对账；此次停止定时后不自动执行这些协调者动作。原现场在忽略目录`.data/fresh-8793/check-stop-summary/`，没有手改DB/检查点/回执或新增权限。
