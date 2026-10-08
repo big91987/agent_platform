@@ -18,11 +18,22 @@ type WorkflowStart struct {
 	RequestID     string            `json:"request_id,omitempty"`
 }
 type NodeResult struct {
-	Inputs    map[string]string `json:"inputs,omitempty"`
-	Route     string            `json:"route,omitempty"`
-	Summary   string            `json:"summary"`
-	Artifacts []string          `json:"artifacts,omitempty"`
+	Inputs    map[string]any `json:"inputs,omitzero"`
+	Route     string         `json:"route,omitempty"`
+	Summary   string         `json:"summary"`
+	Artifacts []string       `json:"artifacts,omitempty"`
 }
+
+// Check numbers before decoding into interface values; accepted values must
+// survive the platform's JSON representation without silent rounding.
+func (r *NodeResult) UnmarshalJSON(data []byte) error {
+	if _, err := completionJSONValue(data); err != nil {
+		return err
+	}
+	type plain NodeResult
+	return json.Unmarshal(data, (*plain)(r))
+}
+
 type WorkflowStep struct {
 	WaitKind            string            `json:"wait_kind,omitempty"`
 	WaitReason          string            `json:"wait_reason,omitempty"`
@@ -50,10 +61,24 @@ type WorkflowRun struct {
 	WorkspacePath string               `json:"workspace_path"`
 	Status        string               `json:"status"`
 	Seq           int                  `json:"seq"`
+	MaxSteps      int                  `json:"max_steps"`
 	Error         string               `json:"error,omitempty"`
 	Created       string               `json:"created_at"`
 	Updated       string               `json:"updated_at"`
 	Steps         []WorkflowStep       `json:"steps"`
+}
+
+const workflowExecutionLimitError = "maximum node executions reached; inspect loop before starting another run"
+
+func (r WorkflowRun) executionLimit() int {
+	if r.MaxSteps > 0 {
+		return r.MaxSteps
+	}
+	return r.Definition.MaxSteps
+}
+
+func (r WorkflowRun) atExecutionLimit() bool {
+	return r.Seq >= r.executionLimit()
 }
 
 func (w Workflow) node(id string) WorkflowNode {
@@ -92,6 +117,7 @@ func (s *Store) initWorkflowRuns() error {
  conversation_id TEXT NOT NULL DEFAULT '',token_hash TEXT NOT NULL DEFAULT '',result TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(run_id,seq));
  CREATE TABLE IF NOT EXISTS workflow_run_parameters(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),parameters TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS workflow_run_limits(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),max_steps INTEGER NOT NULL CHECK(max_steps BETWEEN 1 AND 1000));
  CREATE TABLE IF NOT EXISTS workflow_node_controls(run_id TEXT NOT NULL,seq INTEGER NOT NULL,wait_kind TEXT NOT NULL DEFAULT '',wait_reason TEXT NOT NULL DEFAULT '',wait_message_id INTEGER NOT NULL DEFAULT 0,continuations INTEGER NOT NULL DEFAULT 0,last_message_id INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(run_id,seq),FOREIGN KEY(run_id,seq) REFERENCES workflow_steps(run_id,seq));
  CREATE UNIQUE INDEX IF NOT EXISTS workflow_conversation ON workflow_steps(conversation_id) WHERE conversation_id!='';`)
 	return e
@@ -108,6 +134,10 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	}
 	if e = json.Unmarshal([]byte(raw), &r.Definition); e != nil {
 		return r, e
+	}
+	r.MaxSteps = r.Definition.MaxSteps
+	if err := tx.QueryRow(`SELECT max_steps FROM workflow_run_limits WHERE run_id=?`, id).Scan(&r.MaxSteps); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return r, err
 	}
 	var parameters string
 	if err := tx.QueryRow(`SELECT parameters FROM workflow_run_parameters WHERE run_id=?`, id).Scan(&parameters); err == nil {
@@ -527,6 +557,14 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 	if r.Definition.target(step.NodeID, result.Route) == "" {
 		return errors.New("route is not an outgoing edge of this node")
 	}
+	if token != "" && !handoff {
+		if node.ExitMode == "handoff" {
+			return errors.New("this node uses handoff")
+		}
+		if e = validateCompletionResult(node, result); e != nil {
+			return e
+		}
+	}
 	if step.Result != nil {
 		previous, _ := json.Marshal(step.Result)
 		if string(previous) == string(raw) {
@@ -598,8 +636,8 @@ func (s *Store) advanceWorkflow(id string, seq int) error {
 	if _, e = tx.Exec(`UPDATE workflow_steps SET status='completed',updated=? WHERE run_id=? AND seq=?`, now(), id, seq); e != nil {
 		return e
 	}
-	if seq >= r.Definition.MaxSteps {
-		_, e = tx.Exec(`UPDATE workflow_runs SET status='failed',error='maximum node executions reached; inspect loop before starting another run',updated=? WHERE id=?`, now(), id)
+	if r.atExecutionLimit() {
+		_, e = tx.Exec(`UPDATE workflow_runs SET status='failed',error=?,updated=? WHERE id=?`, workflowExecutionLimitError, now(), id)
 	} else {
 		r.Seq++
 		e = insertWorkflowStep(tx, r, r.Definition.target(step.NodeID, step.Result.Route))

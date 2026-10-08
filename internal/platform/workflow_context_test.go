@@ -288,7 +288,7 @@ func TestWorkflowMarkdownCorrectionHandoffAndReturnInput(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Complete(conv.ID, msg.ID, "completed", "")
-	r.Steps[0].Result = &NodeResult{Summary: "真实上游结论，代码版本abc", Artifacts: []string{"docs/requirements.md"}, Inputs: map[string]string{"unresolved": "分页失败，证据test.log"}}
+	r.Steps[0].Result = &NodeResult{Summary: "真实上游结论，代码版本abc", Artifacts: []string{"docs/requirements.md"}, Inputs: map[string]any{"unresolved": "分页失败，证据test.log"}}
 	r.Steps = append(r.Steps, WorkflowStep{Seq: 2, NodeID: r.Steps[0].NodeID, Error: "人工回退：重新核验"})
 	text, err := s.workflowAgentInput(r, r.Steps[1], r.Definition.Nodes[0])
 	if err != nil {

@@ -21,3 +21,15 @@
 一次 Run 使用启动时指定的共享工作区，网页和 API 都写 `workspace_path`，之后不允许更换。Agent 的工作区模板只用于未指定现有工作区的独立会话；编排启动必需已有目录，因此新版节点不提供该字段，API 拒绝非空节点 seed_dir；旧冻结配置保持原样。没有通用工作流变量系统，任务数据通过 User Input、handoff 与工作区文件传递。
 
 实施状态按[交付计划](../03-delivery/workflow-node-agent-plan.md)维护；本修订的真实浏览器、Codex 和产品研发链路验证完成前不沿用上阶段验收结论。
+
+## 交接模式与固定输出（2026-10-07）
+
+用户确认节点提供两种可切换的交接模式。新节点保存 `exit_mode=handoff|complete`，默认handoff；同一节点只启用一种方式。handoff页配置多个目标及各自选择策略；固定流转页配置唯一目标、`completion_schema`和`completion_instructions`。说明用于解释输出字段的来源、生成规则与示例，不另设任务说明。保留现有工具名complete_node。
+
+固定工具保留summary与artifacts公共字段，Schema定义其inputs业务对象，支持JSON类型、嵌套对象与数组，未配置时沿用字符串键值对。自定义Schema在保存时检查有效性，工具注册时直接成为inputs参数Schema，并在持久化结果前按Run冻结定义再次验证。缺字段、类型或约束不符返回工具错误，Agent修正后重试；不落完成结果、不推进、不补造默认值。填写说明同时进入工具说明与输入预览。
+
+输出直接存入既有result.inputs，命令Connector从标准stdin的previous_results读取同一对象及原类型，Agent下游通过既有输入组装得到其内容。无额外变量、字段映射层或输出对象ID。Schema首期使用本地支持的JSON Schema校验字段，不支持引用/自定义关键字；不远程加载schema、不执行表达式。配置说明最长16000字节，schema最长32000字节。
+
+旧定义未设置exit_mode时继续按原边线执行，冻结Run不变。旧混合模式在编辑器明确选择新模式及保留目标，不能默默删线。标准模板升级为显式模式；混合协作示例改为统一handoff至校验或结束，不让新配置继续混用两个工具。模式切换到固定时若有多个目标，先选择唯一保留目标；切回handoff保留输出Schema草稿但不应用到handoff工具。开发分支直接提交推送，不创建Platform PR。
+
+数值保真边界：在任何 MCP 参数重编码前检查 JSON 数值的十进制往返；无法无损表示的数值明确拒绝并要求字符串，不让验证库先舍入。Schema 字面量做同样检查。合法 `inputs:{}` 保留为空对象，不省略字段；未提供 inputs 的旧结果仍可省略。此约束也覆盖存储重载到命令 stdin 的路径。

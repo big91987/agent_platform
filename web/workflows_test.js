@@ -7,7 +7,7 @@ function editorPage(){
  const el=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',disabled:false,querySelectorAll:()=>[],checkValidity:()=>true,classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){},set innerHTML(html){this.html=html;for(const match of html.matchAll(/<(textarea|select)\b([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)(?=<\/(?:textarea|select)>|$)/g)){const [,tag,attrs,key,tail]=match,target=el('#'+key);target.value=tag==='input'?(attrs.match(/\bvalue="([^"]*)"/)?.[1]||''):tag==='textarea'?tail:(tail.match(/<option[^>]*value="([^"]*)"[^>]*selected/)?.[1]||tail.match(/<option[^>]*value="([^"]*)"/)?.[1]||'');target.checked=/\bchecked\b/.test(attrs);}for(const match of html.matchAll(/<input\b([^>]*\bid="([^"]+)"[^>]*)>/g)){const target=el('#'+match[2]);target.value=match[1].match(/\bvalue="([^"]*)"/)?.[1]||'';target.checked=/\bchecked\b/.test(match[1]);}},get innerHTML(){return this.html||''}});return elements.get(id)};
  const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,state:{agents:[],me:{admin:true}},esc:x=>String(x??''),connectorKinds:{},dialog:html=>{el('#dialog').innerHTML=html;el('#dialog').close=()=>{}},toast:message=>{el('#toast').textContent=message}});
  for(const file of ['workflow-model.js','agent-config.js','workflow-panel.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
- vm.runInContext("const graph=new WorkflowGraph();graph.value.context_version=1;const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
+ vm.runInContext("const graph=new WorkflowGraph();graph.value.context_version=2;const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
  return {ctx,el};
 }
 test('connection settings change the displayed target and policy in the single graph edge',()=>{
@@ -19,22 +19,22 @@ test('connection settings change the displayed target and policy in the single g
  assert.equal(vm.runInContext('editor.graph.value.edges[0].description',ctx),'核验通过');
  assert.match(el('#wf-inspector').innerHTML,/核验通过/);
 });
-test('preview uses unsaved visible session prompt without mutating or saving the graph',async()=>{
+test('preview uses unsaved visible role instructions without mutating or saving the graph',async()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
- el('#wf-node-name').value='研究';el('#wf-node-prompt').value='实时草稿 {{handoff}}';el('#wf-node-x').value='0';el('#wf-node-y').value='0';el('#wf-continuation').value='3';el('#wf-timeout').value='14400';
+ el('#wf-node-name').value='研究';el('#wf-agent-instructions').value='实时职责草稿';el('#wf-node-x').value='0';el('#wf-node-y').value='0';el('#wf-continuation').value='3';el('#wf-timeout').value='14400';
  ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push({path,method,body});return {session_prompt:'展开后的工作说明',input:'预览输入'}}",ctx);
  await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
  assert.equal(ctx.requests.length,1);
  assert.equal(ctx.requests[0].path,'/api/workflows/preview');
- assert.equal(ctx.requests[0].body.workflow.nodes[0].prompt,'实时草稿 {{handoff}}');
- assert.equal(vm.runInContext('a.prompt',ctx),'{{handoff}}');
- assert.match(el('#wf-preview-content').innerHTML,/展开后的工作说明/);
+ assert.equal(ctx.requests[0].body.workflow.nodes[0].agent.instructions,'实时职责草稿');
+ assert.equal(vm.runInContext('a.agent.instructions',ctx),'');
+ assert.match(el('#wf-preview-content').innerHTML,/预览输入/);
  assert.match(el('#wf-preview-content').innerHTML,/readonly/);
  assert.equal(vm.runInContext('editor.panelTab',ctx),'preview');
 });
-test('mixed Agent paths expose compatibility warning while keeping both editable edges',()=>{
- const {ctx,el}=editorPage();vm.runInContext("graph.connect(a.id,'fixed',c.id,'automatic');renderWorkflowInspector(editor)",ctx);
- assert.match(el('#wf-inspector').innerHTML,/混合/);
+test('mixed stored Agent paths become one handoff mode with every target retained while keeping both editable edges',()=>{
+ const {ctx,el}=editorPage();vm.runInContext("delete a.exit_mode;graph.connect(a.id,'fixed',c.id,'automatic');graph.upgradeForEditing(state.agents);renderWorkflowInspector(editor)",ctx);
+ assert.equal(vm.runInContext('graph.node(a.id).exit_mode',ctx),'handoff');assert.equal(vm.runInContext('graph.agentMode(a.id)',ctx),'handoff');
  assert.equal(vm.runInContext('graph.value.edges.length',ctx),2);
 });
 
@@ -49,12 +49,12 @@ test('opening a legacy Agent reference leaves stored graph intact until direct n
  assert.equal(vm.runInContext('state.agents[0].instructions',ctx),'角色职责');
 });
 
-test('editing a Session Prompt keeps its current draft when a target is changed and inspector redraws',()=>{
+test('editing role instructions keeps its current draft when a target is changed and inspector redraws',()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
- for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-prompt':'修改后的说明 {{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
- el('#wf-node-prompt').oninput();
+ for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-agent-instructions':'修改后的职责','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ el('#wf-agent-instructions').oninput();
  vm.runInContext('graph.updateEdge(0,{target:c.id});renderWorkflowInspector(editor)',ctx);
- assert.match(el('#wf-inspector').innerHTML,/修改后的说明/);
+ assert.match(el('#wf-inspector').innerHTML,/修改后的职责/);
  assert.equal(vm.runInContext('graph.value.edges[0].target',ctx),'node_3');
 });
 test('node user input permission is visible and unsaved preview respects disabling it',async()=>{
@@ -73,13 +73,13 @@ test('click-selected node opens right tabs and closing retains unsaved draft',()
  assert.match(el('#wf-inspector').innerHTML,/wf-pane-config/);
  assert.match(el('#wf-inspector').innerHTML,/wf-pane-handoff/);
  assert.match(el('#wf-inspector').innerHTML,/wf-pane-preview/);
- for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-prompt':'未保存输入 {{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
- el('#wf-node-prompt').oninput();el('#wf-tab-handoff').onclick();
+ for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-agent-instructions':'未保存职责','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
+ el('#wf-agent-instructions').oninput();el('#wf-tab-handoff').onclick();
  assert.equal(vm.runInContext('editor.panelTab',ctx),'handoff');
  el('#wf-panel-close').onclick();
  assert.equal(vm.runInContext('editor.selected',ctx),null);
  assert.equal(el('#wf-inspector').hidden,true);
- assert.equal(vm.runInContext('a.prompt',ctx),'未保存输入 {{handoff}}');
+ assert.equal(vm.runInContext('a.agent.instructions',ctx),'未保存职责');
 });
 test('late preview of a previous node cannot replace current drawer details',async()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
@@ -101,7 +101,7 @@ test('a late failed preview cannot overwrite a newer successful preview',async()
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
  for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  ctx.requests=[];vm.runInContext("api=()=>new Promise((resolve,reject)=>requests.push({resolve,reject}));old=previewWorkflowNode(editor,a);fresh=previewWorkflowNode(editor,a)",ctx);
- ctx.requests[1].resolve({session_prompt:'NEW SUCCESS',input:'new'});await vm.runInContext('fresh',ctx);
+ ctx.requests[1].resolve({input:'NEW SUCCESS'});await vm.runInContext('fresh',ctx);
  ctx.requests[0].reject(new Error('OLD ERROR'));await vm.runInContext('old',ctx);
  assert.match(el('#wf-preview-content').innerHTML,/NEW SUCCESS/);assert.doesNotMatch(el('#wf-preview-content').innerHTML,/OLD ERROR/);
 });
@@ -123,8 +123,8 @@ test('save submits the visible independent execution settings and migrates unope
  const nodes=JSON.parse(JSON.stringify(ctx.requests[0].body.nodes));
  assert.equal(nodes[0].agent_id,undefined);assert.equal(nodes[0].agent.instructions,'节点职责');assert.equal(nodes[0].agent.model,'model-local');
  assert.deepEqual(nodes[0].agent.skills,['/skills/a','/skills/b']);assert.deepEqual(nodes[0].agent.env,{MODE:'node',REMOVE:null});
- assert.equal(nodes[0].agent.network_access,true);assert.equal(nodes[0].agent.allow_elevation,true);assert.equal(nodes[0].agent.trust_hooks,true);assert.equal(nodes[0].agent.inherit_env,false);assert.equal(nodes[0].agent.seed_dir,'/template');assert.equal(nodes[0].agent.native_config,'model_reasoning_effort = "high"');
- assert.equal(nodes[2].agent_id,undefined);assert.equal(nodes[2].agent.instructions,'Old role');assert.equal(nodes[2].agent.authorized_users,undefined);assert.equal(nodes[2].agent.resolved_tools,undefined);
+ assert.equal(nodes[0].agent.network_access,true);assert.equal(nodes[0].agent.allow_elevation,true);assert.equal(nodes[0].agent.trust_hooks,true);assert.equal(nodes[0].agent.inherit_env,false);assert.equal(nodes[0].agent.seed_dir,undefined);assert.equal(nodes[0].agent.native_config,'model_reasoning_effort = "high"');
+ assert.equal(nodes[2].agent_id,undefined);assert.equal(nodes[2].agent.instructions,'Old role\n\n旧任务');assert.equal(nodes[2].agent.authorized_users,undefined);assert.equal(nodes[2].agent.resolved_tools,undefined);
  vm.runInContext("state.agents[0].env.MODE='changed'",ctx);assert.equal(vm.runInContext('editor.graph.value.nodes[2].agent.env.MODE',ctx),'source');
 });
 test('invalid environment draft survives closing and reopening and blocks save until corrected',async()=>{
@@ -179,8 +179,8 @@ test('share export captures visible config and legacy snapshots while omitting s
  el('#wf-agent-instructions').value='Visible role';el('#wf-node-prompt').value='Visible task {{handoff}}';
  vm.runInContext('exportWorkflow(editor)',ctx);
  const exported=JSON.parse(el('#wf-export-json').value);
- assert.equal(exported.nodes[0].agent.instructions,'Visible role');assert.equal(exported.nodes[0].prompt,'Visible task {{handoff}}');
- assert.equal(exported.nodes[2].agent_id,undefined);assert.equal(exported.nodes[2].agent.model,'legacy-model');assert.equal(exported.nodes[2].agent.instructions,'Legacy role');assert.deepEqual(exported.nodes[2].agent.tool_servers,[{server_id:'t',tools:['read']}]);
+ assert.equal(exported.nodes[0].agent.instructions,'Visible role');assert.equal(exported.nodes[0].prompt,undefined);
+ assert.equal(exported.nodes[2].agent_id,undefined);assert.equal(exported.nodes[2].agent.model,'legacy-model');assert.equal(exported.nodes[2].agent.instructions,'Legacy role\n\nOld prompt');assert.deepEqual(exported.nodes[2].agent.tool_servers,[{server_id:'t',tools:['read']}]);
  assert.equal(exported.nodes[0].agent.native_config,'');assert.deepEqual(exported.nodes[0].agent.env,{});assert.doesNotMatch(el('#wf-export-json').value,/PRIVATE_MARKER/);
  assert.equal(vm.runInContext('JSON.stringify(graph.value)===before',ctx),true);
 });
@@ -224,4 +224,34 @@ test('standalone and workflow forms read the same execution settings and preserv
  assert.deepEqual(standalone,node);
  assert.deepEqual(node.env,{MODE:'test',REMOVE:null});
  assert.deepEqual(node.tool_servers,[{server_id:'unavailable',tools:['inspect'],approvals:{inspect:'confirm'}}]);
+});
+test('fixed output drafts survive closing and invalid JSON blocks save even after switching nodes',async()=>{
+ const {ctx,el}=editorPage();vm.runInContext("graph.value.context_version=2;delete a.prompt;graph.setExitMode(a.id,'complete');renderWorkflowInspector(editor)",ctx);
+ assert.match(el('#wf-inspector').innerHTML,/wf-completion-schema/);
+ el('#wf-completion-schema').value='{"type":"object","properties":{"passed":{"type":"boolean"}}}';el('#wf-completion-instructions').value='根据验证填写 passed';el('#wf-completion-schema').oninput();
+ ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push(body);return {input:'preview'}}",ctx);await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
+ assert.equal(ctx.requests[0].workflow.nodes[0].completion_schema.properties.passed.type,'boolean');
+ el('#wf-completion-schema').value='{bad';el('#wf-completion-schema').oninput();el('#wf-panel-close').onclick();
+ vm.runInContext('editor.selected=a.id;renderWorkflowInspector(editor)',ctx);assert.equal(el('#wf-completion-schema').value,'{bad');
+ vm.runInContext('editor.selected=b.id;renderWorkflowInspector(editor)',ctx);ctx.requests.length=0;await vm.runInContext('saveWorkflow(editor)',ctx);
+ assert.equal(ctx.requests.length,0);assert.match(el('#toast').textContent,/输出格式/);
+});
+test('schema drafts reject numbers that JSON.parse would silently round',()=>{
+ const {ctx}=editorPage();
+ assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"id":{"const":9007199254740993}}}\',instructions:""})',ctx),/数值/);
+ assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"n":{"minimum":1.0000000000000001}}}\',instructions:""})',ctx),/数值/);
+ assert.doesNotThrow(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"n":{"minimum":0.1,"maximum":1e3}}}\',instructions:""})',ctx));
+});
+test('stored workflows open the same current form regardless of their input version',async()=>{
+ for(const version of [0,1]){
+  const {ctx,el}=editorPage();ctx.version=version;
+  vm.runInContext("graph.value.context_version=version;graph.value.id='stored';a.prompt='原职责 {{handoff}}';state.agents=[{id:'shared',executor:'codex',model:'configured-model',instructions:'角色'}];delete a.agent;delete a.exit_mode;a.agent_id='shared';api=async()=>[]",ctx);
+  await vm.runInContext('openWorkflowEditor(graph)',ctx);
+  vm.runInContext('workflowEditor.selected=a.id;renderWorkflowInspector(workflowEditor)',ctx);
+  assert.equal(vm.runInContext('graph.value.context_version',ctx),2);
+  assert.match(el('#wf-inspector').innerHTML,/wf-exit-handoff/);assert.match(el('#wf-inspector').innerHTML,/wf-exit-complete/);assert.match(el('#wf-inspector').innerHTML,/wf-pane-preview/);
+  assert.doesNotMatch(el('#wf-inspector').innerHTML,/Session Prompt|wf-node-prompt|{{handoff}}/);
+  assert.equal(el('#wf-agent-model').value,'configured-model');assert.equal(el('#wf-agent-instructions').value,'角色\n\n原职责');
+  assert.equal(vm.runInContext('workflowEditor.dirty',ctx),true);
+ }
 });

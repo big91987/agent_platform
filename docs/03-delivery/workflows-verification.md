@@ -1093,3 +1093,414 @@ GitHub双向入口实测发现：平台建立的测试Issue #22又被opened入�
 原Run `713a325b560ddc53be37ff3a0bbc5014` 已完成requirements，实际产物为本Run的product-definition.md、acceptance-matrix.md、g1-review.md；矩阵完整保留AC01–AC18/H01–H08，明确产品项待实现/待验证。G1只判Ready for Architecture，未冒充产品Go。设计节点seq5正在执行；原生进程存活，已落architecture.md/runtime-contracts.md，阶段尚未完成，不预判设计验收。
 
 真实重跑[原Issue #24入站Actions 37615595429 attempt2](https://github.com/big91987/model-relay/actions/runs/37615595429)成功，正式API查询issue_number=24仍仅一个Run、ID不变；没有重新创建工作区/Run或替换当前阶段。接单、需求、设计三节点分别通过正式context API与原生turn_context交叉核对，配置和实际模型均为gpt-6.1-sol，执行器Codex，冻结revision8/context_version2。原生记录分别为01a11629-dc4b-7890-82f1-c0e8038eb015、01a1162b-f34a-79f1-99d8-a7aad51e567e、01a11632-c6b6-7090-80f9-d7ef1acf2ee5；输入SHA256和原生身份另存私有product-model-input-evidence.json。这些是材料承接/幂等/执行身份的分项证据，研发、QA和发布仍未通过。
+
+
+### Agent 交接模式与固定输出（2026-10-07）
+
+Agent 节点配置增加互斥的自主交接/固定流转；后者配置唯一目标、`inputs` JSON Schema与填写说明。配置进入冻结节点，生成工具参数与首轮输入；校验不通过不保存、不推进。旧版混合图与在途运行保持原行为。切换多目标需明确选择保留路径，无效JSON草稿关闭后仍保留并阻止保存。显式空对象保持 `{}`；数值在UI/原始MCP/存储解码之前做十进制往返检查，不可无损表示的数字明确拒绝，精确长编号/高精度值使用string。
+
+独立复审发现并以RED→GREEN关闭空对象丢字段、MCP/存储数值舍入；同步修正handoff说明使用真实必填summary。最终标准`scripts/verify.sh` exit0：Go vet、全仓race（platform49.667s）、Ruff、安装器/Python/SDK和浏览器回归通过；之后追加Schema草稿数值保真测试，63项Node回归及构建通过。未把测试文本中的临时路径作为平台默认配置。
+
+仅升级8792，PID28917，二进制SHA256 `5c83de9b4018ae821b138079e06be0fa63253326f69252a02fd407ed817a538f`。升级前确认无运行/排队原生会话，备份数据库与已核对的旧二进制；升级后原研发waiting Run及两个取消历史逐JSON一致，8788 PID82011不变。
+
+真实浏览器在[独立验收编排](http://127.0.0.1:8792/workflows/aa204b67bfc09f261283330b2ae30f5d)切换固定流转，输入无效JSON、关闭面板后保存被拒绝；重新打开保留原草稿。填写Schema/说明后保存revision2，重载与输入预览均显示冻结前的正确契约。[真实Run](http://127.0.0.1:8792/workflow-runs/b8250145f04f6ce079d3322fcf0e5e4e) completed seq3；Codex会话`b5ac37c8feb625176267f0db646a4788`原生事件133348明确拒绝unexpected字段，133373接受修正结果。Agent结束后Command Connector读取原始previous_results，实测布尔true、整数2、字符串数组和嵌套metadata对象，并校验Agent实际文件，exit0；消费回执由命令生成。没有用工具调用文字代替真实执行。
+
+原协作manifest标准升级成功，编排`94dbd79c540c732568f0de1bb41e9715` revision5；重复安装不变，两条历史Run保持冻结。原研发manifest升级被在途Run保护拒绝，未绕过保护、未停止或取消它；原研发模板仍revision8，待原任务结束后升级。该研发Run `713a325b560ddc53be37ff3a0bbc5014` seq10等待原生沙箱之外的受支持宿主回归，完整产品尚未验收。平台本功能局部通过不等于完整研发流程完成。
+
+私有原始回执、升级备份、原生事件与安装器日志位于ignored `.data/workflow-evidence/completion-contract/` 与 `.data/maintenance-backups/20261007-completion-contract/`。截图保留在私有临时目录，不提交原生历史或环境配置。
+
+
+## 全新服务与测试仓Pipeline（2026-10-07）
+
+用户要求不继续保留旧配置路径，部署新端口并在测试仓重新起Pipeline。当前源码构建为独立二进制，服务监听8793，使用新的平台数据、CI账户、安装manifest、浏览器工具证据目录和任务工作区；旧服务未参与这次验证。GitHub入口YAML及来源manifest摘要与维护源一致，仓库变量通过正式接口切换到新服务CI配置。
+
+标准安装器新装编排 `8f497228b60a8ea46b7d37be59ebe578` revision1/context2，六阶段Agent直接内嵌Codex/gpt-6.1-sol及handoff配置。真实浏览器在实际研发节点确认可编辑名称、执行器、模型、角色和统一权限/Skills/工具表单，交接页具有自主交接和固定流转两种选择，无独立Session Prompt。
+
+[model-relay #25](https://github.com/big91987/model-relay/issues/25) 触发 [Actions37643773819](https://github.com/big91987/model-relay/actions/runs/37643773819)，正式SDK创建唯一Run `4cd62ced6a4f98f50e3cca6f7596eb06`。prepare exit0：main基线 `98511771871cf0951ecef716bbb55deb13e18da5`，独立任务分支，design-v0.2.0摘要 `5f51d35fdc15ed7214749f9413879b4238097f1d6b6bbe2cc0d508d8e103cef7`、19文件，材料回执传入后续阶段；Issue节点完成，seq3 intake原生会话 `2484b357ad325a0d06346eeba69e4688` 已完成真实handoff至requirements，seq4需求会话 `e49f561b3423651e08efd1ce59635d20` 正在执行。此证据只证明全新标准入口和原生执行开始，不代表完整产品研发、QA或正式部署已通过。运行与安装证据保存在忽略目录 `.data/fresh-8793/`。
+
+
+## 8793典型场景实测（2026-10-07）
+
+本轮在测试仓 `big91987/model-relay` 的独立checkout验流程，不修改产品源码或门禁。部署基线为维护分支 `codex/workflow-node-config-ui` 的HEAD `9931ff6cafe2b2a01d0f2ae1a603fbec563c35da` 加未提交的completion/统一UI改动，运行二进制SHA256 `b7b2eeec1a1ef7bd6b49781eb35d0fd367237ee6d726bca0c13e34dfe32039b8`。不是已发布源版本；私有 `baseline.json`、`source.patch` 和新增completion源文件记录此次快照。测试期间未更换二进制、未重启服务或修改主产品Run。
+
+准备边界：标准安装器安装collaboration-check，GitHub入口已有checkout逻辑准备两个独立测试仓目录；固定输出场景通过正式配置API预制图和只读校验Connector，是明确的流程验收夹具。固定校验只检查release.md和结构化输入，不替代产品make verify，不宣称完整产品功能通过。两条Run均从浏览器运行表单输入任务/工作区启动；停止、恢复及人工回退均由同一管理员浏览器会话完成。未验证从空状态通过UI创建全部配置的旅程。
+
+| 场景 | 操作与最终事实 | 证据类型 | 结果 |
+|---|---|---|---|
+| 正常阶段交接 | 主Run接入→需求→设计；材料摘要/路径经真实handoff传递，当前seq5设计执行中 | API-E2E、原生工具、External State | Pass（仅已执行阶段） |
+| GitHub重复接单 | 正式workflow_dispatch重放Issue25，Actions37644991582成功返回原Run；主编排Run仍恰好1条 | External State、API-E2E | Pass |
+| 澄清等待 | 标准writer未获版本号，调用wait_for_input并显示等待澄清；未自行编造版本或推进 | UI-E2E、原生工具 | Pass |
+| 等待态停止与恢复 | 页面停止到stopped、填继续说明答复版本号，再继续原节点；会话ID不变，前后原生thread.started均为 `01a11701-b3c7-7713-86ba-1a74bbbfa540` | UI-E2E、Data Reconciliation | Pass |
+| 独立校验返工 | reviewer实际读文件发现缺章节→handoff writer修复→reviewer命令复验→done；release.md最终符合版本/章节/文字要求 | UI-E2E、原生工具、文件核对 | Pass |
+| 完成后人工回退 | 同一Run完成seq6后，页面选择reviewer并填写原因；seq7重新核验、seq8done；前6步历史保留，未重建Issue | UI-E2E、API-E2E | Pass |
+| Schema错误可纠正 | complete_node含unexpected时原生事件1947拒绝，事件2134纠正后接受；错误输出未产生下一步，最终只保存合规输入 | 原生工具、API-E2E | Pass |
+| 固定命令失败返工 | 原命令真实exit1（缺少验收章节）→repair读取原日志并修正文件→同一Connector原命令exit0→done | UI-E2E、External State、API-E2E | Pass |
+| 类型化消费 | 宿主命令实际断言布尔/整数/数组/嵌套对象，consumer-receipt.json记录原类型及执行seq4 | External State、文件核对 | Pass |
+| 跨运行所有者隔离 | 使用已授权CI caller读取admin拥有的验收Run和会话，两入口均403 | API-E2E | Pass |
+| 主产品完整研发/QA/PR/合并部署 | 主Issue25仍在设计；当前未产生本轮完整产品验收或发布结果 | — | Not Run（后续阶段） |
+| 正在执行的进程中断、服务重启恢复、外部响应丢失 | 本轮未中断主研发服务，等待态停止不可替代这些场景 | — | Not Run |
+
+实测Run：[澄清与返工](http://127.0.0.1:8793/workflow-runs/c4afbc7f6ad82e65b9a9ddd5eff81bb6) 完成8步；[Schema与固定命令返工](http://127.0.0.1:8793/workflow-runs/dd9d5ec416dfa23a42458ef843f9ab09) 完成5步。平台生成Issue26及Hook评论均未引发反射Run，主Issue25重复入口仅返回原任务。测试Issue26已正式关闭；测试checkout只新增release.md/consumer-receipt.json，无产品源码修改或提交，验收文件留在忽略存储供复查；无在途测试Run。主产品Run继续执行。
+
+证据目录：维护源忽略目录 `.data/fresh-8793/scenarios/`，包含基线、两条Run完整JSON、各节点原生事件、命令退出回执、跨用户拒绝及GitHub通知；页面截图 `/private/tmp/agent-platform-8793-typical-scenarios.png`。不提交原生历史或测试仓本机数据。
+
+本轮没有在已执行场景发现流程阻断。质量较上一轮从“创建Run和入口显示”推进到真实等待/恢复、主动与固定交接、两类返工和人工回退闭环；整条产品交付仍In Progress，不能据此判断全面Go。后续页面优化候选：失败命令在节点生命周期上显示“已完成”，同时另列exit1/failed，对用户不够直观；仅记录，按用户要求先完成流程验证再优化页面及跳转。
+
+
+## 半小时检查：研发与公开参考覆盖（2026-10-08 00:18）
+
+Issue25主Run已由seq5 design正式handoff至seq6 development，会话 `3ea939a86321137ea64d7c4f6f6451df`，原生thread `01a11712-97dd-7b70-b438-288da4552303`。五份设计文档实际存在，26行AC/H矩阵完整。未建新任务；GitHub当前Open PR为0。研发工作树已有身份、Key、费用、控制台API和迁移改动，源码产出与需求/设计文档分开记录；研发原生消息报告开始接入工作台及迁移。
+
+原生事件接口每页最多300条，本次按after完整分页得到2929条，最新事件2026-10-07 16:20:03UTC，conversation仍running。第一页最新时间15:56不能用于判断停滞。局部Go命令证据包括 `TestConsoleIdentityAndKeys` / `TestMicroDollarPrecision` exit0（原生event5696，运行日志实际耗时1.323s）；这只是当时局部工作树回归，未取得最终make verify/固定tests Connector、独立QA、PR或正式部署证据。后续改动必须在同版本重新验收。配置模型为gpt-6.1-sol；当前节点自身没有独立供应商实际模型回执，不把配置声明改写成外部模型验真。
+
+公开对照检查采用材料已有官方来源，不读取本机New API：
+
+| 公开参考的用户能力 | 当前冻结设计承接 | 当前实测/缺口 |
+|---|---|---|
+| [New API渠道管理](https://docs.newapi.pro/en/docs/guide/feature-guide/admin/channel)：渠道表格、配置对话框、自定义端点、模型映射及核验 | 服务接入/核验与状态、模型发布/授权、真实工作台 | 设计覆盖，研发中；未验真实UI。参考中的批量运营、多个Key轮询、参数覆盖等不能自动视为当前范围已覆盖，列后续差距 |
+| [LiteLLM Admin UI](https://docs.litellm.ai/docs/proxy/ui)：连贯模型、Key及费用入口，人员邀请/登录 | A工作台与成员身份/接受邀请/服务端scope | 身份相关局部Go回归有exit0；全旅程UI/权限/部署未验 |
+| [LiteLLM Virtual Keys](https://docs.litellm.ai/docs/proxy/virtual_keys)：模型权限与团队/用户边界、预算及限流 | 稳定Key轮换、租户/Key独立资源约束、共享额度及历史 | Key轮换局部Go回归有exit0；预算并发、未知用量、完整管理旅程待固定tests与QA |
+
+用户最新对齐目标已正式提交至原Run的User Input，稳定request_id `model-relay-heartbeat-20261008T0018-alignment`，message1548，接收后沿原研发会话处理。要求本Run文档明确实现/局部测试/宿主完整测试/QA/发布分别对应的真实事实、公开能力差距与后续需求，并将实际路径交QA；不静默扩写冻结材料、不以对照文档代替代码和门禁。无需重复要求用户授权普通推荐。
+
+检查证据保存在忽略目录 `.data/fresh-8793/heartbeat-20261008*.json`：正式Run、Issue、完整原生分页、局部命令退出结果和补充输入回执。当前未发现需救援的流程阻塞，状态为真实研发持续推进；整链In Progress，完整产品完成度不报虚构百分比。
+
+## 半小时检查：真实工作台测试接入（2026-10-08 00:48）
+
+正式API核对主Run仍running/seq6 development，原会话仍running、无错误或等待原因。完整分页取得3554条原生事件，最新时间2026-10-07 16:48:09UTC，研发持续活动。GitHub当前Open PR为0；尚无本轮产品QA、合并或部署。上一轮补充User Input message1548实际仍queued：接口接收成功不等于Agent已处理，本次不重复提交，也不把商业覆盖对照算已产出。
+
+源码核对：新增 `tests/browser/console.go`、`console.mjs`，现有 `tests/browser/main.go` 已调用 `consoleJourney()` 并在失败时退出。JS旅程访问实际Go服务 `/admin/`，覆盖1280、1440、390三种宽度及移动菜单；既有 `make verify` 的browser目标仍通过 `go run ./tests/browser` 调用。因此三视口旅程已写入固定测试入口，但本轮未取得实际浏览器执行结果，状态为已实现/待测试，不能依据Agent自报“已加入门禁”判Pass。
+
+新增局部命令证据：原生event6430执行 `go test ./... -run '^(TestConsoleIdentityAndKeys|TestMicroDollarPrecision|TestInProcessContract|TestDeploymentContractAndIdempotentUpgradeCLI)$' -count=1`，exit0，relay2.115s/CLI2.777s；event6466及6668执行 `TestConsoleAccountingInProcess`，均exit0，最新1.179s。这些是限定选择的回归，未覆盖完整suite、race或最终make verify。
+
+| 卡点/限制 | 具体影响与证据 | 原因及处理 | 当前结论/后续 |
+|---|---|---|---|
+| 原生沙箱禁止真实HTTP监听 | event6390：`TestConsoleActualHTTPQuotaBillingAndSSE` exit1，`listen tcp 127.0.0.1:0: bind: operation not permitted`；无法在原生执行器内完成该HTTP验证 | 已知执行边界，Agent明确记录不计通过，继续可执行的局部计费回归；完整测试使用既有宿主tests Connector | 待研发完成后经正常handoff触发固定 `make verify`；未临时扩大权限、删测试或修改门禁，未在持续改动中的工作树抢跑宿主验证 |
+
+本轮无新的Harness根因缺陷或需人工救援的停滞。检查证据在忽略目录 `.data/fresh-8793/check-20261008-0048/`，包括Run、conversation、完整原生分页、局部测试退出结果及Issue。继续等正式固定测试及独立QA，按同一版本记录完整结果；商业覆盖补充待原会话处理后核验实际文档路径。
+
+## 半小时检查：固定门禁失败留证与局部修复（2026-10-08 01:18）
+
+主Run仍running/seq6 development，原会话无错误、未等待，5597条完整分页事件核对至2026-10-07 17:17:04UTC。研发继续修改多尝试计费、权限、迁移及浏览器旅程，没有Open PR或新的产品发布Actions。message1548仍queued，不重复创建输入/任务，也不认定商业对齐文档已完成。
+
+本次获得实际固定命令失败：event7695在17:05:56UTC执行make verify，exit2，于health-history中止，真实HTTP监听 `bind: operation not permitted` 导致历史HTTP回归拒绝。日志实际保存在产品本Run `validation/attempt-01/make-verify.log`。这是原生执行器内的失败尝试，没有宿主tests Connector回执；后续全量测试及UI未因此通过。研发任务T001已明确稳定监听限制不重复运行、完整门禁由宿主Connector负责；原生消息同样明确未通过，继续可运行实现和检查。目前仍研发中，待正式handoff进入既有tests节点，不抢跑持续修改中的工作树，不删门禁或增加执行权限。
+
+新增可核对的局部事实：event7961执行 `go vet ./...` exit0；event8358执行身份/Key、金额精度及计费三个定向测试，exit0（relay1.302s）。新治理/邀请限速回归先在event8585编译失败，再在event8678断言失败，研发修改后event8698的 `TestConsoleGovernanceInProcess|TestConsoleInvitationRateLimit` 定向命令exit0（0.970s），失败历史保留。以上均是当时工作树上的局部检查；产品还在改动，没有完整race/UI/独立QA，不能标记对应完整AC已验收。
+
+完成度：有持续产品代码和局部测试产出；固定门禁本次Fail（原生监听限制），宿主完整验证Not Run；独立QA、PR、合并、正式部署及health/UI版本核对仍Not Run。研发任务T001的实施事实段仍为初始化文字，暂不能用该段判断实际代码完成度，继续以原生命令/源码/正式Run核对，并待交接时核验更新后的任务记录。证据保存在忽略目录 `.data/fresh-8793/check-20261008-0118/`。
+
+## 半小时检查：资源、成员范围及迁移定向回归（2026-10-08 01:48）
+
+正式Run仍running/seq6 development，原会话无错误或等待，完整分页6883条事件至2026-10-07 17:47:38UTC。原生消息报告在同步运维说明、Trellis契约及版本证据；当前主Run尚未handoff固定tests。GitHub Open PR仍0，无新产品部署Actions；商业补充message1548仍queued，不重复投递。
+
+核对失败到修正的实际内容，区分产品修复与测试修正：
+
+| 原失败 | 后续改动与实际证据 | 结论边界 |
+|---|---|---|
+| event8719资源回归`key limit 409` | 测试按已存在的资源版本填写Revision1，再更新用Revision2；event8744定向回归exit0（1.653s） | 测试修正版本前置条件，不能称为产品限额故障已修复 |
+| 同一event8719成员回归`assigned key read 403` | console_keys.go允许非管理员GET，写操作仍限制；同轮补Key更新幂等处理，注销入口移至业务写权限判断之前；event8744成员范围定向回归exit0 | 有产品源码修复和局部检查，实际HTTP、UI与独立权限QA仍未验 |
+| event8846 schema1迁移回归`legacy digest identity lost` | event8975将schema1断言从appID改为generationIdentity，schema2仍走appID；迁移定向命令exit0（0.981s），覆盖备份失败保持原版本、迁移事实、schema2正式历史费用核对及备份恢复 | 通过来自调整测试所调用的身份入口；此处没有迁移产品代码修复证据。schema1真实HTTP身份旅程仍需宿主/独立QA核验 |
+
+event9473扩大定向选择至InProcess、身份/Key、金额精度、迁移守恒、邀请限速及Key代际截止，exit0（3.237s）。event9663及9699的JS语法/Go vet检查exit0。event8993使用 `go test ./... -run '^$'`，仅编译检查、没有测试执行，不算全仓回归。新增迁移/崩溃/browser测试仍需实际宿主门禁回执，Agent自报“加入门禁”不能替代执行。
+
+本轮未重复运行已知禁止监听的make verify，也未停止持续活动的研发进程。完整宿主门禁、独立QA、PR、合并、正式部署、health版本及实际用户页面仍Not Run；本Run研发任务T001实施事实段尚为初始化内容，待正式交接核验更新和真实产物。原始证据在忽略目录 `.data/fresh-8793/check-20261008-0148/`；持续按原Harness推进。
+
+## 半小时检查：研发候选、追加输入送达与前端修正（2026-10-08 02:18）
+
+主Run仍running/seq6 development；原会话无错误，完整分页8608条事件至2026-10-07 18:17:59UTC。T001已更新为In Review、implementation-r1，研发验证report与逐AC源码/用例/待验映射实际存在，原初始化实施段已替换。所有完整验收复选框仍未勾选，没有Open PR、独立QA或产品部署。候选源码仍未提交，HEAD不能代替工作树指纹。
+
+追加输入接续已真实发生：原生event10609尝试正式handoff宿主tests，被拒绝原因是用户输入已保存待送达，工具明确要求正常结束当前turn、先处理输入再重试。Agent正常结束后，原会话收到message1548，当前状态running且队列为空，明确回复将补功能/旅程对照，不要求重发、未创建新Run或会话。此处验证了在途追加输入不会被交接丢弃；宿主tests尚未接受，不能把尝试交接算阶段已推进。
+
+非监听补充证据已公开保存在本Runvalidation：attempt-02格式exit2后修正；attempt-03格式/module/vet/JS/119项原Node测试/指定Go race/build/diff-check exit0；attempt-04历史未定价风险展示及迁移守恒race exit0，并保存来源指纹。两者仅证明各自当时工作树的补充检查，真实HTTP/SSE、kill/restart、三视口浏览器与完整make verify仍待宿主。
+
+处理商业补充时，Agent发现详情抽屉误用限额摘要，继续修正详情展示、列表搜索及Token汇总，并增加前端回归。attempt-05、07补充检查exit2，attempt-06 exit0；attempt-07为新增跨列表分组搜索用例未找到row-29。源码新增搜索后，event11725复验仍失败；event11845修正测试DOM夹具读取textContent的优先顺序，attempt-08实际exit0：127项Node测试、格式/vet/build/JS检查及计费in-process race（4.027s），没有把失败断言删除。测试修正与产品改动分开记录，这仍不是实际浏览器旅程通过。
+
+继续动作：研发完成商业覆盖/缺口文档，更新新增改动后的来源指纹与待验映射，再正式handoff既有宿主tests；当前对照文档尚未核验完成，旧attempt-04指纹不能覆盖后续改动。首个完整make verify的监听限制失败历史保留，完整宿主门禁、独立QA、PR/合并/正式发布及health/UI一致性仍Not Run。检查与后续复核原始证据在忽略目录 `.data/fresh-8793/check-20261008-0218/`。
+
+## 半小时检查：宿主完整测试失败并正式返工（2026-10-08 02:48）
+
+正式API核对seq6已completed并接受handoff；seq7 tests真实执行 `make verify`、exit2、route=failed，自动推进seq8 development（新会话 `c9dd3fc093c183bd6e3f683803acbde5`，running）。无手动回退、重建任务或数据修补。首次宿主测试指纹 `93b2b67d21d7e1dfbeffd02b2f26a3b414cca7fc0dd781c358c3c91871e44fc2`，基线HEAD仍9851177；后续返工版本必须重新运行完整门禁。
+
+简短Connector回执只有有界输出，不能用其缺少测试名判断未执行。本次经正式 `/steps/7/output?offset=...` 三页读取至eof，保留日志82637 bytes、truncated=false（UTF-8解码82319字符）。完整日志确认127项Node、Go vet、全仓 `go test -race -count=1 -v ./...` 和构建实际完成；relay325.006s。新增真实HTTP治理、资源维度、人员scope、额度/计费/SSE、真实进程崩溃恢复、迁移守恒、身份/Key等测试有明确PASS，首次将这些从Not Run推进为该指纹下的实际宿主分项通过。完整make verify仍Fail，因为browser在迁移步骤中止；不能外推后续三视口新控制台旅程通过。
+
+| 卡点 | 用户影响与证据 | 原因/处理 | 当前复验及后续 |
+|---|---|---|---|
+| 迁移浏览器驱动与生产升级目标不一致 | seq7日志 `migration browser verification failed: candidate upgrade response invalid`，完整门禁无法完成，独立QA/发布未进入 | seq8读取原命令日志，定位旧驱动期待schema2，而正式CLI升级至schema3；产品Agent修改仓库测试驱动，保留schema1→2历史UI/数据守恒检查，用明确test-only schema2兼容入口承载该层，另增加生产CLI schema1/2→3、身份/历史/映射守恒、真实调用及三视口新管理页旅程 | attempt-09非监听补充exit0：目标契约race7.607s、迁移守恒race5.048s及Node127项/vet/build/JS检查。实际完整浏览器尚待正式宿主tests重跑；测试源码存在不算通过，不降级生产迁移目标 |
+
+源码核对 `migrationJourney()` 仍由原browser入口调用；新增生产分支实际调用候选CLI upgrade、要求schema3、逐表核对身份/历史/映射、受控HTTP调用，再运行 `migration-console.mjs`。这是产品测试驱动修复，不是平台权限或监听修补，不由维护者代写产品。原失败日志和本次回归已保留；尚无独立QA裁决，仍需核对驱动与断言实际执行。
+
+商业覆盖/缺口及J01–J07旅程对照现已实际写入原 `acceptance-matrix.md`，区分实现、局部测试、完整宿主、QA和发布，列协议/渠道批量运营、企业身份、自动轮换、外部财务和高可用等冻结范围外差距，没有静默改写design-v0.2.0或声明完全商用对齐。message1548已处理完成，原研发会话closed。下游QA须对照同冻结交互材料，不能把范围内缺陷归为未来差距。当前Open PR为0，QA、合并、部署及health/UI版本一致性仍Not Run。
+
+证据在忽略目录 `.data/fresh-8793/check-20261008-0248/`：Run、原生会话/事件、正式完整分页命令日志、当前返工检查。主流程正在真实失败→研发修正闭环中，继续沿原handoff重验固定门禁，无需用户输入。
+
+## 半小时检查：迁移Key列表契约修正与第三次宿主门禁（2026-10-08 03:18）
+
+主Run真实推进：seq8返工已completed，seq9宿主tests再次exit2并走failed边；seq10研发修正已completed并接受handoff，当前seq11 tests running。没有waiting/error或待处理输入，未人工重建任务、重复启动测试或停止进程。Open PR仍0；最新GitHub Actions为Issue入口，不是产品部署。
+
+seq9完整留存日志经正式output API三页读至eof，83947 bytes、truncated=false；绑定117文件、工作树SHA `f059c17ab3a1b0edf181d612d2907b0a755ba50605bca737901061abe99739ff`。全仓Go race/构建再次完成，20条包含TestConsole的PASS记录。browser确认旧schema1→2兼容UI迁移、两个模型映射/Key/历史及旧二进制回退通过；生产schema3控制台在keys-1280失败，不能认定该视口及之后三视口旅程通过。粗粒度阶段只能定位至Key检查，不能单凭此日志认定唯一失败原因。
+
+| 卡点 | 根因证据及修复 | 复验及限制 |
+|---|---|---|
+| 迁移控制台Key检查失败 | seq10源码核对正式列表包络为items/total，旧driver读取data；仅修migration-console.mjs及共用断言，保留恰好两个Key、total及启停身份对应检查。增加实际Go handler/SQLite集合契约测试，8项Node回归拒绝旧包络、缺/多Key、错误total或身份/启停变化；增加逐视口/HTTP/契约阶段的安全诊断 | 候选migration-driver-r3；135项Node、指定Key集合/迁移守恒race（7.542s）、格式/module/vet/build/JS检查exit0。第三次完整宿主make verify正在seq11执行，尚无最终退出码或实际browser通过证据 |
+
+原迁移驱动断言仍实际调用 `verifyMigratedKeys(body)`；health要求schema3、两行Key可见、历史待确认非零、页面无横向溢出和三视口循环均保留。此次修复属于测试包络错配，没有改产品API、迁移CLI/数据、依赖或权限，不把旧包络兼容加回生产契约。源测试纳入既有固定门禁，未skip或减少断言。
+
+当前候选来源：119文件、Go1.25.6、HEAD9851177（未提交候选不能仅按HEAD识别），工作树SHA `bd81e49e060f7e0494e1217947a0e9367fab394b19a64bfe0845b427addbecc6`；产品本Run `validation/attempt-10/` 保留checks.md、source-evidence.json、host-seq09-summary.md和补充日志。独立QA、PR、合并、正式部署、health/UI版本一致性仍Not Run，完整门禁未通过。商业对照保持同一矩阵/冻结材料，无新增范围重写。原始检查及seq9全日志在忽略目录 `.data/fresh-8793/check-20261008-0318/`，继续等正式门禁回执并按原路径返工或进入QA。
+
+## 半小时检查：生产迁移实测通过、服务核验修正（2026-10-08 03:48）
+
+seq11第三次宿主make verify真实exit2；原failed边进入seq12研发，修正后已正式handoff，当前seq13 tests running（第四次宿主完整门禁）。主Run无错误/等待，原任务与历史保留；无重复建Run或额外手动测试。Open PR为0，最新GitHub Actions仍为Issue入口，QA/发布未开始。
+
+seq11完整日志经正式output API三页读取至eof，86204 bytes、truncated=false，指纹bd81e49e…与上一候选一致。全仓race有CLI8.782s、relay330.653s、browser包7.066s、health-history5.370s实际通过。生产CLI的schema1→3和schema2→3均通过身份/历史/映射守恒、受控HTTP及1280/1440/390原生管理页旅程；旧schema1→2兼容UI/回退仍通过。旧Go UI、版本/恢复/日志分页旅程和多上游/失败恢复/SSE取消在1280及390也通过，均仅受控上游证据。新增完整控制台旅程停在service-1280，后续新增十页/调用/权限旅程仍不能判Pass，完整门禁仍Fail。
+
+| 卡点/影响 | 定位及修正 | 复验与剩余动作 |
+|---|---|---|
+| 新控制台服务核验不能通过，阻止门禁及QA | seq11仅报告service-1280 AssertionError；seq12源码/新回归确认服务行核验POST遗漏expected_execution_revision，修workspace.js显式传入实际execution_revision，保留Go版本guard；受控models列表fixture另补协议必需object=list。两个原因分开记录，不归因沙箱 | 修复前Node新增2例失败、Go核验用例因fixture列表缺标记失败，原red日志保留；137项Node及核验/Key集合/迁移守恒的指定race9.808s、格式/module/vet/build/JS检查exit0。当前seq13宿主完整make verify重新执行，未取得退出码或新控制台实际browser通过 |
+
+修复只涉及前端核验契约、夹具及对应测试/安全诊断，没有改变后台版本校验、迁移CLI、权限或固定门禁，也未删原断言。产品Agent维护本Run `validation/attempt-12/` checks、红/绿日志、材料回执及source-evidence；最终119文件、Go1.25.6、HEAD9851177、候选工作树SHA `312cae2097f665d7e50ab6ac11290dd54fe444c6c6a37ed5dda233108d8bc101`。旧指纹的成功分项不可移作此修正版本的完整通过。
+
+继续核验seq13正式回执：门禁失败沿原development返工，仅exit0后进入独立QA；冻结矩阵和商业/J01–J07差距保持，不将局部成功作商用对齐结论。独立QA、PR、合并、正式Actions部署及health/UI一致性仍Not Run；真实供应商/支付/外部身份无凭据仍Not Run。当前原始证据在忽略目录 `.data/fresh-8793/check-20261008-0348/`，本轮无需用户介入。
+
+## 半小时检查：服务核验实测闭合与模型驱动精确匹配（2026-10-08 04:18）
+
+seq13第四次宿主make verify exit2，原failed边自动进入seq14研发；seq14修复已completed，当前seq15第五次宿主tests running，无错误/等待。原任务/日志保留，未额外启动测试。GitHub Open PR仍0、最新Actions为Issue入口；独立QA、PR/合并、正式部署及health/UI一致性未开始。
+
+seq13完整日志经正式output API三页读至eof，86640 bytes、truncated=false；指纹312cae20…与service-check-r1候选一致。全仓race实际通过（CLI9.372s、relay330.853s、browser包8.816s、health-history6.459s），生产两种schema3迁移三视口、旧UI及多上游旅程继续通过。新控制台失败阶段已从service推进至model-1280：安全诊断显示创建服务201、核验200、success/applicable true且execution_revision存在/一致，确认前轮服务核验修复已在真实页面生效；该记录不能证明模型创建及后续旅程通过。
+
+| 卡点 | 最小定位/改动 | 实际复验与限制 |
+|---|---|---|
+| 新控制台模型表单driver选择歧义 | 产品模型编辑器有“远端模型名”及包含该子串的附加路由标签，driver模糊getByLabel匹配2处；精确匹配仅1处。只改console.mjs为exact:true并断言唯一，保留原模型POST/租户授权/后续断言，不改产品标签/后台、不用first或API预置替代操作 | 原驱动新增回归exit1（2匹配），驱动修正后VM缺assert注入再失败，修正fixture后138项Node及格式/module/vet/build/JS检查exit0。本地Chromium启动诊断仍permission denied，未到DOM/网络，明确不是原生验证；正式浏览器待seq15宿主结果 |
+
+核对新增回归执行实际modelEditor字段与driver片段，确认只写alias/upstream/remote三字段，不操作附加routes。分段诊断保留安全枚举及remote_label_matches，不泄露输入/响应/秘密。seq14产品本Run `validation/attempt-14/` 保留红/绿日志、checks、材料及source-evidence；候选model-driver-r1，119文件、Go1.25.6、HEAD9851177、工作树SHA `34f3a82f0c7687194a60e0cbce6af66e6badff55b0b50a373a0690764e6e7fa3`，冻结材料不变。
+
+完整宿主门禁尚未通过；seq15若失败继续按真实证据返工，只有exit0后进入独立QA。商业功能/J01–J07对照与范围外差距仍在原矩阵，未改验收范围。检查及正式seq13全日志在忽略目录 `.data/fresh-8793/check-20261008-0418/`。本轮无新的平台源码缺陷或必须人工救援的停滞。
+
+## 半小时检查：Key超时保留现场与最小诊断（2026-10-08 04:48）
+
+seq15第五次宿主make verify exit2，正式failed边进入seq16；seq16最小诊断候选已completed并接受handoff，当前seq17第六次完整tests running。主Run无error/wait，未重复启动测试或要求重发输入。GitHub Open PR仍0，最新Actions为Issue入口；QA、合并、正式部署及health/UI一致性仍Not Run。
+
+正式output API三页取得seq15完整86806 bytes日志、eof/truncated=false；绑定model-driver-r1指纹34f3a82f…，全仓race实际通过（relay332.565s），生产迁移三视口、旧UI及多上游旅程继续通过。新增控制台已越过model进入key-1280，remote_label_matches=1，表明模型精确定位修复实际生效；最后一条TimeoutError的粗阶段同时覆盖编辑/签发/秘密/调用/详情，不能据此判断Key创建失败，也不能借已有write_status201推断Key签发成功。
+
+| 当前卡点 | 最小处理及已尝试 | 尚未解决/下步 |
+|---|---|---|
+| 新控制台Key旅程超时，阻止完整验收与QA | seq16仅在原console.mjs拆成11个Key动作阶段，添加catalog/members/签发/call/detail数值状态、page枚举/布尔及控件计数；观察器不读响应body、不输出秘密/账号/ID/URL/原异常，不改变页面。141项Node诊断投影/observer及格式/module/vet/build/JS检查exit0；原定位、动作、断言保留，无sleep、重试或产品修补 | 根因仍未知，待seq17真实宿主stage/status/DOM投影。可能边界包括编辑依赖/选项、提交、一次秘密转交、调用或详情；这些仅是假设，不能将源码close/navigate顺序或VM检查写成真实浏览器时序结论 |
+
+该候选名key-diagnostic-r1，**不是Key修复**。本轮未改产品UI/Go协议/SQLite、依赖、Makefile或权限；原生监听/Chromium限制已知，不再从原生环境重复必败尝试。产品本Run `validation/attempt-16/` 保留checks、host-seq15-summary、最终non-listening-final日志及source-evidence；119文件、Go1.25.6、HEAD9851177、工作树SHA `66b873dcdae343c12265140898fddf3fed9d5c298db1b89b507d6d806d029995`，两次来源核对一致。完整门禁及新控制台后续三视口尚未通过，不认定Key根因已解决。
+
+继续由原宿主tests取得具体失败边界，再由产品Agent做最小修复/复验；若退出成功仍须独立QA逐AC/H裁决。商业对照与冻结材料不变，真实供应商/支付/外部身份仍无联调事实。检查和seq15全日志在忽略目录 `.data/fresh-8793/check-20261008-0448/`；当前无需用户补充权限或输入。
+
+## 半小时检查：Key转交根因闭合与键盘准备状态（2026-10-08 05:18）
+
+正式状态已推进至seq20 development running：seq17第六次宿主make verify exit2→seq18产品修复→seq19第七次宿主make verify exit2→seq20。无error/wait或待输入，原任务持续活动，不重复启动命令。GitHub Open PR仍0，独立QA/发布未开始。seq17/19完整日志分别经正式output API三页读至eof，87698/88101 bytes、truncated=false，不能沿用简短回执作为完整证据。
+
+| 卡点 | 真实定位/修复 | 实际复验边界 |
+|---|---|---|
+| Key调用超时 | seq17指纹66b873dc…的安全日志定位key-call-http-1280：签发201、有secret/id、已在playground，却call_key_nonempty=false、无call状态。seq18确认dialog close处理全局清理，误清转交后的call-key；修workspace.js关闭仅清本dialog，显式转交捕获epoch避免旧导航迟到复原秘密 | key-transfer-r1，四项受控close/transfer/重开/跨epoch回归及145项Node通过。seq19指纹b6139420…真实越过原卡点：签发/转交、正常及SSE调用、同Request ID详情、轮换、邀请、丢回执读回、限额拒绝及1280十页导航完成，最终停keyboard-1280；日志request_detail_status200、最终call_status429是限额拒绝，不是首次调用失败。该候选Key闭环已在此视口实际执行，但三视口/整套验收仍未通过 |
+| 键盘旅程断言失败 | seq19粗keyboard阶段AssertionError不能区分首次Tab、圈定、Escape或回触发点。seq20仅细分阶段/最多16条布尔焦点轨迹；源码进一步确认keyEditor依赖异步加载，driver点击后立即Tab而未等editor可见，添加locator.waitFor(visible)及延迟打开RED→GREEN回归 | 最终152项Node/格式/module/vet/build/JS检查exit0；产品dialog/Go/权限未改，保留首次Tab/12循环/Escape不可见/准确返回触发按钮全部断言，无强制focus、sleep或重试。确定的driver准备缺口已修，但仍不认定是seq19唯一根因或产品焦点已通过，待正式宿主重验 |
+
+seq18候选Key来源SHA `b61394208bd1f0c4fd58d466390fbfc794c703c5eafeec47b6fe903ce6bc5bdf`；seq20 keyboard-ready-r1当前119文件、Go1.25.6、HEAD9851177、工作树SHA `71be54206d9850fa442f33c18ddd3c7aaba5590019543a78498a128ae0ab8350`。产品本Runattempt-18保留Key实际红绿及清理边界说明，attempt-20保留诊断/延迟准备回归、最终非监听日志和来源一致性。受控调度/VM不作为真实Chromium证据，旧指纹分项成功不可外推当前完整Pass。
+
+下一步seq20完成正式handoff后由原tests完整复验，根据keyboard分段与焦点投影做最小判断；只有当前候选make verify exit0后进入独立QA。冻结AC/H和商业/J01–J07范围不变。完整三视口新控制台、QA、PR/合并、正式Actions部署及health/UI一致性仍未完成。检查/正式全日志在忽略目录 `.data/fresh-8793/check-20261008-0518/`，本轮无需用户介入。
+
+本轮结束前正式API再次核对：seq20已completed并接受handoff，seq21 tests running，第八次宿主完整make verify正在执行；尚无退出回执。最新状态保存在同证据目录run-final.json。
+
+## 半小时检查：固定门禁首次通过、QA缺口与容量故障恢复（2026-10-08 05:48）
+
+seq21第八次宿主完整 `make verify` **exit0**，正式进入seq22独立QA。正式output API三页读至eof，88327 bytes、truncated=false；119文件、Go1.25.6、HEAD9851177、工作树SHA `71be54206d9850fa442f33c18ddd3c7aaba5590019543a78498a128ae0ab8350`。全仓race/build实际通过（CLI8.917s、relay332.902s、browser包7.969s、health-history5.854s），152项Node及现有后端、恢复、生产迁移、旧UI/多上游断言完成。新console-real-go-ui在1280/1440/390均明确result=passed，覆盖脚本现有十页、签发/调用/费用/限额、弹层键盘及秘密清理。此前keyboard路径在此版本通过；未增加sleep/强制focus/删断言。
+
+这是一份**固定门禁通过**，不是全部冻结产品验收通过。QA独立读取同材料和seq21完整日志、复核来源及局部非监听检查后，实际落盘 `acceptance/acceptance-matrix.md`、`acceptance/remediation-handoff.md` 和host-seq21-review：
+
+| QA发现 | 当前用户影响/证据层级 | 接续要求 |
+|---|---|---|
+| QA22-01，P1，Open：强制连续UI旅程覆盖不足 | 现有脚本无法证明真实租户管理员完整授权收窄/修正、1h/24h过渡、费用硬预算耗尽/提高恢复、两租户暂停恢复、账单核对/关闭/更正、分页/迟到范围恢复等；是验收覆盖缺陷，不宣称这些功能已实测失败 | 保持冻结J01–J07及verification-design要求；产品Agent补真实浏览器连续步骤/角色/起始状态/最终事实，保留现有断言，再完整宿主门禁/独立QA。不得用API预填隐藏UI步骤或SQL改账/时间 |
+| QA22-02，P2，Open：Key列表状态不准确 | 静态审查实际formatter仅按revoked，未按enabled/expires区分，页面无法明确辨认停用/过期状态；当前是Static Review，不冒充已在浏览器制造过期Key复现 | 根据服务端安全元数据呈现状态并补真实列表用例；该P2单项不作为No-Go依据 |
+
+QA当前结论No-Go，报告/正式development交接尚未完成时遭原生外部容量故障：seq22及Run failed，`codexErrorInfo:serverOverloaded / Selected model is at capacity`（21:38:12UTC），无产品门禁回退或权限问题。本轮先保存原Run/会话/事件及已落盘报告，不换指定模型、不重跑已成功测试；利用既有CI所有者凭据经正式 `/resume`，seq22 + 继续说明提交。202 Accepted，原会话 `01a6ef633f44ccf8bfb2bb9148366a28` running、Run running，消息4132承接已写现场、要求完成报告并正式handoff整改。
+
+恢复后原生thread.started再次为 `01a11845-346f-75c1-a3e3-427b87476028`，与故障前相同；新的原生消息/命令及177条新事件核对至21:50:13UTC，暂无再次容量错误，QA继续整理No-Go报告。此证据验证**真实外部容量失败→正式恢复→原线程继续执行**；不是所有外部故障已保证恢复，也不是QA已通过。未手改数据库/检查点、未注入新权限或重建Run。
+
+下一步QA完成正式返工交接，按原Pipeline修覆盖和状态、重新固定测试再独立QA；本次exit0指纹不得挪用到后续改动。GitHub Open PR为0，最新Actions仍Issue入口，PR/授权合并/正式部署及health/UI版本一致性未完成；真实供应商/支付/外部身份Not Run。维护源无新通用缺陷被证明，容量故障通过既有受支持恢复处理。原始证据及正式恢复回执在忽略目录 `.data/fresh-8793/check-20261008-0548/`，不保存公开凭据。当前无需用户介入。
+
+## 半小时检查：独立QA正式返工与连续旅程候选（2026-10-08 06:18）
+
+seq22独立QA已completed、原会话closed；完整报告、逐AC/H矩阵、J01–J07及整改交接已落本Run，结论仍No-Go。原生handoff事件22443正式接受development，当前seq23研发running、会话`2c461ab639cea990b90cd0dd29b20b13`，无error/wait。容量故障经正式resume后已完成同native线程接续→报告→正式返工交接，恢复场景闭合；不等于产品QA通过，也不保证所有外部失败恢复。没有重建Run、换模型、重复User Input或人工启动另一门禁。
+
+| QA缺口/新发现 | 候选处理及维护者核对 | 实测状态与剩余动作 |
+|---|---|---|
+| QA22-01 P1连续UI覆盖 | 产品Agent新增journeys.go/mjs：每视口独立production InitConsole/Open临时SQLite及真实Go服务，J01–J07从UI创建/邀请/接受/登录并持续操作；涵盖授权拒绝修正、代际过渡/期限、预算恢复、双租户暂停与成员权限、账单核对/结账/更正、日志分页及迟到范围。原browser main追加fullConsoleJourneys，原迁移/控制台等断言保留 | 新浏览器旅程全部Not Run，不能按源码存在计Pass。需当前指纹完整make verify及3视口×7旅程回执/安全失败现场，再独立QA复审；QA22-01保持Open |
+| QA22-02 P2列表状态/信息 | workspace.js新增启用/停用/过期/过渡/撤销/未知状态与应用、授权、已用/预留/预算列；新增真实函数契约回归 | 156项Node通过，其中新增状态/驱动契约及空租户回归；真实过期/停用列表待浏览器执行。QA22-02保持Open |
+| 新发现：移除成员后无租户仍显示加载 | 源码确认needTenant append空态未移除旧加载占位，产品Agent改replaceChildren并补原函数回归；请求详情增加当前租户/Request ID日志入口 | 属源码/受控回归证据，未称本地真实浏览器复现；相关连续成员/日志旅程待宿主 |
+
+夹具边界经源码核对：每1280/1440/390实例分别创建临时目录，production init自带空legacy租户如实保留，没有SQL写入/修改日期/补业务数据。另一随机loopback端口以随机capability保护测试专用clock推进和dispatch计数；仅注入已有Config.Clock，无生产调试路由，认证会话仍真实wall clock。UI写操作均由实际表单/按钮提交，API仅读回；受控上游/读失败时序不冒充真实供应商。结束关闭所有server/store/context及临时目录。测试受控时间证明的是产品期限/账期行为，不扩展为人员会话时间验证。
+
+当前continuous-journeys-r1候选122文件、Go1.25.6、HEAD9851177，工作树SHA `cb51d80c2e424c6953d66cdfd2c319ad07e3744158c38ee5153b4c18cc98a4f0`；候选未提交，不能仅按HEAD识别。attempt-23保存checks、frontend-test/final-static、checks-final、source-evidence及material-source。156项Node、7项定向Go race、format/module/vet/build/JS/diff检查exit0；`go test -run '^$' ./tests/browser`仅编译，不是浏览器执行，也不是全仓race。seq21旧指纹71be…的完整绿保留，不能挪用为此新候选通过。首次指纹生成缓存访问失败在checks记录，重做所得非空JSON才作为来源；未把组合shell末尾exit0当失败子命令通过。
+
+当前GitHub Open PR0，最新Actions仍Issue入口，产品5545仍旧main9851177/schema2；无本轮PR/合并/正式部署/health与新页面一致证据。冻结design-v0.2.0及原商业/旅程矩阵保持，真实供应商/支付/外部身份Not Run。主Run正常活动，继续原handoff→固定tests→独立QA，无需人工救援或新增权限。平台维护源未发现需新补丁的通用根因，仍保留当前开发分支WIP、不新建Platform PR。正式实时快照/原生事件在忽略目录`.data/fresh-8793/check-20261008-0618/`，不提交原生历史或秘密。
+
+## 半小时检查：连续旅程初始状态错配与正式返工（2026-10-08 06:48）
+
+seq23已completed并正式handoff，最终新增详情日志筛选检查使Node总数157，122文件最终工作树SHA `182077621a4dbc04d73b8517a40f70811c9c8e46f435d7d9596edcfb5018bab2`，与seq24宿主来源一致；06:18的cb51d80c…只是交接前检查快照，不作为本次门禁版本。seq24第九次完整make verify真实exit2，正式failed边自动进入seq25 development，当前会话`7103f664dd712bccad7dba7403c5dfb3` running，无error/wait。未重复启动门禁或发送相同输入。
+
+正式output API三页读至eof，89307 bytes、truncated=false。全仓race实际通过（CLI8.626s、relay330.410s、browser包7.365s、health-history5.399s），build、历史健康预期红灯、旧兼容迁移/两种生产schema3迁移三视口、旧UI及多上游旅程继续通过。console-real-go-ui在1280/1440/390均passed，证明前轮新增Key展示/空态等候选未使既有门禁失败，但不能据此证明新规定全部状态/期限旅程通过。新continuous-console在1280的`J01-empty-state / authoritative-read` assertion失败，checkpoints=[]，未到任何J01完成或后续J02–J07/其他视口，不补造通过记录。安全失败JSON实际存在test-results/continuous-1280-82376.json，无秘密。
+
+| 卡点及用户影响 | 最小诊断/已尝试处理 | 复验与后续 |
+|---|---|---|
+| 新连续旅程错误初态断言阻止完整验收 | seq25读取原完整日志/规范，源码明确InitConsole的schema3新安装在同初始化事务移除legacy；旧driver却要求一个legacy租户，再读其Key。真正迁移保留legacy与新安装为空是两种入口。只修journeys.mjs为upstreams/models/tenants均零、选择器空，按资源拆阶段和记录安全计数；新增真实InitConsole/Open+handler集合回归，生产初始化/数据库/权限未改 | 原生命令事件25239实际node_exit=0/go_exit=0；attempt-25 journey-test.log 6/6通过，TestConsoleFreshInstallationEmptyCollections三资源定向race4.041s通过（in-process，非真实网络）。当前为driver修复候选，不是完整浏览器Pass；仍需原固定make verify及独立QA |
+
+**维护者记录更正：**06:18夹具审计中的“production init自带空legacy租户如实保留”判断不准确，当时把driver/docs的预期当成了初始化事实。现明确核对store.go InitConsole/initSchema源码和定向真实初始化测试：全新schema3无租户；legacy属于升级兼容数据。保留上一轮历史以便追溯，本节替代其该项事实判断。测试夹具不手改DB的边界仍成立；不能把生产初始化事务内的正式清理误写成测试造数据。研发attempt-23同样遗留了该描述，正在本轮整改记录中更正，不据此静默改变冻结输入。
+
+QA22-01/02继续Open，当前新连续旅程仍未通过。seq25正常活动并已明确根因/执行定向回归，沿原handoff接完整宿主重验，无需人工resume或换模型。GitHub Open PR0，最新37698335357/37697341708仅Issue入口success，未发布产品；PR/合并/Actions部署及新health/UI一致性仍未完成，真实供应商/支付/外部身份Not Run。当前证据在忽略目录`.data/fresh-8793/check-20261008-0648/`，平台源分支/在途服务保持，不新建Platform PR。
+
+## 半小时检查：新安装初态实测闭合与受控响应角色修正（2026-10-08 07:18）
+
+seq25正式交接后，seq26第十次宿主完整make verify exit2；原failed边进入seq27，整改已completed并正式handoff，当前seq28第十一次完整tests running、Run running，无error/wait。不重复创建任务或手动启动另一测试，不需User Input/恢复操作。正式seq26日志经output API三页读至eof，89976 bytes、truncated=false，122文件/Go1.25.6/HEAD9851177，工作树SHA `ed726cdd9609135b02904e2022ef20faa65e1b0b1796e723f9d1af1293a8f071`，与seq25交接一致。
+
+seq26全仓race（CLI8.788s、relay334.661s、browser包7.662s、health-history5.466s）、158项Node/build、旧/生产迁移与旧UI/多上游继续通过，console-real-go-ui三视口均passed。新增continuous-console实际越过初态，安全回执initial_counts为upstreams/models/tenants各0，停在1280 `J01-responsibility-chain / proxy-call`，last_status502、checkpoints=[]。这证明前轮新安装driver修正已生效，但尚无任何J01完成、后续J02–J07或新增1440/390通过；502是实际调用断点，不归为原生沙箱限制。
+
+| 卡点与用户影响 | 最小诊断/处理证据 | 当前结论与后续 |
+|---|---|---|
+| 新连续旅程首调用502，阻止完整验证/QA | seq27追踪实际journeys.go受控上游→生产validResponse：known/unknown两响应均缺message.role，而validator要求assistant。提取同一实际handler供runner/回归共用，两分支原fixture回归先红（原生事件26470日志独立exit_code1，外层收集命令exit0不作测试绿）；仅补两响应role，已知3/4/7和未知usage缺省保留，未放宽生产parser/身份/计费/SQL | 修后实际fixture、生产缺role/错role拒绝及assistant接受、原空集合/会计in-process定向race四顶层通过，事件26658；159项Node及format/module/vet/build/browser compile/JS/diff exit0，事件26797。这是非监听证据，未证明宿主唯一原因或新UI通过，待seq28实际回执 |
+
+新TestContinuousUpstreamRelayHTTP已接入原Go门禁：真实临时受控上游HTTP、schema3管理/调用handler与SQLite对账，验证已知费14/成本7及未知pending1；本地因既知监听边界未执行，测试源码存在不是Pass，也不称为整个relay服务网络/browser实测。失败driver保留原200/dispatch/旅程断言，追加5秒有界GET同Request ID的安全终态、错误白名单、上游状态、最多3尝试数值摘要；GET诊断失败不替代原status断言，不输出ID/地址/正文/秘密。Node安全投影正反例已执行。
+
+当前controlled-completion-r1候选124文件、Go1.25.6、HEAD9851177，工作树SHA `9fd82d0300ce6e3b0879662a8194522f7beb9b1a99e69ad3a32b153c9825a687`，以attempt-27/source-evidence及正式handoff为准；checks、expected-red、protocol-fixture、journey-test、material-source及host-seq26-summary均在本Run。QA22-01/02仍Open，原No-Go有效，旧指纹分项绿不能作为新候选完整通过。新增3视口×7旅程、独立QA逐AC/H及正式发布继续待验；冻结design-v0.2.0/商业矩阵不改，真实供应商/外部身份/支付Not Run。
+
+GitHub Open PR0，最新37701331059/37700157826/37699171748仅Issue入口success，未新建PR/合并/部署，产品当前仍旧main9851177/schema2；新版本health/UI一致性未完成。平台源无新通用根因修复，保持开发分支WIP与8793在途运行，不新建Platform PR、不碰其他服务/工作树。完整日志、Run/会话/原生验证事件在忽略目录`.data/fresh-8793/check-20261008-0718/`，无必须用户介入的问题。
+
+## 早间累计成果复核：四条连续旅程通过，暂停恢复继续诊断（2026-10-08）
+
+用户询问整夜累计解决问题时再次读取正式实时API：seq28完整make verify已completed/exit2，seq29研发completed，当前seq30 tests running，无error。seq28正式output三页读至eof，92097 bytes、truncated=false，完整日志保存忽略目录`.data/fresh-8793/check-20261008-morning-summary/seq28-full-command.log`。原生产迁移/旧UI/多上游与console-real-go-ui三视口继续通过；新增continuous1280明确J01/J02/J03/J04各passed，覆盖新安装到责任链调用、授权收窄/修正、轮换/期限及预算拒绝恢复。受控响应role修正已推进越过前轮首调用断点。
+
+新增旅程停在`J05-resume / authoritative-read`，HTTP200、checkpoints仅J01–J04；原费用守恒断言未通过，日志尚无比较金额，不能直接归因生产收费错误，也不能称J05已通过。seq29正式交接明确pause-conservation-diagnostic-r1仅诊断候选：保留原费用断言，增加暂停拒绝/Beta调用/恢复的before/after白名单诊断及双租户双Key定向回归；未改生产计费/权限/DB。当前候选124文件SHA `6263734f52bb1631801f5db0f27d44f7a12de0e64f1fad4ffdf003c244b6dd92`，局部检查以该节点回执为准，完整实测待seq30。新增J05后续/J06/J07及1440/390连续仍未完成，QA22-01/02未关闭、原No-Go有效，不能按先前固定门禁绿宣称产品整链完成。继续真实回执→最小归因→正式返工或独立QA，发布仍待完成。
+
+## 半小时检查：费用守恒实测成立，成员刷新边界继续定位（2026-10-08 08:47）
+
+seq30第十二次宿主完整make verify exit2，原failed边正式进入seq31 development，当前会话`46816e3282988da7f8d2a59f77c9ecfb` running、原生事件分页核对仍活跃，无error/wait。完整seq30日志经正式output API三页读至eof，92708 bytes、truncated=false，绑定124文件SHA `6263734f52bb1631801f5db0f27d44f7a12de0e64f1fad4ffdf003c244b6dd92`，未重复启动测试/Run。161项Node、全仓race（CLI8.775s、relay346.581s、browser9.828s、health-history4.915s）、build、迁移/旧UI/多上游及console-real-go-ui三个视口实际通过；TestContinuousUpstreamRelayHTTP known/unknown在宿主通过2.53s，属于受控上游HTTP+生产handler/持久化，不冒充真实供应商。
+
+新增continuous1280的J01–J04继续passed，最终仍粗`J05-resume / authoritative-read` assertion。新增安全usage_facts显示同账期，费用126→126微美元、预留0→0、调用9→9、pending0→0、并发0→0；因此实际已执行的费用守恒成立。**更正早间记录：**仅凭粗stage和最后一次read200不能断言失败的是费用守恒；该标签之后还有成员降权/移除/诊断范围/UI租户选项/跨租户隔离断言。此前“费用守恒断言失败”保留为当时错误归因，本节替代该判断。不把守恒成立外推整个J05通过，真实精确失败位置仍待细分回执。
+
+| 当前卡点/影响 | 最小诊断及已尝试 | 复验与下步 |
+|---|---|---|
+| J05后续成员边界失败，阻止连续验收 | seq31保持生产Go/UI/权限/计费/DB不变，拆分member-lookup/role-change/readback/diagnostic-recovery/remove/removed-key-scope/membership/UI-scope/application-survives/other-tenant-request阶段；新增安全读取状态、成员角色/选项计数及限定源文件行列定位，不打印原错误堆栈或秘密 | PeopleScope in-process定向race11.598s实际通过，事件29523，非浏览器机制或全链结果 |
+| 已证driver刷新准备缺口（实际原断点仍待确认） | 产品refresh按钮先异步syncTenants，再进入页面加载；旧driver点击后仅ready可能在旧内容仍可见时提前结束。实际driver片段延迟回归先红，refresh-red.log/事件29765记录独立exit_code1；候选在成员移除场景等待明确租户选项数0后再ready，保留原零选项断言，不sleep/重试/强制改DOM | driver文件12项回归exit0，事件29773。只证明确定性准备缺口，不能称seq30唯一根因或成员撤权真实页面已Pass；完整候选尚在研发，待原handoff/tests获得分段原始事实 |
+
+本轮产品源码修改仍由Pipeline Agent承担。平台Harness的固定tests失败→正式development返工持续正常，未发现需要新通用平台补丁的阻断，未手改数据库/检查点或临时扩大权限。QA22-01/02仍Open，J05后续/J06/J07及其他视口continuous未通过、独立QA/PR/合并/部署未完成，冻结输入/商业矩阵保持，真实供应商/支付/外部身份Not Run。
+
+外部状态查询：首次gh GraphQL TLS handshake timeout且后续Actions串行命令未执行，未将失败读取记为PR0；改正式GitHub REST分别只读核验，PR列表空、近期37704106006/37703181902/37702285408均Issue entry success，并非部署。一次读取恢复成功，无循环盲试/新权限/外部写入。原始Run/完整日志/seq31原生消息与事件在忽略目录`.data/fresh-8793/check-20261008-0847/`，当前无需用户介入；平台/产品事实分别记录。
+
+## 半小时检查：成员与日志旅程实测通过，追加账本驱动修正（2026-10-08 09:17）
+
+seq31已正式交tests，seq32第十三次完整make verify exit2，原failed边自动返seq33；seq33 completed并正式handoff，当前seq34第十四次完整tests running，Run无error/wait。正式seq32输出三页读至eof，93546 bytes、truncated=false，124文件Go1.25.6、HEAD9851177、工作树SHA `de6d4d88d809bedacf06d00693c51cb4fb7159b2d2c986c3bf80a025a270b978`。164项Node、全仓race（CLI10.091s、relay356.337s、browser11.101s、health-history5.303s）、build、生产迁移/旧UI/多上游及原console-real-go-ui三视口实际通过；扩展PeopleScopeActualHTTP通过9.84s。
+
+新增continuous1280明确J01/J02/J03/J04/J05/J07各passed。J05成员安全投影role=finance、diagnostic_count=0、退出后tenant_count/tenant_option_count=0，费用126→126等守恒；前轮刷新等待修正在宿主越过原断点，双租户暂停恢复、成员降权/移除/应用Key保留及日志范围旅程达到该脚本完成点。J07在J06前执行以保持同账期分页，真实执行顺序保留；不是漏跑账单或把后续拼成通过。新增1440/390尚未到达，六旅程通过只属于当前1280版本。
+
+| 当前卡点/用户影响 | 根因与最小修正 | 回归及待验 |
+|---|---|---|
+| J06账单核对driver读错累计费用，阻止完整验收 | 正式失败boundary为journeys.mjs:412:137，read200；旧driver期望charge_entries[0].fee=21。生产追加账本初始未知用量项确认费用0，核对保留原项并追加差额。实际driver片段对该追加账本先红0≠21；seq33只改累计读取，不改生产费用/API/DB。保留fee21并加强cost7/Tokens3+4、pending0/reserve0、原项及价快照不变、新delta ordinal/revision/原因/证据；安全ledger_facts仅金额/条数 | ledger-red.log原13项中1fail，ledger-green-final13/13通过；扩展Governance测试首次误期望revision1失败保留，依admission revision+1改预期后定向race4.392s绿。当前全部165项Node/四顶层in-process race19.433s及format/module/vet/build/browser compile/JS/diff exit0，完整宿主与实际J06仍待seq34 |
+
+候选reconciliation-ledger-r1、124文件、Go1.25.6、HEAD9851177，工作树SHA `50fb764aac5443687e376c18906b36b765f02e9b05788fa4d5ac73617cbc98a4`，attempt-33/source-evidence和正式handoff一致。代码核对helper累计BigInt并逐项检查原账目、价格快照和revision，而不是删金额断言或取第一项放行；新增Go回归分别用既有GovernanceInProcess/ActualHTTP入口，后者新增强部分仍待当前宿主。局部/VM结果不证明浏览器机制或完整账单旅程，旧候选六旅程绿不能直接移为当前完整Pass。
+
+平台Harness失败→development→tests持续正常，当前无新通用平台缺陷被证明，未重复Run/测试、未新User Input、未手改检查点/回执或扩大权限。QA22-01/02与No-Go仍Open，新三视口七旅程/独立QA/PR/合并/部署未完成，冻结design-v0.2.0及商业矩阵保持，供应商/支付/外部身份Not Run。GitHub REST核验Open PR0，近期37711920711/37711213262/37710289218均Issue entry success、旧main9851177，并非正式新产品部署。当前证据`.data/fresh-8793/check-20261008-0917/`，无需用户介入；测试仓事实与平台可靠性分别留证。
+
+## 半小时检查：三视口七旅程全绿，独立QA发现首次读回失败恢复缺陷（2026-10-08 09:47）
+
+seq34第十四次宿主完整make verify真实exit0，正式进入seq35独立QA；QA完成No-Go并正式handoff至seq36 development，结束前复核Run/seq36仍running、无error/wait。未重复Run、测试或User Input，不需要手动resume。正式seq34 output三页读至eof，94335 bytes、truncated=false，124文件、Go1.25.6、HEAD9851177、工作树SHA `50fb764aac5443687e376c18906b36b765f02e9b05788fa4d5ac73617cbc98a4`，与研发交接一致。165项Node、全仓race（CLI9.244s、relay365.518s、browser9.897s、health-history5.311s）、build及原迁移/旧UI/多上游/控制台断言实际通过。
+
+新增continuous-console在1280/1440/390各有J01–J07完成回执，合计21/21，顺序为J01/J02/J03/J04/J05/J07/J06，以保持日志分页在账期推进之前。累计账本driver修正已在真实受控Go/HTTP/Chromium入口越过J06断点，不是只凭局部回归。QA35检查前后124文件指纹不变，绑定18份实际JSON/截图产物并留material-integrity/artifact-index；维护者另查看390最终Key页面截图，能见启用/过期/撤销状态，但单张截图不替代完整视觉验收或故障覆盖。以上为受控上游证据，真实供应商/支付/外部身份仍Not Run。
+
+独立QA报告已迁移当前入口到本Run acceptance/acceptance-report-35.md、acceptance-matrix-35.md、user-journeys-35.md、remediation-handoff-35.md，QA22历史报告保留并指向当前报告。QA22-02 Key状态展示P2已Closed；QA22-01主旅程覆盖P1部分闭合，但原强制故障/并发覆盖仍不足。QA35独立165项Node及7项定向Go race/非监听检查exit0，不以这些绿取代缺失的浏览器/HTTP故障验证。
+
+| 卡点与用户影响 | 根因/可复验诊断/已尝试 | 后续与状态 |
+|---|---|---|
+| QA35-01 P1：签发或轮换已提交、写响应丢失后，首次安全GET失败会丢失重试入口，页面也不显示操作标识，用户无法从当前页面继续安全确认结果 | 独立QA执行真实production workspace.js的edit函数，catch中的output.textContent清掉先前附加的retry按钮；operation id仅保留在闭包。attempt-35/readback-recovery.test.mjs以DOM替代层复现mutation1/read1/retryfalse/operationvisiblefalse；readback-red.log和原生事件33173保存实际test exit1。外层收集shell exit0不当通过，此证据是生产函数Contract复现，尚非Chromium复现 | QA正式返工已接受；seq36 Agent已确认定位并限定本轮修恢复流程及AC08/09/16回归，当前无修复通过或完整重验结果。保留操作引用/显式只读重试，不自动重放写入或重新生成秘密；之后固定make verify及独立QA |
+| AC08/AC16/AC09残余强制故障和并发覆盖 | 已有21旅程不覆盖：轮换响应丢失及首次GET503/abort/401/404后重试、快速双保存/Enter；普通与SSE双发送、延迟上游、取消pending及单次计量；Key独立RPM/TPM/并发/费用的zero/null/positive边界、双Key争用租户额度和新旧代际共同并发、无部分扣减及其他租户隔离 | 纳入原QA35整改handoff而非改写冻结输入；要求真实受控Go/HTTP/Chromium回执，保留旧用量/历史和单operation/admission/dispatch证明。当前仍Open，No-Go有效 |
+
+Harness的完整tests成功→独立QA→No-Go正确返development路径实际成立，本轮没有发现平台跳错节点或新通用平台阻断；产品缺陷仍由Pipeline Agent修改。平台源码保持开发分支WIP、不重启在途8793，不新建Platform PR/合源main。执行中进程中断、当前服务在途重启等尚未实测边界不因本轮绿自动关闭。
+
+GitHub首次读取TLS超时、Actions未随串行命令执行，随后Open PR正式REST只读重查为空；本轮Actions读取先遇网络限制，再通过获准只读网络成功核验37714582530/37714580485/37712863518均Issue entry success，旧main9851177，并非部署。产品5545实际health200、schema2、version98511771871cf0951ecef716bbb55deb13e18da5。本轮新候选未PR/合并/部署，Task5/U1仍Active，不能以21旅程或完整门禁绿宣称整链/商用对齐完成。现场及最新Run/health证据在忽略目录`.data/fresh-8793/check-20261008-0947/`，无必须用户介入的问题。
+
+## 半小时检查：安全读回修复候选与两层资源矩阵交完整复验（2026-10-08 10:17）
+
+seq36 development已completed，原生handoff事件36175正式accepted=true/target=tests，seq37第十五次原完整make verify已派发，10:09:58开始、当前running，Run无error/wait。未手动重复门禁、投递任务或resume。新候选safe-readback-resource-matrix-r1，127文件、Go1.25.6、HEAD98511771871cf0951ecef716bbb55deb13e18da5，工作树SHA `3ee2122eadac33a67342523a082f791d8a81154cc86b7321d53de856866a15ef`，交接前source-evidence/source-after一致，原生事件36083实际source comparison/diff/format exit0。旧50fb指纹的seq34全绿和QA结论保持历史，不作为新版本通过。
+
+维护者只读核对生产workspace.js edit实现：未知结果时分别附加操作引用、状态节点和“安全读回”按钮；GET失败只更改状态节点，不再清父节点；unknown锁住再次form提交并隐藏保存，GET忙去重，epoch/dialog-open隔离迟到结果。产品修复由Pipeline Agent落DOM责任层，未改Go鉴权/计费/迁移或DB规则，未引入新生产依赖。QA35-01仍Open，当前只能称修复候选，不能称真实Chromium恢复或独立QA关单。
+
+| 目标/用户影响 | 实际改动及局部证据 | 真实宿主/后续边界 |
+|---|---|---|
+| 未知写入首次读回失败无法继续确认 | 原QA生产函数红灯修改前重放exit1保留；新增生产editor Contract覆盖按钮/引用保留、未知提交锁与读回去重，frontend最终169/169通过。原生事件36009实际169 pass、fail0及来源摘要 | 原console新增三视口签发201/轮换200提交后丢响应→503→404→同operation200恢复；要求单mutation、无秘密重放、usage/原请求价快照不变、过渡409不叠加，仍待seq37真实结果 |
+| AC09两层各维度及多Key/代际争用缺口 | 新ResourceMatrixInProcess租户/Key各calls/RPM/TPM/concurrency/budget的0→正有限→null共10分例，SharedResourcesInProcess两分例barrier8争2、6拒绝、另租户1次；resource-check.log实际race32.295s/exit0。两次测试前置失败（租户revision错用2、无界fixture仍强求max_tokens100）保留，只纠正新driver/fixture，原fixture默认断言不放宽 | 同名ActualHTTP入口自动纳入原go test，要求拒绝无跨scope部分扣减、历史/金额不重置；本地handler+SQLite+受控Transport不等于实际HTTP通过 |
+| AC16普通/SSE快速重复发送覆盖 | 新console-faults.mjs接原console.mjs；受控上游350ms有界延迟/测试专用dispatch事实，native双点击/Enter，断言一个POST/准入/同ID/dispatch及Tokens3+4，原取消/费用未知不重放保留 | 当前仅代码/语法及局部检查，不计真实Chromium双发送通过。真实三视口fault JSON/安全截图必须由宿主实际执行产生 |
+
+新增tests/browser/readback.test.mjs由原frontend-test glob、新console_resource_matrix_test.go由原go test收集，Makefile原完整门禁本轮未改。既有Governance/ResourceDimensions/PeopleScope/PauseUsage/KeyCollection/FreshInstallation六顶层race23.879s实际exit0，format/modules/vet/build等局部检查exit0；不以数量替代AC实证或替代宿主。冻结archive5f51…和19材料逐项完整性匹配，商业对照/AC规则不改。
+
+新浏览器driver会在隔离测试页重建旧editor、要求重试按钮消失，然后解除asset route/reload当前产品再验证修复。此为**修复后隔离重建旧行为**，尚未执行；不是原QA35已经存在的Chromium红灯，也不是当前产品Pass。当前原QA35红灯仍为实际生产函数Contract。原旅程21检查点/J06累计账本/Governance守恒/旧迁移、进程恢复及键盘门槛仍保留。
+
+运行中首次读取seq37正式output返回404 record not found，当前没有已保存的完整回执，不能记为exit0/失败/日志截断或据此判平台错误；仅保存该读取边界，待正式节点完成再按原output分页读至eof。seq37已connector_dispatched=true，不额外起同命令。审计脚本遇个别native item输出null后停止解析，完整2471事件已先写忽略证据；调整只读解析null处理后成功核验命令及handoff，不将审计脚本错误算作产品门禁故障。
+
+QA35 No-Go/QA35-01/QA22-01残余仍未关闭，QA22-02旧关闭事实保留；Task5/U1 Active。Harness的正式development→tests接受/派发正常，无新通用平台根因得到证明；在途服务/源分支WIP保持，无新Platform PR/源main合并。近期GitHub37716527895/37714582530/37714580485仅Issue入口success、旧main9851177；5545实际health200/schema2/版本9851177，当前候选未部署。真实供应商/支付/外部身份及尚未实测平台负向继续分层Not Run。现场在忽略目录`.data/fresh-8793/check-20261008-1017/`，无需用户介入，继续等待原完整门禁并由独立QA核验关单。
+
+本轮结束前10:20复核seq37仍running，无error。GitHub PR列表第一次及一次有界只读重查均TLS handshake timeout；本轮Open PR数量未知，不能沿用09:47的0作为现状。Actions和产品health独立读取成功如上，暂不构成产品或Harness阻断，不循环重试。
+
+## 半小时检查：安全恢复及资源竞争独立QA关闭，十页设计对照待补证（2026-10-08 10:47）
+
+seq37第十五次原完整make verify真实exit0，正式进入seq38独立QA；seq38已completed并No-Go正式返seq39 development，当前running，无error/wait。原生handoff事件38144 accepted=true/target=development，未重复创建任务/投递输入/手动resume。当前独立QA关闭与新补证责任以acceptance-report-38.md、acceptance-matrix-38.md、user-journeys-38.md、visual-review-38.md、remediation-handoff-38.md为准，旧QA35保留历史。
+
+正式seq37 output四页读至eof，101748 bytes、truncated=false，127文件、Go1.25.6、HEAD9851177、工作树SHA `3ee2122eadac33a67342523a082f791d8a81154cc86b7321d53de856866a15ef`，与研发交接及QA前后指纹相同。169Node、全仓race（CLI8.834s、relay412.191s、browser9.688s、health-history5.700s）、build和原迁移/进程/HTTP/SSE/旧UI/键盘等实际通过。原健康隔离重建红灯是预期历史证据，不是本轮门禁失败。
+
+新增ResourceMatrixActualHTTP在tenant/Key五维共10分例实际通过24.90s；SharedResourcesActualHTTP两个分例各8争2/6拒绝/另租户1次、real_http=true，通过5.11s。三视口console-faults均passed：签发201/轮换200已提交丢响应→GET503/404/200，mutation1、不重放secret、叠加轮换409；普通/SSE双发送均proxyPOST/admission/attempt/actual dispatch各1、Tokens3+4。原continuous三视口七旅程21/21保持绿。每视口另有清楚标记的旧editor隔离重建expected_failure，不能追溯为原QA35的Chromium红灯，也不计当前修复资产失败。
+
+独立QA38实际169Node/0skip（原生36825）、七顶层Go race48.879s/exit0（37021）及带set-e的format/modules/vet/build通过；source unchanged事件37769，材料archive/19文件一致。归档63件宿主真实JSON/PNG，本轮维护者再次按artifact-index对63件原文件及副本逐一核对bytes/SHA，全部一致。另人工查看390轮换首次503截图，操作标识、未知状态和“安全读回”按钮仍可触达；单图不替代十页完整设计对照。
+
+| 项目 | 当前结论/用户影响 | 后续责任 |
+|---|---|---|
+| QA35-01读回恢复P1 | **Closed**，真实当前asset签发/已用Key轮换三视口故障链确认按钮/引用保留、安全恢复、只一次写，历史/usage/价快照不变 | 保留原Contract红及当前真实复验，后续新指纹不跨用旧绿 |
+| QA22-01原列明的主链/AC08/09/16覆盖主题P1 | **Closed（该主题指定范围）**，21旅程/两层五维/共享资源/双发送实测补齐 | 不外推所有可能故障组合或整套AC/H全部完成 |
+| QA22-02状态展示P2 | **Closed（保持）** | 原启停/过期/撤销/过渡断言继续保留 |
+| QA38-01强制AC01完整十页批准设计实际对照 | **Open / Not Run**，是证据门槛缺口，非已证明的新产品P1。当前十页循环只检查h1/根宽度，现存图主要Key/账单，不能证明工作台/模型/服务/成员/预算/分析/日志/调用等主要信息与动作符合批准设计 | 已正式交seq39，在既有真实Go+Chromium入口补逐页page/role/scope、字段/关键操作及适用空态/非空态截图和原型映射；优先复用已有旅程，不重写已通过功能、不要求像素复刻、不变冻结输入。测试源变化后新指纹原完整门禁/独立QA |
+
+seq39已在原会话明确只补十页真实页面采集与映射，保留原门禁；当前没有需求/设计歧义或新增权限请求，不需要用户再批准。QA本次No-Go来自冻结AC01/verification-design原强制门槛（QA35矩阵已Not Run），不是新发现运行故障或给装饰建议加门禁。未进入report/PR/合并/部署。产品供应商/外部身份/支付仍Not Run，不把受控上游语义绿称商用全面对齐。
+
+Harness的tests成功→QA独立关旧缺陷→正确No-Go补证返development路径正常，本轮无跳错节点或新通用平台阻断。平台侧H02/H03/H04/H07/H08证据由维护者负责，QA无法自行核对不等于全部功能不支持；已有入站去重等证据留在典型场景记录，实际模型/在途重启/完整发布与安装升级等缺口仍按原矩阵分层，不让产品Agent造平台回执。源平台开发分支WIP/在途8793保持，不新Platform PR或合源main。
+
+GitHub本轮正式REST核验Open PR0，Actions首次及一次有界重查均TLS handshake timeout，近期Actions现状未知，不沿用旧入口成功当当前部署证明；未循环盲试。5545实际health200、schema2/version98511771871cf0951ecef716bbb55deb13e18da5，仍为旧部署。Task5/U1 Active，整链新版本发布未完成。当前完整日志/QA原生事件/Run/health证据在忽略目录`.data/fresh-8793/check-20261008-1047/`，无需用户介入。
+
+## 半小时检查：十页实际页面采集交完整门禁，可读性候选待验（2026-10-08 11:17）
+
+seq39 development已completed，原生handoff事件41244正式accepted=true/target=tests，当前seq40第十六次原完整make verify running（11:11:19开始），Run无error/wait。原QA38 No-Go/QA38-01仍Open；QA35-01/QA22-01指定范围/QA22-02旧关闭事实保留，但不把旧3ee2122…绿色跨用到新候选。当前ten-page-evidence-r1，129文件、Go1.25.6、HEAD98511771871cf0951ecef716bbb55deb13e18da5，工作树SHA `bb30f8179c08e5e9dad248382132ec1018959c934efcd5951b1cab55e5b486da`，source-evidence/source-after及正式交接一致，原生41152记录实际摘要、材料19件匹配和非监听检查exit0。
+
+| 目标/影响 | 实际处理及局部证据 | 本轮未验/下步 |
+|---|---|---|
+| QA38-01十页批准设计实际对照缺证据 | 新console-visual.mjs接原连续J01–J07之后，复用已由真实UI创建的双租户/双模型/多Key/核对请求；逐页角色/scope、多对象列、摘要、筛选、主要操作、5详情/6编辑，界面落定及秘密清除后采集。page-mapping.md逐页列批准信息→正式入口→实际断言和布局差异，不自行判合理或关单 | 预期每视口21PNG、三视口63PNG/3JSON尚未取得正式宿主生成结果；这些是采集计划，不能计实际截图或AC01通过。待seq40原完整门禁及独立QA真实逐页对照 |
+| Key配额原JSON不便日常管理，详情存在内部英文key | 产品Agent复用现有limitSummary呈现Key五维额度；实际attempts和四费率字段中文化，未改值/零/无限/未知费用口径或后端权限/预算/账本。既有workspace源函数回归和新采集Contract纳入原frontend-test | 173项Node实际exit0（原生40093/40875），语法/format/module/vet/build/diff各exit0（41152）；VM及源码/构建不替代真实Chromium可读性/全部AC符合 |
+
+完整逐页映射仍公开待判差异：工作台以真实条形趋势呈现、模型部分来源/价格/延迟位于关联服务或详情/日志，服务模型数/优先级未聚合到列表，租户关联计数不重复、分析分布分置工作台，调用测试只收无秘密合理空表单。不能因新增自动断言绿就把缺字段解释成装饰；独立QA按原冻结AC01判主要信息/动作是否满足，必要缺口再最小返工。未改变design-v0.2.0、未执行包内脚本、不以API预制完成态/改DB或重放业务副作用来补画面。
+
+原Makefile及既有console烟测/keyboard/fault/实际HTTP/Go/迁移/J01–J07/J06守恒门槛保留。QA38的63件历史产物不冒作本轮新图；新代码/测试指纹变化后完整宿主和独立QA仍须重新核对。没有重复原生已知监听失败，也没有重复Run/测试/输入、手动resume或临时扩大权限。当前完整门禁暂无正式结果，U1/Task5 Active，产品实现与测试资产完成不等于已验收/发布。
+
+Harness正式development→tests接受/派发正常，本轮无跳错或新通用平台阻断，源开发分支WIP/在途8793保持、不新Platform PR或合源main。GitHub本轮Open PR正式REST为0，Actions初次TLS超时后仅作一次有界只读重查，不把读取失败判部署成功；5545实际health200/schema2/旧main9851177，新候选尚未部署。供应商/支付/外部身份及平台H未验边界仍分层保留，不宣称全面商用对齐。现场`.data/fresh-8793/check-20261008-1117/`，无必须用户介入问题，沿原门禁/QA推进。
+
+本轮Actions有界重查实际成功：37721532229/37719369766/37719365917均Issue entry success、旧main9851177，非正式新部署。该读取恢复不涉及重试业务写入或扩大权限。
+
+
+## 半小时检查：采集首断点与运行次数耗尽的正式恢复（2026-10-08 11:47～12:12）
+
+**测试仓进度。** seq40第十六次原完整make verify真实exit2；正式output四页读至eof，共101576 bytes、truncated=false，129文件、Go1.25.6、HEAD9851177、候选SHA `bb30f8179c08e5e9dad248382132ec1018959c934efcd5951b1cab55e5b486da`。173Node、全仓race（CLI9.731s、relay413.975s、browser10.738s、health-history5.779s）、build，原迁移/旧UI/多上游/console/fault三视口均实际通过；新continuous1280 J01–J07均passed，随后新增visual-overview首断言失败。`test-results/visual-1280/review.json` pages=[]/phase=overview/result=failed，新十页截图与新1440/390采集未取得，QA38-01继续Open、QA38 No-Go有效。QA35-01/QA22-01指定主题/QA22-02原关闭事实保留，不能跨用旧指纹绿。
+
+采集失败具体字段仍未知：failure_boundary.available=false，新模块断言未被旧诊断行过滤捕获；last_status404来自先前J06跨租户账单预期读取，不是overview HTTP404证据。源码可复验假设是采集ready一律拒绝.empty，而J06推进测试钟至新月，工作台近7日可能合理无调用；尚未以真实DOM事实证明，不按猜测降门槛。正式返工输入要求先保存断言前安全字段/角色/scope/尺寸/适用空态和准确异常来源，禁止秘密、虚构截图或改冻结材料，产品及driver最小修复仍交Pipeline Agent。
+
+**Harness卡点与修复。** seq40结果已接受route=failed/exit2，原上限保护将Run置failed，error为`maximum node executions reached; inspect loop before starting another run`，没有派发seq41。冻结图max_steps40；原resume禁止重放已结束命令，原return拒绝超限，缺少审查后有界继续入口。用户影响是有明确新返工动作也无法保留原历史继续，并非handoff跳错或测试命令未执行。
+
+维护源实现授权显式return的可选max_steps：只有耗尽原预算时可追加更大有限总上限（最多1000），要求当前seq、非空检查原因、合法目标、静止执行及有效授权；与新节点同事务记录调用者/40→60/原因。预算存于平台启动幂等创建的run limits表，与冻结图分离，不自动追加/不改旧结果/不自动重放命令。当前Run有效预算通过GET显示；达到新上限仍停止。运行页直接显示检查原因、总上限和目标表单，默认选已接受结果的合法后继；上限耗尽无需再停止。标准研发模板新装默认100，已有Run不随模板升级涨预算。
+
+| 验证与应用 | 本轮实际证据 | 限制 |
+|---|---|---|
+| API/恢复行为红绿 | 新workflow_limit_test先HTTP400 unknown max_steps红灯；修复后非法0/等值/1001、非法目标不改变历史，未授权403、过期seq409；原图/历史/workspace不变，真实Store关闭重开后有效预算保留，新增预算耗尽再停止 | Go隔离回归不单独当真实Pipeline恢复 |
+| 页面行为与实际页面 | workflow-runs Node行为先缺表单红、修复后通过；实际IAB刷新当前Run，40次停止提示、总上限60、默认研发实现、原因与继续按钮可见。原有已打开页刷新前仍显示旧资源，刷新后新入口可核对 | 此次提交用正式API，而非浏览器表单点击；不把VM当窄屏/完整体验验收 |
+| 全维护源检查 | `bash scripts/verify.sh`完整exit0，平台全race50.460s、模板/安装/工作流72Python测试6.278s及所有原入口通过；最后仅调整停止提示中文，Node再次exit0、重新go build恢复binary exit0。初次额外build被沙箱Go cache访问阻止，获准正常构建后成功，无代码失败 | 非致命macOS链接warning保存；完整检查不证明所有实际异常/商用目标完成 |
+| 8793标准二进制升级 | 通过正式API确认active_runs=[]/active_native=[]；核对PID36295仅8793，SIGTERM退出后备份platform.db/原binary/manifest/配置，再替换并同端口/同数据/原凭据启动PID27655。旧binarySHA b7b2eeec…，新d926462e50e118de886a990cf60d6c1b6e29e21c4226df63f44afcb2f765f905；逐项比对40步、冻结图、workspace、参数和Connector快照一致 | 本轮是无在途升级；不能外推为在途服务重启验证。没有手改数据库或旧检查点，启动由维护源正常创建存储 |
+| 标准安装升级 | 原install.json加--upgrade安装软件交付模板，同workflow/Connector/browser IDs；连续两次exit0，第二次无变化、manifest完全一致，新模板上限100。原Run冻结图/有效上限40及40步仍完全一致 | 新安装通过标准模板/安装回归；当前实际环境验证是已有安装升级，不另造重复Run |
+| 正式恢复 | 原model-relay-ci Token通过POST return seq40/target=development/max_steps60/检查原因，实际HTTP202进入seq41；原40步深比较一致、冻结图40、有效预算60、原workspace一致。新会话842bbd6702fd65a920ecac1a8630c848 status=running，Agent实际回复“我先恢复 seq40 完整失败证据和规范，再定位采集断言” | 当前只是恢复执行，不是产品采集修复完成/独立QA/发布；20次额外预算耗尽仍须审查，不能盲目反复追加 |
+
+本轮维护源唯一源码、手册、模板、升级路径与实际Run恢复已对应；未改测试仓产品、手工回执、DB或检查点，未增加权限或切换模型。现有8792/8788不动。源开发分支包含此前completion Schema/统一配置WIP及本次修复，完整检查覆盖当前代码；不新Platform PR或合main。运行新节点沿冻结图原策略执行，与新模板配置分层。
+
+12:11 GitHub正式Actions只读返回37726214624/37721532229/37719369766均Issue entry success、旧main9851177，非新产品部署。Open PR本轮读取TLS超时，当前数量未知，不沿用11:17的0。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，新候选未合并部署；8793未提供/healthz（404），其就绪与升级以真实登录、Run API、页面和原生执行证明，不造health版本。U1/Task5仍Active，整链发布与平台其余未测负向继续保持未验。完整现场/红绿/检查/备份/标准升级/正式恢复收据在忽略目录`.data/fresh-8793/check-20261008-1147/`。

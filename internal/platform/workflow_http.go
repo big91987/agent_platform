@@ -141,11 +141,12 @@ func (h *Server) workflowRunRoutes() {
 }
 func (h *Server) workflowRunCommand(w http.ResponseWriter, r *http.Request, c Caller) {
 	var in struct {
-		Seq     int    `json:"seq"`
-		Route   string `json:"route"`
-		Summary string `json:"summary"`
-		Target  string `json:"target"`
-		Message string `json:"message"`
+		Seq      int    `json:"seq"`
+		Route    string `json:"route"`
+		Summary  string `json:"summary"`
+		Target   string `json:"target"`
+		Message  string `json:"message"`
+		MaxSteps int    `json:"max_steps"`
 	}
 	if e := decode(w, r, &in); e != nil {
 		fail(w, e)
@@ -161,7 +162,7 @@ func (h *Server) workflowRunCommand(w http.ResponseWriter, r *http.Request, c Ca
 	case strings.HasSuffix(r.URL.Path, "/cancel"):
 		err = h.workflows.Cancel(c, id, in.Seq)
 	case strings.HasSuffix(r.URL.Path, "/return"):
-		err = h.workflows.Return(c, id, in.Seq, in.Target, in.Summary)
+		err = h.workflows.Return(c, id, in.Seq, in.Target, in.Summary, in.MaxSteps)
 	case strings.HasSuffix(r.URL.Path, "/resume"):
 		err = h.workflows.Resume(c, id, in.Seq, in.Message)
 	default:
@@ -209,7 +210,13 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 	}
 	service := mcp.NewServer(&mcp.Implementation{Name: "workflow-node", Version: "1.0.0"}, nil)
 	if allows("complete_node") {
-		mcp.AddTool(service, &mcp.Tool{Name: "complete_node", Description: "Declare this node complete using a factual summary and artifact paths. Omit route to follow its fixed edge. Legacy graphs also accept their named routes; use handoff for autonomous choices. The platform waits for this turn to finish before advancing. After acceptance, end this turn and stop changing files."}, func(ctx context.Context, req *mcp.CallToolRequest, in NodeResult) (*mcp.CallToolResult, any, error) {
+		node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
+		schema, err := completionToolSchema(node)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		err = addCompletionTool(service, &mcp.Tool{Name: "complete_node", InputSchema: schema, Description: "Declare this node complete using a factual summary and artifact paths. Omit route to follow its fixed edge. Legacy graphs also accept their named routes; use handoff for autonomous choices. The platform waits for this turn to finish before advancing. After acceptance, end this turn and stop changing files." + completionGuidance(node)}, schema, func(ctx context.Context, req *mcp.CallToolRequest, in NodeResult) (*mcp.CallToolResult, any, error) {
 			current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 			if e != nil {
 				return nil, nil, e
@@ -230,9 +237,13 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "route": in.Route, "message": "Result saved. End this turn; the platform advances after the Agent is quiet."}, nil
 		})
+		if err != nil {
+			fail(w, err)
+			return
+		}
 	}
 	if allows("handoff") {
-		mcp.AddTool(service, &mcp.Tool{Name: "handoff", Description: "Choose an allowed Agent handoff target. Include reason, structured inputs and artifact paths. After acceptance end this turn; the platform waits for it to finish."}, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
+		mcp.AddTool(service, &mcp.Tool{Name: "handoff", Description: "Choose an allowed Agent handoff target. Include summary, structured inputs and artifact paths. After acceptance end this turn; the platform waits for it to finish."}, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
 			current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 			if e != nil {
 				return nil, nil, e

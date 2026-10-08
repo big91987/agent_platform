@@ -15,7 +15,8 @@
         "instructions": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 60,
-      "y": 70
+      "y": 70,
+      "exit_mode": "handoff"
     },
     {
       "id": "design",
@@ -26,7 +27,8 @@
         "instructions": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 360,
-      "y": 70
+      "y": 70,
+      "exit_mode": "handoff"
     },
     {
       "id": "development",
@@ -37,7 +39,8 @@
         "instructions": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 660,
-      "y": 70
+      "y": 70,
+      "exit_mode": "handoff"
     },
     {
       "id": "qa",
@@ -48,7 +51,8 @@
         "instructions": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 60,
-      "y": 270
+      "y": 270,
+      "exit_mode": "handoff"
     },
     {
       "id": "tests",

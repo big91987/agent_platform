@@ -31,6 +31,9 @@ func (s *Store) handoffWorkflowNode(id string, seq int, token string, in Handoff
 		return ErrConflict
 	}
 	step := r.Steps[len(r.Steps)-1]
+	if r.Definition.node(step.NodeID).ExitMode == "complete" {
+		return errors.New("this node uses fixed completion")
+	}
 	routes := []string{}
 	for _, edge := range r.Definition.Edges {
 		if edge.Source == step.NodeID && edge.Target == in.Target && r.Definition.edgeMode(edge) == "handoff" && (in.Route == "" || in.Route == edge.Route) {
@@ -40,5 +43,9 @@ func (s *Store) handoffWorkflowNode(id string, seq int, token string, in Handoff
 	if len(routes) != 1 {
 		return errors.New("select one allowed handoff target; specify route when several edges share the same target")
 	}
-	return s.submitWorkflowResult(Caller{}, id, seq, token, NodeResult{Route: routes[0], Summary: in.Summary, Inputs: in.Inputs, Artifacts: in.Artifacts}, true)
+	inputs := map[string]any{}
+	for k, v := range in.Inputs {
+		inputs[k] = v
+	}
+	return s.submitWorkflowResult(Caller{}, id, seq, token, NodeResult{Route: routes[0], Summary: in.Summary, Inputs: inputs, Artifacts: in.Artifacts}, true)
 }

@@ -93,3 +93,31 @@ test('completed node labels previous waiting as history and unchanged refresh pr
  vm.runInContext('renderWorkflowStepDetails(workflowRunPage,step,node)',ctx);
  assert.match(el('#wf-step-details').innerHTML,/reading state/);
 });
+test('typed completion output remains readable in step details',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',setAttribute(){},focus(){}});return elements.get(id)};
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,esc:x=>String(x??'')});
+ for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'r',run:{id:'r',definition:{nodes:[{id:'dev',name:'检查',kind:'agent'}]},steps:[{seq:1,node_id:'dev',status:'completed',result:{summary:'完成',inputs:{verdict:{passed:true},files:['a','b']}}}]}}",ctx);
+ await vm.runInContext("workflowStepDetails('r',1)",ctx);
+ assert.doesNotMatch(el('#wf-step-details').innerHTML,/\[object Object\]/);
+ assert.match(el('#wf-step-details').innerHTML,/<dd>\{"passed":true\}<\/dd>/);
+ assert.match(el('#wf-step-details').innerHTML,/<dd>\["a","b"\]<\/dd>/);
+});
+
+test('exhausted run exposes inspected bounded return without replaying the completed command',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
+ const run={id:'run',workflow_id:'wf',status:'failed',seq:40,max_steps:40,error:'maximum node executions reached; inspect loop before starting another run',input:'task',definition:{name:'测试',revision:1,max_steps:40,nodes:[{id:'tests',name:'固定测试',kind:'connector'},{id:'dev',name:'研发',kind:'agent'}],edges:[{source:'tests',route:'failed',target:'dev'}]},steps:[{seq:40,node_id:'tests',status:'completed',connector_dispatched:true,result:{route:'failed',summary:'exit 2'}}]};
+ const calls=[];
+ const ctx=vm.createContext({esc:x=>String(x??''),$:el,toast(){},document:{querySelectorAll:()=>[]},api:async(path,method,body)=>{if(method==='POST')calls.push({path,body});return path.endsWith('/notifications')?[]:run}});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run'}",ctx);await vm.runInContext("refreshWorkflowRun('run')",ctx);
+ const html=el('#wf-run-controls').innerHTML;
+ assert.match(html,/id="wf-return-form"/);
+ assert.match(html,/id="wf-return-max-steps"/);
+ assert.match(html,/min="41" max="1000"/);
+ assert.match(html,/value="dev" selected/);
+ assert.doesNotMatch(html,/id="wf-resume-form"/);
+ el('#wf-return-target').value='dev';el('#wf-return-reason').value=' inspected failure ';el('#wf-return-max-steps').value='60';
+ await el('#wf-return-form').onsubmit({preventDefault(){}});
+ assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/workflow-runs/run/return');assert.equal(calls[0].body.max_steps,60);assert.equal(calls[0].body.target,'dev');assert.equal(calls[0].body.seq,40);
+});

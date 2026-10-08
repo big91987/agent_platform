@@ -26,6 +26,11 @@ func workflowNodeTools(w Workflow, n WorkflowNode) []string {
 			}
 		}
 	}
+	if n.ExitMode == "handoff" {
+		choice, fixed = true, false
+	} else if n.ExitMode == "complete" {
+		choice, fixed = false, true
+	}
 	if choice {
 		tools = append(tools, "handoff")
 	}
@@ -85,7 +90,7 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 		for _, edge := range fixed {
 			fmtLine += w.node(edge.Target).Name + "（" + edge.Target + "）\n"
 		}
-		prompt += fmtLine
+		prompt += fmtLine + completionGuidance(n)
 	} else if handoff.Len() == 0 {
 		prompt += "\n\n## 完成\n全部责任完成后调用 complete_node，提交真实 summary 和实际产物。"
 	}

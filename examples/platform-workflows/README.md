@@ -270,3 +270,32 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 先 `POST /api/workflow-runs/{id}/stop` 并等待 stopped，再 `POST /api/workflow-runs/{id}/cancel`，两次均传页面/GET 返回的当前 `seq`。网页 Run 控制区和 Python `workflow_command(run_id, "cancel", seq=seq)` 使用同一路径。failed 且进程已退出也可取消；运行中/停止中和过期 seq 返回冲突。
 
 取消保留文件、消息与外部回执，关闭当前会话，释放工作区；无法继续或回退。重新工作须建新的任务/Run。研发准备步骤仍拒绝脏目录，需先明确保留和交接已有成果，不能手改数据库或删除入口状态文件绕过去重。GitHub 旧 Issue 的重复事件仍关联原已取消 Run，不自动重启；新工作使用引用原 Issue/Run 的新 Issue。
+
+### Agent 交接方式与固定输出
+
+Agent 节点的“交接”页可选择两种方式：
+
+- **自主交接（handoff）**：为各目标填写交接策略，Agent 选择目标并提交 summary、inputs、artifacts。研发与返工模板使用此方式。
+- **固定流转（complete_node）**：设置唯一后续目标、输出 JSON Schema 和输出填写说明。Schema 约束工具的 `inputs` 对象，字段描述与填写说明一起提供给 Agent。调用不合规则返回错误，修正后才能继续。`summary`、`artifacts` 仍分别记录结论和产物路径。
+
+例如，下游脚本需要一个布尔结论和文件列表：
+
+```json
+{"type":"object","properties":{"passed":{"type":"boolean","description":"实际检查是否全部通过"},"files":{"type":"array","items":{"type":"string"}}},"required":["passed","files"],"additionalProperties":false}
+```
+
+填写说明可以是：“运行约定检查，全部通过才将 passed 设为 true；files 只填写实际产生的工作区相对路径。”命令 Connector 的标准输入仍使用 `previous_results`，从对应节点的 `result.inputs` 读取这些值；布尔、数组、对象与数字不转成字符串。
+
+支持对象、数组、基础类型、required、enum/const、allOf/anyOf/oneOf/not、长度/数量/数值范围及 pattern。Schema 根必须是 object；不支持引用、远程加载、默认值注入或 format 等未列出的关键字，保存时明确报错。格式留空保留默认字符串键值对象，适用于无需固定业务字段的简单场景。
+
+新节点显式选择一种方式；切换到固定流转且有多个目标时，先选择保留目标。已运行任务始终使用自己的冻结配置；旧版混合定义读取时保持原行为，重新选择模式后只影响后续运行。标准安装器更新模板时继续检查 manifest 漂移，不覆盖用户自行修改的配置。
+
+数值须能在运行时 JSON 数值表示中无损往返；例如 `9007199254740993` 或 `1.0000000000000001` 会明确报错，不会静默改值。高精度金额或长数字编号应将字段配置为 `string`。同样的检查适用于 Schema 中的数值约束与枚举。
+
+### 达到运行执行次数上限后继续
+
+平台仍在有限次数处停止自动推进。先检查完整命令回执、原生交接及历次返工，确认有明确的新处理动作；在运行页填写回退原因、目标节点和新的总执行上限。授权用户也可调用 `POST /api/workflow-runs/{id}/return`，提交 `seq`、`target`、`summary` 和 `max_steps`。仅在原预算耗尽时接受更大上限，最多1000次；不自动追加，也不重放已结束的命令。普通中断继续使用原resume/stop/return语义。
+
+新的运行预算与冻结图分别保存。原图、节点结果、Connector回执及工作区保留，新节点记录调用者、预算变化和检查原因；旧seq重复请求拒绝，新上限耗尽仍停止。首次失败发生在新节点时仍须走完整tests/独立QA，不把恢复当放行。
+
+服务按正常构建、备份、无在途执行检查及二进制升级获得该入口；启动时自动创建Run预算存储，重复启动不改旧记录，旧Run初始上限仍取自己的冻结配置。不得手改数据库或旧图。研发交付模板的新安装默认100次，已有安装沿原manifest加`--upgrade`同步，仍检查配置漂移及在途执行；模板升级不追加已有Run预算，已有Run只能经上述显式受支持入口检查后恢复。

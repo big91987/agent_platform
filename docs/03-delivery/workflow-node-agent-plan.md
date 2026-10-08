@@ -16,7 +16,7 @@
 
 ## 配置一致性与研发流程回归（2026-10-07，新分支）
 
-状态：实施中。分支 `codex/workflow-node-config-ui`，封版基线 `d7bd602`，源 PR #5 不合并 main。以下用户确认取代上阶段对独立 Session Prompt 的设计。仅升级开发实例 8792；8788 保持不动。
+状态：实施中。分支 `codex/workflow-node-config-ui`，封版基线 `d7bd602`，源 PR #5 不合并 main。以下用户确认取代上阶段对独立 Session Prompt 的设计。按用户最新指令改为在8793使用全新数据目录、新装编排和新的测试仓Pipeline；8788保持不动。
 
 ### 已确认的产品约定
 
@@ -65,3 +65,75 @@
 执行原则：按任务推进并持续维护此表。Platform 当前在 `codex/workflow-node-config-ui` 直接开发、提交和推送，不自行新建 PR；后续源仓集成另按用户指令。单元测试、局部探针和平台的小任务通过不等于产品研发链路通过；源平台交付和测试仓产品交付分别留证。没有证据的项目保持未完成。
 
 当前完整回归入口：[model-relay #24](https://github.com/big91987/model-relay/issues/24)。两个旧 Run 已取消、文件保留；新任务从标准 main checkout 开始，不将旧未验收代码当作已交付基线。真实证据见[配置一致性验收](workflows-verification.md#配置一致性输入与取消2026-10-07)。
+
+## 交接模式与固定输出实施计划（2026-10-07）
+
+> 执行：按superpowers:executing-plans在当前会话逐项实现；沿用用户对普通实现选择和直接推进的授权。设计见[节点配置](../02-architecture/workflow-node-agent.md#交接模式与固定输出2026-10-07)。不重复要求审批已经明确的两种模式及Schema方案。
+
+目标：界面可选handoff/固定流转，固定程序得到经Schema校验的类型化输入。Go使用已有jsonschema-go依赖，前端沿用图模型/抽屉；运行快照、单一结果及原有调度不变。只在当前开发分支交付。
+
+评审重点：旧冻结混合图；无效Schema草稿保存/关闭；切换多个目标的意外丢线；嵌套类型到命令stdin不失真；不合规结果不能先存后验。
+
+- [x] Task 1 后端契约：workflow_completion.go负责Schema、模式和工具参数；WorkflowNode增加exit_mode/completion_schema/completion_instructions；NodeResult.inputs支持JSON类型。先加真实Store/MCP测试：不合规结果拒绝且不推进、合法结果原类型到Connector、冻结旧图和模式拒绝，再实现并跑相关Go测试。
+- [x] Task 2 节点表单：workflow-model.js负责模式切换、单目标约束；workflows.js提供交接模式选择及两种配置页，固定Schema/说明/目标可保存重载预览，错误草稿保持。增加模型/表单行为测试，禁止连接器/连线对话框旁路混用模式。
+- [x] Task 3 模板交付：install.py/三个模板升级显式模式，协作夹具不再混合；旧manifest漂移保护/冻结Run保持，更新手册与输入文档，验证标准新装升级。
+- [ ] Task 4 真验与发布：独立代码复审、完整Go/vet/race及前端/Python回归；真实浏览器设置Schema和说明、真实Codex错误修正后固定命令消费、handoff模式切换。当前源码构建部署至8793全新服务，标准新装编排后用新的测试仓Issue验证；不继续迁移旧配置，不碰8788。提交推送分支，维护证据与剩余边界。
+
+
+交接模式验收进度：后端契约、表单与模板源码已完成。最终 `scripts/verify.sh` exit0（Go race49.667s），随后前端数值草稿保真回归与构建通过（63项Node测试）。8792已升级；真实Codex固定输出Run `b8250145f04f6ce079d3322fcf0e5e4e` 完成，原生事件记录额外字段拒绝、修正接受，命令消费布尔/数字/数组/对象且exit0。原协作安装标准升级为revision5并幂等重装，历史Run不变。原研发模板因Run仍waiting由安装器正常阻止升级，保持revision8冻结；等待任务结束后再走原manifest升级，不绕过保护。完整model-relay #24研发验收仍未完成。
+
+
+2026-10-07最新部署决定：用户明确要求新端口、全新服务和新Pipeline，取代继续升级旧流程的方案。8793全新数据与独立工作区经标准安装器安装当前模板，编排 `8f497228b60a8ea46b7d37be59ebe578` revision1/context2，六个Agent均为Codex/gpt-6.1-sol和显式handoff。测试仓标准入口切换至新服务，[Issue25](https://github.com/big91987/model-relay/issues/25) 经真实 [Actions37643773819](https://github.com/big91987/model-relay/actions/runs/37643773819) 创建唯一 [Run4cd62ced6a4f98f50e3cca6f7596eb06](http://127.0.0.1:8793/workflow-runs/4cd62ced6a4f98f50e3cca6f7596eb06)。准备与Issue节点已完成，19文件设计包摘要核验通过，原生intake已完成handoff，seq4需求节点正在执行。完整研发、QA、合并与部署仍未完成，保持Task5未完成。
+
+
+典型场景验证（8793）：正常阶段handoff、GitHub入口重复投递去重、澄清等待、等待态页面停止/原线程恢复、独立校验返工、完成后人工回退、Schema拒绝纠正、固定命令exit1自动返工/exit0复验、类型化消费和跨用户读取隔离已实际验证。两条专用验收Run完成，Issue26关闭，主Issue25仍在设计。详细矩阵见[验证记录](workflows-verification.md#8793典型场景实测2026-10-07)。下一批继续主产品make verify/独立QA/PR发布，并补进程执行中中断、服务重启与外部失败恢复；页面和跳转优化安排在流程验证之后。
+
+
+半小时检查2026-10-08 00:18：主Pipeline已从设计正式推进到seq6研发，局部Go回归已实际执行；Task5完整产品回归仍未完成。商业对齐补充经原会话User Input接收，详细进展和缺口在统一验证记录维护。
+
+半小时检查2026-10-08 00:48：seq6研发持续活动，三视口控制台旅程已接入固定测试源码入口，计费局部Go回归通过；真实HTTP监听受原生沙箱限制，等待既有宿主tests Connector执行完整make verify。商业补充message1548仍queued，接收不代表处理完成；无新PR/QA/发布。Task5保持未完成，继续正常交接与证据核验，不重建任务或绕过测试。
+
+半小时检查2026-10-08 01:18：seq6仍在实现与局部修复；实际make verify在原生环境exit2，health-history监听禁止，日志已保留。go vet及新增治理/邀请限速定向回归实际通过；完整宿主门禁、UI、独立QA和发布未执行。商业补充仍queued，不重投输入。Task5未完成，后续核验正式tests交接和更新后的研发任务记录。
+
+半小时检查2026-10-08 01:48：新增资源/成员范围、迁移守恒及代际截止的局部命令通过；核对并分别记录产品权限修复与测试Revision/身份入口修正，保留失败历史。研发仍活跃，未交固定宿主tests；Task5的完整门禁、QA及发布仍未完成，商业补充仍queued，不重建任务。
+
+半小时检查2026-10-08 02:18：研发候选和AC待验报告已形成，商业输入message1548已在原会话送达/处理中；待输入交接拒绝→正常结束turn→原会话接续路径实际验证。补充检查扩大至127项Node和指定race，新增前端失败/修正历史保留；完整宿主tests尚未接受，最终指纹及商业对照文档待更新核验，Task5仍未完成。
+
+半小时检查2026-10-08 02:48：正式seq7宿主完整门禁执行，后台HTTP/SSE和真实崩溃恢复等全仓race分项通过；迁移browser驱动目标不符导致exit2，原failed边自动返seq8研发。Agent正修测试驱动，保留历史schema2层并增加生产schema3旅程，局部目标契约/迁移race通过，待完整重跑。商业覆盖/旅程/后续差距已写入原矩阵，Task5仍未完成，QA及发布未开始。
+
+半小时检查2026-10-08 03:18：seq9宿主browser继续发现Key集合包络错配，原failed边返seq10，driver修正及135项Node/指定race回归通过。当前seq11第三次宿主完整门禁running，原迁移/数量/身份/启停断言保留，无放宽权限或生产兼容补丁。完整QA、PR及发布尚未开始，Task5仍未完成。
+
+半小时检查2026-10-08 03:48：生产schema3迁移三视口、旧UI/多上游旅程正式通过，新控制台服务核验失败自动返seq12。前端版本参数与受控列表协议修正、137项Node和指定race通过；当前seq13第四次完整宿主测试running。完整门禁/独立QA/发布未通过，Task5仍未完成；后台guard、历史与原断言保持。
+
+半小时检查2026-10-08 04:18：服务核验修复在宿主UI实测生效，模型driver歧义失败返seq14；精确label匹配及唯一性回归修正、138项Node等通过。当前seq15第五次完整宿主门禁running，原断言和产品配置保留，QA/发布未开始，Task5仍未完成。
+
+半小时检查2026-10-08 04:48：seq15模型旅程越过原失败点，但Key粗阶段超时。seq16只补11动作阶段/安全观测，141项Node及非监听检查通过；当前seq17第六次完整宿主测试running，Key根因未知，不称已修复。完整门禁/QA/发布未完成，Task5保持未完成。
+
+半小时检查2026-10-08 05:18：Key转交误清值根因由产品Agent正式修复，seq19宿主越过Key/调用/详情等原卡点，停在键盘断言。seq20补driver异步准备等待及安全焦点诊断，152项Node等通过，当前仍研发running；完整宿主/独立QA/发布待完成，Task5未完成。
+
+结束前最新复核：seq20正式handoff已接受，seq21第八次宿主make verify running，完整门禁/QA/发布仍未完成。
+
+半小时检查2026-10-08 05:48：seq21完整宿主门禁首次exit0、新控制台三视口通过；独立QA识别旅程覆盖P1/列表状态P2，尚未完整验收。seq22模型容量错误已通过正式resume接回原会话/线程且实际继续执行，当前QA running，待正式整改handoff。Task5仍未完成，PR/合并/部署未开始；真实外部失败恢复证据已留统一验证记录。
+
+半小时检查2026-10-08 06:18：seq22原线程恢复后完成No-Go报告并正式handoff研发，当前seq23 running。新J01–J07连续UI旅程（三视口、独立临时库/真实Go/测试时钟）已接入固定browser入口，旧断言保留；Key列表状态/信息和空租户加载态修复候选、156项Node与指定race等通过。新指纹cb51d80c…完整宿主/独立QA仍待执行，QA22-01/02仍Open；不复用seq21绿作为新候选Pass。Task5未完成，PR/合并/发布未开始。
+
+半小时检查2026-10-08 06:48：seq24当前最终指纹18207762…完整门禁exit2，旧三视口控制台通过但新增J01空态断言失败，正式返seq25。源码及新增in-process回归确认全新安装零租户，driver误期望迁移legacy；Agent修driver/分段诊断，6项Node和定向race通过，未改初始化/业务权限。上一轮init保留legacy判断已更正，当前完整宿主仍待重验，QA22两项Open，Task5及发布未完成。
+
+半小时检查2026-10-08 07:18：seq26证实初态修正生效，continuous J01首次调用502返seq27；实际受控上游缺assistant role的契约红灯复现，fixture修正后定向回归/159项Node通过，生产validator不放宽。当前seq28第十一次宿主完整make verify running，新HTTP持久化及三视口七旅程尚待回执，QA22两项仍Open。Task5/发布未完成，正式返工保持原Run与冻结材料。
+
+2026-10-08早间累计成果复核：seq28新增连续1280/J01–J04实际通过，J05恢复后的费用守恒断言失败，完整make verify仍exit2；seq29仅诊断候选已正式交接，当前seq30完整tests running。不可称暂停恢复根因已修复，QA22两项及Task5仍未关闭，七旅程/独立QA/发布待验。
+
+半小时检查2026-10-08 08:47：seq30诊断确认费用/预留/调用数等守恒，粗J05阶段实际还覆盖后续成员操作，前次“费用断言失败”归因更正。seq31研发running，补成员分段和延迟刷新准备回归，12项driver及PeopleScope定向race通过；只修候选driver等待，不改生产计费/权限。实际原断点及完整宿主/独立QA待验，Task5/QA22/发布均未完成，原failed路由正常。
+
+半小时检查2026-10-08 09:17：seq32新增1280连续J01–J05/J07实际通过，J06读取首账目与累计费用混淆导致exit2，正式返seq33。driver累计读取修正保留fee21并加强成本/Token/原项/价格快照/追加revision断言，165项Node及定向race通过；当前seq34第十四次宿主完整门禁running。原handoff/failed路由正常，QA22/Task5/完整三视口/发布仍未完成，不把新增六旅程分项绿外推全部Go。
+
+半小时检查2026-10-08 09:47：seq34第十四次完整门禁exit0，三个视口的七旅程实际21/21通过；独立QA35核对同指纹50fb764a…和18产物，QA22-02 Closed。QA22-01保留故障/并发覆盖残项，新增QA35-01读回首次失败丢按钮/操作标识P1，生产函数Contract真实exit1复现，待真实Chromium回归。QA No-Go通过原handoff正确返回seq36 development，当前running；Agent修恢复路径和AC08/09/16，不重复任务/手动恢复。当前Harness这条测试成功→QA→返工路径无跳转错误，新平台源码保持WIP；Task5及新PR/合并/部署未完成，旧health/schema2未更新，不能称发布或全部异常流程通过。证据与故障恢复范围见统一验证记录。
+
+半小时检查2026-10-08 10:17：seq36 completed，正式handoff accepted至tests，seq37原完整make verify running。读回恢复修复/unknown去重、169项Node及新12分例与原6顶层Go定向race已实际完成；新增真实HTTP/三视口故障旅程仍待宿主，新127文件指纹3ee2122e…不跨用旧seq34绿。QA35 No-Go仍有效，QA35-01/QA22-01待新完整结果及独立QA关单；既有QA22-02关闭保留。Harness交接/派发无错，未手动重复Run或测试；Task5/新发布未完成，源平台WIP保持。细节、原红灯与新driver前置失败、更明确的旧editor隔离重建证据边界见统一验证记录。
+
+半小时检查2026-10-08 10:47：seq37当前3ee2122e…完整门禁exit0，三视口恢复/双发送、新ActualHTTP资源竞争及21主旅程实测通过；独立QA38关闭QA35-01/QA22-01指定范围并保持QA22-02关闭。因原AC01十页设计实际对照证据未齐，正式No-Go补证返seq39，当前running，无新已执行产品P0/P1。Harness测试成功→QA关旧项→正确返补证正常，Task5及新PR/合并/部署尚未完成。源平台WIP/在途服务保持，H与发布未验边界继续由维护者负责；完整版本/63产物校验及原型对照责任见统一验证记录。
+
+半小时检查2026-10-08 11:17：seq39正式交tests，seq40原完整门禁running。十页当前页面/角色/scope/详情编辑采集和原型映射已接原入口，Key额度/详情可读性候选及173Node/非监听检查通过；新129文件bb30f817…实际截图/完整结果/独立QA仍待验，QA38-01未闭。原handoff/派发正常，无新平台阻断；Task5及新发布未完成，源平台WIP/在途服务保持，具体证据与可读性和设计差异判断边界见统一验证记录。
+
+
+2026-10-08 11:47～12:12：**测试仓**seq40原完整make verify exit2/101576 bytes；173Node、全仓race/build、原三视口控制台/故障及新增1280七旅程绿，首visual-overview采集断言失败，具体字段待真实安全DOM诊断。QA38-01仍Open/No-Go，旧三项关闭事实保留，不把旧绿或计划截图作当前完成。**Harness**同时耗尽原冻结40次上限，无正式有界恢复入口；维护源新增授权检查原因/目标/有限max_steps的return，保留冻结图/历史/回执/workspace，不自动重放。Go/API与Node红绿、完整scripts/verify.sh exit0后，无在途备份升级8793；标准manifest升级连续两次幂等、同ID，新模板100、原Run40不变。正式CI Token return seq40→41 development HTTP202，有效预算60/冻结40/原40步深比较一致，原生Codex已实际运行定位采集断点。未手改DB/回执/权限/冻结输入，产品实现仍由Pipeline Agent；U1/Task5及产品新PR/合并/发布未完成。源只在开发分支交付，不创建Platform PR/合main；其余未测典型负向不因本次恢复关闭。详证见统一验证记录本轮条目。

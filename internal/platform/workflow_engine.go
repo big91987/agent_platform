@@ -352,17 +352,28 @@ func (e *WorkflowEngine) Stop(c Caller, id string, seq int) error {
 
 // Return requires a stopped or completed run. Completed history is immutable;
 // explicit review feedback starts a new execution only after workspace reacquisition.
-func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason string) error {
+func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason string, limits ...int) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	r, err := e.store.WorkflowRun(c, id)
 	if err != nil {
 		return err
 	}
-	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed") || strings.TrimSpace(reason) == "" {
+	limitFailure := r.Status == "failed" && r.Error == workflowExecutionLimitError && r.atExecutionLimit() && r.Steps[len(r.Steps)-1].Result != nil
+	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed" && !limitFailure) || strings.TrimSpace(reason) == "" {
 		return ErrConflict
 	}
-	if r.Status == "completed" {
+	newLimit := r.executionLimit()
+	if len(limits) > 1 {
+		return errors.New("provide one execution limit")
+	}
+	if len(limits) == 1 && limits[0] != 0 {
+		if !r.atExecutionLimit() || limits[0] <= newLimit || limits[0] > 1000 {
+			return errors.New("after inspecting an exhausted run, choose a greater execution limit up to 1000")
+		}
+		newLimit = limits[0]
+	}
+	if r.Status == "completed" || limitFailure || newLimit != r.executionLimit() {
 		owner, err := e.store.workflowCaller(r)
 		if err != nil {
 			return err
@@ -374,7 +385,7 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if !e.connectorQuiet(r.ID) || !e.quiet(r.Steps[len(r.Steps)-1].ConversationID) {
 		return ErrConflict
 	}
-	if r.Definition.node(target).ID == "" || r.Seq >= r.Definition.MaxSteps {
+	if r.Definition.node(target).ID == "" || r.Seq >= newLimit {
 		return errors.New("invalid return target or execution limit reached")
 	}
 	tx, err := e.store.DB.Begin()
@@ -389,7 +400,14 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if current.Seq != seq || current.Status != r.Status {
 		return ErrConflict
 	}
-	if current.Status == "completed" {
+	if newLimit != current.executionLimit() {
+		if _, err = tx.Exec(`INSERT INTO workflow_run_limits(run_id,max_steps) VALUES(?,?) ON CONFLICT(run_id) DO UPDATE SET max_steps=excluded.max_steps`, id, newLimit); err != nil {
+			return err
+		}
+		reason = fmt.Sprintf("执行次数上限 %d → %d（%s）；%s", current.executionLimit(), newLimit, c.Username, strings.TrimSpace(reason))
+		current.MaxSteps = newLimit
+	}
+	if current.Status == "completed" || limitFailure {
 		path, err := normalizeWorkspace(current.WorkspacePath)
 		if err != nil {
 			return err
@@ -404,7 +422,7 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 		if err = insertWorkflowStep(tx, current, target); err != nil {
 			return err
 		}
-		if _, err = tx.Exec(`UPDATE workflow_steps SET error=? WHERE run_id=? AND seq=?`, "完成后回退到 "+target+": "+strings.TrimSpace(reason), id, current.Seq); err != nil {
+		if _, err = tx.Exec(`UPDATE workflow_steps SET error=? WHERE run_id=? AND seq=?`, "检查后回退到 "+target+": "+strings.TrimSpace(reason), id, current.Seq); err != nil {
 			return err
 		}
 		return tx.Commit()

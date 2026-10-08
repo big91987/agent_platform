@@ -73,13 +73,14 @@ test('adding nodes at the same palette position keeps the new node selectable',(
 });
 test('edge choices survive export/import and invalid fixed Agent branches are rejected',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
+ delete a.exit_mode; // Existing v2 mixed definitions remain compatible.
  g.connect(a.id,'approved',b.id,'handoff','通过时交接');
  g.connect(a.id,'finished',c.id,'automatic');
  assert.equal(g.edgeMode(g.value.edges[0]),'handoff');
  assert.equal(g.edgeMode(g.value.edges[1]),'automatic');
  assert.throws(()=>g.connect(a.id,'another',b.id,'automatic'),/固定/);
  const copy=G.import(JSON.stringify(g.value));assert.equal(copy.value.edges[0].description,'通过时交接');
- assert.equal(copy.edgeMode(copy.value.edges[1]),'automatic');
+ assert.equal(copy.edgeMode(copy.value.edges[1]),'handoff');assert.equal(copy.node(a.id).exit_mode,'handoff');
  assert.throws(()=>G.import(JSON.stringify({...g.value,edges:[{source:a.id,target:b.id,route:'next',mode:'guess'}]})),/连线/);
 });
 
@@ -135,4 +136,32 @@ test('new nodes expose a typed user input switch and preserve explicit disabled 
  a.allow_user_input=false;
  assert.equal(G.import(JSON.stringify(g.value)).node(a.id).allow_user_input,false);
  a.allow_user_input='false';assert.throws(()=>g.validateAgent(a),/用户输入/);
+});
+test('explicit Agent exit mode is exclusive and fixed mode requires an intentional retained target',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
+ assert.equal(a.exit_mode,'handoff');g.connect(a.id,'b',b.id);g.connect(a.id,'c',c.id);
+ assert.throws(()=>g.setExitMode(a.id,'complete'),/目标/);
+ assert.equal(g.value.edges.length,2);
+ g.setExitMode(a.id,'complete','c');assert.equal(g.value.edges.length,1);assert.equal(g.value.edges[0].target,c.id);
+ assert.equal(g.value.edges[0].mode,'automatic');assert.throws(()=>g.connect(a.id,'b',b.id,'handoff'),/方式/);
+ a.completion_schema={type:'object',properties:{passed:{type:'boolean'}},required:['passed']};a.completion_instructions='真实验证结果';
+ g.setExitMode(a.id,'handoff');assert.equal(a.completion_schema.required[0],'passed');assert.equal(g.value.edges[0].mode,'handoff');
+});
+test('editing any stored definition uses current Agent config and exits without a legacy prompt field',()=>{
+ const G=model();
+ for(const version of [0,1,2]){
+  const value={context_version:version,nodes:[{id:'work',name:'研发',kind:'agent',agent_id:'shared',prompt:version===2?'':'检查真实结果 {{handoff}}',x:0,y:0},{id:'done',name:'完成',kind:'end',x:300,y:0}],edges:[{source:'work',route:'next',target:'done',mode:'handoff'}]};
+  const g=new G(value),agents=[{id:'shared',executor:'codex',model:'chosen-model',instructions:'长期职责',skills:['/skills'],env:{MODE:'kept'},seed_dir:'/unused-seed'}];
+  assert.equal(g.upgradeForEditing(agents),true);assert.equal(g.value.context_version,2);
+  const n=g.node('work');assert.equal(n.agent_id,undefined);assert.equal(n.prompt,undefined);assert.equal(n.exit_mode,'handoff');assert.equal(n.agent.model,'chosen-model');assert.equal(n.agent.seed_dir,undefined);
+  if(version<2)assert.match(n.agent.instructions,/检查真实结果/);
+  assert.equal(g.value.edges[0].route,'next');n.agent.env.MODE='changed';assert.equal(agents[0].env.MODE,'kept');assert.equal(value.nodes[0].agent_id,'shared');
+  assert.equal(g.upgradeForEditing(agents),false);
+ }
+});
+test('current API serialization does not make an unchanged editor dirty',()=>{
+ const G=model(),g=new G(),n=g.add('agent',0,0);
+ Object.assign(n.agent,{id:'',name:'',enabled:false,authorized_users:null,seed_dir:''});
+ assert.equal(g.upgradeForEditing([]),false);
+ assert.equal(g.value.nodes[0].agent.name,undefined);
 });

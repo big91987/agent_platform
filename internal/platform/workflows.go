@@ -30,19 +30,22 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
-	AllowUserInput          *bool          `json:"allow_user_input,omitempty"`
-	ContinuationLimit       int            `json:"continuation_limit,omitempty"`
-	ExecutionTimeoutSeconds int            `json:"execution_timeout_seconds,omitempty"`
-	ID                      string         `json:"id"`
-	Name                    string         `json:"name"`
-	Kind                    string         `json:"kind"`
-	AgentID                 string         `json:"agent_id,omitempty"`
-	Agent                   *Agent         `json:"agent,omitempty"`
-	ConnectorID             string         `json:"connector_id,omitempty"`
-	ConnectorInput          ConnectorInput `json:"connector_input,omitempty"`
-	Prompt                  string         `json:"prompt,omitempty"`
-	X                       float64        `json:"x"`
-	Y                       float64        `json:"y"`
+	ExitMode                string          `json:"exit_mode,omitempty"`
+	CompletionSchema        json.RawMessage `json:"completion_schema,omitempty"`
+	CompletionInstructions  string          `json:"completion_instructions,omitempty"`
+	AllowUserInput          *bool           `json:"allow_user_input,omitempty"`
+	ContinuationLimit       int             `json:"continuation_limit,omitempty"`
+	ExecutionTimeoutSeconds int             `json:"execution_timeout_seconds,omitempty"`
+	ID                      string          `json:"id"`
+	Name                    string          `json:"name"`
+	Kind                    string          `json:"kind"`
+	AgentID                 string          `json:"agent_id,omitempty"`
+	Agent                   *Agent          `json:"agent,omitempty"`
+	ConnectorID             string          `json:"connector_id,omitempty"`
+	ConnectorInput          ConnectorInput  `json:"connector_input,omitempty"`
+	Prompt                  string          `json:"prompt,omitempty"`
+	X                       float64         `json:"x"`
+	Y                       float64         `json:"y"`
 }
 type WorkflowEdge struct {
 	Mode        string `json:"mode,omitempty"`
@@ -104,6 +107,9 @@ func validateWorkflow(w Workflow) error {
 		}
 		if n.ContinuationLimit < 0 || n.ContinuationLimit > 10 || n.ExecutionTimeoutSeconds < 0 || n.ExecutionTimeoutSeconds > 86400 {
 			return fmt.Errorf("invalid continuation limits for node %s", n.ID)
+		}
+		if err := validateCompletionConfig(w, n); err != nil {
+			return fmt.Errorf("node %s: %w", n.ID, err)
 		}
 		nodes[n.ID] = n
 	}

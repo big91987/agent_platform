@@ -11,6 +11,22 @@ class DeliveryRoutesTest(unittest.TestCase):
             Path(__file__).with_name("software-delivery.json").read_text()
         )
 
+    def test_agent_exit_modes_are_explicit_and_exclusive(self):
+        for name in ("software-delivery", "qa-rework", "collaboration-check"):
+            graph = json.loads(Path(__file__).with_name(name + ".json").read_text())
+            for node in graph["nodes"]:
+                if node["kind"] != "agent":
+                    continue
+                with self.subTest(template=name, node=node["id"]):
+                    self.assertEqual(node.get("exit_mode"), "handoff")
+                    self.assertTrue(
+                        all(
+                            edge["mode"] == "handoff"
+                            for edge in graph["edges"]
+                            if edge["source"] == node["id"]
+                        )
+                    )
+
     def reachable(self, excluded=()):
         visited, pending = set(), [self.graph["entry"]]
         while pending:

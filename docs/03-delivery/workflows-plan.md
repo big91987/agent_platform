@@ -4,7 +4,9 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
+当前状态（2026-10-08 12:12）：8793同一Run正式恢复至seq41研发，运行预算检查后40→60，冻结图和原40步保持；标准模板升级100次且重复安装幂等。产品首十页采集断言待修，QA38-01 Open/No-Go，Task5/U1 Active，旧部署仍9851177/schema2。完整发布/实际在途重启等未验边界保持；源开发分支提交/推送，不创建Platform PR或合main。证据见本轮验证记录。
+
+阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
 ## 里程碑与任务
 
@@ -178,7 +180,7 @@ GitHub 入口原安装器 `--upgrade` 返回 Unchanged，仓库变量仍引用�
 
 | 里程碑 | 结果与退出证据 | 当前状态 |
 |---|---|---|
-| U1 已有原型接续得到可信成品 | 材料冻结/接收/逐阶段引用，PRD与原型/AC一致，成品真实UI/功能、固定tests/独立QA、原PR/合并/正式部署一致 | Active：Issue21设计中；材料/需求交接实测，不是整链通过 |
+| U1 已有原型接续得到可信成品 | 材料冻结/接收/逐阶段引用，PRD与原型/AC一致，成品真实UI/功能、固定tests/独立QA、原PR/合并/正式部署一致 | Active：8793全新Issue25/Run4cd62ced6a4f98f50e3cca6f7596eb06已进入seq6研发；需求/设计交接与典型返工恢复实测，完整测试/QA/发布尚未完成 |
 | U2 不同研发路径可按手册使用 | 从头、原型接续、Bug、Code Review、部署的输入/配置/起点/出口/恢复明确；新仓库标准安装及各路径实际入口证据 | Active：手册初版已形成，历史短路径参考有效，专用Code Review仍未验 |
 | U3 一句话需求到交互质量闭环 | 对照U1定位瓶颈；需求/规则/原型/AC追踪，必要可运行原型及浏览器检查进入通用模板，再通过原安装升级与新案例验证 | Planned：当前仅为待验证假设，尚不能归因需求或设计 |
 | U4 完整考试与可复用交付 | 手册每路径状态与证据匹配，关键恢复和质量无P0/P1未关闭；源PR交付、正式版本和明确未测限制 | Planned：不沿用局部Go判完整通过 |
@@ -190,3 +192,62 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 ## 当前框架改造：角色与会话输入
 
 已接受设计见 [会话输入](../02-architecture/workflow-session-input.md)，实施与回归见 [实施计划](workflow-session-input-plan.md)。维护源先修复角色/项目规则分离、Markdown Session Prompt/交接预览、明确等待及有界续跑，再沿原 manifest 升级。旧产品 Run 正式冻结，未修改其工作区或冻结输入。原产品质量与用户旅程目标继续 In Progress/No-Go，不能将这一框架验收切片称为产品全链通过。
+
+
+## 半小时检查与持续推进（2026-10-07）
+
+用户重新明确授权在本会话每30分钟检查测试仓model-relay的研发进展、完成度及卡点，并通过当前8793 Harness持续推进。当前绑定Issue25/Run `4cd62ced6a4f98f50e3cca6f7596eb06`，先核对实时状态，再采取正式handoff、固定测试、独立QA、返工或恢复动作，不重复建Run。定时任务 `model-relay` 已在应用中启用，挂在本会话；既有无关自动化保持不变。
+
+最终产品目标由用户再次强调为：基本功能与交互达到商用模型中转管理控制台水平，对齐New API、LiteLLM的公开能力和用户旅程。当前design-v0.2.0仍是这一轮冻结实现/验收输入；完成度需分别列实现、测试、QA和发布事实，并形成与公开参考的覆盖/差距对照，不能以现有冻结材料有限范围自动证明全面对齐。发现尚未涵盖的必要能力，通过后续需求/设计交接完善，保留版本与用户决定。不得读取本机New API源码、数据和秘密。
+
+卡点在原验证记录登记：实际状态、用户影响、证据、最小诊断、处理尝试、复验结论和未解决原因；能修复的通用问题先落唯一维护源，经标准安装升级复验。暂时解决不了时保留现场和明确下一步，不绕门禁、伪造回执或反复盲试。只在重要阶段结果、实质卡点、处理结论或需要用户介入时通知。流程验证优先，平台页面和跳转优化随后推进。
+
+
+2026-10-08 00:18（Asia/Shanghai）首次半小时检查：主Run running/seq6 development，五份architecture-r1设计产物已实际存在并通过正式handoff交研发。研发已修改身份/租户/Key/额度费用/控制台API及迁移相关源码，原生事件完整分页核对至16:20UTC仍活跃；身份/Key轮换/微美元精度相关局部Go回归有exit0原生命令证据，不能外推完整make verify。当前没有Open PR、没有本轮独立QA或发布。用户对New API/LiteLLM的功能与交互对齐要求已通过正式User Input送入原研发会话（message1548、稳定request_id），要求在本Run文档记录覆盖/差距并交给QA；未重建Run、未改冻结材料。当前无必须人工救援的阻塞。
+
+2026-10-08 00:48：主Run与原研发会话继续运行，完整事件核对至16:48UTC。三视口真实Go控制台旅程源码已接入既有make verify/browser入口；新增计费局部回归exit0，实际HTTP监听因原生沙箱边界失败，完整HTTP/UI验证待正常handoff至宿主固定tests Connector。没有Open PR或本轮QA/发布。message1548仍queued，尚不能认定商业覆盖补充已被处理；本次不重复输入。具体证据与处理记录见统一验证文档，U1/Task5仍Active。
+
+2026-10-08 01:18：研发原会话仍活跃。首次本轮make verify实际执行exit2，在health-history因原生监听禁止而中止，失败日志已留在本Run validation/attempt-01；宿主固定tests尚未执行。go vet及计费/身份/治理/邀请的定向回归有exit0，治理回归保留编译和断言失败后修正历史，不能外推完整验收。商业补充仍queued；无PR、QA或发布。继续既有阶段和正式宿主测试交接，U1/Task5保持Active，卡点与证据在统一验证记录。
+
+2026-10-08 01:48：seq6继续活动，新增资源/成员范围、迁移守恒和代际截止定向回归通过。成员读取Key范围有产品代码修复；资源Revision和schema1身份断言属于测试前置条件/入口修正，未将测试修正描述为迁移产品故障修复。全仓空选择仅编译检查。固定宿主门禁、独立QA、PR及发布仍待执行，商业补充仍queued；U1/Task5保持Active，具体失败/修正及限制在统一验证记录。
+
+2026-10-08 02:18：implementation-r1候选、T001 In Review及逐AC待验报告已形成。首次正式tests handoff因待送达输入被正常拒绝，Agent结束turn后在原会话处理message1548；队列已空、不要求用户重发。商业对照检查又推动详情/列表搜索/Token汇总修正，新增前端失败保留，attempt-08的127项Node及计费race等补充检查exit0。完整宿主tests尚未接受交接、QA及发布未开始；待研发更新最终指纹/对照文档后正常推进。U1/Task5仍Active，事实见统一验证记录。
+
+2026-10-08 02:48：seq7宿主make verify实际执行，真实HTTP/SSE、进程崩溃恢复及全仓race/构建完成，browser因旧迁移驱动期待schema2而exit2，正式failed路径自动返seq8研发。产品Agent保留旧迁移守恒层并新增生产schema3迁移/browser旅程；目标契约及迁移守恒的局部race通过，完整宿主门禁需重跑。商业/J01–J07对照与冻结范围外差距已落原验收矩阵，输入已处理。无QA、PR或发布；U1/Task5仍Active，失败和修复证据见统一验证记录。
+
+2026-10-08 03:18：seq9宿主复验旧兼容迁移UI通过，但生产schema3 Key检查失败exit2，自动返seq10。研发定位driver误读data包络（正式为items），保留数量/身份/启停断言并加契约及安全诊断回归；135项Node和指定race等检查通过，当前seq11第三次宿主完整make verify running。未取得完整门禁退出码或QA/PR/发布，U1/Task5仍Active；失败、候选指纹和复验在统一验证记录。
+
+2026-10-08 03:48：seq11生产schema1/2→3迁移及三视口原生管理页、旧UI和多上游旅程实际通过；新控制台在服务核验处失败，原failed边返seq12。前端补expected_execution_revision，受控列表fixture补object=list；137项Node及指定race等通过，当前seq13第四次宿主完整门禁running。无QA、PR或发布，U1/Task5保持Active；完整日志、根因、红绿回归及新指纹在统一验证记录。
+
+2026-10-08 04:18：seq13确认服务核验200且版本/success/applicable一致，原服务修复真实生效；模型表单driver标签子串歧义导致门禁exit2，自动返seq14。驱动精确匹配及唯一性回归修正，138项Node/非监听检查通过，当前seq15第五次宿主完整make verify running。无QA/PR/发布，U1/Task5保持Active；失败、fixture修正及当前指纹见统一验证记录。
+
+2026-10-08 04:48：seq15模型定位修复生效并推进至Key旅程，但粗阶段超时导致完整门禁exit2。seq16只增加11阶段安全诊断、141项Node及非监听检查通过，未猜改产品或宣称Key修复；当前seq17第六次宿主完整门禁running，根因待具体回执。U1/Task5仍Active，QA/PR/发布未开始，现场/假设/下一步在统一验证记录。
+
+2026-10-08 05:18：seq17定位Key签发成功但dialog close误清转交值，seq18修生命周期与跨epoch归属；seq19真实Key/调用/同ID详情及1280后续旅程越过原卡点，键盘断言失败返seq20。driver新增异步editor可见性等待及保留原断言的分段诊断，152项Node等通过；当前seq20仍running，完整宿主重验/独立QA/发布待执行。U1/Task5保持Active，具体根因与实测边界见统一验证记录。
+
+本轮结束前复核：seq20已正式交接，当前seq21第八次宿主完整tests running，尚无退出码；独立QA及发布继续待验。
+
+2026-10-08 05:48：seq21首次完整make verify exit0，新控制台三视口实际通过，正式进入seq22独立QA。QA发现P1强制UI旅程覆盖不足及P2 Key列表状态问题，结论No-Go，报告与整改交接已部分落盘。模型容量故障使Run failed；本轮通过既有CI所有者正式resume接续原QA会话/同native线程，实际继续活动，无换模型或重建任务。当前QA仍running，待正式返研发补覆盖，再门禁/QA；PR及发布未开始。U1/Task5仍Active，证据分层和恢复详见统一验证记录。
+
+2026-10-08 06:18：恢复后的seq22独立QA已completed，正式No-Go交接development接受，seq23研发running。产品Agent新增独立空库、测试专用受控时钟及三视口J01–J07连续UI旅程并接入原browser固定入口；Key状态/授权/预算展示和无租户加载态已形成修复候选。156项Node及7项定向race等非监听检查通过，新122文件指纹cb51d80c…的完整宿主make verify/新旅程尚未执行，QA22两项仍Open。真实容量故障恢复已完成原线程报告→正式返工交接，未换模型/重建Run。U1/Task5保持Active，无PR/合并/新部署；详细边界见统一验证记录。
+
+2026-10-08 06:48：seq23最终157项Node/指纹18207762…正式交tests；seq24第九次宿主make verify exit2，旧三视口控制台等通过，新continuous-console在J01初始状态失败，自动返seq25研发。已定位driver把全新安装误作含legacy租户的迁移安装；Agent修零集合断言和安全诊断，6项Node及新安装in-process定向race通过，完整宿主仍待复验。上一轮“init保留空legacy”的维护者记录判断不准确，已在验证记录明确更正；生产初始化未为测试修改。QA22缺陷仍Open，U1/Task5保持Active，无PR/新部署。
+
+2026-10-08 07:18：seq26第十次宿主完整门禁exit2，真实初始三集合均零，已越过上一断点；连续J01首次调用502，原failed边返seq27。实际受控上游响应缺assistant role，产品Agent只修fixture，保留生产协议校验/已知未知收费规则，实际夹具正反回归及159项Node等通过；当前seq28第十一次完整make verify running。没有J01–J07完成证据或新QA通过，QA22问题保持Open；U1/Task5仍Active，PR/合并/发布未开始，细节见统一验证记录。
+
+2026-10-08 早间用户询问累计成果时复核：seq28完整门禁exit2，但新增continuous1280的J01–J04已实际passed，暂停恢复J05费用守恒断言失败；seq29仅增加分段安全诊断及回归，正式交接后seq30完整tests running。当前不能称J05根因已修复或七旅程/独立QA完成；U1/Task5继续Active，待真实比较金额回执再最小归因。完整日志证据与边界见统一验证记录。
+
+2026-10-08 08:47：seq30第十二次完整门禁exit2，新增1280/J01–J04及原三视口控制台继续通过。诊断实测费用126→126、调用数9→9等全部守恒，早间把粗J05标签判断为费用断言失败不准确；失败边界在后续成员操作，seq31正在拆分。源码/延迟回归确认driver刷新可能在租户同步完成前读取旧选项，已补候选等待与12项driver回归通过，真实原断点尚待宿主归因/复验。原Run正常running，QA22两项Open，U1/Task5未完成，未PR/发布；GitHub首次TLS读取失败后REST核验成功，非产品或Harness阻断。
+
+2026-10-08 09:17：seq32第十三次完整门禁exit2，但新增1280/J01–J05及J07实际passed，成员刷新/隔离旅程越过原断点。J06账单核对driver误读首条不可改写的零费用账目为累计费用21；seq33仅修累计账本读取并加强原项/快照/追加差额断言，165项Node与定向race等通过。当前seq34第十四次完整make verify running；新指纹50fb764a…完整结果/其他视口/独立QA待验，QA22问题未关闭，U1/Task5仍Active，未PR/合并/部署。
+
+2026-10-08 09:47：seq34完整make verify exit0，指纹50fb764a…三个视口×J01–J07共21/21实际通过；seq35独立QA核对指纹/18产物，关闭QA22-02状态展示，保留QA22-01故障/并发覆盖残项并新增QA35-01 P1：写结果不确定时首次安全GET失败清掉读回重试按钮且不显示操作标识。真实生产函数Contract复现exit1，尚非Chromium复现；原QA正式No-Go返seq36研发，当前running，正在修恢复流程并补AC08/09/16，未获得修复重验结果。Harness门禁成功→QA→正确返工正常，无新平台阻断；U1/Task5继续Active，Open PR0、近期Actions仅Issue入口，5545仍旧main9851177/schema2，未新合并部署。具体原因、证据和真实外部验证限制见统一验证记录。
+
+2026-10-08 10:17：seq36安全读回修复候选已正式交tests，当前seq37第十五次原完整make verify running。生产editor保留独立操作引用/重试与unknown提交锁；169项Node、新两层五维/共享竞争12分例in-process race及原6项race实际通过，三视口轮换丢响应/双发送与实际HTTP新矩阵已接原门禁但尚无宿主回执。当前127文件指纹3ee2122e…，不继承旧50fb完整绿；QA35 No-Go及两项未关残项保留，QA22-02仍Closed。Harness接受/派发正常，无新平台阻断；U1/Task5 Active，近期Actions仅Issue入口，5545仍旧main/schema2，未新发布。真实UI旧行为隔离重建不是原QA Chromium红灯，详细证据与测试前置失败纠正见统一验证记录。
+
+2026-10-08 10:47：seq37完整make verify exit0/101748 bytes，当前127文件3ee2122e…三视口故障与21主旅程、新ActualHTTP资源矩阵全部通过；QA38同指纹独立复验/63产物核验，关闭QA35-01和QA22-01指定覆盖主题，QA22-02保持Closed。仍No-Go：原强制AC01十页批准原型与实际页面逐页对照未齐，仅h1导航烟测不能放行；已正式返seq39补采集/映射，当前running，不改冻结输入或重写已通过功能。Harness关单→补证返工路由正常；U1/Task5 Active，Open PR0，Actions本轮TLS读取失败未知，5545仍旧main/schema2，未新合并部署。缺口是验收证据，不冒称新产品P1，详见统一验证记录。
+
+2026-10-08 11:17：seq39 completed并正式交tests，seq40第十六次原完整make verify running。新增十页真实页面/详情/编辑采集和逐页映射接原J旅程，计划三视口63PNG/3JSON尚未作为真实产物通过；Key额度复用资源摘要及详情中文标签候选、173Node与非监听检查实际通过。新129文件bb30f817…不能继承旧完整门禁绿，QA38-01仍待宿主/独立QA判断，旧缺陷关闭事实保持。Harness派发正常，U1/Task5 Active，Open PR0，旧5545/schema2保持，无新合并部署；设计差异和证据限制见统一验证记录。
+
+
+2026-10-08 11:47～12:12：**测试仓**seq40原完整make verify exit2/101576 bytes；173Node、全仓race/build、原三视口控制台/故障及新增1280七旅程绿，首visual-overview采集断言失败，具体字段待真实安全DOM诊断。QA38-01仍Open/No-Go，旧三项关闭事实保留，不把旧绿或计划截图作当前完成。**Harness**同时耗尽原冻结40次上限，无正式有界恢复入口；维护源新增授权检查原因/目标/有限max_steps的return，保留冻结图/历史/回执/workspace，不自动重放。Go/API与Node红绿、完整scripts/verify.sh exit0后，无在途备份升级8793；标准manifest升级连续两次幂等、同ID，新模板100、原Run40不变。正式CI Token return seq40→41 development HTTP202，有效预算60/冻结40/原40步深比较一致，原生Codex已实际运行定位采集断点。未手改DB/回执/权限/冻结输入，产品实现仍由Pipeline Agent；U1/Task5及产品新PR/合并/发布未完成。源只在开发分支交付，不创建Platform PR/合main；其余未测典型负向不因本次恢复关闭。详证见统一验证记录本轮条目。
