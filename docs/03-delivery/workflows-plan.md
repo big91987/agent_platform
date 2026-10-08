@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 14:21）：QA47正式No-Go，QA38-01采集缺口Closed，但新QA47-01 P1/AC01主要管理摘要缺失仍Open，QA47-02原始/确认Token口径P2 Open。seq48整改候选交原完整tests49后exit2，服务创建等待响应超时，已自动返seq50研发修编辑器锁生命周期；局部检查不替代完整门禁或独立QA。用户要求部署最新效果且不替Harness实现，已通过同Run正式User Input message9179送达；既有Deploy Model Relay locally/在线Runner可用，待Harness正常QA/report/publish/pr产物后由授权协调者合并、触发正式Actions。Run有效60/冻结40保持；新PR/合并/部署未发生，5545仍9851177/schema2。源开发分支提交/推送、不建Platform PR/合main。详证见统一验证记录。
+当前状态（2026-10-08 14:21）：QA47正式No-Go，QA38-01采集缺口Closed，但新QA47-01 P1/AC01主要管理摘要缺失仍Open，QA47-02原始/确认Token口径P2 Open。seq48整改候选交原完整tests49后exit2，服务创建等待响应超时，已自动返seq50研发修编辑器锁生命周期，结束前已正式进入seq51完整tests；局部检查不替代完整门禁或独立QA。用户要求部署最新效果且不替Harness实现，同Run正式User Input message9179已completed，部署要求已写原任务并带入交接；既有Deploy Model Relay locally/在线Runner可用，待Harness正常QA/report/publish/pr产物后由授权协调者合并、触发正式Actions。Run有效60/冻结40保持；新PR/合并/部署未发生，5545仍9851177/schema2。源开发分支提交/推送、不建Platform PR/合main。详证见统一验证记录。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
