@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-09 02:40）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests14独立冷验证在内层12分钟期限退出（exit2/249788bytes/truncated=false），正式API八页至EOF、runner完整249576bytes及state摘要一致；源码不变/自有进程组消失/候选移除已记录，本轮非缺包或Owner stop，但浏览器三视口未完整，仍No-Go。自动返研发15加入阶段UTC/耗时及routing调用边界诊断，未改动作/断言/门禁/时限；147件24725bbb7833cfc2665d44b67de4982cc045aa375ad5ec65c68c6c7d6f2b044e候选的tests16自18:33:16Z running，用实际新诊断区分累计耗时与单步卡住后再修，不盲目增限或重复。原三P2在development13复审静态闭合；新诊断复审核同147件源戳、无新增Critical/Important且原动作/断言/时限保持；完整冷绿及独立QA仍待完成。无新PR/正式部署，旧preview版本保持；通用controller实际下一Actions日志复验和动态独立QA仍待完成，长期阶段1Active，预算100/定时ACTIVE30分钟。
+当前状态（2026-10-09 03:10）：Issue28/Run3e7496815b9922704072482cf44e73e2的tests16内层12分钟失败（exit2/294002bytes/truncated=false），正式API九页读至EOF、runner293790bytes/hash与state匹配，冷起点/源前后/所属组清理闭合但非绿。新时序证据定位internal/relay race450.421秒、browser519.258秒才开始，149routing calls全end/0pending；390冷却被期限中断不算已证产品缺陷。自动研发17对独立Go场景T.Parallel并以parallel4有界调度，原race/count1/断言/HTTP/浏览器/冷缓存/锁/12min和Connector900秒保持；147件28571f199f257d5c0bb09fc679150ddb8c5beff822c1a8c813a3bb54c064eeb7的tests18自19:02:33Z running，首browser约374.629秒提前144.629秒，局部时序改善不等于全套解决。新并行隔离复审无新增Critical/Important，parallel4是每包testing槽上限而非全宿主进程数；新完整冷绿/独立QA/PR/正式部署未完成。预算100/定时ACTIVE30分钟、阶段1Active；通用controller下一Actions实证和动态独立QA工具缺口保持。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
