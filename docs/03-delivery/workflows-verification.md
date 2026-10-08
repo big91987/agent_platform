@@ -1542,3 +1542,22 @@ QA38-01继续Open/QA38 No-Go，QA35-01/QA22-01指定主题/QA22-02旧关闭事�
 **Harness进度。** 显式有界恢复之后，seq41→42诊断tests→43正确failed返研发→44候选tests均实际正常，未发现新的跳错/重复派发/通用平台故障。维护源20e1a97干净、8793代码binary仍d926462e…；本轮只有证据记录更新，不重启在途服务或重复已通过平台全回归。seq43原生thread-start事件有Codex thread/CLI/provider元数据，但没有实际model字段；冻结配置指定gpt-6.1-sol，不能据此新增“底层模型已独立验证”的结论，原H边界保持。
 
 GitHub本轮Actions37728783413/37727970399/37727067377都是Issue entry success/旧main9851177，非新发布。Open PR首次读取TLS timeout，当前数量未知，不沿用12:18的0；不循环盲试。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，新候选未合并部署。完整原日志/当前Run/原生1361事件与health在忽略目录`.data/fresh-8793/check-20261008-1248/`；产品证据在同Run attempt43原文件，维护者没有修改产品或回执。
+
+
+## 半小时检查：十页三视口真实采集与完整门禁通过，独立设计QA在途（2026-10-08 13:18）
+
+Run实时seq47 qa running，无error/等待，有效预算60/冻结图40；seq44完整测试exit2正确返seq45，seq45 visual-editor-owner-r1已正式交tests，seq46第十九次原完整make verify真实exit0，13:13:35进入独立QA47。没有重复Run、输入、命令、手动恢复、服务重启或权限扩大；产品及采集驱动由Pipeline Agent修正。
+
+**两个采集断点实际验证。** 维护者分别将seq44和seq46正式output四页读至eof：103687/104299 bytes、均truncated=false。seq44旧候选31bbf962…的1280当前周期UI真实活动requests0→1/trend0→1/fee21/closed_bill_unchanged=true已通过，越过overview原空态断点，采集overview/models/services/keys/tenants/limits六页后停limits-editor/open-editor timeout。实际limits role/scope/ready/字段/操作/非空/布局/秘密均通过、调整租户限额enabled、editor_open=false；源码按钮由mainAction置.page-heading/#page-action，采集却在#content中寻找。责任是locator所属容器错误，不是新预算业务失败、监听限制或未知异步等待。
+
+seq45只修console-visual.mjs/test及既有Trellis契约：limits editor按声明heading owner找exact唯一按钮；其他5editor保留current row/content，不跨容器fallback、不提高超时。原采集门槛/生产Go/UI/账本/测试钟/Makefile均保持。旧owner隔离重建的EXPECTED RED是Contract层预期红评估exit0，不称修改前Chromium红灯；实际旧宿主红来自seq44。局部8/8及182Node/静态检查exit0，129文件新指纹 `7e0b20ddbdea4585959365d8ad3b6121abaa91cd3f450fa2c6c21f7afc05a9ab`、HEAD9851177、Go1.25.6，source-evidence/source-after/正式seq45交接一致，19件材料/原archive5f51…保持。
+
+**当前同版完整测试已通过。** seq46源戳为上述7e0b20dd…，182Node/0fail，全仓race（CLI8.975s、relay405.581s、browser10.801s、health-history5.925s）、build，原迁移schema1/2→3/进程/实际HTTP/旧UI/多上游/键盘/三视口console及fault全部通过。三视口故障链仍单mutation、无秘密重放、轮换过渡409；双普通/SSE仍proxyPOST/admission/attempt/dispatch各1、Tokens3+4。新continuous三视口J01–J07共21检查点均passed；当前周期UI活动三视口均真实passed且旧结账对象保持。新console-visual三个视口各result=passed/pages10，越过limits editor并完成所有后续采集。受控真实HTTP/SSE只证明本项目语义，不是供应商联调。
+
+维护者独立从三个新review.json递归核验其引用PNG：每视口10页+5详情+6编辑=21张，共63个唯一实际路径，全部存在且SHA256与review逐项匹配，结果保存在visual-artifact-verification.json。没有用文件夹总数量或旧同名图冒当前证据。人工查看当前390工作台和1280租户限额editor，当前月1调用/100%/费用0.000021、趋势及预算编辑实际呈现；仅查看两图不替代全部冻结设计对照或独立QA。旧QA38的63件fault/连续证据与本轮63件visual不同，不混为同一批。
+
+**独立QA尚未结束。** seq47已读取同材料/当前源戳/正式门禁与三视口截图，正在独立对照；原生消息指出模型和租户摘要可能缺冻结设计关键信息，当前只是QA在途发现，未有已接受结果或正式整改单，不预判其Go/No-Go/缺陷等级，也不由维护者代改产品。QA38-01继续Open直到独立QA正式关闭；自动化采集通过与63图齐全不足以保证AC01全部信息/主要动作符合。若明确缺口，沿现有正式handoff返工，不静默改设计或新增用户审批。QA35-01/QA22-01指定主题/QA22-02旧关闭事实按范围保持。
+
+**Harness。** 有界恢复后原failed→研发→tests→独立QA路由及同Run预算实际正常，无跳错/重复派发或新的通用缺陷。源开发分支a96aa9d干净、8793 binary仍d926462e…；本轮只更新现有证据，不重跑已通过平台完整检查、不重启在途服务。底层实际模型/在途重启/完整新发布等原未验边界保持，不以产品门禁绿外推所有Harness异常场景通过。
+
+GitHub本轮正式Open PR0；Actions读取TLS timeout，当前近期Actions未知，不沿用旧入口成功作发布证明。5545实际health200/schema2/version98511771871cf0951ecef716bbb55deb13e18da5，仍旧部署，新产品未PR/合并/正式Actions部署。Task5/U1 Active；当前关键路径为独立逐页QA→必要返工或报告发布→测试仓授权合并/正式部署/health和页面一致。真实供应商/支付/外部身份及冻结外商业功能仍未验证/后续缺口。现场、两份完整原日志、当前review、63文件摘要、QA原生事件及health在忽略目录`.data/fresh-8793/check-20261008-1318/`，没有必须用户介入事项。
