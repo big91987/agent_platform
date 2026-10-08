@@ -14,6 +14,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -596,9 +597,16 @@ def prepare(root, sha, plan_path, output):
                 str(source),
                 sha,
             )
-            log = root / "logs" / ("verify-" + sha + ".log")
-            with log.open("w") as stream:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=root / "logs",
+                prefix="verify-" + sha + "-",
+                suffix=".log",
+                delete=False,
+            ) as stream:
+                log = Path(stream.name)
                 result = run("make", "verify", cwd=source, stdout=stream, check=False)
+            print("Verification log:", log)
             if result.returncode:
                 raise RuntimeError(
                     "project verification failed; see private log " + str(log)

@@ -1724,3 +1724,25 @@ GitHub正式回读PR27 open/Draft/head66f1328ada75ea90e5638fbf2bd58663ac86347e�
 后续处理：沿Owner正式return seq67→qa，要求只纠正产物交接，列出实际文件或已有ui-artifact-index.json引用其留存清单，保留QA65原证据与Blocked/Not Run边界，不补造测试、不改产品/门禁。新QA应核同版源码及真实材料后交接report→publish→同PR；源码变化才需受影响tests/QA重新验证。当前总预算100有余，不增加限额、改冻结定义或回执。目录拒绝属于现有安全契约，本轮不把发布器改成递归接受目录。正式恢复及实际再次发布结果待回读。
 
 正式恢复回读：普通failed seq67直接return按现有约束返回409、未改变状态；源码确认普通失败须先stop到stopped（执行次数耗尽的特例除外）。Owner stop HTTP202→stopped，再return seq67→qa HTTP202，Run running/seq68、原生QA ee880602e02ccb47c27283b35322d291 running/error空。管理员同调用者核对前66步/冻结definition完全不变，seq67失败connector_receipt逐值保持；其状态由正式回退记录为cancelled并附原因，不补造通过。纠正由Pipeline QA执行，尚未有新的有效交接或发布回执。原生源码与安装指令同源，问题不需要目录许可、数据库编辑或新配置；源平台通用能力无永久修复新结论。
+
+
+### 2026-10-09 00:10 文件级恢复完成、精确合并与正式部署分发
+
+正式Run completed/seq72/error空：QA68与report69只纠正交接和公共说明，report69携带75件实际文件清单；publish70 exit0/124bytes/truncated=false，pushed=true、head e613038e6cc4a3ce63782a95d35cd42f74cb354c；pr71正式绑定同PR27及该head，没有创建重复PR，done72 completed。原67失败仍保存，其取消状态来自正式回退，不能解释为发布成功。
+
+维护者合并前逐项读取新提交git对象而非仅查未提交工作树：140件字节数/SHA及总源戳ca8ec50aa168cf16ac2e24edfe214aa44d06a05846c34deadbc3c7cb6c02904a全部与QA65 integrity一致，checkout干净，GitHub PR27确认同head/base9851177、mergeable_state clean及GitGuardian success。原完整make verify/QA65和修复只读复审适用于该提交；没有代产品实现或重跑门禁。
+
+按既有测试仓授权将原PR27 ready，再以sha=e613038…执行精确合并，正式API merged=true/mergeSHA cd413b5aa24a372a19c19af999a6ef61b5c41572，main ref同值。未创建Platform PR或合并源main。正式Deploy Model Relay locally（375348269）：push prepare [37806816549](https://github.com/big91987/model-relay/actions/runs/37806816549) in_progress；Owner workflow_dispatch main/deploy=true/target=preview已发送，[37806849658](https://github.com/big91987/model-relay/actions/runs/37806849658) queued，两者headSHA均mergeSHA。自动push只准备；只有dispatch activate成功及真实Deployment/healthz/schema3/admin页面闭合才认最新正式部署。没有手启临时服务/改数据/绕门禁；当前仍待prepare完整门禁、激活和实际页面核验，不提前宣称上线。后续不重复dispatch或继续旧完成Run盲循环；当前阶段1剩余外部发布事实核验后才选择长期后续阶段。
+
+
+正式准备失败（2026-10-09 00:14）：push prepare37806816549 failure、dispatch37806849658 failure，均未进入activate，5545实际health200/旧9851177/schema2仍健康。前述in_progress/queued是分发时点历史，不是当前部署状态。读取Actions失败日志及正式私有verify-cd413b5…日志，当前精确merge源戳仍ca8ec50a…。首次prepare私有日志被同SHA第二prepare以w模式覆盖，保留第二次完整可得日志至ignored check-20261009-0010/deploy-verify-failed.log；不得声称已恢复首次全部失败原因。第二次真实失败为frontend-test 192例/191pass/1fail，route-cleanup.test.mjs加载playwright-core/package.json报MODULE_NOT_FOUND，未到全量Go/browser/activate。历史HealthMethodsHTTP红灯重建已按分类器PASS，不能把其中FAIL误认为当前失败原因。
+
+最小只读诊断：产品Makefile先frontend-test、test、build，browser最后才npm ci；新增route-cleanup.test.mjs在frontend-test中require.resolve依赖。此前seq64/QA工作区已有node_modules，使干净安装问题未暴露。现象不是权限或供应商错误；本轮不在运行副本手装包或跳过例子。产品依赖/固定入口根因由新main Pipeline Agent修复；新的真实Issue应从合并main开始，用标准锁定安装和干净工作树验证，原Issue25/PR27保持已完成历史，不继续旧Run盲返工。通用部署器按SHA复用日志覆盖不同尝试是维护源可复验缺陷，平台另行处理唯一源码、标准安装/升级；本轮先保留可得证据，不更改在途控制器。
+
+已创建唯一新Bug [Issue28](https://github.com/big91987/model-relay/issues/28)，目标从当前main修复干净安装依赖顺序并完成正式部署；未重复原Issue25。自动入站[37807379538](https://github.com/big91987/model-relay/actions/runs/37807379538)失败于gh api读取Issue28，尚未clone/Start Run，正式API仅原完成Run；Actions仅给出CLI非零，没有保留HTTP原因，不能归因权限或供应商。之前相同入口多次真实成功，本轮Owner gh读取正常；计划对原入站Actions作一次有界rerun，保留同Issue/幂等request入口，不改凭据/权限/配置。重试若继续失败保留新日志和未知原因，不反复盲试。
+
+Issue28入站第二次实际结果：Actions37807379538 run_attempt2 success，正式API唯一Run3e7496815b9922704072482cf44e73e2 running/error空，issue2 completed→intake3/ccdf61b328f2751386b7efe433469851 running。新checkout由原SDK prepare创建，从合并main开始；本协调者没有代写产品、临时装依赖或发重复任务。原首轮GH读取非零原因未知保留，后续通过不倒写成已定位网络原因。
+
+通用日志修复采用已授权的最小有界方案：源码controller.prepare每次真正make verify用NamedTemporaryFile在原private logs中独立600文件，失败后保留，随后stamp仍追加同次路径；ready候选复用不假装重跑。现有正常/升级/停服/数据协议不变。TDD真实git/make连续两次失败保留及一次成功回归：旧版仅1日志vs2预期失败，修复后3日志且两失败字节不变、权限无group/other读取、计划成功绑定SHA；完整*_test.py 60件58.517s exit0（默认test*.py无匹配的初次发现不算测试，已纠正实际命令）。README记录私有日志和标准升级，证据在ignored controller-log-red/green/suite.log。修复只读复审和标准安装升级待实际回读，正式新版本Actions复验仍待产品Issue28候选。
+
+日志修复只读独立复审完成：无Critical/Important，确认mkstemp排他创建/0600/delete=False、失败保留、重试不删logs、ready复用不重跑，原部署锁/令牌隔离/标准安装升级保持。reviewer未代跑测试；启动异常/父进程强杀可能不打印已创建日志路径、断电持久性未测，保留限制。新Issue28冻结定义实际max_steps100，与当前标准模板一致，无提前增限。

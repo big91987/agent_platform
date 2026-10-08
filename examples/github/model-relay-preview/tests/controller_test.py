@@ -176,6 +176,42 @@ class DeploymentControllerTest(unittest.TestCase):
             self.prepare(target)
         self.assertEqual(json.loads(self.plan.read_text())["sha"], target)
 
+    def test_repeated_preparation_preserves_each_failed_verification_log(self):
+        makefile = self.work / "Makefile"
+        makefile.write_text(
+            makefile.read_text().replace(
+                "verify:\n",
+                'verify:\n\t@echo "$$VERIFY_TEST_ATTEMPT"\n'
+                '\t@test "$$VERIFY_TEST_FAIL" != yes\n',
+            )
+        )
+        target = self.commit("verification attempt logs")
+        for attempt in ("first failure", "second failure"):
+            with patch.dict(
+                os.environ,
+                {"VERIFY_TEST_ATTEMPT": attempt, "VERIFY_TEST_FAIL": "yes"},
+            ):
+                with self.assertRaisesRegex(RuntimeError, "verification failed"):
+                    self.prepare(target)
+        logs = list((self.root / "logs").glob("verify-*.log"))
+        self.assertEqual(len(logs), 2)
+        prior = {path: path.read_bytes() for path in logs}
+        self.assertEqual(
+            {data.splitlines()[0] for data in prior.values()},
+            {b"first failure", b"second failure"},
+        )
+        for path in logs:
+            self.assertEqual(path.stat().st_mode & 0o077, 0)
+        with patch.dict(
+            os.environ,
+            {"VERIFY_TEST_ATTEMPT": "successful recovery", "VERIFY_TEST_FAIL": "no"},
+        ):
+            self.prepare(target)
+        self.assertEqual(json.loads(self.plan.read_text())["sha"], target)
+        for path, data in prior.items():
+            self.assertEqual(path.read_bytes(), data)
+        self.assertEqual(len(list((self.root / "logs").glob("verify-*.log"))), 3)
+
     def test_exact_main_preparation_is_repeatable_and_rejects_stale_head(self):
         self.prepare(self.old)
         prepared = json.loads(self.plan.read_text())

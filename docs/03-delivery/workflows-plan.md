@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 23:40）：Issue25 budget-clock-r1候选140件ca8ec50a…已通过seq64原完整make verify和seq65独立QA（Go with known issues），两项预算/回拨问题关闭，候选只读复审无新的Critical/Important。report66完成，publish67因QA65交接含host证据目录而在git提交前拒绝；只读复现与同版摘要核对成立，既有指令和发布器均要求实际非空文件，本轮保留安全契约。普通failed直接return被409拒绝后，已沿正式stop→return进入qa68/ee880602e02ccb47c27283b35322d291，纠正交接再report→publish→原PR27。没有产品改动、测试重放、增限或重复任务；当前总预算100。PR27仍Draft/head66f1328尚不含新修复，5545仍9851177/schema2，尚未合并部署。原生QA动态浏览器实操仍Blocked，独立self_hosted首次UI、真实外部联调与部分Harness验收仍未完成。冻结design-v0.2.0、长期五阶段计划与产品/平台责任边界保持；model-relay自动任务ACTIVE，每30分钟按实时状态推进。
+当前状态（2026-10-09 00:20）：原Issue25/Run4cd62ced6a4f98f50e3cca6f7596eb06 completed/72步，修复版e613038的140件ca8ec50a…与seq64/QA65一致；PR27已精确合并main cd413b5aa24a372a19c19af999a6ef61b5c41572。正式prepare37806816549及deploy dispatch37806849658均在prepare失败，未activate；干净工作树frontend-test加载playwright-core失败，产品Makefile把npm ci放在后续browser，旧工作区已装依赖掩盖缺口。新Bug Issue28通过原Actions37807379538第二次有界尝试成功，正式唯一Run3e7496815b9922704072482cf44e73e2 running/intake3（ccdf61b328f2751386b7efe433469851），从已合并main修标准依赖入口、干净测试与独立QA后再PR/正式部署；不继续旧完成Run。5545实际health旧9851177/schema2保持。平台通用部署日志同SHA覆盖已定位，维护源独立私有日志修复与红→绿/完整60测试通过，复审/标准升级待闭合；原生QA动态浏览器缺口仍未解决。长期阶段1继续Active，其他阶段及未验范围保持；model-relay ACTIVE每30分钟先核对新锚点，不重复Issue/Run/dispatch、不越权或伪造上线。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
