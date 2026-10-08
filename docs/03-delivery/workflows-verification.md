@@ -1746,3 +1746,7 @@ Issue28入站第二次实际结果：Actions37807379538 run_attempt2 success，�
 通用日志修复采用已授权的最小有界方案：源码controller.prepare每次真正make verify用NamedTemporaryFile在原private logs中独立600文件，失败后保留，随后stamp仍追加同次路径；ready候选复用不假装重跑。现有正常/升级/停服/数据协议不变。TDD真实git/make连续两次失败保留及一次成功回归：旧版仅1日志vs2预期失败，修复后3日志且两失败字节不变、权限无group/other读取、计划成功绑定SHA；完整*_test.py 60件58.517s exit0（默认test*.py无匹配的初次发现不算测试，已纠正实际命令）。README记录私有日志和标准升级，证据在ignored controller-log-red/green/suite.log。修复只读复审和标准安装升级待实际回读，正式新版本Actions复验仍待产品Issue28候选。
 
 日志修复只读独立复审完成：无Critical/Important，确认mkstemp排他创建/0600/delete=False、失败保留、重试不删logs、ready复用不重跑，原部署锁/令牌隔离/标准安装升级保持。reviewer未代跑测试；启动异常/父进程强杀可能不打印已创建日志路径、断电持久性未测，保留限制。新Issue28冻结定义实际max_steps100，与当前标准模板一致，无提前增限。
+
+标准升级与实际状态回读（2026-10-09 00:20后）：部署两目标activation均committed，失败Actions已完成，无在途activate。维护源789cc90原install.py以原参数升级两个私有根，未手改运行副本；source/两controller.py/两controller-install.json SHA均2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79。前后原preview.json/activation stage及尚可得verify-cd413b5…字节摘要完全相等，两health均200/9851177/schema2。安装器未init、部署或start产品、未替换实际数据/密钥。新装/升级回归含在60项中，既有两安装标准升级已应用；新控制器真实Actions尝试尚待产品修复候选，不宣称完整新部署成功或补回首次覆盖日志。源平台只开发分支提交。
+
+Issue28当前正式API：intake3 completed→development4/93e40ccfc93d89bd4400be032eb6947b running/error空，总预算100。已进入原生研发，不是仅创建Issue或说明计划；源码实现/干净固定门禁/独立QA/新PR及最新正式部署仍待真实结果。当前工作锚点切换Issue28/Run3e7496815b9922704072482cf44e73e2，原Issue25/Run72/PR27merged保留历史。

@@ -221,3 +221,6 @@
 
 
 2026-10-09 00:20：正式干净main部署拒绝依赖顺序错误，旧工作区缓存掩盖frontend-test缺playwright-core，产品根因由新Issue28/Run3e7496815b9922704072482cf44e73e2承担；独立冷安装验收需进入持续交付要求，不能把旧工作区绿色当标准首次安装通过。另定位平台controller同SHA verify日志w覆盖历史；维护源改每次尝试独立600私有日志，不新增API/权限或领域对象，真实git/make双失败→成功回归旧版1!=2红、新版绿，完整控制器/安装/隔离/故障/Workflow60测试58.517s exit0。只读复审/原安装器升级待闭合；不能补回已覆盖的首次日志或宣称实际正式双失败重试已被新控制器验证。QA浏览器通用缺口仍Ready for diagnosis。
+
+
+日志修复标准集成完成：维护源789cc90，独立复审无Critical/Important，原install.py以原根/仓库/端口/代理参数升级preview5545和validation5546；source/controller/controller-install摘要一致2d456ca50265cdd6db89ee4b0f3d0e85695bec45adff7a2b2665c826d48fab79。原配置/activation committed/可得旧失败日志字节保持，两产品health均旧9851177/schema2健康，没有部署或启停新产品。真实新控制器Actions尝试及日志绑定仍待Issue28候选，测试夹具通过不能替正式Pipeline。Issue28当前development4原生93e40ccfc93d89bd4400be032eb6947b running。
