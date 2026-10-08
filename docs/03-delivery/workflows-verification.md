@@ -1658,3 +1658,25 @@ seq56 candidate records-detail-entry-r1只修驱动为精确Request ID行详情/
 正式恢复回执（2026-10-08 19:39 Asia/Shanghai）：Owner return HTTP202，seq60→61 pr，有效max_steps64。原始60步及冻结definition经管理员正式API深比较完全不变；CI return响应含调用者权限相关配置脱敏，与管理员响应不可直接作为同字段比较，先前核对脚本误报AssertionError已通过同Caller回读排除。pr61由正式github.pull_request Connector创建草稿PR27，head_sha66f1328ada75ea90e5638fbf2bd58663ac86347e；URL https://github.com/big91987/model-relay/pull/27 ，已附到当前会话。done62完成，Run completed/error空，不重放publish。Run completed仅表示编排已交付PR，不等于用户部署目标完成；PR尚未合并、正式新Actions部署/health/schema3/实际用户页面未完成，旧5545版本保持。产品Go with known issues与P3保留，定时仍PAUSED。
 
 用户询问预算和Web验证方式：原Run冻结40，协调者上次恢复设60，本轮明确检查只余pr→done后正式设64；是节点执行总次数，包含Agent/Connector/结束节点和返工，不是模型消息或工具调用次数。当前通用模板100，未因此改写老Run预算。seq57宿主make verify经go run ./tests/browser启动真实Go/隔离SQLite/受控HTTP-SSE上游并用Playwright浏览器执行实际UI；1280/1440/390全部J01–J07通过。QA58自身未重新操作浏览器全链：独立核验版本源戳/固定完整回执、设计比对30页+8关键图，独立193Node/5非监听Go race，关闭原层缺陷。区分宿主UI-E2E、独立证据/视觉验收和未完成的正式部署UI，不能声称QA亲自完整复跑或供应商联调已验。
+
+
+## 长期推进计划与QA浏览器能力核对（2026-10-08）
+
+用户继续授权基于8793迭代Model Relay、维护长期计划并记录/修复卡点。计划已在现有workflows-plan.md增补五个结果阶段，workflow-node-agent-plan.md承接通用改进；不另建平行状态目录、不自行恢复此前PAUSED定时任务。
+
+实时GitHub：PR27 open/draft，base9851177/head66f1328ada75ea90e5638fbf2bd58663ac86347e，mergeable=true/clean；GitGuardian check success。尚无新版合并/部署事实，合并前只读复审进行中，不把扫描通过替代代码评审。当前PR已绑定QA58/seq57同134源文件fb4066fa…指纹；已有正式Connector恢复及Run完成证据保留。
+
+新确认的通用缺口：管理员API回读冻结QA配置含browser-validation.check(auto)，network_access=false/sandbox=workspace-write；browser_tool.py的当前真实合同仅app及docs/workflow/prototype，并创建静态浏览器check。产品Go动态服务不能通过该入口独立验收。seq57宿主真实UI通过和QA58独立截图/证据审查维持原层结论；根因是工具能力覆盖不足，不能说“QA没有工具”或“QA已经独立操作全链”。改进进入正式诊断/工具来源，不修改当前已验候选、不静默扩大QA权限。
+
+公开官方资料核对入口已写入计划，只作为后续能力对照；本机New API源码/数据/秘密未读取。已有商用矩阵与freeze不改写，外部联调和正式页面仍待事实。
+
+
+合并前复审发现与处理（2026-10-08）：PR27暂不合并。只读代码复审发现两项源路径可达P1，尚未由Pipeline实测复现，不拿静态发现冒称测试结果。
+
+1. 显式零软预算仍可能dispatch：internal/relay/accounting.go:290-292只在Hard=true检查Budget，console_api.go允许持久化budget_micro_usd=0/hard=false；契约implementation-contract.md:95/97明确NULL无限、0禁止受理。按当前revision用正式PUT tenant或Key limits设0/false，其余cap null，再用已授权且已定价Key发chat；预期429且上游dispatch=0、费用/预留不增加，代码当前跳过预算检查。现有console_resource_matrix_test零矩阵强制Hard=true，未覆盖此组合。修复必须保留正软预算告警语义与NULL无上限，不直接把软预算改成硬预算。
+2. 过期秘密可能随时钟回拨复活：console_keys.go:395/accounting.go:135/routing.go:177向generationIdentity传raw store.now，console_keys.go:407-411只比当前时间/不退休旧代，store.go:28-32无高水位；admissionClock在鉴权以后且只根据admissions。契约implementation-contract.md:114要求Key/代际/邀请及所有窗口同有效UTC时钟，回拨不复活。让1h过渡旧Key在精确截止后被拒，再把测试clock回拨到截止前，旧Key仍应401且零dispatch；邀请与Key期限、跨进程重启、分钟/月窗口同样需核验。现有GenerationExactDeadline用二次rotation先retire才断言，未覆盖回拨未retire；当前console_contract_test回拨后期待旧月窗口也需核对契约。
+
+发现影响分别是预算停止意图未生效、过期应用权限可能恢复。候选QA58受控验收事实保留，但新发现使发布判定暂不放行；不删除或重写旧Go报告。准备经Owner正式return同当前Run到development，携完整受支持HTTP复现/原契约，产品Agent负责红绿回归和最小修复→原完整tests→独立QA→report→publish更新同PR27。完成Run的正式评审返工是当前交付接续，不恢复取消旧Run；冻结材料、历史与产品源码均不由协调者手改。
+
+
+返工入口已实测接受：POST /return(seq62,target=development) HTTP202，同Run seq63 running，原生研发会话a61735cc14d2675688203cc090f2e44f已回复“先恢复候选、项目规范及两项复审线索，再补回归并修复”。原definition及前62步用同管理员API深比较完全保持。复审最终分类为零软预算P1、时钟回拨过期凭据P2，两项均Important、必须修复/反证后再放行；前初报使用两项P1仅为初步风险分类，最终以可复验报告和独立QA为准。当前新红绿/完整测试/QA尚未发生，不声称已修复。有效总预算仍64，当前未耗尽，现有恢复合同不允许提前增加；若在正式tests64完成后耗尽，沿原回执检查后正式有界接续，不自动放大、不手改DB。下一次发布更新同PR27，产品代码和公共状态由Pipeline维护。

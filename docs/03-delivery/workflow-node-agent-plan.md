@@ -180,3 +180,23 @@
 正式恢复回执（2026-10-08 19:39 Asia/Shanghai）：Owner return HTTP202，seq60→61 pr，有效max_steps64。原始60步及冻结definition经管理员正式API深比较完全不变；CI return响应含调用者权限相关配置脱敏，与管理员响应不可直接作为同字段比较，先前核对脚本误报AssertionError已通过同Caller回读排除。pr61由正式github.pull_request Connector创建草稿PR27，head_sha66f1328ada75ea90e5638fbf2bd58663ac86347e；URL https://github.com/big91987/model-relay/pull/27 ，已附到当前会话。done62完成，Run completed/error空，不重放publish。Run completed仅表示编排已交付PR，不等于用户部署目标完成；PR尚未合并、正式新Actions部署/health/schema3/实际用户页面未完成，旧5545版本保持。产品Go with known issues与P3保留，定时仍PAUSED。
 
 用户询问预算和Web验证方式：原Run冻结40，协调者上次恢复设60，本轮明确检查只余pr→done后正式设64；是节点执行总次数，包含Agent/Connector/结束节点和返工，不是模型消息或工具调用次数。当前通用模板100，未因此改写老Run预算。seq57宿主make verify经go run ./tests/browser启动真实Go/隔离SQLite/受控HTTP-SSE上游并用Playwright浏览器执行实际UI；1280/1440/390全部J01–J07通过。QA58自身未重新操作浏览器全链：独立核验版本源戳/固定完整回执、设计比对30页+8关键图，独立193Node/5非监听Go race，关闭原层缺陷。区分宿主UI-E2E、独立证据/视觉验收和未完成的正式部署UI，不能声称QA亲自完整复跑或供应商联调已验。
+
+
+## 持续研发中的Harness改进（2026-10-08）
+
+本节承接用户长期推进授权，服务Model Relay持续交付（详见workflows-plan.md），不把产品实现转给协调者。当前平台8793、唯一维护源本仓及codex/workflow-node-config-ui；原生Codex/gpt-6.1-sol配置保持，Platform仅开发分支提交推送，不建新PR/不合源main。
+
+| 工作 | 当前事实/用户影响 | 最小处理与验收 | 状态 |
+|---|---|---|---|
+| QA独立真实网页入口 | QA确有browser-validation.check/auto工具，但browser_tool.py公开合同仅root=app或docs/workflow/prototype；当前Go动态服务不在其能力内，native监听限制下QA不能自己重跑真实Web | 先核对现有受信浏览器运行时/fixture生命周期，复用标准工具边界支持当前工作区的隔离真实服务；QA经原生工具自行fill/click/错误恢复并核对同版facts。限定受信目标和资源清理，不临时开网络/提权、不把静态原型绿当后端E2E。先修源码/模板/安装，再以真实Pipeline复验 | Ready for diagnosis，未实现 |
+| 长流程预算和卡点呈现 | 原40、恢复60在publish后耗尽；正式return已恢复到64并完成PR，当前标准模板100。用户能配置max_steps，不是每消息/工具计数 | 复用现有配置/告警/恢复语义检查新模板默认和用户可见剩余次数是否合理；以实际返工成本支持默认选择，停止原因和明确接续可操作，不自动无限扩预算、不重放已结束副作用 | 有界恢复已验；默认及呈现优化Planned |
+| 正式失败/重复/权限与版本证据 | 既有典型路径部分已验，QA58 H02/H03-runtime/H04/H08仍有证据缺口 | 沿原编号做针对性真实验证：重复入站唯一Run、材料缺失/错SHA拒绝与恢复、实际模型证据可获得性、模板升级新装/重入和旧Run保持；只验证缺口，不为填表重建重复产品任务 | Planned |
+| 可复用交付与定位效率 | 产品多次返工涉及driver、采集和证据版本；宿主全量测试仍必需但不能以重复大日志代替最小归因 | 保留正式完整门禁；定位时先准确失败阶段/请求ID/同版最小案例，再由产品Agent修；交接携带源码摘要、事实与未验边界。标准安装/升级覆盖新仓和已有仓，工具日志/截图只按授权呈现 | 持续执行 |
+
+每项通用改动必须有原故障、修复正常路径与失败恢复证据，并同步维护源/模板/依赖/手册；当前Task5/U1不能因PR节点done直接改Accepted，正式部署与未验范围保持可见。UI与跳转优化按用户先流程可靠后页面的顺序推进。
+
+
+最新合并前复审：PR27发现零软预算及回拨过期凭据两项源路径可达P1，复现待产品Pipeline；当前发布暂缓，保留原QA58证据并正式返development补回归/最小修复/完整测试/独立QA，详见workflows-verification.md本轮发现记录。阶段1继续Active，其余里程碑状态保持，不因新发现擅改冻结需求或手改产品。
+
+
+长期推进当前动作：Owner正式return已接受，seq63原生development会话a61735cc14d2675688203cc090f2e44f running；候选两项Important由产品Agent复现/修复，源模板/QA浏览器改进保持独立责任，未擅改产品权限。当前预算64尚未耗尽，若下一正式门禁后触顶按现有支持入口检查接续。

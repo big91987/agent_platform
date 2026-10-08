@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 16:00）：用户核对10/6发布后的Issue数量及设计截图。正式仓库共7个Issue20–26：产品任务20/21/24/25四个，Harness验收22/23/26三个；20/21旧Run cancelled，24旧Run waiting，22/23/26验收Run completed，只有25当前实际推进。旧Issue仍Open不等于同时开发。Issue25 seq57同fb4066fa…原完整make verify exit0/106669bytes，193Node及三视口编辑中断/七旅程/新增管理摘要/十页采集通过，已进入seq58独立QA；QA47 P1/P2尚待正式关闭，新PR/合并/部署未发生。已找到并核对冻结design-v0.2.0原型工作台/租户/Key截图原件摘要，供用户查看，明确为设计演示数据。展示版仍PR19/5545、平台8793最新功能；定时保持PAUSED，Task5/U1 Active。详证见统一验证记录。
+当前状态（2026-10-08，本轮长期推进授权）：用户要求继续以8793当前平台迭代Model Relay，产品交付和Harness改进分别维护证据。Issue25 Run已由正式评审返工接续至seq63 development running，QA58及宿主seq57完整测试作为历史证据保留；真实PR27/head66f1328ada75ea90e5638fbf2bd58663ac86347e暂缓合并，合并前复审发现两项Important，产品Agent正在补复现和修复。尚未合并部署，5545仍旧9851177/schema2，不把编排完成当最新产品上线。长期计划见下方“Model Relay持续交付”，冻结design-v0.2.0不改写；新阶段任务交给Pipeline Agent，通用问题修平台维护源/模板/标准升级。定时按此前明确指令仍PAUSED，本次继续推进不自行恢复定时。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
@@ -273,3 +273,29 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 正式恢复回执（2026-10-08 19:39 Asia/Shanghai）：Owner return HTTP202，seq60→61 pr，有效max_steps64。原始60步及冻结definition经管理员正式API深比较完全不变；CI return响应含调用者权限相关配置脱敏，与管理员响应不可直接作为同字段比较，先前核对脚本误报AssertionError已通过同Caller回读排除。pr61由正式github.pull_request Connector创建草稿PR27，head_sha66f1328ada75ea90e5638fbf2bd58663ac86347e；URL https://github.com/big91987/model-relay/pull/27 ，已附到当前会话。done62完成，Run completed/error空，不重放publish。Run completed仅表示编排已交付PR，不等于用户部署目标完成；PR尚未合并、正式新Actions部署/health/schema3/实际用户页面未完成，旧5545版本保持。产品Go with known issues与P3保留，定时仍PAUSED。
 
 用户询问预算和Web验证方式：原Run冻结40，协调者上次恢复设60，本轮明确检查只余pr→done后正式设64；是节点执行总次数，包含Agent/Connector/结束节点和返工，不是模型消息或工具调用次数。当前通用模板100，未因此改写老Run预算。seq57宿主make verify经go run ./tests/browser启动真实Go/隔离SQLite/受控HTTP-SSE上游并用Playwright浏览器执行实际UI；1280/1440/390全部J01–J07通过。QA58自身未重新操作浏览器全链：独立核验版本源戳/固定完整回执、设计比对30页+8关键图，独立193Node/5非监听Go race，关闭原层缺陷。区分宿主UI-E2E、独立证据/视觉验收和未完成的正式部署UI，不能声称QA亲自完整复跑或供应商联调已验。
+
+
+## Model Relay持续交付（2026-10-08）
+
+目标：从当前design-v0.2.0候选推进到可实际使用、可稳定运营的模型中转管理控制台，逐步对齐New API/LiteLLM公开基本能力和用户旅程；每个阶段形成可部署、可验收的结果。不承诺一次做完参考产品全功能，不编造日历期限或完成百分比。当前冻结输入、代码和QA58是首轮发布基线，后续范围经正式User Input→需求/设计→研发/测试/QA承接。
+
+维护约定：本节维护长期里程碑/依赖和下一批工作；workflow-node-agent-plan.md维护Harness通用改进，workflows-verification.md维护真实证据和卡点。产品本身的任务/基线/验证由Pipeline写入测试仓现有docs/workflow/runs/<run>/delivery，Issue关联该权威产物，不由协调者手改产品工作树或另建重复状态源。已完成旧Run不恢复，下一阶段走当前标准模板正式新Issue入口，引用已合并产品提交和明确范围。
+
+| 顺序/阶段结果 | 当前可执行任务及负责人 | 依赖/进入条件 | 验收退出条件 | 状态 |
+|---|---|---|---|---|
+| 1 当前多租户控制台真实上线 | 现有Issue25/PR27：只读合并前复审、精确head授权合并、正式main prepare/Owner preview deploy；协调者/Connector负责发布核验 | seq57+QA58同134文件源戳，现有授权；复审无未修Critical/Important | PR/merge/Actions/Deployment环境URL、health version/schema3同版，旧schema2经正式升级保留数据和身份，实际登录页面验收；T001仍In Review至发布事实闭合 | Active，正式返研发63 |
+| 2 管理页面可理解、操作连续 | 依据QA58-01 P3做术语/窄列/状态文案完善；补独立self_hosted首次网页分支、真实管理入口与错误恢复；产品Agent实现，独立QA验收 | 阶段1已合并版本；QA原编号和截图；问题输入已有明确AC，复杂偏差返需求/设计 | 从页面完整完成平台管理员与租户管理员主要旅程，三视口、键盘/弹层/范围/错态可用；完整make verify与新独立QA、PR和正式部署；不改费用/权限口径来换界面绿 | Planned，问题包可准备，开发基线待合并 |
+| 3 商用基本能力按用户旅程补齐 | 先在需求节点沿已有商用五层矩阵核对接入/模型/路由/Key/团队/预算/费用/日志；明确已支持、已验证和真正缺口，一次选一个可发布纵向切片，由设计/研发接力 | 官方公开参考与本产品实测，不复制本机New API资料；新承诺由正式需求/AC明确 | 新用户能够接入→授权→调用→诊断→对账；适用故障切换/限流/成员生命周期等能力各有确定语义、页面和同版验证；新增范围独立版本化，不改冻结v0.2.0 | Planned，缺口排序输入待需求节点 |
+| 4 升级、恢复及运行可维护 | 正式validation目标上的非空升级/失败恢复、备份/旧数据守恒、重启未知请求和费用处理；性能/容量目标先测量再立基线；产品Agent及受支持运维流程负责 | 阶段1真实schema3部署；影响故障演练只用已授权隔离目标，不对preview做破坏实验 | 标准新装/升级/回滚步骤可复现，源记录不被预检查改写，恢复后Key/历史/账本守恒，故障证据明确RPO；已证明的容量/边界和告警动作可定位 | Planned |
+| 5 外部联调与运营能力按需要扩展 | 真实供应商/已有推理端点联调；外部身份、支付充值等先由需求明确场景和边界，再设计实现 | 凭据、外部账号/费用授权或受信维护者输入实际存在；缺失时其他阶段继续 | 实际请求/报价/身份/支付回执与页面一致，失败和权限反例有证据；没有真实事实继续Not Run，不把受控上游当商业联调 | Planned，外部依赖条件未满足 |
+
+关键路径：当前PR复审→合并→官方prepare/deploy→真实页面→下一阶段正式Issue/需求；阶段2可预备问题包，阶段3仅做只读差距调查，不用准备工作冒称Ready开发。阶段4的运行测试可在隔离目标与产品迭代并行，修改同一迁移/计费契约时顺序集成。暂不规定固定WIP/迭代日期。
+
+公开参考（2026-10-08核对）：[New API用户文档入口](https://docs.newapi.pro/en)列明渠道、令牌、模型和实例管理；[LiteLLM管理UI](https://docs.litellm.ai/docs/proxy/ui)、[Key](https://docs.litellm.ai/docs/proxy/virtual_keys)、[预算](https://docs.litellm.ai/docs/proxy/users)、[用量](https://docs.litellm.ai/docs/proxy/cost_tracking)及[路由/故障切换](https://docs.litellm.ai/docs/routing-load-balancing)。这些仅用于能力/用户旅程对照，不自动将所有协议、支付、SSO、HA或新发布特性纳入当前产品承诺；现有QA58商用矩阵沿用并由后续需求节点补差距。
+
+每遇卡点先记录用户影响、实际Run/提交/回执、原因假设、已尝试动作和下一步；做最小复现，失败保留现场不循环盲试。产品缺陷交正式development/QA返工；Harness通用缺陷先修唯一平台源码、依赖/模板/安装升级，再正式应用、复验故障和相关恢复。发布成功、受控测试、独立实操QA和真实外部联调分别记录。
+
+计划审查：沿研发交付清单检查无循环硬依赖、无重复Issue/状态源、无新冻结范围或隐含外部授权、未验不标Done；当前发布Ready with Non-blocking Gaps（QA58 P3及明确外部未验），后续能力阶段待受支持需求/设计基线。
+
+
+最新合并前复审：PR27发现零软预算及回拨过期凭据两项源路径可达P1，复现待产品Pipeline；当前发布暂缓，保留原QA58证据并正式返development补回归/最小修复/完整测试/独立QA，详见workflows-verification.md本轮发现记录。阶段1继续Active，其余里程碑状态保持，不因新发现擅改冻结需求或手改产品。
