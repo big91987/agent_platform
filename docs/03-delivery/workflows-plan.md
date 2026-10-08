@@ -283,8 +283,8 @@ U1→U3→U4为质量回溯关键路径，U2手册与既有路径复验可并行
 
 | 顺序/阶段结果 | 当前可执行任务及负责人 | 依赖/进入条件 | 验收退出条件 | 状态 |
 |---|---|---|---|---|
-| 1 当前多租户控制台真实上线 | 现有Issue25/PR27：只读合并前复审、精确head授权合并、正式main prepare/Owner preview deploy；协调者/Connector负责发布核验 | seq57+QA58同134文件源戳，现有授权；复审无未修Critical/Important | PR/merge/Actions/Deployment环境URL、health version/schema3同版，旧schema2经正式升级保留数据和身份，实际登录页面验收；T001仍In Review至发布事实闭合 | 已正式部署9bf6ecaf/schema3；已登录后独立实操待 |
-| 2 管理页面可理解、操作连续 | 依据QA58-01 P3做术语/窄列/状态文案完善；补独立self_hosted首次网页分支、真实管理入口与错误恢复；产品Agent实现，独立QA验收 | 阶段1已合并版本；QA原编号和截图；问题输入已有明确AC，复杂偏差返需求/设计 | 从页面完整完成平台管理员与租户管理员主要旅程，三视口、键盘/弹层/范围/错态可用；完整make verify与新独立QA、PR和正式部署；不改费用/权限口径来换界面绿 | Active，Issue30/PR31同步修复已精确合并3f9cee，正式部署在途；其他P3为后续切片 |
+| 1 当前多租户控制台真实上线 | 现有Issue25/PR27：只读合并前复审、精确head授权合并、正式main prepare/Owner preview deploy；协调者/Connector负责发布核验 | seq57+QA58同134文件源戳，现有授权；复审无未修Critical/Important | PR/merge/Actions/Deployment环境URL、health version/schema3同版，旧schema2经正式升级保留数据和身份，实际登录页面验收；T001仍In Review至发布事实闭合 | 已正式部署3f9cee16/schema3；已登录后独立实操待 |
+| 2 管理页面可理解、操作连续 | 依据QA58-01 P3做术语/窄列/状态文案完善；补独立self_hosted首次网页分支、真实管理入口与错误恢复；产品Agent实现，独立QA验收 | 阶段1已合并版本；QA原编号和截图；问题输入已有明确AC，复杂偏差返需求/设计 | 从页面完整完成平台管理员与租户管理员主要旅程，三视口、键盘/弹层/范围/错态可用；完整make verify与新独立QA、PR和正式部署；不改费用/权限口径来换界面绿 | Active，Issue30/PR31同步修复已部署3f9cee；Issue32/Runb7f93c24接续QA58-01 P3与首次自托管网页旅程 |
 | 3 商用基本能力按用户旅程补齐 | 先在需求节点沿已有商用五层矩阵核对接入/模型/路由/Key/团队/预算/费用/日志；明确已支持、已验证和真正缺口，一次选一个可发布纵向切片，由设计/研发接力 | 官方公开参考与本产品实测，不复制本机New API资料；新承诺由正式需求/AC明确 | 新用户能够接入→授权→调用→诊断→对账；适用故障切换/限流/成员生命周期等能力各有确定语义、页面和同版验证；新增范围独立版本化，不改冻结v0.2.0 | Planned，缺口排序输入待需求节点 |
 | 4 升级、恢复及运行可维护 | 正式validation目标上的非空升级/失败恢复、备份/旧数据守恒、重启未知请求和费用处理；性能/容量目标先测量再立基线；产品Agent及受支持运维流程负责 | 阶段1真实schema3部署；影响故障演练只用已授权隔离目标，不对preview做破坏实验 | 标准新装/升级/回滚步骤可复现，源记录不被预检查改写，恢复后Key/历史/账本守恒，故障证据明确RPO；已证明的容量/边界和告警动作可定位 | Planned |
 | 5 外部联调与运营能力按需要扩展 | 真实供应商/已有推理端点联调；外部身份、支付充值等先由需求明确场景和边界，再设计实现 | 凭据、外部账号/费用授权或受信维护者输入实际存在；缺失时其他阶段继续 | 实际请求/报价/身份/支付回执与页面一致，失败和权限反例有证据；没有真实事实继续Not Run，不把受控上游当商业联调 | Planned，外部依赖条件未满足 |
@@ -331,3 +331,13 @@ Issue30研发4已完成诊断切片但在归档/交接前容量失败，未完�
 ### 2026-10-09 07:10 精确发布合并与正式部署在途
 
 Pipeline完成PR31，不复活已completed Run；已验150源及26QA文件精确发布映射、远端任务分支证据可访问，授权合并main3f9cee后由既有Owner Actions启动preview，prepare尚执行/dispatch pending。完整实际结果与health版本仍待，现网9bf6ecaf保持；下一长期阶段待本次部署闭合后按已有QA58-01 P3正式Issue入口承接，不停旧Run或重复功能。
+
+
+### 2026-10-09 07:40 同步修复正式上线并接续页面改进
+
+PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy成功，Deployment6949052209/local-preview/用户入口http://127.0.0.1:5545/admin/；实际health200/schema3/version一致，实际workspace.js与已验发布对象字节相同。账号、租户、成员及业务配置和正式备份只读保持，console_clock正常推进有差异，不能说整库所有行不变。原生动态独立QA与预览已登录实操仍待，供应商联调仍NotRun。
+
+检查GitHub当前Open Issue无重复P3任务、原30/28/25 Run均completed后，新建唯一Issue32（https://github.com/big91987/model-relay/issues/32），沿现有阶段2、冻结design-v0.2.0和已合并main3f9cee接续术语/窄屏可读性及self_hosted首次网页分支。自动入站Actions37861181092进入Runb7f93c24bc1ea4d0fe182f12aa7622ae，prepare1/issue2已completed、intake3/dc330734fa1ba6376edb70c44b47ca57 running/error空，max100；未重复dispatch、恢复旧Run或由协调者写产品。新候选必须原完整make verify/独立QA/精确PR合并和正式部署，本次创建任务不是产品改进已完成。
+
+
+本轮最终回读：入站Actions37861181092 completed/success；新Run32仍intake3 running/error空/max100/workspace github-issue-5770505233。automation_update正式回读ACTIVE/原30分钟频率、新Issue32/Run锚点生效；未重复启动或扩大预算。

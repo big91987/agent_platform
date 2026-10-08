@@ -1913,3 +1913,19 @@ QA8/850f0b1bf32914d2273f5382c658d5a5 closed/正式next/handoff report9，reply18
 
 
 合并树补充复核：PR head与main合并提交的真实commit.tree.sha均4d16c018fda3d7ab59ad81bf93842a0a12260c84。初次将GitHub git/trees端点以commit alias请求返回的sha8c8b155…误与真实tree SHA比较，布尔false是不同字段口径，非源变更；立即改两个commit.tree.sha同口径核对true，证据merge-tree-check.json保留，不伪称曾发生源码不一致。
+
+
+### 2026-10-09 07:40 PR31正式部署闭合与下一唯一任务
+
+实时push prepare37858024406 completed/success（job113586815699/23:11:34–23:22:55Z）；Owner dispatch37858041523 completed/success，prepare113590348783/23:22:59–23:23:08Z为ready复用，deploy113590410939/23:23:13–23:23:22Z成功。Deployment6949052209/sha3f9cee1615e87e002a2c2300f2d29778072ec3f5/local-preview于23:23:22Z success，实际environment_url http://127.0.0.1:5545/admin/。新5545 health200/statusok/schema3/version3f9cee，旧5546 health200/9851177/schema2保持；未碰8788。实际/admin/ title为Model Relay · 管理工作台，workspace.js与PR已验对象逐字节相同/SHAe1bba2c41135506387873f2f7e080d5a7b0bacdb49ce481ed0494e85a786a5b1。这是正式服务入口核验，不是已登录后实际操作验收。
+
+标准controller安装源摘要2d456ca…一致，唯一verify-3f9cee1615e87e002a2c2300f2d29778072ec3f5-jt63zgxe.log mode0600/341351bytes/SHAac835a91c9c3324507ebba495eda08a739d91aff744b1af8c07b8079b9f30fab。完整原make verify、213Node/Go/全部主BROWSER_PHASE oktrue、冷主CLEAN_END gate_exit0/source_unchangedtrue/候选Playwright-core1.59.1+Chromium147；故障夹具预期exit23不混主验收失败。migration13.187s/legacy88.273s/routing122.168s/console15.115s/full-console51.207s，本次实际绿支持正式activate；ready复用不假称第二次门禁。旧失败日志保持，尚非两个正式失败attempt/强杀断电持久性验证。
+
+activation.json stage committed；本次rollback363008bytes/digest匹配、master.key SHA与journal一致。正式备份的relay.db仅复制到0600私有临时文件immutable只读，与live mode=ro/query_only全表比对后删除；admin/users/tenants/memberships/resource_limits及meta非空行相同，其余原空业务表仍空。console_clock effective由20:44:15.355978Z推进至23:41:54.515903Z，源码advanceClock的单调运行水位，与备份不等属实际运行事实，不手改；不宣称整库全行一致或非空业务全迁移/密码登录实测。只输出布尔/计数及非秘密时钟，不输出凭据值。证据ignored check-20261009-0740/{upgrade-preservation,verify-log-metadata,health5545,health5546,prepare,deploy,deployment-statuses}.json。
+
+正式新Issue32已创建，当前Open旧20–24没有重复该P3任务，旧Run30/28/25均completed未恢复。自动Actions37861181092（23:45:24Z）入站，API确认唯一Runb7f93c24bc1ea4d0fe182f12aa7622ae/23:45:34Z，prepare1与issue2成功，intake3/dc330734fa1ba6376edb70c44b47ca57 running/error空。新输入沿冻结v0.2.0、main3f9cee、QA58-01服务success/技术枚举/窄列断词及首次self_hosted UI NotRun，要求最小现有UI改进和原固定门禁完整真实旅程，产品由Pipeline实现，不重复PR/dispatch或代产品。实际原生承接内容/后续handoff待回读，不以running当开发完成。动态独立QA Blocked、预览已登录操作和供应商/支付/身份NotRun及旧R28-04未知根因保持。
+
+本轮初并行读取因证据目录尚未创建，3个GH命令重定向先失败而未发网络请求；目录建立后顺序读取成功。这是协调读取依赖错误，非GitHub/部署失败，没有重复部署副作用。
+
+
+本轮最终回读：入站Actions37861181092 completed/success；新Run32仍intake3 running/error空/max100/workspace github-issue-5770505233。automation_update正式回读ACTIVE/原30分钟频率、新Issue32/Run锚点生效；未重复启动或扩大预算。
