@@ -1772,3 +1772,18 @@ QA已通过handoff返回development7，研发只新增本Run临时隔离采集�
 正式恢复结果：Owner stop8 HTTP202→stopped，connector_receipt exit-1/log102563bytes/truncated=false，error command interrupted/effects may be partial，维护者通过output API读取至EOF。末段证明热入口Go/Node/部分CLI迁移和browser1280/390在中断前执行，不是完整通过；没有commit/push/activate节点，5545实际health200旧9851177/schema2保持。测试资源仍属于临时受控夹具，停止回执不证明所有外部残留已清理，已要求下一研发检查自己现场、不盲杀他进程。
 
 Owner return8→development HTTP202，Run running/seq9，原生87226f924596c3a7559de78d37116e6c running/error空；管理员同调用者前7步/冻结definition逐值不变，seq8中断receipt逐值保留、正式回退记cancelled原因。原tests5出口全文URL及read_command_output页是真实可追踪历史，不虚构其开始状态/仓库副本；新完整冷证据需实际固定入口生成。没有新增权限、预算、重复Run或产品手工修改。阶段9新代码/实际冷门禁/QA再审和正式PR部署均待真实结果，仍No-Go。
+
+
+### 2026-10-09 01:40 新隔离固定入口前置失败与复制边界复审
+
+正式tests10完成exit2/239bytes/truncated=false，原make verify已实际调用tests/verify，打印唯一test-results/verification/20261008T173346Z-400132109目录；失败在npm prerequisite，未进入原全量门禁，不冒充冷绿。读ignored副本verify.log只有40bytes失败摘要，旧入口没有原始npm stderr，诊断不足保留。平台failed路由正常自动到development11/f8e0283249bd7db33e710c60b4963cba running，无手工重启或额外Run。研发11真实最小npm --version复现NPM_CONFIG_USERCONFIG/GLOBALCONFIG同/dev/null导致double-loading config、exit1，与首次无法归因的原层日志不同；正在改两个隔离空文件并采集原层诊断。定向日志有顺序/失败/采集夹具绿，不能当完整冷make通过。当前144件源码戳4d484086e12d71308e42b963ec0266f5f756924f8073defd1c5622a6260c9025为待测试候选，旧142件审查/seq5绿不代新入口验收。
+
+新入口只读reviewer发现Important/P2待复现：copyFiles词法相对路径和copyFile最终文件Lstat不能拒绝父目录链接；若原tracked路径父目录如internal被替为指向根外目录的符号链接，最终普通文件可被穿过父链接读取/复制，违背新规范只复制候选/拒绝path escapes。最终文件symlink测试未覆盖该情况。影响是隔离副本可能包含工作区根外内容，必须由Pipeline最小真实文件复制复现、修复和根内正常/最终链接/父链接/边界恢复回归；不放宽权限、不临时删链接绕过、不由协调者改产品。复审未执行复制探针，当前为静态可达发现，不能虚报已实测根外泄漏；将经正式User Input交当前研发处理后再固定宿主与独立QA。其余日志/取消/缓存边界复审继续。
+
+复审最终共3项Important/P2：父目录symlink复制逃逸、sourceEvidence/依赖Chromium probe失败stderr未进完整日志、辅助Git/源码/探针未纳入ctx及有界进程取消。审查main.go摘要8436e8bf…e1bf/main_test902de886…e848期间稳定；仅静态结论，未进行根外读取或取消实验。npm两个独立空配置文件的修复已在当前代码，HOME仍继承，隔离范围不是整个主目录。
+
+准备向development11发正式消息前实时seq检查发现已到tests12，断言在POST前退出，未发送、不丢失队列或错误标记为已输入。需按本次已知Important发现对当前tests12正式stop，检查回执/副作用并Owner return development，交产品Agent最小复现及修复；不等整套长测试结束后才处理已知边界，不提前放宽任何门禁或把未复现发现当实际泄漏。
+
+Owner stop12 HTTP202→stopped，exit-1/61016bytes/truncated=false、原错误effects may be partial，output API读至EOF；193Node通过、Go race启动后中断不算全量绿。执行器ignored state 20261008T174328Z-4124892975仍cleanup=not_started/log_bytes0，不能用外层stopped补造内层完成；先保留状态与源版本。只读ps探针因非UTF8进程文本首次失败，容错解码后含model-relay-verify/clean目录参数匹配空；这只是有范围的观察，不证明全部无路径子进程/端口已净，无广泛kill。5545实际health200/9851177/schema2保持，没有Git发布或activate副作用。
+
+Owner return12→development HTTP202，Run running/seq13 pending/error空；管理员同调用者前11步/冻结definition逐值保持、seq12 connector_receipt逐值不变。反馈同时包含3项静态发现及复现要求、state未闭合和其原因未确定边界；源码真实修复、辅助失败/取消回归、下一完整冷门禁与独立QA均待实际结果。所有普通选择与测试仓新PR/合并/正式部署授权保持，未扩权限/预算或重建任务。当前工作不是产品上线，禁止以旧seq5或仅夹具绿放行新入口。
