@@ -1713,3 +1713,14 @@ seq64完成（2026-10-08 22:44）：原make verify timeout900s实际exit0，1108
 既有合并前reviewer对修复工作树追加只读复审：显式非NULL零预算独立拒绝、NULL/正软预算语义保留；持久max(previous,wall)有效UTC经正常schema3 init/Open加载，锁后及dispatch前刷新，时钟事务先于业务事务、失败返回503，没有发现新的Critical/Important或反向锁依赖。该结论只读且限140件ca8ec50a…候选；未重跑测试、未证明吞吐，不能放行旧PR27 head66f1328本身。
 
 GitHub正式回读PR27 open/Draft/head66f1328ada75ea90e5638fbf2bd58663ac86347e，尚不含修复；报告节点正在更新原公共进度和本Run pr.md，等待正式publish/pr，再核对新提交与QA65一致后授权合并和verified-main Actions部署。产品5545仍9851177/schema2，未上线新候选；不重放测试、不建重复Run/PR、不改回执或权限。私有核对记录在ignored .data/fresh-8793/check-20261008-2310，公共记录只写结论和可追踪正式产物。
+
+
+### 2026-10-08 23:40 QA产物目录导致正式发布拒绝
+
+实时Run failed/seq67 publish，exit1/978bytes/truncated=false：repository.py delivery_artifacts拒绝QA65 artifacts中的acceptance/evidence/attempt-65/host目录；report66已完成并保持140件ca8ec50a…未变。用户影响：新修复尚未推送到PR27，合并/正式部署不能推进；GitHub仍Draft/head66f1328，不能把QA候选当已上线。
+
+已按systematic-debugging读取完整回执与维护源，进行只读最小复现：QA65全部产物仅该项不是文件；目录下证据确实存在。当前通用QA/common指令明确要求实际文件，发布器只接受同Run文档根内非空文件，未发生协议不一致；这是Agent交接路径不合约，不是产品测试失败或需要放宽目录权限。发布校验在git add/commit/push之前抛错，工作区HEAD66f1328、暂存为空；140件逐项字节摘要及总源戳再核匹配，未有未明提交/推送副作用。
+
+后续处理：沿Owner正式return seq67→qa，要求只纠正产物交接，列出实际文件或已有ui-artifact-index.json引用其留存清单，保留QA65原证据与Blocked/Not Run边界，不补造测试、不改产品/门禁。新QA应核同版源码及真实材料后交接report→publish→同PR；源码变化才需受影响tests/QA重新验证。当前总预算100有余，不增加限额、改冻结定义或回执。目录拒绝属于现有安全契约，本轮不把发布器改成递归接受目录。正式恢复及实际再次发布结果待回读。
+
+正式恢复回读：普通failed seq67直接return按现有约束返回409、未改变状态；源码确认普通失败须先stop到stopped（执行次数耗尽的特例除外）。Owner stop HTTP202→stopped，再return seq67→qa HTTP202，Run running/seq68、原生QA ee880602e02ccb47c27283b35322d291 running/error空。管理员同调用者核对前66步/冻结definition完全不变，seq67失败connector_receipt逐值保持；其状态由正式回退记录为cancelled并附原因，不补造通过。纠正由Pipeline QA执行，尚未有新的有效交接或发布回执。原生源码与安装指令同源，问题不需要目录许可、数据库编辑或新配置；源平台通用能力无永久修复新结论。

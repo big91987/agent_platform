@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08 23:10）：Issue25 budget-clock-r1候选140件ca8ec50a…已通过seq64原完整make verify和seq65独立QA（Go with known issues），零软预算和回拨过期凭据两项问题由QA65关闭；维护者只读复审未发现新的Critical/Important。Run4cd62ced6a4f98f50e3cca6f7596eb06正在report66更新交付说明，须沿publish/pr更新同一个PR27后核对精确提交再合并部署。PR27仍Draft/head66f1328ada75ea90e5638fbf2bd58663ac86347e，尚不含未提交修复；5545仍9851177/schema2，未宣称上线。QA65亲自非监听race/Node测试及同版宿主HTTP/三视口证据审查成立，原生QA动态浏览器实操仍Blocked，独立self_hosted首次UI、真实供应商/外部身份支付、部分Harness负向/升级证据及正式部署仍未验。长期五阶段计划和冻结design-v0.2.0保持，产品实现归Pipeline，通用能力改进归平台维护源/模板/标准升级；model-relay自动任务ACTIVE，每30分钟按实时状态推进，重要结果通知。
+当前状态（2026-10-08 23:40）：Issue25 budget-clock-r1候选140件ca8ec50a…已通过seq64原完整make verify和seq65独立QA（Go with known issues），两项预算/回拨问题关闭，候选只读复审无新的Critical/Important。report66完成，publish67因QA65交接含host证据目录而在git提交前拒绝；只读复现与同版摘要核对成立，既有指令和发布器均要求实际非空文件，本轮保留安全契约。普通failed直接return被409拒绝后，已沿正式stop→return进入qa68/ee880602e02ccb47c27283b35322d291，纠正交接再report→publish→原PR27。没有产品改动、测试重放、增限或重复任务；当前总预算100。PR27仍Draft/head66f1328尚不含新修复，5545仍9851177/schema2，尚未合并部署。原生QA动态浏览器实操仍Blocked，独立self_hosted首次UI、真实外部联调与部分Harness验收仍未完成。冻结design-v0.2.0、长期五阶段计划与产品/平台责任边界保持；model-relay自动任务ACTIVE，每30分钟按实时状态推进。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
