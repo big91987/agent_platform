@@ -1683,3 +1683,22 @@ seq56 candidate records-detail-entry-r1只修驱动为精确Request ID行详情/
 
 
 用户最新要求恢复持续定期推进（2026-10-08）：通过原automation_update更新model-relay为ACTIVE，保留原30分钟频率、当前thread和通知策略；同步长期阶段、PR27/研发63返工、新旧测试版本及QA浏览器边界进任务prompt，不创建重复定时任务。配置正式回读ACTIVE。当前同Run seq63 development running，原生会话a61735cc14d2675688203cc090f2e44f，自报“内进程已复现两项缺陷；继续补重启、期限和窗口守恒回归”；这是Agent执行进展，不等于原完整宿主测试或独立QA通过，PR27仍待修复版重新验证再合并。定期检查先核实时态再推进受支持入口，卡点记录并诊断修复；重要结果/问题通知，正常未变保持安静。此前PAUSED记录是历史，不代表当前自动任务状态。
+
+
+## 定期检查：预算/时钟整改候选交完整门禁（2026-10-08 22:40）
+
+当前正式API：seq63 development completed，候选budget-clock-r1，HEAD66f1328ada75ea90e5638fbf2bd58663ac86347e+未提交工作树，140件SHA256 ca8ec50aa168cf16ac2e24edfe214aa44d06a05846c34deadbc3c7cb6c02904a；seq64 tests running/connector_dispatched=true，无结果或error。不沿用旧seq57/QA58放行新代码。
+
+维护者已读取attempt-63/checks.md/source-evidence.json及真实red.log、race-current.log：生产handler/SQLite旧代码tenant/key零软预算均status200/dispatch1，过期未retire代际回拨status200/dispatch1；当前内进程/跨进程/正式backup-restore和锁排队期限的局部race实际exit0、85.696s，静态/193Node局部绿。新代码显式零预算独立于Hard拒绝，NULL和正软预算语义保留；增加schema3持久有效UTC高水位，锁取得/受理/dispatch前采样及普通init/Open/恢复兼容。测试调整失败与原日志保留，19冻结材料一致。该层是内进程handler及子进程回归，不冒称真实网络HTTP；新增review-history会在宿主按准确PR27旧提交重建实际HTTP红灯，随后完整原门禁验证当前绿，旧红重建不等于原开发时已执行网络。
+
+当前预算64未结束，不提前加预算、不打断或重跑正在运行的完整测试；完成后若达到上限，按原正式回执/路由检查后有界接续QA或development。GitHub PR27仍Open/Draft且head旧66f1328，无新发布；最新Actions37793164457等仅Issue入口success，5545 health200/schema2/version9851177仍旧部署。QA独立动态Go浏览器与其他H/真实供应商/外部身份支付缺口保持未验。私有本轮API现场保存在.data/fresh-8793/check-20261008-2240，自动任务保持ACTIVE。
+
+
+seq64完成（2026-10-08 22:44）：原make verify timeout900s实际exit0，110897 bytes/truncated=false；维护者经正式output API偏移0/32768/65536/98304完整读取至110897/eof，140件ca8ec50a…源戳与研发63一致。准确PR27旧提交历史实际HTTP红灯重建观察tenant/key零软预算200/dispatch1和旧代际回拨200/dispatch1；当前正式HTTP及内进程预算/回拨、锁排队精确期限、跨进程恢复回归均PASS，全仓relay race458.373s，Node193通过。1280/1440/390各J01–J07/management-summary/实际周期活动/十页visual通过。冻结材料保持。完整受控测试通过不等于独立QA、真实供应商或正式上线。
+
+同时当前Run failed/seq64，error明确为maximum node executions reached，旧门禁节点completed/result.next，不是产品测试失败。无未明副作用或继续返工环；已检查当前候选、绿色回执与尚余QA→report→publish→同PR→done。准备沿Owner正式return seq64→qa，新的有限总预算100对齐当前标准software-delivery模板，保留原64步/冻结定义/工作区；不重跑已成功tests、不重建Issue/Run、不改回执或权限。恢复结果待实际回读。
+
+
+有界恢复实际闭合（2026-10-08 22:45）：Owner return(seq64,target=qa,max_steps100) HTTP202，管理员回读Run running/seq65/max_steps100/error空；原64步及冻结definition逐值完全相等。独立QA原生会话09572eed8c075180d4e8b4492aeb7a4f running，已明确核对当前候选与完整宿主回执再形成独立结论，无新正式QA结果。恢复没有重放成功测试或创建Run、修改冻结配置/产品源码/权限。新总预算100有界且对齐当前标准模板，检查依据是有效新候选、明确完整绿门禁和有限QA/report/publish/同PR/done剩余路径，不因定时触发自动增限。
+
+修复候选额外只读合并前复审已交同reviewer，检查零软预算/持久UTC/初始化及恢复/锁排队/事务边界，禁止代产品测试或修代码，结论待返回。正式PR27目前旧head66f1328仍未合并，修复候选尚未publish，不进行Actions新部署。下一步等待QA65及修复复审；缺陷再经原development返工，只有同版门禁与独立验收成立才report→更新同PR→授权合并→正式部署。自动任务prompt已同步当前QA65/预算100/新门禁，30分钟频率及ACTIVE保持。

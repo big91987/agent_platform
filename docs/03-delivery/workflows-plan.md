@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-08，本轮长期推进授权）：用户要求继续以8793当前平台迭代Model Relay，产品交付和Harness改进分别维护证据。Issue25 Run已由正式评审返工接续至seq63 development running，QA58及宿主seq57完整测试作为历史证据保留；真实PR27/head66f1328ada75ea90e5638fbf2bd58663ac86347e暂缓合并，合并前复审发现两项Important，产品Agent正在补复现和修复。尚未合并部署，5545仍旧9851177/schema2，不把编排完成当最新产品上线。长期计划见下方“Model Relay持续交付”，冻结design-v0.2.0不改写；新阶段任务交给Pipeline Agent，通用问题修平台维护源/模板/标准升级。用户最新明确要求恢复持续定期推进，原model-relay自动任务已正式恢复ACTIVE，沿原每30分钟频率在当前会话检查并推进。
+当前状态（2026-10-08，本轮长期推进授权）：用户要求继续以8793当前平台迭代Model Relay，产品交付和Harness改进分别维护证据。Issue25 budget-clock-r1候选140件ca8ec50a…已完成seq64原完整make verify exit0/110897bytes，当前ActualHTTP预算/回拨/重启回归及三视口完整旅程通过；正式有界恢复进入seq65独立QA。QA58/seq57仅历史证据，PR27/head66f1328ada75ea90e5638fbf2bd58663ac86347e尚未包含未提交修复且暂缓合并，新独立QA和修复版只读复审进行中。尚未合并部署，5545仍旧9851177/schema2，不把编排完成当最新产品上线。长期计划见下方“Model Relay持续交付”，冻结design-v0.2.0不改写；新阶段任务交给Pipeline Agent，通用问题修平台维护源/模板/标准升级。用户最新明确要求恢复持续定期推进，原model-relay自动任务已正式恢复ACTIVE，沿原每30分钟频率在当前会话检查并推进。
 
 阶段快照（2026-10-07）：用户视角的Harness典型路径验收 **In Progress／No-Go**。测试产品是交付质量证据，不替代平台用户体验及使用手册。路线1/2已正式发布；旧Issue20 Run保持stopped/seq13。当前用已冻结design-v0.2.0原型/PRD包经真实Issue21、Actions和唯一Run2f589073fb909da91a3e6f76a8ba5430验证中途接续，材料准备/接单/需求承接已发生，设计执行中。用户授权原型与普通测试选择自主判断，执行模型Codex gpt-6.1-sol。测试仓允许合并/正式部署，源PR5不合main；完整实现/QA/发布与其余路径尚未验收。
 
