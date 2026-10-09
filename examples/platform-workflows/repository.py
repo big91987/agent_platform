@@ -59,14 +59,126 @@ def task_docs(run):
     return "docs/workflow/runs/" + run["run_id"]
 
 
+def published_head(run, branch):
+    for step in reversed(run.get("previous_results", [])):
+        if step.get("node_id") != "publish":
+            continue
+        receipt = step.get("connector_receipt", {})
+        if step.get("status") != "completed" or receipt.get("exit_code") != 0:
+            raise ValueError(
+                "Last publication failed or is uncertain; inspect it before integration"
+            )
+        try:
+            output = json.loads(receipt.get("output", ""))
+        except (ValueError, TypeError):
+            raise ValueError(
+                "Last publication receipt is invalid; no integration attempted"
+            ) from None
+        if (
+            not isinstance(output, dict)
+            or output.get("branch") != branch
+            or output.get("pushed") is not True
+            or not re.fullmatch(r"[a-f0-9]{40}", str(output.get("head", "")))
+        ):
+            raise ValueError(
+                "Last publication receipt does not identify this candidate"
+            )
+        return output["head"]
+    return None
+
+
+def integrate_published_base(workspace, run, base, head):
+    if git(workspace, "rev-parse", "HEAD") != head:
+        raise ValueError(
+            "Task HEAD differs from its last publication; inspect before preparing again"
+        )
+    git(workspace, "check-ref-format", "--branch", base)
+    pending = subprocess.run(
+        ["git", "-C", str(workspace), "rev-parse", "--verify", "MERGE_HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if pending.returncode == 0:
+        # A lost prepare receipt must not fetch a moving base or replay the merge.
+        target = pending.stdout.strip()
+        if target != git(workspace, "rev-parse", "origin/" + base):
+            raise ValueError(
+                "Pending merge differs from the prepared base; inspect without replay"
+            )
+        conflicts = git(workspace, "diff", "--name-only", "--diff-filter=U", "-z")
+        return {
+            "integration_base": target,
+            "integration_pending": True,
+            "integration_conflicts": [name for name in conflicts.split("\0") if name],
+        }
+    if pending.returncode != 128:
+        raise ValueError("Unable to inspect pending integration; no merge attempted")
+    if git(workspace, "diff", "--cached", "--name-only"):
+        raise ValueError(
+            "Task has staged changes; preserve and inspect them before integration"
+        )
+    paths = subprocess.check_output(
+        ["git", "-C", str(workspace), "diff", "HEAD", "--name-only", "-z"]
+    ) + subprocess.check_output(
+        [
+            "git",
+            "-C",
+            str(workspace),
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ]
+    )
+    prefix = task_docs(run).encode() + b"/"
+    if any(not name.startswith(prefix) for name in paths.split(b"\0") if name):
+        raise ValueError(
+            "Task has uncommitted product changes; preserve them before integrating its base"
+        )
+    git(
+        workspace,
+        "fetch",
+        "origin",
+        "+refs/heads/" + base + ":refs/remotes/origin/" + base,
+    )
+    target = git(workspace, "rev-parse", "origin/" + base)
+    try:
+        git(workspace, "merge", "--no-commit", "--no-ff", target)
+    except subprocess.CalledProcessError:
+        # Content conflicts are preparation output, not a completed integration.
+        # Preserve the index and files; development edits them before fixed tests.
+        conflicts = git(workspace, "diff", "--name-only", "--diff-filter=U", "-z")
+        if not conflicts or git(workspace, "rev-parse", "MERGE_HEAD") != target:
+            raise
+        return {
+            "integration_base": target,
+            "integration_pending": True,
+            "integration_conflicts": [name for name in conflicts.split("\0") if name],
+        }
+    # Git may report already integrated; neither path commits or pushes.
+    pending = subprocess.run(
+        ["git", "-C", str(workspace), "rev-parse", "--verify", "MERGE_HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    return {"integration_base": target, "integration_pending": pending.returncode == 0}
+
+
 def prepare(workspace, run, base, scoped_docs=False):
     branch = branch_for(run)
     current = git(workspace, "branch", "--show-current")
     if current == branch:
+        head = published_head(run, branch)
+        integration = (
+            integrate_published_base(workspace, run, base, head) if head else {}
+        )
         return {
             "branch": branch,
             "head": git(workspace, "rev-parse", "HEAD"),
             "continued": True,
+            **integration,
             **({"document_root": task_docs(run)} if scoped_docs else {}),
         }
     if git(workspace, "status", "--porcelain"):
@@ -271,9 +383,22 @@ def publish(workspace, run, scoped_docs=False, materials=False):
         for name in ("docs/workflow/qa.md", "docs/workflow/pr.md"):
             if not (workspace / name).is_file():
                 raise ValueError("Missing delivery artifact: " + name)
+    if git(workspace, "diff", "--name-only", "--diff-filter=U"):
+        raise ValueError(
+            "Base integration has unresolved conflicts; no publication attempted"
+        )
     check_publish_files(workspace)
     git(workspace, "add", "--all")
-    if git(workspace, "diff", "--cached", "--name-only"):
+    pending_merge = subprocess.run(
+        ["git", "-C", str(workspace), "rev-parse", "--verify", "MERGE_HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if (
+        git(workspace, "diff", "--cached", "--name-only")
+        or pending_merge.returncode == 0
+    ):
         title = run.get("input", "Workflow delivery").splitlines()[0][:120]
         git(workspace, "commit", "-m", title)
     git(workspace, "push", "origin", "HEAD:refs/heads/" + branch)
@@ -284,7 +409,7 @@ def publish(workspace, run, scoped_docs=False, materials=False):
     }
 
 
-def run_tests(workspace, run, command):
+def run_tests(workspace, run, command, base="main"):
     verify_material(workspace, run)
     if (
         not isinstance(command, list)
@@ -292,6 +417,37 @@ def run_tests(workspace, run, command):
         or any(not isinstance(x, str) or not x or "\0" in x for x in command)
     ):
         raise ValueError("Fixed test command must be a non-empty argv array")
+    pending = subprocess.run(
+        ["git", "-C", str(workspace), "rev-parse", "--verify", "MERGE_HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    conflicts = (
+        [
+            name
+            for name in git(
+                workspace, "diff", "--name-only", "--diff-filter=U", "-z"
+            ).split("\0")
+            if name
+        ]
+        if pending.returncode == 0
+        else []
+    )
+    if conflicts:
+        branch = branch_for(run)
+        if (
+            git(workspace, "branch", "--show-current") != branch
+            or published_head(run, branch) != git(workspace, "rev-parse", "HEAD")
+            or git(workspace, "rev-parse", "MERGE_HEAD")
+            != git(workspace, "rev-parse", "origin/" + base)
+        ):
+            raise ValueError("Conflict resolution is not the prepared task integration")
+        # Native Agents can edit files but cannot write .git. The configured
+        # test Connector records their resolution; it never commits or pushes.
+        git(workspace, "--literal-pathspecs", "diff", "--check", "--", *conflicts)
+        git(workspace, "--literal-pathspecs", "add", "--", *conflicts)
+        print(json.dumps({"integration_resolution_staged": conflicts}), flush=True)
     environment = dict(os.environ)
     environment.pop("GH_TOKEN", None)
     return subprocess.run(
@@ -337,7 +493,9 @@ def main():
     if args.operation == "verify":
         if not args.test_command:
             raise ValueError("Fixed test argv required")
-        raise SystemExit(run_tests(workspace, run, json.loads(args.test_command)))
+        raise SystemExit(
+            run_tests(workspace, run, json.loads(args.test_command), args.base)
+        )
     result = (
         prepare(workspace, run, args.base, args.task_docs)
         if args.operation == "prepare"

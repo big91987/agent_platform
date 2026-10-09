@@ -1,6 +1,7 @@
 """Real local Git repositories exercise publish boundaries; no remote API mock."""
 
 import importlib.util
+import json
 import os
 import subprocess
 import tempfile
@@ -69,6 +70,232 @@ class RepositoryTest(unittest.TestCase):
         repo.git(self.workspace, "checkout", "main")
         with self.assertRaises(ValueError):
             repo.publish(self.workspace, self.run)
+
+    def published_task(self):
+        repo.prepare(self.workspace, self.run, "main")
+        (self.workspace / "feature.txt").write_text("task change\n")
+        repo.git(self.workspace, "add", "feature.txt")
+        repo.git(self.workspace, "commit", "-m", "task")
+        head = repo.git(self.workspace, "rev-parse", "HEAD")
+        self.run["previous_results"] = [
+            {
+                "node_id": "publish",
+                "status": "completed",
+                "connector_receipt": {
+                    "exit_code": 0,
+                    "output": json.dumps(
+                        {
+                            "branch": repo.branch_for(self.run),
+                            "head": head,
+                            "pushed": True,
+                        }
+                    ),
+                },
+            }
+        ]
+        repo.git(self.workspace, "checkout", "main")
+        (self.workspace / "upstream.txt").write_text("upstream change\n")
+        repo.git(self.workspace, "add", "upstream.txt")
+        repo.git(self.workspace, "commit", "-m", "upstream")
+        base = repo.git(self.workspace, "rev-parse", "HEAD")
+        repo.git(self.workspace, "push", "origin", "main")
+        repo.git(self.workspace, "checkout", repo.branch_for(self.run))
+        return head, base
+
+    def test_published_prepare_integrates_base_without_committing_and_is_repeatable(
+        self,
+    ):
+        head, base = self.published_task()
+        directory = self.workspace / repo.task_docs(self.run)
+        directory.mkdir(parents=True)
+        evidence = directory / "blocked.md"
+        evidence.write_text("Original native failure\n")
+        receipt = repo.prepare(self.workspace, self.run, "main", True)
+        self.assertTrue((self.workspace / "upstream.txt").is_file())
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), head)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "MERGE_HEAD"), base)
+        self.assertEqual(receipt["integration_base"], base)
+        self.assertEqual(
+            repo.prepare(self.workspace, self.run, "main", True)["integration_base"],
+            base,
+        )
+        self.assertEqual(evidence.read_text(), "Original native failure\n")
+
+    def test_published_prepare_rejects_dirty_product_without_overwriting(self):
+        head, _ = self.published_task()
+        (self.workspace / "feature.txt").write_text("unfinished product work\n")
+        with self.assertRaisesRegex(ValueError, "uncommitted"):
+            repo.prepare(self.workspace, self.run, "main")
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), head)
+        self.assertEqual(
+            (self.workspace / "feature.txt").read_text(), "unfinished product work\n"
+        )
+
+    def test_unpublished_prepare_continuation_preserves_legacy_behavior(self):
+        repo.prepare(self.workspace, self.run, "main")
+        (self.workspace / "README.md").write_text("unfinished\n")
+        receipt = repo.prepare(self.workspace, self.run, "main")
+        self.assertTrue(receipt["continued"])
+        self.assertEqual((self.workspace / "README.md").read_text(), "unfinished\n")
+
+    def test_prepare_conflict_preserves_files_and_cannot_publish_unresolved(self):
+        head, _ = self.published_task()
+        repo.git(self.workspace, "checkout", "main")
+        (self.workspace / "feature.txt").write_text("opposite upstream change\n")
+        repo.git(self.workspace, "add", "feature.txt")
+        repo.git(self.workspace, "commit", "-m", "conflicting upstream")
+        base = repo.git(self.workspace, "rev-parse", "HEAD")
+        repo.git(self.workspace, "push", "origin", "main")
+        repo.git(self.workspace, "checkout", repo.branch_for(self.run))
+        receipt = repo.prepare(self.workspace, self.run, "main")
+        self.assertEqual(receipt["integration_conflicts"], ["feature.txt"])
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), head)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "MERGE_HEAD"), base)
+        self.assertEqual(
+            repo.git(self.workspace, "diff", "--name-only", "--diff-filter=U"),
+            "feature.txt",
+        )
+        self.assertEqual(
+            repo.prepare(self.workspace, self.run, "main")["integration_conflicts"],
+            ["feature.txt"],
+        )
+        docs = self.workspace / "docs/workflow"
+        docs.mkdir(parents=True)
+        (docs / "qa.md").write_text("Evidence")
+        (docs / "pr.md").write_text("Report")
+        with self.assertRaisesRegex(ValueError, "conflicts"):
+            repo.publish(self.workspace, self.run)
+        with self.assertRaises(subprocess.CalledProcessError):
+            repo.run_tests(self.workspace, self.run, ["python3", "-c", "pass"])
+        (self.workspace / "feature.txt").write_text("resolved by development\n")
+        self.assertEqual(
+            repo.run_tests(self.workspace, self.run, ["python3", "-c", "pass"]), 0
+        )
+        self.assertEqual(
+            repo.git(self.workspace, "diff", "--name-only", "--diff-filter=U"), ""
+        )
+        repo.publish(self.workspace, self.run)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD^2"), base)
+
+    def test_conflict_paths_are_literal_and_do_not_stage_unrelated_files(self):
+        name = ":(glob)*"
+        (self.workspace / name).write_text("initial\n")
+        repo.git(self.workspace, "add", ".")
+        repo.git(self.workspace, "commit", "-m", "literal filename")
+        repo.git(self.workspace, "push", "origin", "main")
+        head, _ = self.published_task()
+        (self.workspace / name).write_text("task\n")
+        repo.git(self.workspace, "--literal-pathspecs", "add", "--", name)
+        repo.git(self.workspace, "commit", "-m", "task literal change")
+        self.run["previous_results"][0]["connector_receipt"]["output"] = json.dumps(
+            {
+                "branch": repo.branch_for(self.run),
+                "head": repo.git(self.workspace, "rev-parse", "HEAD"),
+                "pushed": True,
+            }
+        )
+        repo.git(self.workspace, "checkout", "main")
+        (self.workspace / name).write_text("upstream\n")
+        repo.git(self.workspace, "--literal-pathspecs", "add", "--", name)
+        repo.git(self.workspace, "commit", "-m", "upstream literal change")
+        repo.git(self.workspace, "push", "origin", "main")
+        repo.git(self.workspace, "checkout", repo.branch_for(self.run))
+        self.assertEqual(
+            repo.prepare(self.workspace, self.run, "main")["integration_conflicts"],
+            [name],
+        )
+        (self.workspace / name).write_text("resolved\n")
+        (self.workspace / "unrelated.txt").write_text("must remain unstaged\n")
+        self.assertEqual(
+            repo.run_tests(self.workspace, self.run, ["python3", "-c", "pass"]), 0
+        )
+        self.assertNotIn(
+            "unrelated.txt", repo.git(self.workspace, "diff", "--cached", "--name-only")
+        )
+        self.assertIn(
+            "unrelated.txt",
+            repo.git(self.workspace, "ls-files", "--others", "--exclude-standard"),
+        )
+
+    def test_publication_commits_pending_merge_and_preserves_both_parents(self):
+        head, base = self.published_task()
+        repo.prepare(self.workspace, self.run, "main")
+        docs = self.workspace / "docs/workflow"
+        docs.mkdir(parents=True)
+        (docs / "qa.md").write_text("Joint evidence")
+        (docs / "pr.md").write_text("Joint report")
+        receipt = repo.publish(self.workspace, self.run)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD^1"), head)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD^2"), base)
+        self.assertEqual(
+            repo.git(
+                self.workspace, "rev-parse", "origin/" + repo.branch_for(self.run)
+            ),
+            receipt["head"],
+        )
+        repo.publish(self.workspace, self.run)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), receipt["head"])
+
+    def test_publish_finishes_equal_tree_merge_without_new_content(self):
+        repo.prepare(self.workspace, self.run, "main")
+        docs = self.workspace / "docs/workflow"
+        docs.mkdir(parents=True)
+        (docs / "qa.md").write_text("Evidence")
+        (docs / "pr.md").write_text("Report")
+        repo.git(self.workspace, "add", "docs")
+        repo.git(self.workspace, "commit", "-m", "task documents")
+        head = repo.git(self.workspace, "rev-parse", "HEAD")
+        self.run["previous_results"] = [
+            {
+                "node_id": "publish",
+                "status": "completed",
+                "connector_receipt": {
+                    "exit_code": 0,
+                    "output": json.dumps(
+                        {
+                            "branch": repo.branch_for(self.run),
+                            "head": head,
+                            "pushed": True,
+                        }
+                    ),
+                },
+            }
+        ]
+        repo.git(self.workspace, "checkout", "main")
+        repo.git(self.workspace, "cherry-pick", "--no-commit", head)
+        repo.git(self.workspace, "commit", "-m", "same upstream content")
+        base = repo.git(self.workspace, "rev-parse", "HEAD")
+        repo.git(self.workspace, "push", "origin", "main")
+        repo.git(self.workspace, "checkout", repo.branch_for(self.run))
+        repo.prepare(self.workspace, self.run, "main")
+        self.assertEqual(repo.git(self.workspace, "diff", "HEAD", "--name-only"), "")
+        receipt = repo.publish(self.workspace, self.run)
+        self.assertNotEqual(receipt["head"], head)
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD^2"), base)
+
+    def test_failed_publication_does_not_fall_back_to_unpublished_continuation(self):
+        self.published_task()
+        self.run["previous_results"].append(
+            {
+                "node_id": "publish",
+                "status": "failed",
+                "connector_receipt": {"exit_code": 1},
+            }
+        )
+        (self.workspace / "feature.txt").write_text("unfinished\n")
+        with self.assertRaisesRegex(ValueError, "publication"):
+            repo.prepare(self.workspace, self.run, "main")
+
+    def test_staged_task_evidence_is_rejected_before_merge_without_losing_content(self):
+        head, _ = self.published_task()
+        directory = self.workspace / repo.task_docs(self.run)
+        directory.mkdir(parents=True)
+        (directory / "blocked.md").write_text("Failure evidence")
+        repo.git(self.workspace, "add", str(directory.relative_to(self.workspace)))
+        with self.assertRaisesRegex(ValueError, "staged"):
+            repo.prepare(self.workspace, self.run, "main")
+        self.assertEqual(repo.git(self.workspace, "rev-parse", "HEAD"), head)
+        self.assertEqual((directory / "blocked.md").read_text(), "Failure evidence")
 
     def test_task_artifacts_use_skill_filenames_and_do_not_overwrite_other_runs(self):
         receipt = repo.prepare(self.workspace, self.run, "main", True)
