@@ -371,3 +371,10 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 当前测试Run c41e8047001414b96d327c39fb9c1eeb仍e2e_plan4 running/error空。正式User Input request_id model-relay:product-e2e:repair-development-handoff:20261009已实际接收message20418/running；补充覆盖当前冻结Run，不修改图或升级在途流程。测试未完成，暂无最终报告、修复Issue或development接单；这些须据后续真实产物核验。原model-relay定时仍PAUSED；尝试新增报告完成后周期跟进被自动审批拒绝（用户已停止定时），未创建新自动任务，不用其他方式绕过。是否采用本次自动完成跟进待用户明确选择。
 
 最终正式API回读：测试Run c41e8047001414b96d327c39fb9c1eeb已从e2e_plan4进入e2e_execute5/running/error空；这是测试执行准备接单，不是测试完成。修复Issue、跨Run材料接收及development接单仍待实际报告；未新增定时任务。交接标准源9dc693a已推开发分支，原在途图保持。
+
+
+### 后续优化：GitHub发布身份与消息来源
+
+用户在Issue33截图反馈：平台Hook自动回写和协调者通过工具提交都显示big91987，难以区分本人输入、协调者操作和Agent Platform/具体节点回复。目标是在GitHub可见作者与正文来源上明确区分三者，并保留Run/节点/会话关联，不要求用户查看隐藏HTML标记猜来源。列入后续Harness优化，本轮仅记录，不切换凭据、不修改在途任务或旧评论。
+
+现状：Connector由token_env读取Bearer凭据调用GitHub，Hook正文已有隐藏agent-platform-hook标记作去重/防反馈，未提供用户可见来源。独立平台用户ID不能改变GitHub评论作者。候选方向为GitHub App installation身份：安装令牌的动作归属App bot，而非用户身份令牌；目前平台仅读取已提供令牌，App凭据/安装/短期令牌生成续期/标准升级尚待实现与验证。先实现清楚的来源展示，后续接独立发布身份时还须覆盖最小仓库权限、令牌过期恢复、评论去重/结果未知核查、Hook不反触发新Run及原生输出保持。官方依据：https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps 和 https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation 。

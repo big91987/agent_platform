@@ -1967,3 +1967,8 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 新的周期完成跟进请求被自动审批拒绝，原因是原用户已停止定时且仅授权一次交接；工具isError/拒绝回执明确，没有新定时任务创建，旧model-relay仍PAUSED。不借其他工具绕过；本次完成后自动跟进是否允许已向用户说明并待明确选择。真实产品完成报告→材料SHA核验→唯一修复Issue→development原生接单仍待验证。
 
 最终正式API回读：测试Run c41e8047001414b96d327c39fb9c1eeb已从e2e_plan4进入e2e_execute5/running/error空；这是测试执行准备接单，不是测试完成。修复Issue、跨Run材料接收及development接单仍待实际报告；未新增定时任务。交接标准源9dc693a已推开发分支，原在途图保持。
+
+
+### 2026-10-09 GitHub作者混同问题（待实现）
+
+用户截图显示Issue启动及Agent回复作者都为big91987。本轮只读源码：connectors.go以token_env配置GitHub凭据，connector_execution.go githubRequest读取环境令牌并以Bearer发请求；workflow_hooks.go自动评论只附隐藏agent-platform-hook标记，缺用户可见来源。GitHub官方说明installation token归属App bot，user token归属用户；支持独立外部身份，不由平台内部用户ID控制。已记入计划；未创建App/机器人账号、生成或切换凭据、改历史评论或验证bot真实发布，独立身份与来源展示当前仍未实现。
