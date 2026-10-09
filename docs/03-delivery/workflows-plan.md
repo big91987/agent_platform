@@ -369,3 +369,5 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 维护源e2e_report要求实际问题包与文件级artifacts：受测版本、用户影响、复现与预期/实际、首失败回执、相关脱敏文件、原AC与回归条件、已有Issue关系；intake明确已复核输入足够时直交development。报告/证据通过原SHA-256 ZIP材料入口传新工作区，不能只贴本机路径，秘密不随包发布。先查既有任务按修复范围去重；未执行/凭据问题不自动算产品故障，无已确认缺陷不造任务，Harness与测试设施单列。
 
 当前测试Run c41e8047001414b96d327c39fb9c1eeb仍e2e_plan4 running/error空。正式User Input request_id model-relay:product-e2e:repair-development-handoff:20261009已实际接收message20418/running；补充覆盖当前冻结Run，不修改图或升级在途流程。测试未完成，暂无最终报告、修复Issue或development接单；这些须据后续真实产物核验。原model-relay定时仍PAUSED；尝试新增报告完成后周期跟进被自动审批拒绝（用户已停止定时），未创建新自动任务，不用其他方式绕过。是否采用本次自动完成跟进待用户明确选择。
+
+最终正式API回读：测试Run c41e8047001414b96d327c39fb9c1eeb已从e2e_plan4进入e2e_execute5/running/error空；这是测试执行准备接单，不是测试完成。修复Issue、跨Run材料接收及development接单仍待实际报告；未新增定时任务。交接标准源9dc693a已推开发分支，原在途图保持。
