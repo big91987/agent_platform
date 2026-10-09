@@ -2,7 +2,7 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-09 23:34）：Model Relay PR35已精确合并并通过正式Actions部署，5545实际version6929376089535038112da48aed715fd729615d76/schema3，管理页JS/CSS与已验候选同版；Issue32原Run61步完成。Issue34唯一Run637705186406b80a2ee4afaf0d6b2167完成到seq16，PR36仍Draft，Go仅限受控计量/安全回归资产；与新main联合门禁、真实供应商成功/费用和原两屏限额范围仍待验，Issue33产品结论No-Go保持。Harness已正式修复PR默认误关Issue及入站GitHub API未使用配置代理，原Actions37925548923 attempt4 success，唯一接单评论6083929828与完整Run16不变已核。8793运行620b523后端，入口源码a51c7af按既有安装根生效；独立复审及标准回归通过。下一步是受支持的PR36联合验证接续，当前主模板缺直接PR刷新入口；无人值守报告发布、动态独立QA工具能力和真实供应商安全/历史预算条件仍有缺口。全部来源证据及旧失败见下方历史记录，不由单项通过外推整套商用验收或工程净收益。
+当前状态（2026-10-10 00:07）：PR35已正式部署main692937/schema3；PR36仍Draft/head8917f942。原研发17实际Git写锁拒绝后已正式停止，Harness维护源d59417b修复受信候选整合，19项真实Git回归/完整标准门禁/独立复审通过并标准升级。原Run正式return17→prepare18 exit0，实际整合main692937，无冲突、未提交推送；issue19完成，当前development21 running。原16步骤和冻结配置保持，联合完整冷门禁/新QA/合并部署尚未完成。旧tests9/QA10只覆盖M01单候选；Issue33 No-Go、真实供应商/费用未验及历史budget not_attested保持。动态独立QA、无人值守报告发布仍待完善。
 
 历史长周期目标：**No-Go／In Progress（2026-10-06）**。路线1首次调用体验已正式发布；路线2多上游/有限切换经 Issue #18 原 Run 的固定门禁、独立 QA 返工、PR #19 合并，正式 main `98511771871cf0951ecef716bbb55deb13e18da5` 已部署。自动 prepare、隔离目标真实健康失败后的旧数据恢复、显式重试 schema1→2 及预览发布均有 Actions/API/UI 证据，见文末。路线3 Issue #20 已由 GitHub Actions/SDK 自动进入唯一 Run `9e6d05f409675e0ef65c6486691462df`，需求/设计已完成并交接研发；路线4待执行。DEP02–04 剩余真实 Go 联合负例、DEP05 未覆盖安装边缘及后续产品路线未全部通过。真实供应商联调 Not Run；源 PR #5 仍 Draft/Open、未合并。历史小节保留当时事实，不能把历史片段或单项通过外推整体完成。
 
@@ -2106,3 +2106,29 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 - 原入口有界诊断attempt3真实失败：现只公开transport error，未进入新的产品执行，首两轮具体底层细节仍不能补造。一次同Issue只读传输对照，direct非零transport、既有配置代理exit0；源码核对发现git_proxy此前只应用Git而未用于gh API。通用最小根因修复复用原参数，校验后只给GitHub子进程传HTTPS_PROXY，GET/POST同路径，平台Client及os.environ保持；默认env=None保留旧调用，未新增配置开关、节点或自动重试。新边界原红→绿，独立16入口回归及复审无C/I/M，完整scripts/verify.sh exit0（83项模板/安装，Go racecached沿用未变结果）。原运行配置确实含已对照成功的代理，不临时改环境或安装副本；下一次正式原Actions复验采用该维护源版本。日志及探针check-20261009-hourly-1439、/private/tmp/agent-platform-entry-transport-verify.log。
 
 - 接单通知正式恢复闭合：维护源a51c7af已推，原配置/安装根自动复用同源码，原Actions37925548923 attempt4 success（52秒）；唯一接单评论及GitHub正式回执已保存entry-restored.json，正文用运行页当前状态而非向已结束任务承诺继续输入。完整Run16逐值不变、关联Issue34仅唯一Run，无产品重放或新增supplier请求。此前attempt1/2原错误细节不补造、attempt3新诊断transport红及直连/代理对照保留。源码隔离回归与正式GitHub恢复分开成立；后续无需协调者每次注入环境或重试求绿。原代理继承NO_PROXY限制仍有效，别据此次一轮成功宣称所有外部故障或长期网络SLA已验。
+
+
+### 2026-10-09 PR36联合候选交付补正（按小时检查）
+
+实时API/GitHub核验：PR35已经正式部署main6929376089535038112da48aed715fd729615d76，5545实际health200/schema3，5546仍9851177/schema2；PR36仍Draft/head8917f942cb38af2f56aa93914ab62e763bf9cc6e，关联Issue34与原Run16已completed，未出现第二个候选或新任务。两个单独候选绿不替联合门禁。当前不需要新增PR刷新图或业务状态；既有completed-return具备重取独占工作区、保留历史及冻结定义的交付返工能力，可用于同一未合并PR的候选补正，不能用于把新产品阶段塞回完成Run。
+
+本轮Builder只fetch已授权仓库精确main到原checkout的origin/main（原本3f9cee→692937）；候选HEAD/代码/工作区干净状态未改变，没有代产品合并、写用例、运行make或调用供应商。随后Owner正式return16→development17，同Issue/Run/分支/PR，原16步和definition/connectors/parameters/workspace/max100逐值保持。补正输入明确本地无提交整合精确main属于本次研发责任，远端PR合并及commit/push仍由正式交付入口负责；没有改执行权限或冻结图。实际conversation bfa034a2aa046d07346d18fe17d446e0已running，原生消息32295承接核分支/主线/规范再整合；node.started评论6084212713真实已发。受理与承接不等于整合完成、完整冷门禁或新QA通过。
+
+Pipeline需取得联合新源码指纹、固定make verify完整冷门禁与独立QA，再更新同PR36；原tests9/QA10为历史单候选证据。若沙箱或本地Git能力阻断，保留现场并反馈，不临时扩权或绕行；若新门禁失败，最小归因后返工，不延长期限/弱断言求绿。真实供应商/费用及Issue33 No-Go、历史budget not_attested保持，不读取私有Provider配置、不重新消费24次。本轮手动只读fetch是明确的输入准备，不将其称为模板自动PR刷新；若该准备持续成为协调者介入点，后续只在唯一维护源完善必要的受信基线接续入口，不采用旧注册表pr_refresh脚本或新增通用编排框架。
+
+私有回执：check-20261009-hourly-1538/run-before.json、return-response.json、run-after-return.json、conversation-live.json。上述为原生研发接续的阶段事实，随后实际Git写锁拒绝及通用修复记录如下；原代理/Refs修复不重复部署或重跑。PR36未合并、未部署。
+
+
+### 2026-10-10 候选基线整合的受信入口修复
+
+用户影响：PR36在PR35新主线下缺联合验证，原生研发17实际执行本地无提交整合时被沙箱拒绝写 `.git/ORIG_HEAD.lock`（exit128），不能继续取得联合候选。原生Agent保留 integration-blocked-exec17.md 后等待输入，Owner正式stop17；原16步骤、失败回执和冻结配置保持，无产品代码改动。此前让原生Agent直接整合Git的接续选择未解决执行能力缺口，不能描述为联合验证已开始或自动刷新已交付。根因是原prepare的任务分支接续直接返回、不更新已发布候选的基线，而原生执行器不能写Git元数据。
+
+最小修复落在唯一维护源 examples/platform-workflows/repository.py：既有prepare依据本Run最近成功publish回执和本地HEAD，fetch配置基线并进行无提交整合；失败/未知publish、其他HEAD、已暂存内容或未提交产品改动拒绝并保留现场，只允许本任务未暂存交付文档。重复prepare保留原MERGE_HEAD，不重新fetch移动基线。真实冲突作为prepare产物沿原研发路径处理；Agent只编辑文件，固定tests检查残留冲突标记及候选身份后仅暂存冲突文件，publish在独立QA后完成本地整合提交和同分支推送。等内容合并也保留双亲历史。Git冲突文件名使用literal pathspec，防止特殊文件名扩大暂存范围。未新增对象、节点、设置、状态、权限或自动重试，没有协调者代产品合并/测试。
+
+真实临时Git回归先红后绿，最终19项通过；独立复审的失败publish、冲突接续和pathspec边界问题均已复现并修复，最终无Critical/Important，已暂存文档的明确拒绝边界写入README。首次完整验证在协调者沙箱因本机监听EPERM失败，属Harness验证环境，未冒称产品红；宿主r2/r3是中间候选绿，最终r4完整 scripts/verify.sh exit0（92项平台Workflow Python回归，包含19项真实Git；Node/SDK/控制器/browser/vet/race/build全部入口通过，Go race显示cached，不冒称重新执行）。原完整日志113113bytes/SHA256 dfcb64a041af34c76a1dc90d2f0e25228c2e763693f8228c51d8bf3bd84e7547保存在本轮ignored证据。源d59417b已开发分支提交/推送，未建源PR或合main。
+
+正式应用复验：原 install.py --upgrade exit0，复用原主manifest/browser-manifest与对象ID，安装前后完整Run17逐值相同；受信Connector使用唯一维护源repository.py，摘要cbe5cff5f81aca14deca66bdd2ac99af1a9094ec59065a29fc546dfed6b686a9。Owner正式return17→prepare18；真实exit0/953bytes/truncated=false，最近publish HEAD8917f942保持、MERGE_HEAD和integration_base均6929376089535038112da48aed715fd729615d76，pending=true，未提交/推送，无未解决冲突，原61件输入原摘要保持。只读Git核得PR35改动已在合并索引，原Agent阻塞文档保持；prepare/issue完成，intake20原消息32639明确核准备回执后直接交研发。原16步骤、definition/connectors/parameters/workspace/max100逐值保持，没有放大原生权限。实际冲突路径本轮未发生，只能称隔离回归已验。
+
+Issue34既有去重进展评论6083355376已更新并核远端正文，说明原Git卡点、已修受信入口和等待联合测试/QA，非新Issue/Run。私有upgrade.log、run-before/after-upgrade.json、return17-prepare.json、run-after-prepare18.json、integration18-staged-stat.txt及platform-verify-r4.log保留；未恢复旧产品Run、未重复部署，5545还是已验PR35版本。产品新指纹/完整冷门禁/独立QA与同PR36交付由Pipeline负责，本轮Harness修复和prepare接续不改变产品No-Go。
+
+实际后续承接：intake20正式handoff→development21/conversation5cd1db5d235469b1074304c7b5af5c72 running；原生32838明确恢复规范/交接/整合状态、核联合候选与固定入口，不写Git元数据或调用供应商。当前approval_count0，不把承接当完整测试。既有model-relay小时自动化已更新本锚点与修复边界、保持ACTIVE及安静通知策略。
