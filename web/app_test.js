@@ -66,6 +66,24 @@ function conversationPage(data) {
   return {context, node};
 }
 
+test('an old permission save cannot clear drafts or unlock a newer visit to the same conversation',async()=>{
+ const data={conversation:{id:'c1',agent_name:'助手',status:'stopped'},messages:[],artifacts:[],execution_permissions:{network_access:false,allow_elevation:false,approvals_reviewer:'user'}};
+ const {context,node}=conversationPage(data);
+ vm.runInContext("state.me.admin=true;api=async(path,method)=>method==='PATCH'?new Promise(resolve=>{globalThis.finishPermissionSave=resolve}):path.includes('/events?')?[]:snapshot",context);
+ await vm.runInContext("refreshConversation('c1')",context);
+ node('#conversation-permission-reviewer').value='auto_review';
+ const pending=node('#conversation-permissions-form').onsubmit({preventDefault(){}});
+ vm.runInContext("state.id='c2';state.events=[];state.id='c1';state.events=[];state.permissionConversation=null;state.permissionsDraft=null;state.permissionsSaving=false",context);
+ await vm.runInContext("refreshConversation('c1')",context);
+ node('#conversation-permission-network').checked=true;
+ node('#conversation-permissions-form').onchange();
+ vm.runInContext('state.permissionsSaving=true',context);
+ context.finishPermissionSave({ok:true});await pending;
+ assert.equal(vm.runInContext('state.permissionsDraft.network_access',context),true);
+ assert.equal(vm.runInContext('state.permissionsSaving',context),true);
+ assert.equal(node('#conversation-permission-network').checked,true);
+});
+
 test('conversation renders native tools in the timeline without inferring business state', async () => {
   const data = {
     conversation: {id:'c1', agent_name:'助手', status:'running'}, artifacts:[],

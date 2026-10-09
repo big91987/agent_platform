@@ -360,3 +360,11 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 - 管理员正式 PATCH 将唯一 E2E 会话 `4ccfaaa83ab911d6293de0acc293f78c` 改为 auto_review，network/elevation原true保持。旧待审批由正式 stop 取消。原安装器 --upgrade --agent-approvals-reviewer auto_review 成功更新同一产品测试工作流3155ddd1206d4ebc19da94e5b489091f，四个未来 Agent 节点均自动审核；通知凭据通过标准 --notification-token-env AGENT_PLATFORM_GITHUB_BOT 更新未来模板。第一次安装缺 PLATFORM_ADMIN_PASSWORD 在任何安装写入前拒绝，原日志保留，补同一管理员环境后成功。当前旧Run冻结通知配置及后续节点权限不静默改写，当前会话显式修改是独立权限选择。
 - Owner正式resume：E2E原seq5/Run c41e8047001414b96d327c39fb9c1eeb 与主线seq39/Run b7f93c24bc1ea4d0fe182f12aa7622ae 同 conversation/native thread 接续，主线权限仍 user/network=false/elevation=false。实际部署共享表单字节同源；E2E接续后2次原生自动审核 source=agent/status=approved/risk=medium/userAuthorization=high，2个目标命令 exit0/completed，人工待审批0。原生 guardianWarning 是 approved 通知，不是审核失败或降级。Pipeline自执行原浏览器会话核验和独立实例登录；协调者未操作产品或调用provider，不冒称完整旅程通过。
 - 私有正式回执目录 `.data/fresh-8793/check-20261009-auto-review/` 含升级、安装、权限、原生连续性和审核退出状态。当前E2E仍执行中；旧Run后续节点保留冻结权限，新任务获模板选择。产品测试/真实供应商结果、剩余旅程及新缺陷须看本Run原生报告，未因平台回归或两次批准记为全部Pass。
+
+### 2026-10-09 执行权限作为平台产品配置
+
+用户要求权限策略有可见、可保存、能影响真实执行的产品入口，而不是协调者逐Run救援。现有独立Agent编辑与Pipeline节点配置共用执行权限表单，本轮补齐会话侧栏“执行权限”：管理员正式PATCH保存联网、允许申请提权和人工/自动审核；普通用户只读，运行/排队/停止处理中/关闭时锁定；保存后显示实际值，刷新保留草稿，可应用独立Agent当前权限或恢复节点冻结权限。工作流会话从关联Run页停止/接续，明确只改当前节点、后续节点保持启动时设置。
+
+真实Chromium隔离页面回归先红（缺少权限入口）→4项全绿，覆盖保存/重新打开、自动刷新保留选择、节点恢复、普通用户只读及运行锁定；原API权限隔离/原生执行回归沿用已验证实现，未扩大后端权限。独立复审发现并关闭旧PATCH在A→B→A导航后清空新草稿/解除新保存锁的Important，真实app.js行为回归先红后绿，37项Node通过。标准scripts/verify.sh exit0，Go race55.052秒、安装器78项及全部前端/浏览器门禁通过；当前小范围Run跳转说明随后单独Node/Chromium复验及最终构建，不重跑未变产品用例。没有产品验证或真实供应商调用。运行环境应用尚待安全升级回执。
+
+用户认可Pipeline的Agent节点配置，也偏好提交Issue/启动API时按任务控制。已评估现有WorkflowStart.parameters与GitHub入站：可以复用每Run参数传递固定的“权限审核模式”，不建通用共享变量框架。Issue使用专用结构化选择，启动API/网页使用同一含义；平台在启动时核验调用者、Pipeline已允许的执行权限及工具确认冲突，再记录本次实际选择并作用于相关原生节点。Issue不应授权超出管理员已配置的网络/文件/工具权限；原有“自主推进”控制业务确认，不能借它跳过权限审批。GitHub现入口已要求repo owner actor/triggering actor与原Issue作者，继续保留。不存在字段时沿用节点默认，旧Run不追溯改变。任务级Issue/API开关本轮仅完成评估、尚未实现或实测，不能写成已交付；后续需覆盖Issue→唯一Run→实际原生审核、拒绝/恢复、去重及跨Run隔离。
