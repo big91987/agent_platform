@@ -2,7 +2,9 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-10 05:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的input36007已实际承接，plan10将r4-risk1缩为14风险链/114steps/42受控dispatch，保留326旧ID及未验状态，正式交review11/8794ced89a6fcad635f912d4d51ed1fc。无生成网页准备exit0，generation_ready=false/两种生成0。维护源62af199明确计划READY只交执行准备，完整脚本由e2e_execute完成后才交tests，实质入口/窗口方案/安全/容量缺口仍阻断；完整标准verify正式权限exit0。原manifest标准upgrade同workflow revision5，先正式stop11，首漏必填认证调用无配置变化，补标准认证后成功；原stopped Run完整图/input/steps及模型权限Skills保持。原resume11同会话input36793→agent36794实际承接，review11 running/审批0，最终复审及职责修正语义效果待验证。5545health200/0c197c8/schema3、产品tracked diff空；原#33 No-Go/零外部授权/旧预算not_attested不变，无新产品PR或部署。
+当前状态（2026-10-10 05:59）：通用模板62af199已标准升级同workflow revision5，原Run冻结revision4保持；独立review11在正式resume输入36793后实际接受职责澄清和14风险链减法，不再单因handler未实现阻断规划。最终NOT READY仅R03-CAP：300秒容量方案缺可核验依据；36967正式handoff→plan12/4e937a2d3a1de4bcf27ba64da0055436 running。未强制Ready、未开始生成，原#33 No-Go及外部调用0/历史预算未证保持，产品HEAD0c197c8/5545schema3不变。源码标准验证和安装匹配/停恢复已证；脚本准备→固定产品测试→QA整链仍未验收。
+
+历史状态（2026-10-10 05:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的input36007已实际承接，plan10将r4-risk1缩为14风险链/114steps/42受控dispatch，保留326旧ID及未验状态，正式交review11/8794ced89a6fcad635f912d4d51ed1fc。无生成网页准备exit0，generation_ready=false/两种生成0。维护源62af199明确计划READY只交执行准备，完整脚本由e2e_execute完成后才交tests，实质入口/窗口方案/安全/容量缺口仍阻断；完整标准verify正式权限exit0。原manifest标准upgrade同workflow revision5，先正式stop11，首漏必填认证调用无配置变化，补标准认证后成功；原stopped Run完整图/input/steps及模型权限Skills保持。原resume11同会话input36793→agent36794实际承接，review11 running/审批0，最终复审及职责修正语义效果待验证。5545health200/0c197c8/schema3、产品tracked diff空；原#33 No-Go/零外部授权/旧预算not_attested不变，无新产品PR或部署。
 
 历史状态（2026-10-10 04:47）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan6→review7 NOT READY→plan8→review9 r3 NOT READY→plan10/aab04d73b03727c160b533d73d96973a running，审批0。R01价格范围、R04部分已知计量和新增R08同额TPM恢复的文档设计已补齐；R02完整生成准备/协议、R03可执行映射/聚合容量、R05有效UTC窗口证据仍阻断。固定Python入口的原生无生成准备诊断四次exit2/2/2/0，最后证明真实Go/Chromium两宽新管理员入口读取，非两个业务身份或数值旅程；所有受控/供应商生成0。r3规划326cases/38片/约35h不是用户数量目标，协调者通过正式User Input36007要求风险等价类做减法并保留AC/历史/独立复审，目前queued，未宣称已承接或落实。plan10正补测试资产，不重复Run/resume或增限。机器人6088826836反馈准备/遗留阻断、6088913395/6088914021反馈返工/规划启动；原图/input/工作区/max30及前9步逐值保持。实际5545health200/0c197c8/schema3保持，产品tracked diff为空，无新PR/部署；原#33 No-Go和真实供应商历史预算not_attested不变。
 
@@ -2228,3 +2230,6 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 首标准verify受协调者沙箱监听EPERM阻断，platform-verify.log保留；正式权限完整scripts/verify.sh exit0，platform-verify-authorized.log113103bytes/SHA0c84eb6ff1e9c5d80e81070b203daebf83c4255af2de824ae76b0ce894f10450。覆盖前端/浏览器/Python/vet/Go race/build；Go为cached如实，不新增文案镜像测试。
 - phase-boundary-diagnosis.json列影响/真实阶段证据/竞争假设/预测/已试/下一步；职责修正不替真实窗口/容量前置。原生语义非确定性，安装成功不替实际复验。
 - stop/upgrade/resume完整回执、workflow前后及完整stopped Run比对、installed-template-source-check留存。首安装漏凭据是协调者输入准备错误，非产品或通用源码故障。当前已核实际native承接，后续最终review和路由仍待。
+
+
+后续核验（05:59）：review11实际最终NOT READY只保留R03-CAP，接受风险减法及handler职责澄清，原生36819/36841与正式36967 handoff可核，API显示review11 completed→plan12 running。这是职责纠正后的真实语义接续证据，不表示计划全部Ready或产品通过；后续需规划给出可行容量依据再独立复审。当前Plan12会话4e937a2d3a1de4bcf27ba64da0055436，不重复恢复或创建Run。最终API和Issue回执在ignored check-20261009-hourly-2143。
