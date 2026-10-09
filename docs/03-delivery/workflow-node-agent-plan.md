@@ -2,7 +2,9 @@
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
 
-当前状态（2026-10-10 04:47）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan6→review7 NOT READY→plan8→review9 r3 NOT READY→plan10/aab04d73b03727c160b533d73d96973a running，审批0。R01价格范围、R04部分已知计量和新增R08同额TPM恢复的文档设计已补齐；R02完整生成准备/协议、R03可执行映射/聚合容量、R05有效UTC窗口证据仍阻断。固定Python入口的原生无生成准备诊断四次exit2/2/2/0，最后证明真实Go/Chromium两宽新管理员入口读取，非两个业务身份或数值旅程；所有受控/供应商生成0。r3规划326cases/38片/约35h不是用户数量目标，协调者通过正式User Input36007要求风险等价类做减法并保留AC/历史/独立复审，目前queued，未宣称已承接或落实。plan10正补测试资产，不重复Run/resume或增限。机器人6088826836反馈准备/遗留阻断、6088913395/6088914021反馈返工/规划启动；原图/input/工作区/max30及前9步逐值保持。实际5545health200/0c197c8/schema3保持，产品tracked diff为空，无新PR/部署；原#33 No-Go和真实供应商历史预算not_attested不变。
+当前状态（2026-10-10 05:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的input36007已实际承接，plan10将r4-risk1缩为14风险链/114steps/42受控dispatch，保留326旧ID及未验状态，正式交review11/8794ced89a6fcad635f912d4d51ed1fc。无生成网页准备exit0，generation_ready=false/两种生成0。维护源62af199明确计划READY只交执行准备，完整脚本由e2e_execute完成后才交tests，实质入口/窗口方案/安全/容量缺口仍阻断；完整标准verify正式权限exit0。原manifest标准upgrade同workflow revision5，先正式stop11，首漏必填认证调用无配置变化，补标准认证后成功；原stopped Run完整图/input/steps及模型权限Skills保持。原resume11同会话input36793→agent36794实际承接，review11 running/审批0，最终复审及职责修正语义效果待验证。5545health200/0c197c8/schema3、产品tracked diff空；原#33 No-Go/零外部授权/旧预算not_attested不变，无新产品PR或部署。
+
+历史状态（2026-10-10 04:47）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan6→review7 NOT READY→plan8→review9 r3 NOT READY→plan10/aab04d73b03727c160b533d73d96973a running，审批0。R01价格范围、R04部分已知计量和新增R08同额TPM恢复的文档设计已补齐；R02完整生成准备/协议、R03可执行映射/聚合容量、R05有效UTC窗口证据仍阻断。固定Python入口的原生无生成准备诊断四次exit2/2/2/0，最后证明真实Go/Chromium两宽新管理员入口读取，非两个业务身份或数值旅程；所有受控/供应商生成0。r3规划326cases/38片/约35h不是用户数量目标，协调者通过正式User Input36007要求风险等价类做减法并保留AC/历史/独立复审，目前queued，未宣称已承接或落实。plan10正补测试资产，不重复Run/resume或增限。机器人6088826836反馈准备/遗留阻断、6088913395/6088914021反馈返工/规划启动；原图/input/工作区/max30及前9步逐值保持。实际5545health200/0c197c8/schema3保持，产品tracked diff为空，无新PR/部署；原#33 No-Go和真实供应商历史预算not_attested不变。
 
 历史状态（2026-10-10 03:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的plan4已交独立review5，r1判NOT READY，R01价格准备授权歧义、R02固定入口/受控上游前置、R03派生用例/调度预算、R04部分已知计量、R05自然窗有效时间观测未闭合。关联Issue已由机器人6087643687反馈真实等待，审批0，未产品实测。依据既有隔离准备及普通选择授权，协调者通过原正式User Input34696仅澄清全新隔离实例可首次创建固定受控测试价格，现存/生产/历史价格及算法不变，供应商请求仍0；review5实际承接→正式rework→plan6/e91a46b703cfa8d6df9755ee3d8b9d49 running，原生34869已承接补r2。原r1 NOT READY及R01–07保留，未自动READY；R02–05须整改再独立复审。机器人6088175700/6088176236真实回写返工/新节点启动。Run ID/冻结图/input/工作区/max30及原前4步逐值保持，无重复任务、恢复或权限增限。5545健康version0c197c8/schema3为PR36正式部署，5546旧9851177/schema2、8788未碰；原#33 No-Go与供应商预算not_attested保持。
 
@@ -528,3 +530,14 @@ Issue34去重评论6083355376已按正式远端回执更新上述合并/部署�
 版本/连续性：工作区HEAD0c197c8b3d98346107e65dbf0c41ef5d6b73d437，git diff HEAD tracked路径为空；Run ID/workflow/definition/input/workspace/max30和前9步逐值相同。r1评审SHA e7100298…保持，r2 45022d38…/r3 c74a1d2c…已独立留摘要。已部署5545health200/0c197c8/schema3未变化，不操作预览业务或真实账号。零真实供应商授权与旧#33 No-Go保持，没有确认生产缺陷或新修复包。
 
 证据：ignored .data/fresh-8793/check-20261009-hourly-2044 下run-before、conversation-9/10、review-and-preparation-audit、正式steering-receipt、run/conversation-after-steering、continuity-check与Issue评论。当前只证据文档更新，无新增平台代码或部署，不对文档运行产品门禁。下一轮先核36007真实送达、plan10产物及新独立复审，不能把排队当完成或自动放行。
+
+
+## 计划收敛与通用阶段职责修正（2026-10-10 05:53）
+
+plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch候选，旧326ID/状态和r1–r4保持；review11索引重核无Pass提升，capacity_attested=false。准备通过不是产品生成通过。机器人6089739294/6089739745反馈实际交接及复审；先前6089374966因待输入拒交、原生结束旧回合后承接再交的真实历史保留。
+
+模板READY歧义让规划承担完整脚本实现并反复返工，与原e2e_execute创建入口职责相冲突。唯一维护源62af199只改三个角色及README：计划评审核覆盖、操作、断言、证据、准备方案、安全和可行容量，不能仅因完整脚本尚待实现退规划；执行节点落实完整入口、全部必跑断言/采证/依赖/清理后才交tests。窗口证据和真实操作入口等实质缺口仍阻断，不自动Ready、不新增节点/开关/权限。规划按独立风险和等价类解释残余，不以组合数代质量。
+
+标准upgrade保护在途Run：正式stop11至stopped，首安装调用漏标准管理员认证在认证前失败，workflow逐值未变；补齐必填认证后原install-args/manifest --upgrade exit0，同workflow revision4→5。原stopped Run ID/workflow/definition/input/workspace/max30/steps全部同值，五节点非instructions配置同原，三个角色源码与安装instructions匹配。原Run仍冻结revision4；正式resume11/User Input36793由36794实际承接同会话，旧中断/NOT READY保留，不重写历史。最终独立评审及实际进入执行准备尚待，不能宣称整个职责修复已闭合。
+
+原#33 No-Go和供应商Blocked保持，外部请求0/历史budget not_attested不重置。当前产品HEAD0c197c8/tracked diff空，5545health200同版/schema3，无新产品PR或部署。证据ignored check-20261009-hourly-2143；下一轮核review11最终结论，不重复升级/resume或另起Run。
