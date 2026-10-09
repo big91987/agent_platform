@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-10 00:47）：Issue34/Run637705186406b80a2ee4afaf0d6b2167已development21完成、tests22完整联合冷make verify exit0/959549bytes/truncated=false，30页正式output读至EOF；158件6e359667…源码前后与维护者独立库存重算一致。QA23/conversation8ddf683e0552cf0e658329ed5298e268 running，原生独立回归通过只是进度，尚无最终QA交接。PR36仍Draft/head8917f942，尚未发布联合新head/合并/部署；5545仍已部署PR35 main692937/schema3。Harness源d59417b标准升级后prepare18实际接续已证，不重复return或扩大权限。Issue33 No-Go、真实供应商/费用未验及历史budget not_attested保持；动态独立QA、无人值守报告发布待完善。
+当前状态（2026-10-10 02:04）：Issue34原Run31步completed；联合cold tests22完整exit0和QA23正式Go限M01受控回归资产。report28→publish29 head185acd66→pr30同PR36→done31完成，仅四份交付说明变动；维护者158源码6e359667…/361件QA归档/15链接Git对象核验一致，真实PR标题已通过通用源31fd59b自动更新。PR36按精确head授权合并main0c197c8b3d98346107e65dbf0c41ef5d6b73d437；正式push prepare37970389412 in_progress、Owner preview37970431766 pending，尚未新activate/Deployment。5545仍健康PR35 main692937/schema3，5546旧9851177/schema2。Issue33 No-Go、真实Provider/费用/原限额网页未验及预算not_attested保持；不重复merge/dispatch/复活完成Run，不新增Supplier请求。
 
 历史状态（2026-10-09 07:10）：Issue30/Run2574d6be275f9eb630f8738837507e1e已12步completed，report9→publish10 exit0→pr11 PR31→done12真实完成。PR31/head8c8b155c007686311706ee1f8cec8262a1258bb9经维护者150件Git对象与tests7/QA8源码0384f115…逐字节及26QA归档SHA/bytes核证、树干净、GitGuardian成功；15任务分支证据链接远端非空。已按授权ready并精确SHA合并main3f9cee1615e87e002a2c2300f2d29778072ec3f5。正式push prepare37858024406 in_progress、Owner dispatch37858041523 pending（preview/main3f9cee），不要重复合并/触发或复活完成Run。controller2d456…仍标准安装，新600私有verify-3f9cee…-jt63zgxe.log由真实prepare创建但尚未完整结束；目前5545仍9bf6ecaf/schema3健康，5546旧9851177/schema2保持，未新部署。下一步核实际Actions/Deployment/新health/page；若新红保留首回执最小归因不盲试。R30完成契约候选已测/QA通过，旧R28-04 Open/P2与动态独立QA/供应商/登录未测保持；成功部署后推进长期阶段2其他P3，不停留完成Run。
 
@@ -541,3 +541,22 @@ Issue34既有去重进展评论6083355376已更新并核远端正文，说明原
 本轮同源278Node/全包Go race、受控RPM/TPM非零窗口/并发隔离/安全拒绝与计量终止及取消/预算UTC和迁移/三视口管理连续旅程及首次self_hosted通过。内层故障夹具exit23等保留其预期分类，不把它们当主门禁失败或抹去；顶层跳过项目和真实worker恢复仍沿原完整日志区分。受控HTTP通过不证明真实Provider/实际Token费用、非零网页供应商链通过。QA23原生33261/33280/33301承接独立复核并报告局部通过，但正式result仍空，不能放行。等待其最终QA文件级产物及handoff→report/publish更新同PR36，精确比对联合源和新Git对象后才合并和正式部署。
 
 原Issue34去重评论6083355376已回写联合绿/QA进行中与未验边界，并核远端回执。本轮私有证据check-20261009-hourly-1643/run-before/current.json、tests22.log、tests22-state.json、source-independent-review.json、pr36.json及comment回执保留；旧Git锁拒绝/原16步骤/冻结输入/旧单候选tests9与QA10证据均保持。无代码新修复、无Supplier调用或预算重置；实际管理预览仍PR35版本，不冒称联合上线。
+
+
+### 2026-10-10 联合QA完成及PR说明补正
+
+实时API证明QA23正式result.route=next、Go for joint M01 controlled regression assets only，不再以progress替QA完成。独立实际8组无监听race21.991s、53Node、关键数值和45PNG integrity复核；完整动态浏览器主体仍tests22，QA本人未重跑动态浏览器。report24→publish25 exit0/pushed/head5602f563313427ea9b1c7fbd495f5ce60a1de10a→PR26同PR36→done27 completed。维护者逐Git blob重核158件联合源码SHA6e359667d5f7521f6b8c421454c6fc7cbe5ccb8c74aa87bb1e5955c194c202cc同tests22/QA23；361件QA归档bytes/SHA一致，树干净；5602f563确有8917f942与692937双亲，不是丢掉主线或只更新旧单候选。GitGuardian当前skipping，不能写SUCCESS。供应商/原自然窗数值网页和Issue33产品No-Go不变，确认生产缺陷0。
+
+发布用户影响：远端PR36标题仍原【产品修复】任务名称，正文H1已是【产品测试】实际回归资产；正文仍写当前尚未提交/远端旧HEAD，和publish25/pr26正式事实相矛盾，读者无法准确判断范围与进度。最小诊断证实冻结PR Connector默认title={{input}}只读旧任务、没有使用Pipeline作者的PR标题；报告在发布前编写的当前状态又随发布立即过时。尚未ready/merge/deploy，不以维护者手工改Github作为永久交付。
+
+唯一维护源31fd59b：仅PR Connector的BodyFile及默认空/{{input}}标题选择作者正文第一非空行#一级标题；显式Title仍优先、无H1旧正文和Issue行为保持、正文原样，原PR更新/未知响应恢复协议不变。不新增变量/节点/状态/设置。正文文件路径保护及单行/长度限制保持。真实旧标题回归先红，新行为与兼容/路径/PR恢复定向绿，独立复审C/I/M=0。初次宽正则定向误覆盖需要监听的MCP测试而遭沙箱EPERM，真实环境失败保留；宿主精确定向和最终完整scripts/verify.sh exit0，Go race52.156s/全SDK-Node-Controller-Workflow-vet-build通过。report模板/README同步标题约定与“报告时待执行”的时间口径，具体产品说明仍由Pipeline作者。
+
+正式应用：源码31fd59b开发分支提交推送、不建源PR或合main；8793无在途执行后只读备份与标准构建升级，PID99080→58223，同启动参数/既有服务环境内存继承，值不打印或持久化；二进制SHA2641004470d0950b31b2044451b055a6f82193570dadf9305777edca2cab639a。全部Run重启前后逐值相同，原install.py --upgrade exit0，Run27仍逐值保持。旧27步/冻结配置/权限/材料保留，Owner return27→report28，同Run/PR；原生33798实际承接只补文档，审批空。修正文档后由原publish/pr真实应用标题并确认远端，当前该集成尚待Pipeline，不把隔离Go绿或运行升级当远端标题已修。已验源码不变则不重跑产品tests/QA，源码若变必须返完整门禁。
+
+Issue34去重评论6083355376已写QA23真实结论、旧标题/发布说明卡点、通用修复和仅文档返工，远端回执已确认。ignored check-20261009-hourly-1744保存完整Run27、源码Git对象复核、运行升级前后、return27-report28、平台完整日志与Issue回执；原产品失败、缺验与预算未知保持。当前等待report/publish/pr更新同PR36，不新任务、不代产品验收、不自动增限，不以完成Run补正承接新产品阶段。
+
+正式原流水线补正已闭合：report28→publish29 exit0/pushed/head185acd66d155897ab3f474ab66fdc346a97ab79f→pr30同PR36→done31 completed。远端标题自动使用Pipeline正文H1【产品测试】补齐受控RPM/TPM与安全调用计量回归，说明明确publish25历史联合资产与当时采证对象，不预编文档发布HEAD；Refs #34保持。此次新head与5602f563仅四份交付说明不同，维护者逐Git blob核158件完整源码6e359667…及361QA归档完全同版、15证据URL对象存在、工作树干净。原完整tests22/QA23依然适用，不代跑产品或改变判断。GitGuardian当前NEUTRAL（此前skipping），不是SUCCESS；mergeable/CLEAN，无新增阻断。通用标题改动的隔离验证、正式应用及原Pipeline外部回写三个层次均成立。
+
+已按既有授权ready并精确head185acd66合并PR36，main0c197c8b3d98346107e65dbf0c41ef5d6b73d437，2026-10-09T18:01:27Z。先读Actions核无同版dispatch后，Owner正式deploy-local.yml dispatch deploy=true/target=preview，仅一次；push prepare37970389412/18:01:30Z in_progress，Owner preview37970431766/18:01:52Z pending，均同main。prepare实际固定“Verify and prepare exact main commit”进行中，不能把受理/排队当部署成功或手工activate。当前5545health200仍692937/schema3，5546health200仍9851177/schema2；8788未碰，未重置账号或业务数据。须下一次实时核完整prepare/build/ready、activate/Deployment、environment_url及health/实际页面同新main；若红保留唯一完整日志/首回执最小诊断，不重复dispatch、增限或弱断言。独立QA原动态实操限制/供应商/费用/#33 No-Go与预算未知保持。
+
+Issue34去重评论6083355376已按正式远端回执更新上述合并/部署进行中，旧条目明确按时间保留历史。私有corrected-head-review.json、pr36-corrected/merge.json、actions-before-dispatch/current.json、health-before-activate.json与正式Run31保留；原27步骤与冻结配置保持，仅报告补正文档接续4步。本轮source31fd59b只开发分支交付，后续三文档更新另提交，不建源PR或合源main。
