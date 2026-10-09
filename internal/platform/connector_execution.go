@@ -65,6 +65,15 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 	if title == "" {
 		title = strings.TrimSpace(r.Input)
 	}
+	// The default task title can become obsolete after delivery changes scope.
+	// Use the authored PR document heading, while retaining explicit overrides
+	// and legacy documents without a heading. Never rewrite the supplied body.
+	if v.Kind == "github.pull_request" && p.BodyFile != "" && (p.Title == "" || p.Title == "{{input}}") {
+		heading := strings.TrimSpace(strings.SplitN(strings.TrimSpace(body), "\n", 2)[0])
+		if strings.HasPrefix(heading, "# ") && strings.TrimSpace(strings.TrimPrefix(heading, "# ")) != "" {
+			title = strings.TrimSpace(strings.TrimPrefix(heading, "# "))
+		}
+	}
 	// A task can be multi-paragraph even when used in an explicit template.
 	// Keep GitHub titles on one line; the complete task stays in the body.
 	title = strings.TrimSpace(strings.SplitN(title, "\n", 2)[0])

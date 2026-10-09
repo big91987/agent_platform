@@ -353,6 +353,51 @@ func TestConnectorTitlesUseTaskFirstLineAndPreserveBody(t *testing.T) {
 	}
 }
 
+func TestPRTitleFollowsAuthoredDeliveryHeadingWithoutChangingBody(t *testing.T) {
+	t.Setenv("DELIVERY_TITLE_TOKEN", "test-only")
+	dir := t.TempDir()
+	body := "# 【产品测试】验证计量边界\n\n实际交付及未验边界。\n"
+	if err := os.WriteFile(filepath.Join(dir, "pr.md"), []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	run := WorkflowRun{ID: "run", Input: "【产品修复】原任务目标", WorkspacePath: dir, Definition: Workflow{Nodes: []WorkflowNode{{ID: "pr", ConnectorInput: ConnectorInput{Title: "{{input}}", BodyFile: "pr.md", Head: "branch", Base: "main"}}}}}
+	connector := Connector{Kind: "github.pull_request", WorkspaceRoot: dir, Repository: "owner/repo", TokenEnv: "DELIVERY_TITLE_TOKEN"}
+	for _, title := range []string{"{{input}}", ""} {
+		run.Definition.Nodes[0].ConnectorInput.Title = title
+		request, err := prepareConnectorRequest(connector, run, WorkflowStep{NodeID: "pr", Seq: 2})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if request.Payload["title"] != "【产品测试】验证计量边界" {
+			t.Fatal(request.Payload["title"])
+		}
+		if request.Payload["body"] != body+"\n\n"+request.Marker {
+			t.Fatal("authored body changed")
+		}
+	}
+	run.Definition.Nodes[0].ConnectorInput.Title = "明确指定的标题"
+	request, err := prepareConnectorRequest(connector, run, WorkflowStep{NodeID: "pr", Seq: 2})
+	if err != nil || request.Payload["title"] != "明确指定的标题" {
+		t.Fatal(request, err)
+	}
+	run.Definition.Nodes[0].ConnectorInput.Title = "{{input}}"
+	if err := os.WriteFile(filepath.Join(dir, "pr.md"), []byte("没有标题的旧正文"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	request, err = prepareConnectorRequest(connector, run, WorkflowStep{NodeID: "pr", Seq: 2})
+	if err != nil || request.Payload["title"] != run.Input {
+		t.Fatal(request, err)
+	}
+	connector.Kind = "github.issue_create"
+	if err := os.WriteFile(filepath.Join(dir, "pr.md"), []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	request, err = prepareConnectorRequest(connector, run, WorkflowStep{NodeID: "pr", Seq: 2})
+	if err != nil || request.Payload["title"] != run.Input {
+		t.Fatal(request, err)
+	}
+}
+
 func TestConnectorBodyFileUsesRunDirectoryAndRejectsEscapingSymlink(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("TEST_DOC_TOKEN", "test-token")
