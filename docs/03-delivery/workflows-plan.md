@@ -460,3 +460,5 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 原Run c41e8047001414b96d327c39fb9c1eeb仍冻结旧图，不新增或回填阶段。Owner正式messages提交request_id model-relay:product-e2e:plan-review-rpm-tpm:20261009，message26490/duplicatefalse/statusrunning到QA7同conversation125c0df7668d689b2fe8c08ed62e988c，要求独立补充计划审查并在原Issue反馈缺口与影响，报告未验范围及整改交接；接收不等于已处理或限流已验。定时仍暂停、产品实现与实际模型调用由Pipeline负责。
 
 - 源码验证完成：标准scripts/verify.sh exit0，平台Go race55.573秒、模板安装79项及前端/浏览器/Python/vet/build通过；独立复审无Critical/Important/Minor，另跑安装17项/模板契约3项通过。证明路由与安装接口，不证明新节点实际评审质量或RPM/TPM产品结果。
+
+- 正式应用完成：维护源684f302已推送开发分支。Owner正式stop QA7后，通过原product-e2e/install-args.json与--upgrade标准安装，同工作流3155ddd1206d4ebc19da94e5b489091f升revision3，新增e2e_plan_review；新节点Codex/gpt-6.1-sol/auto_review核验。逐值核原Run冻结definition/connectors/parameters/workspace/max、前6步及当前节点身份保持，主研发工作流8f497…完全不变；未重建任务、改权限、启动替代Run或操作产品/供应商。原QA7同conversation正式resume接续，人工待审批0。私有回执check-20261009-plan-review/application.json及标准install.log。原生message26785已明确“正式承接RPM/TPM计划缺口，补做独立文档评审”；这只是实际承接，不是补充评审完成或RPM/TPM通过。新节点首次真实READY/NOT READY返工回路尚未运行，仍须由后续Pipeline产物验证；原Run不回填新节点历史。
