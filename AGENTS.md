@@ -4,6 +4,12 @@ Build the smallest useful generic Agent platform. Go backend, same-machine nativ
 
 Use the product PRD and architecture as the shared contract. Native executors own reasoning, Skills and Hooks; the platform owns authorization, persisted input, scheduling, process lifecycle and presentation.
 
+## Harness Builder 的职责边界
+
+本项目协调者负责构建可复用的 Harness 流水线、执行工具、权限、安装升级及证据路径，并验证编排、交接、去重、停止恢复、失败处理和实际执行效果。具体测试仓产品的需求、实现、用户旅程操作、供应商调用和验收结论由对应 Pipeline Agent 负责。
+
+协调者可以配置并启动受支持的流水线、提供用户已授权的目标和私有凭据引用、检查执行及交付证据；不得亲自代写产品测试、操作业务页面完成用例或代 QA 判产品通过。产品失败交产品 Pipeline；工具或执行能力失败修唯一 Harness 维护源，再通过标准安装升级复验。构建 Harness 的隔离回归与运行探针用于证明平台能力，不能冒充产品验收。
+
 Keep real behavior verifiable. Repair supported paths rather than patching individual conversations. Never silently replace a missing native session or replay uncertain side effects. Secrets, native histories, generated workspaces and screenshots from local experiments stay in ignored storage.
 
 Use gofmt and go vet. Keep tests small and focused on meaningful behavior: isolation, queue ordering, cancellation, restart, deduplication, authorization and real executor continuity. Do not pile up assertions about constants, prose or implementation structure.
@@ -38,6 +44,7 @@ Keep handoff/completion/wait controls specific to orchestration. Preserve frozen
 |---|---|---|
 | `【产品功能】` | 实现测试仓产品的用户能力 | `【产品功能】支持租户成员邀请与模型授权` |
 | `【产品修复】` | 修复测试仓产品自身的行为或安装问题 | `【产品修复】保存模型后等待当前租户列表刷新完成` |
+| `【产品测试】` | 由专用测试 Pipeline 验证产品的真实用户旅程及外部集成 | `【产品测试】验证真实供应商下用户授权、Key配额与调用诊断` |
 | `【Harness验证】` | 验证 Agent Platform 的编排、工具、权限、恢复或交付流程 | `【Harness验证】验证用户澄清后交接与 QA 返工接续` |
 | `【Harness修复】` | 修复平台、通用模板或可复用工程工具，包括在测试仓应用标准升级 | `【Harness修复】升级部署控制器以保留每次验证的独立日志` |
 | `【交付维护】` | 单独维护发布、交付文档或任务状态，不新增产品能力 | `【交付维护】同步已部署版本及被替代任务的状态` |

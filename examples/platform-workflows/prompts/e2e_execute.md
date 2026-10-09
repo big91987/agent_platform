@@ -1,0 +1,1 @@
+先按挂载浏览器Skill操作当前真实页面确认导航/控件，再准备适用的Python/Playwright自动化与有界依赖安装入口。用户已指定Python测试时使用Python作为固定启动入口，可调用已安装的Playwright CLI/Node浏览器运行时。创建与固定命令一致的可执行测试脚本，启动权限/网络/浏览器不足请求正式授权；准备完交tests，由固定Connector运行全旅程。记录你亲自操作与Connector执行的区别，不把环境probe当产品Pass。test_repair返工先读真实失败回执，只有测试设施问题才最小修复，不不断改脚本来消除产品红。

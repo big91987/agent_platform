@@ -79,6 +79,8 @@ def repository_command(role, repository, base, test_command):
 def stage_instructions(role, common, command_label):
     roles = json.loads((HERE / "prompts/roles.json").read_text())
     responsibilities = (HERE / f"prompts/{role}.md").read_text()
+    if role.startswith("e2e_"):
+        common += "\n\n" + (HERE / "prompts/product-e2e-common.md").read_text()
     guidance = (
         (roles[role], responsibilities)
         if role == "collaboration"
@@ -376,6 +378,29 @@ def main():
     parser.add_argument(
         "--model", help="Native model; defaults to prior config or executor default"
     )
+    parser.add_argument(
+        "--agent-network-access",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Explicit native Agent network grant; upgrades preserve prior grant when omitted",
+    )
+    parser.add_argument(
+        "--allow-agent-elevation",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Allow native permission requests through administrator approval; not automatic approval",
+    )
+    browser_skill = parser.add_mutually_exclusive_group()
+    browser_skill.add_argument(
+        "--browser-skill",
+        type=Path,
+        help="Optional real-browser Skill for product-e2e execution and independent review",
+    )
+    browser_skill.add_argument(
+        "--clear-browser-skill",
+        action="store_true",
+        help="Explicitly remove product-e2e browser Skill mounts on upgrade",
+    )
     parser.add_argument("--token-env", default="WORKFLOW_GITHUB_TOKEN")
     parser.add_argument(
         "--authorized-user",
@@ -400,7 +425,12 @@ def main():
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument(
         "--template",
-        choices=["software-delivery", "qa-rework", "collaboration-check"],
+        choices=[
+            "software-delivery",
+            "qa-rework",
+            "collaboration-check",
+            "product-e2e",
+        ],
         default="software-delivery",
     )
     parser.add_argument("--upgrade", action="store_true")
@@ -449,6 +479,16 @@ def main():
         "qa": [args.qa_skill],
         "report": [args.skill_root / "managing-engineering-delivery-cn"],
     }
+    if args.template == "product-e2e":
+        skills.update(
+            e2e_plan=[args.qa_skill],
+            e2e_execute=[args.qa_skill],
+            e2e_review=[args.qa_skill],
+            e2e_report=[args.qa_skill],
+        )
+        if args.browser_skill:
+            for role in ("e2e_execute", "e2e_review"):
+                skills[role].append(args.browser_skill)
     for paths in skills.values():
         for path in paths:
             if not (path / "SKILL.md").is_file():
@@ -514,6 +554,18 @@ def main():
                 installation.check("agents", role)
                 prior = saved["spec"]
         prior_configs[node["id"]] = prior or {}
+    if (
+        args.template == "product-e2e"
+        and not args.browser_skill
+        and not args.clear_browser_skill
+    ):
+        for role in ("e2e_execute", "e2e_review"):
+            prior_skills = prior_configs.get(role, {}).get("skills")
+            if prior_skills:
+                skills[role] = [Path(path) for path in prior_skills]
+                for path in skills[role]:
+                    if not (path / "SKILL.md").is_file():
+                        parser.error("missing installed Skill asset: " + str(path))
     base = {}
     if args.base_agent and any(not prior for prior in prior_configs.values()):
         base = next(
@@ -569,8 +621,12 @@ def main():
                     if key in os.environ
                 },
             },
-            "network_access": False,
-            "allow_elevation": False,
+            "network_access": args.agent_network_access
+            if args.agent_network_access is not None
+            else prior.get("network_access", False),
+            "allow_elevation": args.allow_agent_elevation
+            if args.allow_agent_elevation is not None
+            else prior.get("allow_elevation", False),
             "trust_hooks": False,
             "native_config": "",
             "seed_dir": "",

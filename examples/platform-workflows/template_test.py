@@ -12,7 +12,12 @@ class DeliveryRoutesTest(unittest.TestCase):
         )
 
     def test_agent_exit_modes_are_explicit_and_exclusive(self):
-        for name in ("software-delivery", "qa-rework", "collaboration-check"):
+        for name in (
+            "software-delivery",
+            "qa-rework",
+            "collaboration-check",
+            "product-e2e",
+        ):
             graph = json.loads(Path(__file__).with_name(name + ".json").read_text())
             for node in graph["nodes"]:
                 if node["kind"] != "agent":

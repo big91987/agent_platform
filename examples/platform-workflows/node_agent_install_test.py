@@ -153,6 +153,7 @@ class NodeAgentInstallTest(unittest.TestCase):
                 & {"id", "name", "enabled", "authorized_users", "resolved_tools"}
             )
             self.assertNotIn("prompt", node)
+
             self.assertNotIn("{{handoff}}", config["instructions"])
             self.assertEqual(graph["context_version"], 2)
         self.assertEqual(nodes["intake"]["agent"]["skills"], [])
@@ -168,6 +169,54 @@ class NodeAgentInstallTest(unittest.TestCase):
         writes = len(self.api.writes)
         self.run_install("--executor", "codex", "--model", "chosen-model")
         self.assertEqual(len(self.api.writes), writes)
+
+    def test_explicit_execution_permissions_survive_upgrade_and_can_be_revoked(self):
+        self.run_install("--agent-network-access", "--allow-agent-elevation")
+        self.api.writes.clear()
+        self.run_install("--upgrade")
+        self.assertEqual(self.api.writes, [])
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertTrue(node["agent"]["network_access"])
+                self.assertTrue(node["agent"]["allow_elevation"])
+        self.run_install(
+            "--upgrade", "--no-agent-network-access", "--no-allow-agent-elevation"
+        )
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertFalse(node["agent"]["network_access"])
+                self.assertFalse(node["agent"]["allow_elevation"])
+
+    def test_product_e2e_keeps_product_failure_for_review_without_publish(self):
+        self.run_install("--template", "product-e2e")
+        graph = self.api.objects["workflows"][0]
+        nodes = {node["id"]: node for node in graph["nodes"]}
+        self.assertNotIn("publish", nodes)
+        self.assertNotIn("pr", nodes)
+        failed = [
+            edge["target"]
+            for edge in graph["edges"]
+            if edge["source"] == "tests" and edge["route"] == "failed"
+        ]
+        self.assertEqual(failed, ["e2e_review"])
+        self.assertIn("e2e_execute", nodes)
+
+    def test_product_e2e_browser_skill_survives_upgrade_until_explicit_removal(self):
+        browser = self.root / "skills" / "browser"
+        browser.mkdir()
+        (browser / "SKILL.md").write_text("real browser instructions")
+        self.run_install("--template", "product-e2e", "--browser-skill", str(browser))
+        self.api.writes.clear()
+        self.run_install("--template", "product-e2e", "--upgrade")
+        self.assertEqual(self.api.writes, [])
+        self.run_install(
+            "--template", "product-e2e", "--upgrade", "--clear-browser-skill"
+        )
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["id"] in ("e2e_execute", "e2e_review"):
+                self.assertEqual(
+                    node["agent"]["skills"], [str(self.root / "skills/qa")]
+                )
 
     def legacy_install(self):
         self.api.objects["agents"] = [
