@@ -1929,3 +1929,17 @@ activation.json stage committed；本次rollback363008bytes/digest匹配、maste
 
 
 本轮最终回读：入站Actions37861181092 completed/success；新Run32仍intake3 running/error空/max100/workspace github-issue-5770505233。automation_update正式回读ACTIVE/原30分钟频率、新Issue32/Run锚点生效；未重复启动或扩大预算。
+
+
+### 2026-10-09 08:10 Issue32新候选与正式宿主验证运行中
+
+API实时Runb7f93c24bc1ea4d0fe182f12aa7622ae running/error空/max100；prepare1/issue2/intake3/development4 completed，tests5 dispatched/running/00:08:41.982124Z。intake按实存源码、冻结material/archive SHA和原PRD/交互/AC摘要完成route development，未伪造新requirements/design。development正式next包含11代码/spec路径及新delivery文件级产物，T001 In Review/M01 Ready for Review不是Accepted。维护者实际VCS/源码清单与同算法库存独立复算152件d78781505e2ca5bfd3fe5d357ea3379cb9a414d7cd127ea0248c2491bc633180，与source-final/handoff一致，源码已实现不等于宿主/QA绿。
+
+本候选为上下文状态中文、未知原值、原生键盘完整标识/表格横滚和三视口独立self_hosted安装角色/UI创建核验/模型价格授权/Key/普通SSE/同ID费用及TCP关闭/401纠正恢复；原R30 ownership/严格summary负例、共享旅程、费用与权限口径保持待完整检验。研发自报86Node、非监听Go race/静态检查属于局部证据，不当新完整门禁。实际native-verify.log156959bytes/SHA cfc8c1149f39c3ef4df254ea1738ace98b7dd44231ff4e76f0c6444f011168fd与state逐字节/长度重算吻合；原生attempt23:56:58Z–23:57:25Z/旧152件6ba7643…前后不变/gate_exit2，review-history historical listener unavailable/not business red，清理owned group absent/candidate removed。它是归档前受限尝试，不是最终d787候选完整验收，也非目标UI红；不反复原生求绿。
+
+正式tests5实际唯一主attempt20261009T000843Z-3220031292/00:08:43.023306Z开始；冷起点node_modules/npm cache不存在/NODE_PATH unset/manualpreinstallnone，152件同d787，前置辅助exit0/owned group absent。00:11:19Z读取日志218996bytes仍Go阶段，finished_utc空；state source_unchanged=false/candidate_unchanged=false/gate_exit-1/exit1/log_bytes0/cleanupnot_started为尚未结束初始值，不拿来断言失败/泄露/源码改动，也不当清理通过。结束后必须通过正式output完整EOF和最终state重算源前后、日志SHA/bytes、全部旧新门禁及清理；若新增旅程使真实时限失败，以阶段实际证据最小归因，不先增限/删断言。
+
+独立只读代码复审已发给既有release_review_27，待结论；reviewer不编辑/代跑。GitHub Open PR空，Issue32原生启动/实际handoff评论与API一致，5545health200/version3f9cee/schema3，不误当新改动已部署。QA58-01、self_hosted网页分支尚未验收关闭；旧R28-04未知历史根因、动态独立QA Blocked/Owner预览登录/供应商支付身份NotRun保持。私有证据ignored check-20261009-0810，未改DB/回执/冻结图/权限/预算或旧Run。
+
+
+本轮独立只读复审完成（00:12:02Z）：同152件d787815…，未发现新增Critical/Important/Minor明确缺陷；没有代跑测试或编辑产品。正式tests5仍running/error空、完整回执和QA待；原automation_update回读ACTIVE/30分钟/最新候选及tests锚点生效，不增加预算/权限或重复任务。
