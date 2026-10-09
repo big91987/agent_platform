@@ -200,6 +200,46 @@ def accepted_run(client, key):
         return None
 
 
+def failure_diagnostic(error):
+    if isinstance(error, subprocess.CalledProcessError):
+        if error.cmd[:2] == ["gh", "api"]:
+            stderr = error.stderr or ""
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode(errors="replace")
+            status = re.search(
+                r"(?m)^gh: [^\r\n]*\(HTTP ([45][0-9]{2})\)[ \t]*$", stderr
+            )
+            if status:
+                return f"GitHub API failed: HTTP {status[1]} (response withheld)"
+            if any(
+                term in stderr.lower()
+                for term in (
+                    "proxyconnect",
+                    "connection refused",
+                    "no such host",
+                    "could not resolve",
+                    "tls handshake",
+                    "i/o timeout",
+                    "connection reset",
+                    "unexpected eof",
+                )
+            ):
+                return "GitHub API failed: transport error (details withheld)"
+            return "GitHub API failed: unknown cause (response withheld)"
+        return f"External command failed: exit {error.returncode} (details withheld)"
+    if isinstance(error, subprocess.TimeoutExpired):
+        return "External command timed out (details withheld)"
+    return str(error)
+
+
+def report_run(config, result):
+    link = f"{config['base_url']}/workflow-runs/{result['id']}"
+    print(f"Run {result['id']} · {result['status']} · {link}", flush=True)
+    if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(summary, "a") as output:
+            output.write(f"[打开平台 Run]({link})\n")
+
+
 def notify(repo, number, key, body):
     marker = (
         "<!-- agent-platform:entry:" + hashlib.sha256(key.encode()).hexdigest() + " -->"
@@ -333,6 +373,8 @@ def forward(config, client, number, comment_id=0):
                 state / (str(issue["id"]) + "-run.json"),
                 {"id": current["id"], "request_id": key},
             )
+            # Acceptance survives an independent Issue notification failure.
+            report_run(config, current)
             notify(
                 repo,
                 number,
@@ -356,17 +398,12 @@ def main():
     client = Client(config["base_url"], token, timeout=60)
     number, comment_id = entry
     result = forward(config, client, number, comment_id)
-    print(f"Run {result['id']} · {result['status']}")
-    if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
-        with open(summary, "a") as output:
-            output.write(
-                f"[打开平台 Run]({config['base_url']}/workflow-runs/{result['id']})\n"
-            )
+    if comment_id:
+        report_run(config, result)
 
 
 if __name__ == "__main__":
     try:
         main()
     except (ValueError, APIError, ConnectionError, subprocess.SubprocessError) as error:
-        # Subprocess errors omit stdout/stderr (which may carry private context).
-        sys.exit(str(error))
+        sys.exit(failure_diagnostic(error))

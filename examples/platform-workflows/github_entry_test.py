@@ -6,6 +6,41 @@ import unittest
 from github_entry import event_input
 
 
+class FailureDiagnosticTest(unittest.TestCase):
+    def test_github_http_failure_keeps_status_without_response_or_arguments(self):
+        import subprocess
+
+        from github_entry import failure_diagnostic
+
+        failure = subprocess.CalledProcessError(
+            1,
+            ["gh", "api", "private-argument"],
+            output="private-body",
+            stderr="gh: private-token (HTTP 403)",
+        )
+        message = failure_diagnostic(failure)
+        self.assertIn("HTTP 403", message)
+        self.assertNotIn("private", message)
+        failure.stderr = "gh: rejected value contains HTTP 200 (HTTP 403)"
+        self.assertIn("HTTP 403", failure_diagnostic(failure))
+        self.assertNotIn("HTTP 200", failure_diagnostic(failure))
+
+    def test_transport_failure_does_not_guess_http_or_expose_endpoint(self):
+        import subprocess
+
+        from github_entry import failure_diagnostic
+
+        failure = subprocess.CalledProcessError(
+            1,
+            ["gh", "api", "private-argument"],
+            stderr="proxyconnect tcp: dial tcp private-endpoint: connect: connection refused",
+        )
+        self.assertIn("transport", failure_diagnostic(failure))
+        failure.stderr = "unrecognized private details"
+        self.assertIn("unknown", failure_diagnostic(failure))
+        self.assertNotIn("private", failure_diagnostic(failure))
+
+
 class EventInputTest(unittest.TestCase):
     def setUp(self):
         self.config = {"repository": "owner/repo"}
@@ -167,6 +202,53 @@ class WorkspaceTest(unittest.TestCase):
 
 
 class ForwardTest(unittest.TestCase):
+    def test_notification_failure_retains_accepted_run_link_without_restarting(self):
+        import contextlib
+        import io
+        import json
+        import os
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from github_entry import forward
+
+        issue = {"number": 7, "id": 123, "user": {"login": "owner"}}
+        client = Mock()
+        client.workflow_by_request.return_value = {
+            "id": "accepted",
+            "status": "completed",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = {
+                "repository": "owner/repo",
+                "state_root": str(root / "state"),
+                "workspace_root": str(root / "work"),
+                "base_url": "http://localhost",
+            }
+            summary = root / "summary.md"
+            output = io.StringIO()
+            with (
+                patch("github_entry.github", return_value=issue),
+                patch(
+                    "github_entry.notify",
+                    side_effect=subprocess.CalledProcessError(1, ["gh", "api"]),
+                ),
+                patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary)}),
+                contextlib.redirect_stdout(output),
+                self.assertRaises(subprocess.CalledProcessError),
+            ):
+                forward(config, client, 7)
+            self.assertIn("accepted", output.getvalue())
+            self.assertIn("http://localhost/workflow-runs/accepted", output.getvalue())
+            self.assertIn("/workflow-runs/accepted", summary.read_text())
+            self.assertEqual(
+                json.loads((root / "state/123-run.json").read_text())["id"], "accepted"
+            )
+            client.start_workflow.assert_not_called()
+
     def test_dispatch_cannot_start_from_platform_generated_issue(self):
         import tempfile
         from pathlib import Path
