@@ -2,7 +2,9 @@
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
 
-当前状态（2026-10-10 03:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的plan4已交独立review5，r1判NOT READY，R01价格准备授权歧义、R02固定入口/受控上游前置、R03派生用例/调度预算、R04部分已知计量、R05自然窗有效时间观测未闭合。关联Issue已由机器人6087643687反馈真实等待，审批0，未产品实测。依据既有隔离准备及普通选择授权，协调者通过原正式User Input34696仅澄清全新隔离实例可首次创建固定受控测试价格，现存/生产/历史价格及算法不变，供应商请求仍0；review5实际承接→正式rework→plan6/e91a46b703cfa8d6df9755ee3d8b9d49 running，原生34869已承接补r2。原r1 NOT READY及R01–07保留，未自动READY；R02–05须整改再独立复审。机器人6088175700/6088176236真实回写返工/新节点启动。Run ID/冻结图/input/工作区/max30及原前4步逐值保持，无重复任务、恢复或权限增限。5545健康version0c197c8/schema3为PR36正式部署，5546旧9851177/schema2、8788未碰；原#33 No-Go与供应商预算not_attested保持。
+当前状态（2026-10-10 04:47）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan6→review7 NOT READY→plan8→review9 r3 NOT READY→plan10/aab04d73b03727c160b533d73d96973a running，审批0。R01价格范围、R04部分已知计量和新增R08同额TPM恢复的文档设计已补齐；R02完整生成准备/协议、R03可执行映射/聚合容量、R05有效UTC窗口证据仍阻断。固定Python入口的原生无生成准备诊断四次exit2/2/2/0，最后证明真实Go/Chromium两宽新管理员入口读取，非两个业务身份或数值旅程；所有受控/供应商生成0。r3规划326cases/38片/约35h不是用户数量目标，协调者通过正式User Input36007要求风险等价类做减法并保留AC/历史/独立复审，目前queued，未宣称已承接或落实。plan10正补测试资产，不重复Run/resume或增限。机器人6088826836反馈准备/遗留阻断、6088913395/6088914021反馈返工/规划启动；原图/input/工作区/max30及前9步逐值保持。实际5545health200/0c197c8/schema3保持，产品tracked diff为空，无新PR/部署；原#33 No-Go和真实供应商历史预算not_attested不变。
+
+历史状态（2026-10-10 03:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的plan4已交独立review5，r1判NOT READY，R01价格准备授权歧义、R02固定入口/受控上游前置、R03派生用例/调度预算、R04部分已知计量、R05自然窗有效时间观测未闭合。关联Issue已由机器人6087643687反馈真实等待，审批0，未产品实测。依据既有隔离准备及普通选择授权，协调者通过原正式User Input34696仅澄清全新隔离实例可首次创建固定受控测试价格，现存/生产/历史价格及算法不变，供应商请求仍0；review5实际承接→正式rework→plan6/e91a46b703cfa8d6df9755ee3d8b9d49 running，原生34869已承接补r2。原r1 NOT READY及R01–07保留，未自动READY；R02–05须整改再独立复审。机器人6088175700/6088176236真实回写返工/新节点启动。Run ID/冻结图/input/工作区/max30及原前4步逐值保持，无重复任务、恢复或权限增限。5545健康version0c197c8/schema3为PR36正式部署，5546旧9851177/schema2、8788未碰；原#33 No-Go与供应商预算not_attested保持。
 
 历史状态（2026-10-10 03:00）：PR36精确合main0c197c8b3d98346107e65dbf0c41ef5d6b73d437已正式prepare37970389412/preview37970431766及Deployment6967804284 success，5545health200/schema3/version与JS/CSS逐字节同已验PR及main，activate committed。正式完整固定冷门禁再次exit0/source158件6e359667…不变；Owner后续ready复用非第二次全测。原Issue34/Run31 completed，不复活或重复部署。专用测试流程revision4已启动唯一新Run29efc188f089daf1d3890bef1b56496d，网页非零限额/自然窗口/双会话补验先规划独立评审，max30原权限不变、零供应商调用。首prepare1因协调者漏做checkout输入准备拒绝，原失败保留；标准克隆后正式stop/return1→prepare2 exit0/857bytes及61材料匹配→issue3创建Issue37→e2e_plan4/2091d42449dd7b10b69c3afb4fcbd1b3 running，原生34101实际承接、审批0；尚未计划评审/实跑。5546旧9851177/schema2、8788未碰；原#33 No-Go/真实Provider费用/预算not_attested不变。
 
@@ -511,3 +513,18 @@ Issue34去重评论6083355376已按正式远端回执更新上述合并/部署�
 - [Issue37](https://github.com/big91987/model-relay/issues/37)机器人big91987-agent-platform-bot[bot]的6087643687已反馈阻断；6088175700反馈正式rework及限制，6088176236反馈规划启动。未由Builder另发重复通知冒充Agent。新增网页测试全部Not Run，原#33 No-Go/真实供应商Blocked不变。
 
 本轮只更新证据文档，不新增平台代码、部署或产品PR。证据：ignored `.data/fresh-8793/check-20261009-hourly-1947/` 下run-before、conversation-live、正式clarification receipt、clarification-followthrough、plan6-live、continuity-check和真实Issue评论回执。下一轮核plan6实际产物→新独立评审，未Ready不得实测。
+
+
+## Issue37 r3复审与可执行计划收敛（2026-10-10 04:47）
+
+实际API：原plan6/独立review7/plan8/独立review9均completed，review9正式rework回plan10 running，无待审批；节点进度不当最终交付。r2/r3均NOT READY，并未进入e2e_execute。r1价格澄清有效、部分已知数值设计及r3新增同限额400/同revision跨窗TPM拒绝→恢复文档成立，均不等于动态Pass。
+
+- 用户影响：新增数值网页验收尚未开始，完整执行入口及窗口采证缺口阻止READY；r3独立评审核326cases/1206steps/38片/566dispatch/128790秒（约35h46m），覆盖膨胀又不适配当前有界执行。Builder未代写用例，也未为数量目标扩Run预算。
+- R02：已有固定Python/config和无生成准备诊断，但完整业务准备、两不同授权身份、可信受控普通/SSE/错误/hold/receipt协议尚缺。R03：原旅程细动作→handler→四层状态/证据及可执行聚合容量未闭合。R05：request.time在admit前、period是月不是分钟，宿主采样/HTTP Date单独不能证明有效准入窗口；Pipeline须补因果包围及运行假设核查，不能改产品字段、注入Store.now/SQL/系统钟。
+- 四份原生准备diagnostic分别exit2/2/2/0；首失败dependencies timeout，后两次browser subprocess_failed，均保留。最后attempt prepare-20261009T203123Z-1d5b48d5表明正式新Go/schema3、Chromium1280/390登录/菜单/退出；控件读取发现显式cap/n无入口，仅为观察而非已证产品缺陷。四份各记cleanup Pass；review9未亲自重跑动态浏览器，Builder未代验。当前generation_ready=false、两种生成均0；原生准备回执不冒称正式Connector完整产品验收或前三失败已永久修好。
+- 依据用户做减法要求，正式messages seq10/request_id model-relay:issue37:plan10:simplify-executable-coverage-r4返回message36007；GET会话再次核为queued，未实际承接，勿重复发送。要求规划Agent说明必要组合/风险等价类，保留核心AC、原r1–r3和失败历史、未覆盖项及影响，再独立复审；不静默删行、截断必跑、弱断言或新增泛化调度对象。具体用例/测试资产仍由Pipeline制定实现。
+- [Issue37](https://github.com/big91987/model-relay/issues/37)机器人6088826836如实反馈r3准备绿/生成阻断，6088913395及6088914021真实反馈NOT READY返工与规划启动，没有另发Builder通知冒充Agent。GitHub现无新产品PR，已完成旧Run未恢复。
+
+版本/连续性：工作区HEAD0c197c8b3d98346107e65dbf0c41ef5d6b73d437，git diff HEAD tracked路径为空；Run ID/workflow/definition/input/workspace/max30和前9步逐值相同。r1评审SHA e7100298…保持，r2 45022d38…/r3 c74a1d2c…已独立留摘要。已部署5545health200/0c197c8/schema3未变化，不操作预览业务或真实账号。零真实供应商授权与旧#33 No-Go保持，没有确认生产缺陷或新修复包。
+
+证据：ignored .data/fresh-8793/check-20261009-hourly-2044 下run-before、conversation-9/10、review-and-preparation-audit、正式steering-receipt、run/conversation-after-steering、continuity-check与Issue评论。当前只证据文档更新，无新增平台代码或部署，不对文档运行产品门禁。下一轮先核36007真实送达、plan10产物及新独立复审，不能把排队当完成或自动放行。
