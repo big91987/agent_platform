@@ -28,7 +28,7 @@
     },
     {
       "id": "e2e_plan",
-      "name": "明确真实用户旅程",
+      "name": "制定真实用户旅程测试计划",
       "kind": "agent",
       "x": 660,
       "y": 70,
@@ -39,10 +39,22 @@
       "exit_mode": "handoff"
     },
     {
+      "id": "e2e_plan_review",
+      "name": "基于文档评审测试计划",
+      "kind": "agent",
+      "x": 60,
+      "y": 270,
+      "agent": {
+        "executor": "codex",
+        "instructions": "执行独立测试计划评审；产品实现和产品修复不属于此流水线。"
+      },
+      "exit_mode": "handoff"
+    },
+    {
       "id": "e2e_execute",
       "name": "准备浏览器与测试执行",
       "kind": "agent",
-      "x": 60,
+      "x": 360,
       "y": 270,
       "agent": {
         "executor": "codex",
@@ -54,7 +66,7 @@
       "id": "tests",
       "name": "执行产品端到端测试",
       "kind": "connector",
-      "x": 360,
+      "x": 660,
       "y": 270,
       "connector_id": "tests"
     },
@@ -62,8 +74,8 @@
       "id": "e2e_review",
       "name": "独立实操与失败复核",
       "kind": "agent",
-      "x": 660,
-      "y": 270,
+      "x": 60,
+      "y": 470,
       "agent": {
         "executor": "codex",
         "instructions": "执行专用产品测试角色；产品实现和产品修复不属于此流水线。"
@@ -74,7 +86,7 @@
       "id": "e2e_report",
       "name": "发布产品测试结论",
       "kind": "agent",
-      "x": 60,
+      "x": 360,
       "y": 470,
       "agent": {
         "executor": "codex",
@@ -86,7 +98,7 @@
       "id": "done",
       "name": "测试报告完成",
       "kind": "end",
-      "x": 360,
+      "x": 660,
       "y": 470
     }
   ],
@@ -108,9 +120,23 @@
     {
       "source": "e2e_plan",
       "route": "next",
-      "target": "e2e_execute",
+      "target": "e2e_plan_review",
       "mode": "handoff",
       "description": "交接"
+    },
+    {
+      "source": "e2e_plan_review",
+      "route": "next",
+      "target": "e2e_execute",
+      "mode": "handoff",
+      "description": "计划评审通过"
+    },
+    {
+      "source": "e2e_plan_review",
+      "route": "rework",
+      "target": "e2e_plan",
+      "mode": "handoff",
+      "description": "补齐计划后复审"
     },
     {
       "source": "e2e_execute",
@@ -118,6 +144,13 @@
       "target": "tests",
       "mode": "handoff",
       "description": "交接"
+    },
+    {
+      "source": "e2e_execute",
+      "route": "plan_review",
+      "target": "e2e_plan_review",
+      "mode": "handoff",
+      "description": "实质计划变更重新评审"
     },
     {
       "source": "tests",

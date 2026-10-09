@@ -449,3 +449,14 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 - 本轮正式应用完成：源码 fe7f69c 已推送开发分支；最终37项Node/4项Chromium通过并构建。8793从80613升级为99555，新binary SHA256 a8e8290e36179e77611cd5b5bc119cba43e775fb64282185e565373d5d7edf6d；实际 /agent-config.js 与 /app.js 均逐字节同源。Owner正式stop/backup/restart/resume，E2E原seq7/e2e_review/conversation125c0df7668d689b2fe8c08ed62e988c及主线seq41/development/conversation866d02e43efaf2249e2101b237416692接续。冻结图、步骤、Connector、参数、预算和原权限不变，未调用本轮权限PATCH或代做产品测试。私有回执目录 .data/fresh-8793/check-20261009-permissions-ui/；未使用的临时平台浏览器Cookie已删除。Issue/API任务级开关仍是上述已评估待实现范围，不与已部署UI混记为完成。
 
 - 实际产品界面闭环补证：部署后旧E2E QA7仍按冻结user模式产生审批e6e367…，原Issue通知已真实发送（等待/处理/新等待可在Run通知记录核对）。本轮使用用户已授权的通用UI入口：Run页“停止当前运行”→会话侧栏“执行权限”→选择auto_review并“保存权限”→重开仍auto_review→Run页带明确不重放说明“继续原节点”。此次是界面发起正式权限PATCH，显式只修改QA会话审批方式；不是部署自动修改旧Run。原native thread一致、network/elevation保持true，后续原生审核approved/risk medium/authorization high，人工待审批0；业务脚本/供应商和产品结论仍归Pipeline。真实界面截图 .data/fresh-8793/check-20261009-permissions-ui/platform-execution-permissions.jpg 不含产品秘密。浏览器保留该配置页供用户查看；任务级Issue/API开关仍待正式实现。
+
+
+### 2026-10-09 测试计划的独立文档评审与核心限额覆盖
+
+用户指出真实产品测试不能只列旅程数，RPM/TPM等核心能力应有可执行计划并基于PRD/AC/设计由独立节点评审。本轮只读核验：现有e2e_plan4已经规划J05/J09/T09，含RPM/TPM/并发零拒绝，但没有充分展开非零阈值、窗口/恢复、计量和共享隔离的用例；e2e_plan直接交e2e_execute，原planning-checks是规划者自查，缺执行前独立计划评审。不是完全未提限流，也不是已验证。独立QA现有报告明确只有零次数配额子集通过，RPM/TPM等Not Run；正式tests6仍exit1/Incomplete-No-Go，当前QA7尚未完成最终交接。
+
+通用维护源product-e2e增加独立e2e_plan_review，依据实际权威文档核需求—用例—预期—证据，READY才交执行、NOT READY回规划；执行实质变更经plan_review回评审。原验收Skill复用，不增加平台状态或产品规则引擎，不代具体产品断言。强化规划/执行职责与AGENTS/README标准，零次数429不替RPM/TPM，缺材料/规则/可信计量/安全调用条件必须Blocked，不能自增预算或删除用户目标。新增安装路由及旧版同ID升级/重复无变更回归旧红→绿。标准完整回归和独立复审正在进行；标准应用及真实新计划评审回路尚未证明。
+
+原Run c41e8047001414b96d327c39fb9c1eeb仍冻结旧图，不新增或回填阶段。Owner正式messages提交request_id model-relay:product-e2e:plan-review-rpm-tpm:20261009，message26490/duplicatefalse/statusrunning到QA7同conversation125c0df7668d689b2fe8c08ed62e988c，要求独立补充计划审查并在原Issue反馈缺口与影响，报告未验范围及整改交接；接收不等于已处理或限流已验。定时仍暂停、产品实现与实际模型调用由Pipeline负责。
+
+- 源码验证完成：标准scripts/verify.sh exit0，平台Go race55.573秒、模板安装79项及前端/浏览器/Python/vet/build通过；独立复审无Critical/Important/Minor，另跑安装17项/模板契约3项通过。证明路由与安装接口，不证明新节点实际评审质量或RPM/TPM产品结果。

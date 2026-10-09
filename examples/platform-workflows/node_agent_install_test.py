@@ -243,6 +243,52 @@ class NodeAgentInstallTest(unittest.TestCase):
         self.assertEqual(failed, ["e2e_review"])
         self.assertIn("e2e_execute", nodes)
 
+    def test_product_e2e_reviews_plan_before_execution_and_upgrades_same_workflow(self):
+        self.run_install("--template", "product-e2e")
+        graph = self.api.objects["workflows"][0]
+        workflow_id = graph["id"]
+
+        def outgoing(node):
+            return {
+                edge["route"]: edge["target"]
+                for edge in graph["edges"]
+                if edge["source"] == node
+            }
+
+        self.assertEqual(outgoing("e2e_plan"), {"next": "e2e_plan_review"})
+        self.assertEqual(
+            outgoing("e2e_plan_review"),
+            {"next": "e2e_execute", "rework": "e2e_plan"},
+        )
+        nodes = {node["id"]: node for node in graph["nodes"]}
+        self.assertEqual(nodes["e2e_plan_review"]["kind"], "agent")
+        self.assertEqual(nodes["e2e_plan_review"]["exit_mode"], "handoff")
+        # Simulate an installation made before the plan review stage existed.
+        graph["nodes"] = [
+            node for node in graph["nodes"] if node["id"] != "e2e_plan_review"
+        ]
+        graph["edges"] = [
+            edge for edge in graph["edges"] if edge["source"] != "e2e_plan_review"
+        ]
+        for edge in graph["edges"]:
+            if edge["source"] == "e2e_plan":
+                edge["target"] = "e2e_execute"
+        graph["edges"] = [
+            edge for edge in graph["edges"] if edge["target"] != "e2e_plan_review"
+        ]
+        manifest = json.loads(self.manifest.read_text())
+        saved = manifest["objects"]["product-e2e"]
+        saved["spec"] = copy.deepcopy(install.projection(graph, saved["spec"]))
+        self.manifest.write_text(json.dumps(manifest))
+        self.run_install("--template", "product-e2e", "--upgrade")
+        self.assertEqual(len(self.api.objects["workflows"]), 1)
+        graph = self.api.objects["workflows"][0]
+        self.assertEqual(graph["id"], workflow_id)
+        self.assertEqual(outgoing("e2e_plan"), {"next": "e2e_plan_review"})
+        self.api.writes.clear()
+        self.run_install("--template", "product-e2e", "--upgrade")
+        self.assertEqual(self.api.writes, [])
+
     def test_product_e2e_browser_skill_survives_upgrade_until_explicit_removal(self):
         browser = self.root / "skills" / "browser"
         browser.mkdir()

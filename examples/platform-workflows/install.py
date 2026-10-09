@@ -498,6 +498,7 @@ def main():
     if args.template == "product-e2e":
         skills.update(
             e2e_plan=[args.qa_skill],
+            e2e_plan_review=[args.qa_skill],
             e2e_execute=[args.qa_skill],
             e2e_review=[args.qa_skill],
             e2e_report=[args.qa_skill],
