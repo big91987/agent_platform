@@ -2,6 +2,8 @@
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
 
+当前状态（2026-10-09 23:34）：Model Relay PR35已精确合并并通过正式Actions部署，5545实际version6929376089535038112da48aed715fd729615d76/schema3，管理页JS/CSS与已验候选同版；Issue32原Run61步完成。Issue34唯一Run637705186406b80a2ee4afaf0d6b2167完成到seq16，PR36仍Draft，Go仅限受控计量/安全回归资产；与新main联合门禁、真实供应商成功/费用和原两屏限额范围仍待验，Issue33产品结论No-Go保持。Harness已正式修复PR默认误关Issue及入站GitHub API未使用配置代理，原Actions37925548923 attempt4 success，唯一接单评论6083929828与完整Run16不变已核。8793运行620b523后端，入口源码a51c7af按既有安装根生效；独立复审及标准回归通过。下一步是受支持的PR36联合验证接续，当前主模板缺直接PR刷新入口；无人值守报告发布、动态独立QA工具能力和真实供应商安全/历史预算条件仍有缺口。全部来源证据及旧失败见下方历史记录，不由单项通过外推整套商用验收或工程净收益。
+
 设计：[节点独立配置](../02-architecture/workflow-node-agent.md)。维护分支延续既有平台工作，不合并源 main；运行实例升级前备份并检查无在途任务，旧停止 Run 保留。
 
 - [x] 后端：节点 agent 配置校验、冻结执行及会话创建，复用现有调度；测试无外部 Agent、配置隔离及旧定义兼容。
@@ -423,3 +425,5 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 - PR35正式部署闭合：push prepare37947651029、Owner preview37947657647均success，Deployment6964015669/local-preview成功，actualhealth200/version6929376089535038112da48aed715fd729615d76/schema3；实际/admin/200与已验PR35工作台JS/CSS逐字节一致，SHA分别72b16706…/a1c089fe…。首次资源比对用了不存在的内部路径而失败，按实际git树改为internal/relay/web后复核，不改变产品或补造结果。Builder没有执行已登录业务旅程，动态独立QA/真实供应商未验范围保持。PR36未合并，不把界面新版本上线当供应商或联合限额验收完成。私有回执deployment-acceptance.json。
 
 - 原入口有界诊断attempt3真实失败：现只公开transport error，未进入新的产品执行，首两轮具体底层细节仍不能补造。一次同Issue只读传输对照，direct非零transport、既有配置代理exit0；源码核对发现git_proxy此前只应用Git而未用于gh API。通用最小根因修复复用原参数，校验后只给GitHub子进程传HTTPS_PROXY，GET/POST同路径，平台Client及os.environ保持；默认env=None保留旧调用，未新增配置开关、节点或自动重试。新边界原红→绿，独立16入口回归及复审无C/I/M，完整scripts/verify.sh exit0（83项模板/安装，Go racecached沿用未变结果）。原运行配置确实含已对照成功的代理，不临时改环境或安装副本；下一次正式原Actions复验采用该维护源版本。日志及探针check-20261009-hourly-1439、/private/tmp/agent-platform-entry-transport-verify.log。
+
+- 接单通知正式恢复闭合：维护源a51c7af已推，原配置/安装根自动复用同源码，原Actions37925548923 attempt4 success（52秒）；唯一接单评论及GitHub正式回执已保存entry-restored.json，正文用运行页当前状态而非向已结束任务承诺继续输入。完整Run16逐值不变、关联Issue34仅唯一Run，无产品重放或新增supplier请求。此前attempt1/2原错误细节不补造、attempt3新诊断transport红及直连/代理对照保留。源码隔离回归与正式GitHub恢复分开成立；后续无需协调者每次注入环境或重试求绿。原代理继承NO_PROXY限制仍有效，别据此次一轮成功宣称所有外部故障或长期网络SLA已验。
