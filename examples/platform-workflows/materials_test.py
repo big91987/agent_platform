@@ -86,6 +86,14 @@ class MaterialTest(unittest.TestCase):
         materials.verify_material(self.workspace, self.run)
         self.assertEqual(list(self.workspace.iterdir()), [])
 
+    def test_null_parameters_from_direct_run_need_no_material_or_files(self):
+        self.run["parameters"] = None
+        self.assertIsNone(
+            materials.install_material(self.workspace, self.run, REPOSITORY)
+        )
+        materials.verify_material(self.workspace, self.run)
+        self.assertEqual(list(self.workspace.iterdir()), [])
+
     def test_descriptor_rejects_wrong_repository_or_url_or_unpinned_input(self):
         good = self.configure(bundle())
         for changes in [

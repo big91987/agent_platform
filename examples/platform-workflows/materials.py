@@ -355,7 +355,7 @@ def _verify(workspace, directory, description):
 
 
 def install_material(workspace, run, repository):
-    if not run.get("parameters", {}).get("material"):
+    if not (run.get("parameters") or {}).get("material"):
         return None
     validate_description(run["parameters"]["material"], repository)
     description, directory = _storage(workspace, run)
@@ -394,7 +394,7 @@ def install_material(workspace, run, repository):
 
 
 def verify_material(workspace, run):
-    if not run.get("parameters", {}).get("material"):
+    if not (run.get("parameters") or {}).get("material"):
         return
     description, directory = _storage(workspace, run)
     _verify(workspace, directory, description)
