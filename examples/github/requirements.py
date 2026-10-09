@@ -15,7 +15,7 @@ from pathlib import Path
 from agent_platform_client import Client
 
 
-def github(path, body=None, *, paginate=False):
+def github(path, body=None, *, paginate=False, env=None):
     command = ["gh", "api", path]
     if paginate:
         command += ["--paginate", "--slurp"]
@@ -28,6 +28,7 @@ def github(path, body=None, *, paginate=False):
         capture_output=True,
         check=True,
         timeout=60,
+        env=env,
     )
     value = json.loads(result.stdout) if result.stdout.strip() else None
     return [item for page in value for item in page] if paginate else value

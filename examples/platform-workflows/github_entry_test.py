@@ -202,6 +202,55 @@ class WorkspaceTest(unittest.TestCase):
 
 
 class ForwardTest(unittest.TestCase):
+    def test_configured_proxy_applies_only_to_github_subprocesses(self):
+        import json
+        import os
+        import subprocess
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from github_entry import forward
+
+        issue = {"number": 7, "id": 123, "user": {"login": "owner"}}
+        client = Mock()
+        client.workflow_by_request.return_value = {
+            "id": "accepted",
+            "status": "completed",
+        }
+        calls = []
+        original_proxy = os.environ.get("HTTPS_PROXY")
+
+        def run(argv, **kwargs):
+            calls.append(kwargs)
+            output = (
+                "[]"
+                if "--paginate" in argv
+                else ("{}" if "--method" in argv else json.dumps(issue))
+            )
+            return subprocess.CompletedProcess(argv, 0, output, "")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = {
+                "repository": "owner/repo",
+                "state_root": str(root / "state"),
+                "workspace_root": str(root / "work"),
+                "base_url": "http://localhost",
+                "git_proxy": "http://localhost:12345",
+            }
+            with patch("requirements.subprocess.run", side_effect=run):
+                forward(config, client, 7)
+            self.assertEqual(len(calls), 3)
+            self.assertTrue(
+                all(
+                    c.get("env", {}).get("HTTPS_PROXY") == config["git_proxy"]
+                    for c in calls
+                )
+            )
+            self.assertEqual(os.environ.get("HTTPS_PROXY"), original_proxy)
+            client.start_workflow.assert_not_called()
+
     def test_notification_failure_retains_accepted_run_link_without_restarting(self):
         import contextlib
         import io

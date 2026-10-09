@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.parse
+from functools import partial
 from pathlib import Path
 
 from agent_platform_client import APIError, Client
@@ -240,11 +241,12 @@ def report_run(config, result):
             output.write(f"[打开平台 Run]({link})\n")
 
 
-def notify(repo, number, key, body):
+def notify(repo, number, key, body, *, github_call=None):
+    call = github_call or github
     marker = (
         "<!-- agent-platform:entry:" + hashlib.sha256(key.encode()).hexdigest() + " -->"
     )
-    comments = github(
+    comments = call(
         f"repos/{repo}/issues/{number}/comments?per_page=100", paginate=True
     )
     if any(
@@ -253,13 +255,20 @@ def notify(repo, number, key, body):
         for comment in comments
     ):
         return
-    github(f"repos/{repo}/issues/{number}/comments", {"body": body + "\n\n" + marker})
+    call(f"repos/{repo}/issues/{number}/comments", {"body": body + "\n\n" + marker})
 
 
 def forward(config, client, number, comment_id=0):
+    validate_proxy(config)
+    github_call = github
+    if config.get("git_proxy"):
+        # Scope the configured GitHub transport to child calls, not platform API.
+        github_call = partial(
+            github, env={**os.environ, "HTTPS_PROXY": config["git_proxy"]}
+        )
     repo = config["repository"]
     owner = repo.split("/")[0]
-    issue = github(f"repos/{repo}/issues/{number}")
+    issue = github_call(f"repos/{repo}/issues/{number}")
     if (
         "pull_request" in issue
         or issue["number"] != number
@@ -286,7 +295,7 @@ def forward(config, client, number, comment_id=0):
                 raise ValueError(
                     "Issue has no Run; start it before forwarding comments"
                 )
-            comment = github(f"repos/{repo}/issues/comments/{comment_id}")
+            comment = github_call(f"repos/{repo}/issues/comments/{comment_id}")
             if (
                 comment.get("issue_url")
                 != f"https://api.github.com/repos/{repo}/issues/{number}"
@@ -331,6 +340,7 @@ def forward(config, client, number, comment_id=0):
                         number,
                         event_key + ":rejected",
                         "这条补充尚未进入执行：" + guidance,
+                        github_call=github_call,
                     )
                 raise
             save(state / ("comment-" + str(comment_id) + "-receipt.json"), receipt)
@@ -339,6 +349,7 @@ def forward(config, client, number, comment_id=0):
                 number,
                 event_key,
                 f"补充已保存到当前 Agent 会话：[查看会话]({receipt['conversation_url']})。",
+                github_call=github_call,
             )
         else:
             if not current:
@@ -379,7 +390,8 @@ def forward(config, client, number, comment_id=0):
                 repo,
                 number,
                 key,
-                f"研发任务已接单：[查看运行进度]({config['base_url']}/workflow-runs/{current['id']})。可直接在本 Issue 评论补充要求；无需再到平台创建任务。",
+                f"研发任务已保存：[查看运行进度]({config['base_url']}/workflow-runs/{current['id']})。当前状态及可用操作见运行页面。",
+                github_call=github_call,
             )
         return current
 
