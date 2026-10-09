@@ -2,7 +2,9 @@
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
 
-当前状态（2026-10-10 03:00）：PR36精确合main0c197c8b3d98346107e65dbf0c41ef5d6b73d437已正式prepare37970389412/preview37970431766及Deployment6967804284 success，5545health200/schema3/version与JS/CSS逐字节同已验PR及main，activate committed。正式完整固定冷门禁再次exit0/source158件6e359667…不变；Owner后续ready复用非第二次全测。原Issue34/Run31 completed，不复活或重复部署。专用测试流程revision4已启动唯一新Run29efc188f089daf1d3890bef1b56496d，网页非零限额/自然窗口/双会话补验先规划独立评审，max30原权限不变、零供应商调用。首prepare1因协调者漏做checkout输入准备拒绝，原失败保留；标准克隆后正式stop/return1→prepare2 exit0/857bytes及61材料匹配→issue3创建Issue37→e2e_plan4/2091d42449dd7b10b69c3afb4fcbd1b3 running，原生34101实际承接、审批0；尚未计划评审/实跑。5546旧9851177/schema2、8788未碰；原#33 No-Go/真实Provider费用/预算not_attested不变。
+当前状态（2026-10-10 03:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的plan4已交独立review5，r1判NOT READY，R01价格准备授权歧义、R02固定入口/受控上游前置、R03派生用例/调度预算、R04部分已知计量、R05自然窗有效时间观测未闭合。关联Issue已由机器人6087643687反馈真实等待，审批0，未产品实测。依据既有隔离准备及普通选择授权，协调者通过原正式User Input34696仅澄清全新隔离实例可首次创建固定受控测试价格，现存/生产/历史价格及算法不变，供应商请求仍0；review5实际承接→正式rework→plan6/e91a46b703cfa8d6df9755ee3d8b9d49 running，原生34869已承接补r2。原r1 NOT READY及R01–07保留，未自动READY；R02–05须整改再独立复审。机器人6088175700/6088176236真实回写返工/新节点启动。Run ID/冻结图/input/工作区/max30及原前4步逐值保持，无重复任务、恢复或权限增限。5545健康version0c197c8/schema3为PR36正式部署，5546旧9851177/schema2、8788未碰；原#33 No-Go与供应商预算not_attested保持。
+
+历史状态（2026-10-10 03:00）：PR36精确合main0c197c8b3d98346107e65dbf0c41ef5d6b73d437已正式prepare37970389412/preview37970431766及Deployment6967804284 success，5545health200/schema3/version与JS/CSS逐字节同已验PR及main，activate committed。正式完整固定冷门禁再次exit0/source158件6e359667…不变；Owner后续ready复用非第二次全测。原Issue34/Run31 completed，不复活或重复部署。专用测试流程revision4已启动唯一新Run29efc188f089daf1d3890bef1b56496d，网页非零限额/自然窗口/双会话补验先规划独立评审，max30原权限不变、零供应商调用。首prepare1因协调者漏做checkout输入准备拒绝，原失败保留；标准克隆后正式stop/return1→prepare2 exit0/857bytes及61材料匹配→issue3创建Issue37→e2e_plan4/2091d42449dd7b10b69c3afb4fcbd1b3 running，原生34101实际承接、审批0；尚未计划评审/实跑。5546旧9851177/schema2、8788未碰；原#33 No-Go/真实Provider费用/预算not_attested不变。
 
 设计：[节点独立配置](../02-architecture/workflow-node-agent.md)。维护分支延续既有平台工作，不合并源 main；运行实例升级前备份并检查无在途任务，旧停止 Run 保留。
 
@@ -496,3 +498,16 @@ Issue34去重评论6083355376已按正式远端回执更新上述合并/部署�
 真实准备卡点：协调者漏做页面/API要求的独立checkout输入准备，空目录Git向上发现平台源仓，prepare1 exit1/439bytes/truncatedfalse以origin不符拒绝；产品步骤0、Issue未创建、目录仍空，校验正确阻止误写。此为启动方错误，不认定通用源码或产品缺陷，不新增开关/放宽仓库门禁。按标准gh repo clone只准备授权仓到原同目录，实际根/仓库/head0c197c8/干净核验；首stop请求漏seq导致409，状态未变，按API要求seq1停止后原return1→prepare2 running。保留原失败与冻结图/权限/input、材料，未重建Run或手改状态。关联Issue34唯一评论6083355376已反馈部署完成与此准备卡点；后续新Issue与计划实际承接须待原prepare/issue完成，不能把return受理当测试通过。证据check-20261009-hourly-1847的正式Actions、Deployment、health、完整日志/state、startup-blocker与原Run回执保留。
 
 实际恢复及后续锚点：原prepare2 completed/exit0/857bytes，HEAD0c197c8、任务分支、材料61项/ZIP a13fb6b9…一致；issue3正式创建唯一【产品测试】Issue37 https://github.com/big91987/model-relay/issues/37 ，e2e_plan4同conversation2091d42449dd7b10b69c3afb4fcbd1b3 running、原生34101承接“核对冻结材料与版本，再制定可执行网页旅程和覆盖矩阵”、审批0。新独立e2e_plan_review还未执行，不能说计划READY、网页通过或真实供应商复测开始。原Run1失败完整保存，stop漏seq的409没有改变状态；正确seq1正式恢复，无权限/冻结图/模板变化。Issue34既有评论按真实回执更新新Issue/Run链接和卡点恢复，不重复通知；下一小时以Issue37/此Run为测试锚点，旧Issue34/PR36是已交付历史，原#33 No-Go保持。
+
+
+## Issue37独立计划拒绝、澄清与正式返工（2026-10-10 03:53）
+
+独立计划评审5读取冻结材料及规则后正式判定 **NOT READY**。当前缺口是计划/准备问题，没有产品实跑，不能制造产品缺陷或以原受控API绿替网页通过。r1在本Run `acceptance/test-plan-review-r1.md` 保存，摘要e71002983b8e30104991f9eeac58131b9ef2703cc8ffae23a86235796eb571b7；复审会按新版本留记录。
+
+- R01：我原输入“不修改价格”过宽，使空隔离实例的正常准入无法准备有效非零价。结合用户已授权的隔离测试数据与普通选择自主处理，通过原Run/seq5正式User Input澄清“允许全新隔离实例首次创建测试价；不改现存、预览、生产、历史价格或算法”。测试费率由Pipeline提出并验算，Builder只澄清范围，未操作业务页面、写产品测试或判验收；无真实供应商调用和新外部预算。
+- R02–05：固定Python入口/config及合法受控上游准备、逐派生ID的五维/双scope/双宽竞争隔离步骤与预算、partial可信计量及累计舍入、有效UTC高水位的可观察证据仍待补齐。R06自然月界/24h/未dispatch边界和R07自动报告发布限制保留；不弱化为部分Ready。
+- 正式messages入口request_id `model-relay:issue37:review5:isolated-price-scope-clarification-r1` HTTP202，message34696 initially queued；原生34697实际承接，34744正式rework回规划，review5 completed/closed→plan6 running。新会话e91a46b703cfa8d6df9755ee3d8b9d49的34869已承接补r2，审批0。受理、进度自报和真正交接分别核验。
+- Run ID、workflow、definition、原input、workspace、max_steps30及原前4步逐值不变；原NOT READY/等待历史保持。没有重复Issue、Run、resume或新权限。
+- [Issue37](https://github.com/big91987/model-relay/issues/37)机器人big91987-agent-platform-bot[bot]的6087643687已反馈阻断；6088175700反馈正式rework及限制，6088176236反馈规划启动。未由Builder另发重复通知冒充Agent。新增网页测试全部Not Run，原#33 No-Go/真实供应商Blocked不变。
+
+本轮只更新证据文档，不新增平台代码、部署或产品PR。证据：ignored `.data/fresh-8793/check-20261009-hourly-1947/` 下run-before、conversation-live、正式clarification receipt、clarification-followthrough、plan6-live、continuity-check和真实Issue评论回执。下一轮核plan6实际产物→新独立评审，未Ready不得实测。
