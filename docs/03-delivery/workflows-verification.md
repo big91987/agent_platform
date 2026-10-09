@@ -1972,3 +1972,13 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 ### 2026-10-09 GitHub作者混同问题（待实现）
 
 用户截图显示Issue启动及Agent回复作者都为big91987。本轮只读源码：connectors.go以token_env配置GitHub凭据，connector_execution.go githubRequest读取环境令牌并以Bearer发请求；workflow_hooks.go自动评论只附隐藏agent-platform-hook标记，缺用户可见来源。GitHub官方说明installation token归属App bot，user token归属用户；支持独立外部身份，不由平台内部用户ID控制。已记入计划；未创建App/机器人账号、生成或切换凭据、改历史评论或验证bot真实发布，独立身份与来源展示当前仍未实现。
+
+### 2026-10-09 GitHub App 独立凭据实现与注册阻塞
+
+维护源新增 github_app.go，服务私有0600有界注册表/2048-bit RSA私钥，RS256 JWT→限定单仓库 installation token；通过原 githubRequest 供 Connector/Hook 使用，缓存续期及并发等待可取消。标准 install.py 的 notification-token-env 只改变评论 Connector，普通升级保持选择；原 Git/Issue/PR 凭据不切换。README 已写标准安装及真实验证边界，界面字段改为 GitHub 凭据名称。
+
+真实 TDD：旧实现 App 身份调用因凭据缺失失败，安装器因新参数未知失败；实现后分别通过。定向 race 覆盖签名/仓库范围/缓存/临近过期重签、缺钥不回退、权限拒绝不发表评论且不泄响应、并发等待取消，连同已有 Connector/Hook 回归 exit0。null 注册表回归随后真实失败，明确拒绝 nil 后定向绿，独立 reviewer 重跑全部 TestGitHubApp 通过并关闭唯一 Important；未发现新增 Critical/Important。
+
+首轮完整 scripts/verify.sh 编译到了 null 修复前版本，末尾该回归失败（其余此前检查通过）；原日志保留 /private/tmp/agent-platform-github-app-verify.log，最终复验另存 /private/tmp/agent-platform-github-app-final-verify.log，不覆盖首失败。最终完整门禁 exit0，前端/SDK/工程安装与 Controller/77项平台模板、go vet、全包 go test -race 与 go build 全部通过；macOS linker 的既有 LC_DYSYMTAB warning 保留，不影响本轮测试退出码。
+
+真实 GitHub 创建入口已到 Confirm access，Chrome 再次确认仍需用户网页二次验证，未读取或处理验证码。公开 App 查询404不证明名称可用；未创建 agent-platform、生成/安装私钥、切服务凭据或发真实 bot 评论。标准实际升级、实际 [bot] 作者、Hook 去重/不反馈与失败恢复均 Not Run；在途产品测试保持，定时仍暂停。

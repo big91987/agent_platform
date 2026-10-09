@@ -403,6 +403,11 @@ def main():
     )
     parser.add_argument("--token-env", default="WORKFLOW_GITHUB_TOKEN")
     parser.add_argument(
+        "--notification-token-env",
+        default=None,
+        help="Separate GitHub credential name for automatic comments; preserve on upgrade",
+    )
+    parser.add_argument(
         "--authorized-user",
         action="append",
         default=None,
@@ -437,6 +442,10 @@ def main():
     parser.add_argument("--prepare-browser", action="store_true")
     parser.add_argument("--trellis-executable", default=shutil.which("trellis"))
     args = parser.parse_args()
+    if args.notification_token_env is not None and not re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*", args.notification_token_env
+    ):
+        parser.error("notification token must be an environment credential name")
     if not args.trellis_executable:
         parser.error("Trellis CLI is required; install @mindfoldhq/trellis@0.6.15")
     trellis_path = str(Path(args.trellis_executable).resolve(strict=True))
@@ -523,6 +532,13 @@ def main():
         },
         args.upgrade,
     )
+    if args.notification_token_env is None:
+        args.notification_token_env = (
+            installation.data["objects"]
+            .get("connector-comment", {})
+            .get("spec", {})
+            .get("token_env", args.token_env)
+        )
     workflow_key = "workflow" if args.template == "software-delivery" else args.template
     prior_graph = installation.data["objects"].get(workflow_key, {}).get("spec", {})
     if args.authorized_user is None:
@@ -659,7 +675,9 @@ def main():
                 if role == "comment"
                 else "github.pull_request",
                 repository=args.repository,
-                token_env=args.token_env,
+                token_env=args.notification_token_env
+                if role == "comment"
+                else args.token_env,
             )
         else:
             spec.update(

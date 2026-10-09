@@ -307,3 +307,9 @@
 
 
 待办：GitHub自动回写身份与来源可辨。平台服务/Hook发布、具体Agent节点内容、协调者提交与用户本人分别可识别；来源标识由可信发布路径提供，保留Agent原文，不将隐藏去重marker当可见作者。独立GitHub App installation bot是候选，平台内用户ID不等于GitHub作者。实现须落唯一Connector/Hook源码、模板及标准安装升级，处理短期凭据生命周期/失败恢复，并核入站权限与反馈去重，不给某个测试仓留本地补丁。本轮没有更换认证或改在途图。
+
+2026-10-09 独立发布身份进入维护源实现：沿原 Connector token_env 凭据引用选择服务私有 App 配置，私钥与短期 token 不进入 Agent/Run；App 注册表损坏或已注册身份缺钥时明确失败，不冒充个人身份。并发签发合并与等待取消、短期缓存/续期、仓库限定及原错误脱敏已实现。标准安装器仅切自动评论凭据并在省略参数升级时保留，Git 推送和 Issue/PR 身份保持原授权；冻结在途图未变，实际服务未切换。
+
+独立复审唯一 Important（null 注册表回退个人）已通过真实失败回归和明确 nil 拒绝修复关闭，无新增 Critical/Important。GitHub App 名称按用户指定 agent-platform，注册网页仍等待本人 Confirm access；本机源码测试和安装 Mock 不证明实际 App、bot 作者、Hook 恢复或标准服务升级。可见消息来源说明仍待后续明确设计，不改写原生输出。
+
+最终 scripts/verify.sh exit0：前端、SDK、标准安装升级与 Controller、模板回归、go vet、全包 race 和二进制构建通过。8793 运行服务及冻结在途 Run 未改；尚无实际 App 安装和机器人评论验证。

@@ -127,6 +127,34 @@ class NodeAgentInstallTest(unittest.TestCase):
                     f"Installer rejected supported node-config invocation: {error}"
                 )
 
+    def test_notification_identity_is_separate_and_survives_upgrade(self):
+        self.run_install(
+            "--token-env", "PERSONAL_TOKEN", "--notification-token-env", "APP_BOT"
+        )
+        connectors = {
+            value["name"].split(" · ")[-1]: value
+            for value in self.api.objects["connectors"]
+        }
+        self.assertEqual(connectors["comment"]["token_env"], "APP_BOT")
+        for role in ("issue", "pr"):
+            self.assertEqual(connectors[role]["token_env"], "PERSONAL_TOKEN")
+        for role in ("prepare", "publish"):
+            self.assertEqual(connectors[role]["env_refs"]["GH_TOKEN"], "PERSONAL_TOKEN")
+        self.api.writes.clear()
+        self.run_install("--upgrade", "--token-env", "PERSONAL_TOKEN")
+        self.assertEqual(self.api.writes, [])
+        self.run_install(
+            "--upgrade",
+            "--token-env",
+            "PERSONAL_TOKEN",
+            "--notification-token-env",
+            "PERSONAL_TOKEN",
+        )
+        changed = [body for _, _, body in self.api.writes]
+        self.assertEqual(len(changed), 1)
+        self.assertEqual(changed[0]["name"].split(" · ")[-1], "comment")
+        self.assertEqual(changed[0]["token_env"], "PERSONAL_TOKEN")
+
     def test_fresh_install_needs_no_shared_agent_and_repeats_without_writes(self):
         self.run_install(
             "--executor",

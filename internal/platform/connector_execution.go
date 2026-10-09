@@ -50,8 +50,8 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 		out.Stdin = string(raw) + "\n"
 		return out, nil
 	}
-	if os.Getenv(v.TokenEnv) == "" {
-		return out, fmt.Errorf("credential environment %s is not configured", v.TokenEnv)
+	if err := githubCredentialConfigured(v); err != nil {
+		return out, err
 	}
 	body := r.Input
 	var err error
@@ -148,12 +148,11 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 var githubClient = &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 func githubRequest(ctx context.Context, v Connector, method, path string, payload any, out any) error {
-	token := os.Getenv(v.TokenEnv)
-	if token == "" {
-		return fmt.Errorf("credential environment %s is not configured", v.TokenEnv)
+	token, err := githubCredential(ctx, v)
+	if err != nil {
+		return err
 	}
 	var b []byte
-	var err error
 	if payload != nil {
 		b, err = json.Marshal(payload)
 		if err != nil {
@@ -173,7 +172,7 @@ func githubRequest(ctx context.Context, v Connector, method, path string, payloa
 	}
 	resp, err := githubClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("GitHub request did not return a confirmed result: %s", connectorRedact(v, err.Error()))
+		return fmt.Errorf("GitHub request did not return a confirmed result: %s", strings.ReplaceAll(connectorRedact(v, err.Error()), token, "[redacted]"))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

@@ -378,3 +378,7 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 用户在Issue33截图反馈：平台Hook自动回写和协调者通过工具提交都显示big91987，难以区分本人输入、协调者操作和Agent Platform/具体节点回复。目标是在GitHub可见作者与正文来源上明确区分三者，并保留Run/节点/会话关联，不要求用户查看隐藏HTML标记猜来源。列入后续Harness优化，本轮仅记录，不切换凭据、不修改在途任务或旧评论。
 
 现状：Connector由token_env读取Bearer凭据调用GitHub，Hook正文已有隐藏agent-platform-hook标记作去重/防反馈，未提供用户可见来源。独立平台用户ID不能改变GitHub评论作者。候选方向为GitHub App installation身份：安装令牌的动作归属App bot，而非用户身份令牌；目前平台仅读取已提供令牌，App凭据/安装/短期令牌生成续期/标准升级尚待实现与验证。先实现清楚的来源展示，后续接独立发布身份时还须覆盖最小仓库权限、令牌过期恢复、评论去重/结果未知核查、Hook不反触发新Run及原生输出保持。官方依据：https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps 和 https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation 。
+
+2026-10-09 用户授权直接创建，名称固定为 `agent-platform`。维护源已实现服务私有 GitHub App 注册表、RS256 installation token 签发、限定 Connector 仓库、临近过期续期与并发取消；复用原凭据引用，不在工作流或原生输入传私钥。安装器新增 `--notification-token-env`，只分离自动评论身份，保留 Git/Issue/PR 原凭据，普通升级保留已配置身份。目标注册权限仅 Issues read/write、只安装 model-relay；未授权扩大到其他仓库。
+
+代码定向回归与独立复审通过；复审发现 JSON null 注册表可能回退个人身份，已真实红→绿并关闭 Important。最终全量 scripts/verify.sh exit0，包含前端/安装升级/SDK/Controller、go vet、全包 race 与构建。Chrome GitHub 创建入口停在 Confirm access，需用户直接完成网页二次验证；尚未创建 App、下载私钥、安装仓库或切换运行服务。App 实际作者、正式 Hook 去重/失败恢复及标准实际升级仍待验证，不能把本地测试当机器人已上线。原定时任务保持暂停。

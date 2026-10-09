@@ -47,6 +47,28 @@ python3 examples/platform-workflows/install.py \
 
 安装不会启动 Agent 或创建 Issue。打开返回的流程链接，点击“运行”，输入普通需求和根目录内的**独立、干净 checkout**。每个独立 Run 必须使用不同 checkout，避免交叉修改。引擎拒绝占用未结束 Run 的同目录、父子目录或符号链接别名；停止／失败仍保留占用，因为之后可以恢复。完成或正式取消后释放。浏览器工具证据目录在工作区外，便于保留诊断；交付截图与报告仍写到项目的验证目录。
 
+### 平台机器人自动评论
+
+平台自动评论可以用独立 GitHub App installation 身份。先在 GitHub 创建 App，为评论用途授予 Issues read/write，并仅安装到所需仓库；此方式无需用户 OAuth 授权，也无需启用 Webhook。App 名称须在 GitHub 创建时确认可用。配置 App issuer（推荐 client ID，也支持数字 App ID）、installation ID 和下载的 RSA 私钥，私钥及注册表放平台主机的私有目录、权限0600，并置于原生 Agent 工作区之外。
+
+平台服务环境的 `PLATFORM_GITHUB_APP_CONFIG` 指向私有 JSON 注册表，例如：
+
+```json
+{
+  "AGENT_PLATFORM_GITHUB_BOT": {
+    "app_id": "<client-id-or-app-id>",
+    "installation_id": 123456,
+    "private_key_file": "/absolute/private/path/app.pem"
+  }
+}
+```
+
+Connector 的 `token_env` 是 GitHub 凭据名称：注册表中该名称存在时，平台签署 App JWT，向固定 GitHub API 申请限定 Connector 仓库的短期安装令牌，在到期前自动重新申请；密钥和令牌不进图、Run、Agent 环境或回执。配置/权限错误停止动作，不降级为个人账号，不盲重发未知结果。名称未注册时沿用同名 Token 环境变量，已有 PAT 安装保持可用。注册表、安装或密钥变更后读取当前配置，不修改旧回执。
+
+原安装命令增加 `--notification-token-env AGENT_PLATFORM_GITHUB_BOT`，只将自动评论 Connector 设为机器人身份。Issue/PR 与准备/推送仍使用原 `--token-env` 凭据；后续若需把这些也改为 App，先确认对应仓库权限与工程入口。省略通知参数升级保留已配置的评论身份，显式传回原凭据名称才恢复个人身份。仍须先安全升级平台，再按原清单 `--upgrade`；在途 Run 保留冻结的 Connector 选择，不为换作者改运行记录，新的 Run 使用新配置。创建 App 或本地测试通过不等于实际机器人评论已验证，应通过正式 Hook 核验可见 `[bot]` 作者、原生内容、去重和失败恢复。
+
+参考：[App installation 认证](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation)、[安装令牌](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app)。
+
 ## 日常操作
 
 - 图中选择节点、连接输出路线、保存即产生新版本；已启动 Run 使用旧图快照。
