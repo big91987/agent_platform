@@ -2,7 +2,9 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-10 05:59）：通用模板62af199已标准升级同workflow revision5，原Run冻结revision4保持；独立review11在正式resume输入36793后实际接受职责澄清和14风险链减法，不再单因handler未实现阻断规划。最终NOT READY仅R03-CAP：300秒容量方案缺可核验依据；36967正式handoff→plan12/4e937a2d3a1de4bcf27ba64da0055436 running。未强制Ready、未开始生成，原#33 No-Go及外部调用0/历史预算未证保持，产品HEAD0c197c8/5545schema3不变。源码标准验证和安装匹配/停恢复已证；脚本准备→固定产品测试→QA整链仍未验收。
+当前状态（2026-10-10 06:54）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan12→独立review13 READY→执行准备14发现上游地址门禁冲突→独立review15 READY→e2e_execute16/bd4c08da275a39d483526da042bd51e6 running，审批0。R03-CAP仅规划层关闭：14链114动作/42dispatch的280秒+20余量估计获评审，实跑容量仍未认证。E14-NET-01独立裁决原评审loopback上游误写，沿正式产品私网精确authority修正，不改产品/注入TestAuthority/扩大外部授权。16原生38376报告P09 HTTP500后30秒冷却与10秒槽冲突，拟正式交回复审，当前尚无handoff或最终准备报告。固定全旅程未开始，Agent双fixture/清理准备复验仅自报进度，不当产品或独立QA通过。HEAD0c197c8/tracked diff空，5545health200/schema3同版，供应商新请求授权0、旧预算not_attested、#33 No-Go保持。模板职责澄清已实际进入执行准备并触发实质前置返评审，不代表tests/QA整链闭合。
+
+历史状态（2026-10-10 05:59）：通用模板62af199已标准升级同workflow revision5，原Run冻结revision4保持；独立review11在正式resume输入36793后实际接受职责澄清和14风险链减法，不再单因handler未实现阻断规划。最终NOT READY仅R03-CAP：300秒容量方案缺可核验依据；36967正式handoff→plan12/4e937a2d3a1de4bcf27ba64da0055436 running。未强制Ready、未开始生成，原#33 No-Go及外部调用0/历史预算未证保持，产品HEAD0c197c8/5545schema3不变。源码标准验证和安装匹配/停恢复已证；脚本准备→固定产品测试→QA整链仍未验收。
 
 历史状态（2026-10-10 05:53）：Issue37/Run29efc188f089daf1d3890bef1b56496d的input36007已实际承接，plan10将r4-risk1缩为14风险链/114steps/42受控dispatch，保留326旧ID及未验状态，正式交review11/8794ced89a6fcad635f912d4d51ed1fc。无生成网页准备exit0，generation_ready=false/两种生成0。维护源62af199明确计划READY只交执行准备，完整脚本由e2e_execute完成后才交tests，实质入口/窗口方案/安全/容量缺口仍阻断；完整标准verify正式权限exit0。原manifest标准upgrade同workflow revision5，先正式stop11，首漏必填认证调用无配置变化，补标准认证后成功；原stopped Run完整图/input/steps及模型权限Skills保持。原resume11同会话input36793→agent36794实际承接，review11 running/审批0，最终复审及职责修正语义效果待验证。5545health200/0c197c8/schema3、产品tracked diff空；原#33 No-Go/零外部授权/旧预算not_attested不变，无新产品PR或部署。
 
@@ -2233,3 +2235,15 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 
 
 后续核验（05:59）：review11实际最终NOT READY只保留R03-CAP，接受风险减法及handler职责澄清，原生36819/36841与正式36967 handoff可核，API显示review11 completed→plan12 running。这是职责纠正后的真实语义接续证据，不表示计划全部Ready或产品通过；后续需规划给出可行容量依据再独立复审。当前Plan12会话4e937a2d3a1de4bcf27ba64da0055436，不重复恢复或创建Run。最终API和Issue回执在ignored check-20261009-hourly-2143。
+
+
+## 计划批准后执行准备与前置冲突返评审（2026-10-10 06:54）
+
+- 证据根：ignored `.data/fresh-8793/check-20261009-hourly-2250/`；正式API `run-before.json`、`run-latest.json`，原生13–16会话及Issue机器人外部回执。源树本轮无实现改动，不代执行产品脚本或业务页面。
+- plan12正式提交r4-risk2，review13独立原文评审/正式next关闭R03-CAP规划阻断。其300秒方案采用双实例/双fixture交错，自然链144秒、窄屏92秒、桌面后置53秒，关键路径280秒加20余量；这是计划估计，`capacity_attested=false`及`accepted_window_proven=false`保持。保留14链114步/42dispatch/128POST/24见证，未把旧326行升Pass。
+- 准备14遵守已评审门禁发现E14-NET-01：评审§5.2限定loopback上游，同HEAD正式serve却仅允许精确私网非loopback/non-link-local上游；记录用户影响为固定旅程无法准备，原因是评审条件误写而非已证产品缺陷。Agent正式build/init/serve和CLI登录页观察、首缓存EPERM及标准审批恢复/清理留证，不是完整固定Connector。正式plan_review路由生效，旧review和失败不改。
+- review15新增 `test-plan-review-r4-risk2-net1.md`独立裁决：管理台loopback、自有私网两个上游具体host:port，随机独立Provider/controller认证，无公网/CIDR/通配或TestAuthority；61材料/49评审前快照校验零失配。保持业务断言、预算与清理，正式next到执行16，未额外授予权限或读取旧私有配置。
+- 执行16仍running，审批0。原生38280/38297/38318/38338/38357分别报告授权准备恢复、CLI入口、旅程接入、三设施失败留证及准备清理复验；这些只是进度，尚无固定生成tests完成回执或独立QA，不从binding资产名推断全实现。38376发现P09 HTTP500触发30秒冷却但仅10秒预算，拟保留证据返独立评审；以最终正式handoff和报告为准，当前不补造已返工。后续应由Pipeline核事实与容量影响并正式复审，Builder不改断言、替写用例或代裁产品结论。
+- Issue机器人6090091544/6090091897真实回写READY与执行启动；6090169448/6090169846回写门禁冲突与复审；6090218179/6090218682回写裁决与执行16启动。未由Builder另发重复评论。
+- 实时产品HEAD完整0c197c8b3d98346107e65dbf0c41ef5d6b73d437、tracked diff空；5545health200/schema3同版，未新产品PR/合并/部署。原Run冻结revision4、模板revision5、max30及Codex/gpt-6.1-sol/auto_review保持，不重复upgrade/消息/resume/Run或提前增限。
+- Harness证据边界：计划评审→执行准备→实质前置重新评审→同Run继续准备已由真实Agent与正式路由证明；完整固定产品tests、自然窗口事实、双身份数值验收和最终独立QA仍未证明。#33原Incomplete-No-Go、供应商授权0/Blocked、历史24/64/90预算未知与R06/R07未完成保持。
