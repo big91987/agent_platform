@@ -360,3 +360,12 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 已标准安装新编排3155ddd1206d4ebc19da94e5b489091f（http://127.0.0.1:8793/workflows/3155ddd1206d4ebc19da94e5b489091f），实际GET确认原生Codex/gpt-6.1-sol、network_access/allow_elevation true、执行/复核挂载Playwright Skill；省略可选授权和浏览器参数的标准upgrade后同ID/revision/配置逐值保持。原研发编排8f497…revision2/权限均false不变，没有修改在途Run。
 
 正式新Run c41e8047001414b96d327c39fb9c1eeb首次prepare失败暴露通用materials空parameters缺陷，先修唯一源28b6469并完整回归/独立复审，再标准upgrade及stop→return同Run续验，prepare2真实exit0。Pipeline自动创建唯一【产品测试】Issue33（https://github.com/big91987/model-relay/issues/33），e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running。此状态证明Harness支持启动/恢复/自动Issue，不等于已执行DeepSeek或产品通过；实际浏览器、外部调用及独立实操效果由后续Pipeline证据核验。本次平台测试中协调者处理执行能力和故障/复验，产品缺陷包交产品研发流水线，不亲自改用例或操作产品完成验收；该分工不扩大为其他任务的全局限制。
+
+
+### 2026-10-09 产品测试报告接续产品修复
+
+用户授权测试完成后，将已复核产品问题创建/更新【产品修复】Issue，附测试报告及相关产物，直接进入研发development实现。本次沿用现有prepare→issue→intake→development短路径，准备/材料校验/关联保持，跳过无关需求/设计，后续固定测试/独立QA/交付保持。不把新问题塞进无关在途Run，不由Builder代产品修复。
+
+维护源e2e_report要求实际问题包与文件级artifacts：受测版本、用户影响、复现与预期/实际、首失败回执、相关脱敏文件、原AC与回归条件、已有Issue关系；intake明确已复核输入足够时直交development。报告/证据通过原SHA-256 ZIP材料入口传新工作区，不能只贴本机路径，秘密不随包发布。先查既有任务按修复范围去重；未执行/凭据问题不自动算产品故障，无已确认缺陷不造任务，Harness与测试设施单列。
+
+当前测试Run c41e8047001414b96d327c39fb9c1eeb仍e2e_plan4 running/error空。正式User Input request_id model-relay:product-e2e:repair-development-handoff:20261009已实际接收message20418/running；补充覆盖当前冻结Run，不修改图或升级在途流程。测试未完成，暂无最终报告、修复Issue或development接单；这些须据后续真实产物核验。原model-relay定时仍PAUSED；尝试新增报告完成后周期跟进被自动审批拒绝（用户已停止定时），未创建新自动任务，不用其他方式绕过。是否采用本次自动完成跟进待用户明确选择。

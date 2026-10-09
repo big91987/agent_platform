@@ -79,6 +79,14 @@ python3 examples/platform-workflows/install.py \
 
 本图创建的 Issue 带平台标记，既有 GitHub 入口会忽略，不再启动另一研发 Run。未配置本图独立 GitHub 入站，因此启动通过正式平台 Run API/页面，保持当前研发入口不变。产品缺陷在报告中交付可复现问题包，修复交另一个产品研发任务；测试设施缺陷才走 `test_repair`，保留旧失败与新回执。
 
+### 测试报告交给开发修复
+
+等独立复核与报告实际交付后，协调者读取最终 handoff 中的报告、问题包和文件级产物，按已复核产品缺陷创建或更新 `【产品修复】具体行为` Issue。开头说明用户遇到的问题及修复后的结果，附受测版本、复现步骤、预期/实际、首失败回执、原验收条件与回归要求，并关联产品测试 Issue/Run；原因假设和未执行范围单列。先检查已有任务，同一问题沿原 Issue 接续，无产品缺陷时不创建修复任务。
+
+报告与相关脱敏截图、日志、测试文件通过现有带 SHA-256 的材料 ZIP 入口传递（见下方“带原型和文档的Issue输入”），在问题正文写 `agent-platform-material` 描述，不能只给另一个工作区的本机路径。选择已确认缺陷所需的具体文件，包内清单记录实际文件摘要和来源；不带私有 Provider 配置、密码、未脱敏 trace/HAR 或缓存，材料作为输入不自动执行。准备节点实际成功下载/校验后再引用其回执路径交接，不把上传成功当研发已接单。
+
+修复 Issue 明确指定从 `development` 开始，经现有研发入站创建独立 Run，`prepare → issue → intake → development`。准备和任务判断完成输入接收，不重做需求/设计；intake 核资料足够后通过原生 handoff 直接交开发。开发再走原固定测试、独立 QA、交付和 PR。不要用 `start_node=development` 跳过分支/材料准备，也不将新的修复塞进仍在执行的无关 Run。登记实际 Issue、修复 Run、development 接单和报告/材料关联；请求结果未知先查去重记录，避免重复启动。
+
 ```sh
 PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
 ruff check examples/platform-workflows

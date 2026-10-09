@@ -1956,3 +1956,12 @@ API实时Runb7f93c24bc1ea4d0fe182f12aa7622ae running/error空/max100；prepare1/
 通过正式Owner Run API request_id model-relay:product-e2e:deepseek-user-journey:20261009创建唯一Run c41e8047001414b96d327c39fb9c1eeb。首次prepare1失败完整output EOF：materials.install_material对parameters:null使用dict.get抛AttributeError，原准备分支已创建，未进产品测试或创建Issue。源materials.py install/verify两个guard改(run.get(parameters) or {})，实际None无材料/无文件回归旧红→绿，独立复审无新增重要问题；提交28b6469后原manifest标准upgrade应用（路径加载修复源码，无需换图/engine）。Builder首次stop未传seq得到409、未变状态，核正式API契约后携带seq1停止；真实stopped后return(seq1,targetprepare,原因)HTTP202进入seq2，冻结definition/工作区逐值保持，原首失败+正式返工原因保留，未新Run或补造回执。prepare2真实exit0后issue3创建唯一 https://github.com/big91987/model-relay/issues/33 ，标题【产品测试】验证真实DeepSeek下用户、模型授权、Key配额与调用诊断；GitHub实际title/平台marker匹配、无凭据，API核默认研发入口无重复Run。
 
 e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30有界，测试生成请求跨attempt最多24次/每次输出64/90秒，具体计数及用例由Pipeline落实。用户提供的密钥仅存忽略目录0600私有配置，Task/Issue只含引用、端点和模型名，不输出值。Builder未操作产品网页、调用真实Provider、代写测试脚本或给产品Go/No-Go；后续测试Agent亲自浏览器/固定宿主/独立实操证据分别保留。此轮证明安装/授权保持、真实准备红→源修→标准恢复绿、自动Issue及原生接单，未宣称整条E2E及所有权限已实操完成。
+
+
+### 2026-10-09 测试报告→development修复交接要求
+
+已更新维护源AGENTS、e2e_report、intake及README：已复核产品缺陷才立【产品修复】，交报告、首红与同版脱敏产物，既有任务去重，沿原SHA材料入口和研发prepare→issue→intake→development；固定测试、独立QA/交付保留。不实现新分类引擎，不略过准备，不手改Run。产品判断仍由测试Pipeline形成，Builder只组织既有事实的正式交接。
+
+模板图与标准安装配置回归17项/0.166s/exit0，git diff --check通过。该回归证明原路由及安装接口没有破坏，不证明新报告内容或实际修复接单。当前正式message20418 request_id model-relay:product-e2e:repair-development-handoff:20261009 duplicate=false，回读原生input running/approval0；原Run seq4/e2e_plan running/error空，暂无完整产品报告或可据此创建的问题。未创建修复Issue、上传材料或启动第二Run。
+
+新的周期完成跟进请求被自动审批拒绝，原因是原用户已停止定时且仅授权一次交接；工具isError/拒绝回执明确，没有新定时任务创建，旧model-relay仍PAUSED。不借其他工具绕过；本次完成后自动跟进是否允许已向用户说明并待明确选择。真实产品完成报告→材料SHA核验→唯一修复Issue→development原生接单仍待验证。

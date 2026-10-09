@@ -299,3 +299,6 @@
 2026-10-09 新增产品测试专用模板：维护源examples/platform-workflows/product-e2e.json与e2e角色指令，复用原安装器、原生执行配置、固定Connector日志和权限审批；平台引擎不内置DeepSeek或产品旅程。Agent联网/allow_elevation显式参数授权，保留workspace-write与管理员原生审批，不自动danger-full-access。新权限只用于独立测试安装，不改变主研发节点；当前浏览器权限配置不当实际Chromium已成功或产品QA绿。
 
 独立复审先发现省略browser-skill升级静默丢挂载P2；以真实MemoryAPI两次安装回归红→绿，保留原挂载、missing资产拒绝、互斥clear显式移除，复审关闭。标准实际upgrade同新Workflow ID/revision/grants/mounts逐值保持，验证并非只Mock安装。原准备helper的参数null问题也由真实新Run捕获、修维护源和标准应用，同Run正式恢复后exit0；没给测试仓/DB/冻结图打补丁，旧失败保留。平台与模板测试的角色分工已进入AGENTS，实际产品验证由专用Pipeline Agent负责，用执行结果检验Harness；此分工不限定协调者在其他任务中的职责。
+
+
+2026-10-09 产品测试→产品修复的交接策略进入标准来源：测试report角色产出已复核、可复现、文件级的问题包；研发intake以真实报告/材料及指定起点直接handoff development，不在引擎加入产品分类或任意跨流水线自动执行。原准备、材料SHA校验、Issue关联、tests/QA及发布门禁不跳过。当前冻结测试Run收到正式新增User Input20418，源码指令改动留给受支持新装/后续安全升级，不修改在途定义。实际跨Run材料接收及development接单尚待报告完成，不能把可达图/安装回归当已走通该真实旅程。
