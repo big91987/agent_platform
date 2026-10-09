@@ -382,3 +382,5 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 2026-10-09 用户授权直接创建，名称固定为 `agent-platform`。维护源已实现服务私有 GitHub App 注册表、RS256 installation token 签发、限定 Connector 仓库、临近过期续期与并发取消；复用原凭据引用，不在工作流或原生输入传私钥。安装器新增 `--notification-token-env`，只分离自动评论身份，保留 Git/Issue/PR 原凭据，普通升级保留已配置身份。目标注册权限仅 Issues read/write、只安装 model-relay；未授权扩大到其他仓库。
 
 代码定向回归与独立复审通过；复审发现 JSON null 注册表可能回退个人身份，已真实红→绿并关闭 Important。最终全量 scripts/verify.sh exit0，包含前端/安装升级/SDK/Controller、go vet、全包 race 与构建。Chrome GitHub 创建入口停在 Confirm access，需用户直接完成网页二次验证；尚未创建 App、下载私钥、安装仓库或切换运行服务。App 实际作者、正式 Hook 去重/失败恢复及标准实际升级仍待验证，不能把本地测试当机器人已上线。原定时任务保持暂停。
+
+后续用户完成 Confirm access；真实创建表单填 agent-platform、Issues read/write、强制 Metadata read-only、Webhook 关闭、仅本人账号安装。提交后 GitHub 明确拒绝：`Name is reserved for the account @agent-platform`，App 未创建。名称为用户指定，不自行改名，已询问替代名称（候选 agent-platform-bot / big91987-agent-platform 可用性尚未核验）。源码49f1aa8已推开发分支；实际安装、私钥、服务切换和机器人评论仍待。

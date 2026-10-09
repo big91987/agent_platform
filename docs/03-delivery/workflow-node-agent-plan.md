@@ -313,3 +313,5 @@
 独立复审唯一 Important（null 注册表回退个人）已通过真实失败回归和明确 nil 拒绝修复关闭，无新增 Critical/Important。GitHub App 名称按用户指定 agent-platform，注册网页仍等待本人 Confirm access；本机源码测试和安装 Mock 不证明实际 App、bot 作者、Hook 恢复或标准服务升级。可见消息来源说明仍待后续明确设计，不改写原生输出。
 
 最终 scripts/verify.sh exit0：前端、SDK、标准安装升级与 Controller、模板回归、go vet、全包 race 和二进制构建通过。8793 运行服务及冻结在途 Run 未改；尚无实际 App 安装和机器人评论验证。
+
+后续实际注册：用户完成网页二次验证后创建 App 表单提交，GitHub 拒绝 agent-platform 名称（保留给 @agent-platform 账号），不是本机凭据或平台实现失败。未改名重试或扩大权限；替代名称需用户决定。没有 App/installation/key，正式运行接入仍未发生。

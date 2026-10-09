@@ -1982,3 +1982,5 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 首轮完整 scripts/verify.sh 编译到了 null 修复前版本，末尾该回归失败（其余此前检查通过）；原日志保留 /private/tmp/agent-platform-github-app-verify.log，最终复验另存 /private/tmp/agent-platform-github-app-final-verify.log，不覆盖首失败。最终完整门禁 exit0，前端/SDK/工程安装与 Controller/77项平台模板、go vet、全包 go test -race 与 go build 全部通过；macOS linker 的既有 LC_DYSYMTAB warning 保留，不影响本轮测试退出码。
 
 真实 GitHub 创建入口已到 Confirm access，Chrome 再次确认仍需用户网页二次验证，未读取或处理验证码。公开 App 查询404不证明名称可用；未创建 agent-platform、生成/安装私钥、切服务凭据或发真实 bot 评论。标准实际升级、实际 [bot] 作者、Hook 去重/不反馈与失败恢复均 Not Run；在途产品测试保持，定时仍暂停。
+
+后续用户已完成二次验证，CUA真实创建表单提交：名称 agent-platform，仓库权限 Issues read/write + mandatory Metadata read-only，OAuth/Device Flow/Webhook 关闭，仅 big91987 账号安装。返回 `Application could not be saved` 与 `Name is reserved for the account @agent-platform`。真实失败证明原404不代表可注册；App 未创建，没有私钥或 installation token，未切运行凭据/改在途 Run/发表评论。替代名称已向用户询问，不静默改变其指定名称。
