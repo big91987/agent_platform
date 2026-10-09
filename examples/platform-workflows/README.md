@@ -66,7 +66,7 @@ python3 examples/platform-workflows/install.py \
 
 ## 验证入口
 
-在测试仓发起本模板的任务及创建 PR 时，遵守维护源 [AGENTS.md 的标题规范](../../AGENTS.md#测试仓-issue-与-pr-标题规范)：使用 `【类别】具体目标`，区分产品功能、产品修复、Harness 验证、Harness 修复及交付维护。该规则适用于所有测试仓；入口 Issue 与后续 PR 都要说明实际目标，正文记录验收依据及替代关系，不能把流程重跑当作新增功能。分类是本项目发起测试的工作规范，不是平台对任意用户输入的通用限制。
+在测试仓发起本模板的任务及创建 PR 时，遵守维护源 [AGENTS.md 的写作规范](../../AGENTS.md#测试仓-issue-与-pr-写作规范)：使用 `【类别】具体目标`，区分产品功能、产品修复、Harness 验证、Harness 修复及交付维护。正文开头先说清问题、要做的具体工作和完成后的变化，再说明范围、可观察验收条件及旧任务关系；PR 描述最终实际改动和已执行验证，不能复制任务愿望当交付结论。执行元数据与完整证据放后，不把流程重跑当新增功能。该规则适用于本项目发起工作的所有测试仓，不是平台对任意用户输入的通用限制。
 
 ```sh
 PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
