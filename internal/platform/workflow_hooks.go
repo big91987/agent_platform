@@ -33,8 +33,45 @@ type WorkflowHookDelivery struct {
 	Receipt *ConnectorReceipt `json:"receipt,omitempty"`
 }
 
+var errApprovalResolved = errors.New("approval already resolved before notification write")
+
 var hookField = regexp.MustCompile(`\{\{\s*([a-z_]+)\s*\}\}`)
-var hookFields = map[string]bool{"event": true, "run_id": true, "node": true, "node_name": true, "seq": true, "text": true, "summary": true, "target": true, "artifacts": true, "conversation_url": true, "run_url": true}
+var hookFields = map[string]bool{"event": true, "run_id": true, "node": true, "node_name": true, "seq": true, "text": true, "summary": true, "target": true, "artifacts": true, "conversation_url": true, "run_url": true, "approval_status": true}
+
+// A configured Agent reply channel also carries execution approval lifecycle.
+// Explicit rules replace these defaults. The frozen graph is never rewritten.
+func workflowNotificationHooks(w Workflow) []WorkflowHook {
+	hooks := append([]WorkflowHook{}, w.Hooks...)
+	type destination struct {
+		event, node, connector string
+		input                  ConnectorInput
+	}
+	seen := map[destination]bool{}
+	for _, h := range hooks {
+		seen[destination{h.Event, h.Node, h.ConnectorID, h.Input}] = true
+	}
+	for _, h := range w.Hooks {
+		if h.Event != "agent.reply.completed" {
+			continue
+		}
+		for _, event := range []string{"approval.requested", "approval.resolved"} {
+			key := destination{event, h.Node, h.ConnectorID, h.Input}
+			if seen[key] {
+				continue
+			}
+			copy := h
+			copy.Event = event
+			if event == "approval.requested" {
+				copy.Body = "**{{node_name}} 等待执行审批**\n\n请在会话中查看并处理当前申请。\n\n[打开待审批会话]({{conversation_url}})"
+			} else {
+				copy.Body = "**{{node_name}} 的执行审批已处理**\n\n结果：{{approval_status}}。\n\n[查看会话]({{conversation_url}})"
+			}
+			hooks = append(hooks, copy)
+			seen[key] = true
+		}
+	}
+	return hooks
+}
 
 func validateWorkflowHooks(w Workflow) error {
 	if len(w.Hooks) > 32 {
@@ -42,7 +79,7 @@ func validateWorkflowHooks(w Workflow) error {
 	}
 	for _, h := range w.Hooks {
 		switch h.Event {
-		case "node.started", "agent.reply.completed", "handoff.after", "run.completed":
+		case "node.started", "agent.reply.completed", "handoff.after", "run.completed", "approval.requested", "approval.resolved":
 		default:
 			return errors.New("unsupported Hook event")
 		}
@@ -114,19 +151,35 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 		if err != nil {
 			return err
 		}
-		order := make([]int, len(r.Definition.Hooks))
+		hooks := workflowNotificationHooks(r.Definition)
+		order := make([]int, len(hooks))
 		for i := range order {
 			order[i] = i
 		}
-		rank := map[string]int{"node.started": 0, "agent.reply.completed": 1, "handoff.after": 2, "run.completed": 3}
+		rank := map[string]int{"node.started": 0, "approval.requested": 1, "approval.resolved": 2, "agent.reply.completed": 3, "handoff.after": 4, "run.completed": 5}
 		sort.SliceStable(order, func(i, j int) bool {
-			return rank[r.Definition.Hooks[order[i]].Event] < rank[r.Definition.Hooks[order[j]].Event]
+			return rank[hooks[order[i]].Event] < rank[hooks[order[j]].Event]
 		})
 		for _, step := range r.Steps {
 			for _, index := range order {
-				h := r.Definition.Hooks[index]
+				h := hooks[index]
 				if h.Node != "" && h.Node != step.NodeID {
 					continue
+				}
+				// Defaults follow the existing channel, but a configured rule for
+				// this destination/node takes precedence. Earlier defaults also
+				// cover overlapping all-node and node-specific reply channels.
+				if index >= len(r.Definition.Hooks) {
+					overridden := false
+					for _, other := range hooks[:index] {
+						if other.Event == h.Event && other.ConnectorID == h.ConnectorID && other.Input == h.Input && (other.Node == "" || other.Node == step.NodeID) {
+							overridden = true
+							break
+						}
+					}
+					if overridden {
+						continue
+					}
 				}
 				fields := map[string]string{"event": h.Event, "run_id": r.ID, "node": step.NodeID, "node_name": r.Definition.node(step.NodeID).Name, "seq": strconv.Itoa(step.Seq), "run_url": e.base + "/workflow-runs/" + r.ID}
 				if step.ConversationID != "" {
@@ -144,6 +197,52 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 					return err
 				}
 				switch h.Event {
+				case "approval.requested", "approval.resolved":
+					if step.ConversationID == "" {
+						continue
+					}
+					// Do not load or publish native commands, reasons or credential data.
+					rows, qerr := e.store.DB.Query(`SELECT id,decision FROM tool_approvals WHERE conversation_id=? ORDER BY created,id`, step.ConversationID)
+					if qerr != nil {
+						return qerr
+					}
+					type decision struct{ id, value string }
+					decisions := []decision{}
+					for rows.Next() {
+						var d decision
+						if qerr = rows.Scan(&d.id, &d.value); qerr != nil {
+							break
+						}
+						decisions = append(decisions, d)
+					}
+					if qerr == nil {
+						qerr = rows.Err()
+					}
+					rows.Close()
+					if qerr != nil {
+						return qerr
+					}
+					for _, d := range decisions {
+						if h.Event == "approval.requested" && d.value != "" || h.Event == "approval.resolved" && d.value == "" {
+							continue
+						}
+						if h.Event == "approval.resolved" && index >= len(r.Definition.Hooks) {
+							// No historical approval backlog on upgrade: resolve only an
+							// approval whose waiting notification was actually collected.
+							var exists bool
+							if qerr = e.store.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM workflow_hook_deliveries WHERE run_id=? AND seq=? AND event='approval.requested' AND json_extract(fields,'$._approval_id')=?)`, r.ID, step.Seq, d.id).Scan(&exists); qerr != nil {
+								return qerr
+							}
+							if !exists {
+								continue
+							}
+						}
+						fields["_approval_id"] = d.id
+						fields["approval_status"] = map[string]string{"": "待处理", "accept": "已批准", "decline": "已拒绝", "cancel": "已失效"}[d.value]
+						if err = emit(d.id); err != nil {
+							break
+						}
+					}
 				case "node.started":
 					if step.ConversationID != "" {
 						err = emit("")
@@ -242,7 +341,27 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		h := r.Definition.Hooks[p.index]
+		hooks := workflowNotificationHooks(r.Definition)
+		if p.index < 0 || p.index >= len(hooks) {
+			return errors.New("notification rule is unavailable")
+		}
+		h := hooks[p.index]
+		if h.Event == "approval.requested" && p.request == "" {
+			fields := map[string]string{}
+			if err = json.Unmarshal([]byte(p.fields), &fields); err != nil {
+				return err
+			}
+			var decision string
+			if err = e.store.DB.QueryRow(`SELECT decision FROM tool_approvals WHERE id=?`, fields["_approval_id"]).Scan(&decision); err != nil {
+				return err
+			}
+			if decision != "" {
+				if _, err = e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status='skipped',error='',updated=? WHERE id=? AND status='pending' AND request=''`, now(), p.id); err != nil {
+					return err
+				}
+				continue
+			}
+		}
 		owner, err := e.store.workflowCaller(r)
 		if err == nil {
 			_, err = e.store.Workflow(owner, r.WorkflowID)
@@ -287,11 +406,28 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 		jobKey := p.run + ":" + p.id
 		e.hookJobs[jobKey] = true
 		e.connectorWG.Add(1)
-		go func(id, key string, v Connector, request connectorRequest, recoverOnly bool) {
+		go func(id, key string, v Connector, request connectorRequest, recoverOnly, approvalWait bool, fieldsRaw string) {
 			defer e.connectorWG.Done()
 			callCtx, cancel := context.WithTimeout(ctx, time.Duration(v.TimeoutSeconds)*time.Second)
 			defer cancel()
-			receipt, err := executeGitHub(callCtx, v, request, recoverOnly)
+			var beforeWrite func() error
+			if approvalWait {
+				beforeWrite = func() error {
+					fields := map[string]string{}
+					if err := json.Unmarshal([]byte(fieldsRaw), &fields); err != nil {
+						return err
+					}
+					var decision string
+					if err := e.store.DB.QueryRow(`SELECT decision FROM tool_approvals WHERE id=?`, fields["_approval_id"]).Scan(&decision); err != nil {
+						return err
+					}
+					if decision != "" {
+						return errApprovalResolved
+					}
+					return nil
+				}
+			}
+			receipt, err := executeGitHubBeforeWrite(callCtx, v, request, recoverOnly, beforeWrite)
 			status, message := "succeeded", ""
 			clearRequest := false
 			if err != nil {
@@ -299,6 +435,9 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 				var notSent *githubNotSentError
 				if errors.As(err, &notSent) {
 					status, clearRequest = "failed", true
+					if errors.Is(err, errApprovalResolved) {
+						status, message = "skipped", ""
+					}
 				}
 			}
 			raw, _ := json.Marshal(receipt)
@@ -308,7 +447,7 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			if _, saveErr := e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status=?,receipt=?,error=?,request=CASE WHEN ? THEN '' ELSE request END,updated=? WHERE id=?`, status, string(raw), message, clearRequest, now(), id); saveErr != nil {
 				log.Printf("save hook delivery: %v", saveErr)
 			}
-		}(p.id, jobKey, v, request, recoverOnly)
+		}(p.id, jobKey, v, request, recoverOnly, h.Event == "approval.requested", p.fields)
 	}
 	return nil
 }

@@ -298,3 +298,104 @@ func TestWorkflowGitHubLiveHookPreflightRetry(t *testing.T) {
 	}
 	t.Logf("real notification retry verified: %s; POST count=%d", issue.URL, posts.Load())
 }
+
+// Opt-in integration: posts two labelled Harness comments to an existing Issue.
+// Approval originates from a controlled AwaitToolApproval callback, not a product
+// Agent or real provider call. The owner decision uses the public HTTP endpoint.
+func TestWorkflowGitHubLiveApprovalLifecycle(t *testing.T) {
+	repo, ref := os.Getenv("WORKFLOW_APPROVAL_LIVE_REPOSITORY"), os.Getenv("WORKFLOW_APPROVAL_LIVE_CREDENTIAL")
+	if repo == "" {
+		t.Skip("set WORKFLOW_APPROVAL_LIVE_REPOSITORY, ISSUE and CREDENTIAL for isolated notification verification")
+	}
+	issue, err := strconv.Atoi(os.Getenv("WORKFLOW_APPROVAL_LIVE_ISSUE"))
+	if err != nil || issue < 1 || ref == "" {
+		t.Fatal("existing Issue and credential reference required")
+	}
+	s := testStore(t)
+	caller, w, _ := runFixture(t, s)
+	a := testAgent(t, s)
+	w.Nodes[0].Kind, w.Nodes[0].AgentID = "agent", a.ID
+	w.Nodes[0].Name = "【Harness验证】隔离审批通知（非产品运行）"
+	v, err := s.SaveConnector(caller, Connector{Name: "Live approval notification", Kind: "github.issue_comment", Repository: repo, TokenEnv: ref, WorkspaceRoot: t.TempDir(), Enabled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Hooks = []WorkflowHook{{Event: "agent.reply.completed", ConnectorID: v.ID, Input: ConnectorInput{IssueNumber: issue}, Body: "{{text}}"}}
+	w, err = s.SaveWorkflow(caller, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewServer(s, nil, nil, "password", "http://localhost")
+	cookie := workflowAdmin(t, h)
+	start := workflowRequest(t, h, cookie, "POST", "/api/workflow-runs", WorkflowStart{WorkflowID: w.ID, Input: "Isolated Harness approval lifecycle; no product action", WorkspacePath: v.WorkspaceRoot})
+	if start.Code != 201 {
+		t.Fatal(start.Code, start.Body.String())
+	}
+	var r WorkflowRun
+	if err = json.Unmarshal(start.Body.Bytes(), &r); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	h.workflows.Tick(ctx)
+	c, m, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.AwaitToolApproval(ctx, c, m, json.RawMessage(`{"platform_permission_request":true,"message":"isolated Harness approval; no command executed"}`))
+	}()
+	defer func() { cancel(); <-done }()
+	approval := waitApproval(t, s, c.ID)
+	dispatch := func() {
+		t.Helper()
+		if err := h.workflows.collectWorkflowHooks(); err != nil {
+			t.Fatal(err)
+		}
+		if err := h.workflows.dispatchWorkflowHooks(ctx); err != nil {
+			t.Fatal(err)
+		}
+		h.workflows.connectorWG.Wait()
+	}
+	dispatch()
+	before, err := s.WorkflowHookDeliveries(caller, r.ID)
+	if err != nil || len(before) != 1 || before[0].Status != "succeeded" {
+		t.Fatalf("pending approval not published: %+v err=%v", before, err)
+	}
+	decision := workflowRequest(t, h, cookie, "POST", "/api/conversations/"+c.ID+"/approvals/"+approval.ID, map[string]string{"decision": "accept"})
+	if decision.Code != 200 {
+		t.Fatal(decision.Code, decision.Body.String())
+	}
+	<-done
+	dispatch()
+	dispatch()
+	after, err := s.WorkflowHookDeliveries(caller, r.ID)
+	if err != nil || len(after) != 2 || after[1].Status != "succeeded" {
+		t.Fatalf("resolution missing/duplicated: %+v err=%v", after, err)
+	}
+	var comments []githubObject
+	if err = githubRequest(ctx, v, "GET", "/repos/"+repo+"/issues/"+strconv.Itoa(issue)+"/comments?per_page=100&_platform_reconcile="+newID(), nil, &comments); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range after {
+		count := 0
+		for _, obj := range comments {
+			if strings.Contains(obj.Body, "<!-- agent-platform-hook:"+d.ID+" -->") {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Fatalf("notification %s has %d actual comments", d.Event, count)
+		}
+	}
+	evidence := map[string]any{"run_id": r.ID, "notifications": after, "matching_comments": 2, "owner_decision_http": decision.Code, "scope": "controlled platform approval callback + public owner decision + actual GitHub Hook; no product Agent, no production service upgrade"}
+	if output := os.Getenv("WORKFLOW_APPROVAL_LIVE_EVIDENCE"); output != "" {
+		raw, _ := json.MarshalIndent(evidence, "", "  ")
+		if err = os.WriteFile(output, raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Logf("actual approval lifecycle comments: %s / %s", after[0].Receipt.URL, after[1].Receipt.URL)
+}

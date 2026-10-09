@@ -392,3 +392,19 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 后续用户自行生成私钥并完成 installation169456895。安装最初为 All repositories，按此次既定范围通过正式 GitHub 设置收窄并保存为唯一 big91987/model-relay，权限 Issues write/Metadata read 保持。下载文件两份，仅原文件 SHA256公钥指纹与 GitHub key_pairs 一致，匹配私钥复制到忽略的私有目录（key/registry0600、目录0700），未发送给 Agent 或提交仓库。
 
 同已验平台二进制在8794独立数据/工作区通过公开 API 走 approval→end→run.completed Hook。私有验证配置无效 issuer 实际401，通知failed但Run completed；恢复合法配置并正式 retry 后succeeded，实际评论6073250016作者 big91987-agent-platform-bot[bot]/Bot。再次retry实际409，正常重启8794后同通知/评论唯一，GitHub Actions37876468415 skipped、8793未新增反馈Run。证据 .data/github-app-validation/acceptance.json。8793仍产品测试seq5、研发seq20两条running，未重启或升级在途模板；主服务切换与标准安装器实际notification身份升级仍待安全窗口。不得将8794验证成功说成8793已换作者。
+
+
+### 2026-10-09 审批卡点在 Issue 不可见：实际补报与通用修复
+
+用户指出产品测试停在执行审批，但 Issue33 看不到卡点。正式 API 核到 Run c41e804…仍 e2e_execute/seq5/running；两项审批已 accept，随后新审批4df8e6d…待处理。原通道只配置 Agent 回合完成回写，原生审批发生在回合中，因而不会及时生成 Issue 通知。14条旅程/31项覆盖是已写测试计划，固定tests/独立QA/最终报告尚未进入，不据计划宣称产品完成。
+
+按本次明确要求，通过8794隔离平台正式 Hook 补充准确状态到 https://github.com/big91987/model-relay/issues/33#issuecomment-6074170155 ，GitHub正式 API 作者 big91987-agent-platform-bot[bot]、Bot；仅补报当前卡点，不代产品验证。评论未经核验的时间标签已纠正，保留去重marker，原创建04:18:38Z/编辑04:20:57Z均按外部回执留证。
+
+通用修复落维护源：既有 Agent 回写通道携带 execution approval requested/resolved；依实际审批ID去重，待办附处理会话，结果区分批准/拒绝/失效；显式节点规则优先，允许独立结果通知。旧已处理审批不由隐式通道回灌；发送前在GitHub查重及App令牌获取之后重核实际决定，已处理待办skipped；发送未知只读核查。原生输出、权限与冻结图不改写。AGENTS及标准说明同步，后续项目复用相同运行能力，无产品阶段硬编码。
+
+8793同时有产品测试和研发在途，最近研发已到tests28；当前不强行停止固定门禁。源码验证与真实隔离回写不等于8793完成升级，服务与评论凭据切换仍待安全窗口；原定时保持PAUSED。
+
+
+最终源码标准门禁 `scripts/verify.sh` exit0，Go全包race50.643s；日志108929bytes/SHA c373550391810fd279e5c72ff69414fd453866d65162babef1031c2ccc19186d。隔离真实GitHub生命周期验证TestWorkflowGitHubLiveApprovalLifecycle exit0/4.665s：受控AwaitToolApproval回调、公开管理员decision HTTP200、原Hook/凭据路径真实发送requested与resolved，重复收集后两通知/两marker评论恰各1，评论6074242941和6074243190均独立核到big91987-agent-platform-bot[bot]/Bot。证据 .data/github-app-validation/approval-lifecycle.json，实际测试Run7c41c7a2b767695b5121876aeac569cb；该临时Store不是8793产品Run，也没有真实模型或产品用例。8794补报验证服务已正常停止。
+
+AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配置回复通道，可在同维护源运行升级后复用审批通知，不为各仓新建审批配置。当前8793仍旧服务、在途源图/原权限/模型及账号不变，标准运行升级和8793实际审批通知尚待安全窗口，不能把隔离验证称为主服务已上线。

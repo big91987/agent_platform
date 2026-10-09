@@ -321,3 +321,13 @@
 最终用户指定 big91987-agent-platform-bot，GitHub Registration successful/App5245414；未生成密钥、未安装或切换运行身份。实际凭据生成/仓库授权的浏览器规则确认已发出，待用户决定。当前原生 Agent/产品 Run 不受注册操作影响。
 
 后续用户自行完成密钥/安装。GitHub正式设置将默认All repositories收窄为唯一model-relay，installation169456895；公钥指纹核验后配置标准服务私有registry，秘密不进入工作流。独立8794同源码实际Hook先401→配置纠正→官方retry成功，GitHub可见Bot作者，重复retry409、重启后评论仍1、实际入站Actions skipped无反馈Run；无数据库/回执改写。该链验证正式App身份和通知恢复，不验证原生Agent文本或代替标准模板实际升级。8793两条在途Run仍running，主服务/manifest切换待安全窗口，冻结图原样。
+
+
+2026-10-09 新增执行审批的可见阻塞通知。缺口不是Agent产品结论遗漏，而是回合内的审批生命周期未投影到原Issue通知通道。沿既有Hook/Connector和服务私有凭据路径投影实际审批状态，不新增业务阶段或授权捷径；公有字段仅状态与会话入口，命令/理由/秘密不进入通知字段。新增requested/resolved显式选项，已有Agent回复通道兼带默认审批通知；固定Hook索引和在途definition不变。标准AGENTS要求卡点/后续处理及时反馈，运行源升级后现有通道可复用，无需对各测试仓单独打补丁。
+
+独立复审3 Important及App刷新边界均以实际最小失败回归修复：节点范围默认/显式去重、独立resolved规则、查重及二次token mint期间批准后停止发送。最终检查在已取得凭据、即将发送请求的位置；已开始/结果未知的HTTP写入不能假装未发生，保持只读回执恢复。源码回归与实际隔离通知须分列；8793在途固定测试不为升级中断，实际服务应用尚待安全窗口，不声称当前在途通知已自动生效。
+
+
+最终源码标准门禁 `scripts/verify.sh` exit0，Go全包race50.643s；日志108929bytes/SHA c373550391810fd279e5c72ff69414fd453866d65162babef1031c2ccc19186d。隔离真实GitHub生命周期验证TestWorkflowGitHubLiveApprovalLifecycle exit0/4.665s：受控AwaitToolApproval回调、公开管理员decision HTTP200、原Hook/凭据路径真实发送requested与resolved，重复收集后两通知/两marker评论恰各1，评论6074242941和6074243190均独立核到big91987-agent-platform-bot[bot]/Bot。证据 .data/github-app-validation/approval-lifecycle.json，实际测试Run7c41c7a2b767695b5121876aeac569cb；该临时Store不是8793产品Run，也没有真实模型或产品用例。8794补报验证服务已正常停止。
+
+AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配置回复通道，可在同维护源运行升级后复用审批通知，不为各仓新建审批配置。当前8793仍旧服务、在途源图/原权限/模型及账号不变，标准运行升级和8793实际审批通知尚待安全窗口，不能把隔离验证称为主服务已上线。

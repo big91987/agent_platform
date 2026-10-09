@@ -1994,3 +1994,19 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 8794隔离验证复用bin/agent-platform标准-listen/-data入口、同维护源二进制，公开API创建approval→end及run.completed Hook。Run e9ea3c04f9f058176e1fbad71282ecd1 completed；验证私有registry初始无效issuer实际GitHub401→通知f8029a8d…failed（无评论回执）。将验证registry恢复合法App配置后，正式通知retry→succeeded，评论 https://github.com/big91987/model-relay/issues/33#issuecomment-6073250016，独立gh API实际author big91987-agent-platform-bot[bot]/typeBot、唯一Hook标记评论1。成功通知再次retry真实HTTP409（诊断脚本因API封装异常exit1，不当功能失败）；正常TERM/同目录重启8794后通知succeeded与同评论1保持。实际issue_comment Actions37876468415 completed/skipped，8793运行列表无新Run，未反馈启动产品任务。
 
 私有证据.data/github-app-validation/acceptance.json、first-delivery.json、retry-delivery.json及platform.log保留。当前8793产品测试Run c41e804…seq5和研发b7f93c24…seq20均running，未升级服务或在途模板/凭据。标准安装器真实identity升级、8793实际Bot作者、原生Agent原文回写与真实令牌到期续期仍未验（续期已有定向回归）；本次actual Hook验证不是整体上线完成。原定时暂停，不借新自动化或重放Run取得升级窗口。
+
+
+## 2026-10-09 Issue 审批卡点反馈缺口
+
+故障与用户影响：Issue33无待审批提示，用户必须进Run/会话发现测试被卡住。正式API核到e2e_execute5/running、两审批accept及新4df8e6d…pending；Agent仍准备，未进入固定tests/QA/report。原Hook只在parent completed后发送Agent回复，审批发生在parent running期间，最小测试TestWorkflowApprovalUsesExistingIssueChannelOnce真实失败“pending approval is invisible in the Issue channel”。不是权限不足重试成功或产品用例结果。
+
+实际临时补报：8794隔离数据，原正式approval→end/run.completed Hook入口，Run355ccde5bd14455f7360c87f7e2024d0、通知b5c2d88…succeeded，Issue评论6074170155；正式GitHub GET核作者big91987-agent-platform-bot[bot]、Bot。评论明确Harness状态与未完成范围，不冒充产品Agent结论。最初不可靠时间标签经维护者更正，实际create04:18:38Z/update04:20:57Z留证；忽略证据 .data/github-app-validation/issue33-approval-status.json。此补报不是自动机制已上线。
+
+维护源修复与回归：审批实际状态投影到原Agent回写渠道，ID稳定去重，处理结果单独通知；历史已处理不回灌、显式节点覆盖、单独resolved可用。请求正文不读命令/理由，内部审批ID不是可插入的公共模板字段。声明顺序不改原Hook索引，definition/seq原样；结果未知恢复只GET。独立复审发现3 Important（查重过程中处理审批仍发过期消息、节点规则重叠、独立resolved被丢弃）及二次App签发边界，新增真实失败回归后修复。App刷新红minted2/posts1→绿posts0，检查移动至凭据获取后/HTTP发送前，已处理且确定未发送为skipped；不把未知写入当未发生。独立最终review无新增Critical/Important、定向race11.762s绿；维护者审批/Hook/GitHub定向race5.468s绿。
+
+全门禁首轮 /private/tmp/agent-platform-approval-hook-verify.log exit1：前端/模板77tests等通过，process_test TestCancelKillsTermIgnoringDescendants在3s启动等候超时“not started”，无审批断言失败；保留该失败，不虚报修复其原因。第二轮同标准门禁 /private/tmp/agent-platform-approval-hook-verify-final.log exit0；其编译早于最后App发送边界调整，最终源码完整门禁另行核验。8793在途两个Run仍保留，不强行中断tests28，也不宣称源码/隔离测试等于运行升级或产品验收。
+
+
+最终源码标准门禁 `scripts/verify.sh` exit0，Go全包race50.643s；日志108929bytes/SHA c373550391810fd279e5c72ff69414fd453866d65162babef1031c2ccc19186d。隔离真实GitHub生命周期验证TestWorkflowGitHubLiveApprovalLifecycle exit0/4.665s：受控AwaitToolApproval回调、公开管理员decision HTTP200、原Hook/凭据路径真实发送requested与resolved，重复收集后两通知/两marker评论恰各1，评论6074242941和6074243190均独立核到big91987-agent-platform-bot[bot]/Bot。证据 .data/github-app-validation/approval-lifecycle.json，实际测试Run7c41c7a2b767695b5121876aeac569cb；该临时Store不是8793产品Run，也没有真实模型或产品用例。8794补报验证服务已正常停止。
+
+AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配置回复通道，可在同维护源运行升级后复用审批通知，不为各仓新建审批配置。当前8793仍旧服务、在途源图/原权限/模型及账号不变，标准运行升级和8793实际审批通知尚待安全窗口，不能把隔离验证称为主服务已上线。

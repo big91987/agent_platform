@@ -10,6 +10,8 @@ Use the product PRD and architecture as the shared contract. Native executors ow
 
 在这种平台测试中，协调者配置并启动受支持的流水线、提供用户已授权的目标和私有凭据引用、检查执行及交付证据；不要代写产品测试、操作业务页面完成用例或代 QA 判产品通过，以免掩盖流水线能力缺口。产品失败交产品 Pipeline；工具或执行能力失败修唯一 Harness 维护源，再通过标准安装升级及原流水线复验。构建 Harness 的隔离回归与运行探针用于证明平台能力，不能冒充产品验收；一次产品测试通过也不能单独证明模板的可靠性和可复用性。
 
+关联 Issue 必须能反映真实卡点，不能只在平台会话中等待。执行审批由平台基于实际审批状态及时通知，附当前节点、处理入口及审批后的结果，不等 Agent 回合结束；其他执行失败、缺输入或外部阻塞由正式原生消息/受信状态回写，写清影响、已尝试处理与下一步。不得把排队、审批受理或恢复受理当成测试完成，也不得公开审批命令、私有路径、凭据或敏感理由。相同卡点去重；已处理而尚未发送的待审批通知跳过；发送结果未知先核对外部回执，不盲重发。
+
 产品测试结束后，协调者依据 Pipeline 报告及已复核缺陷创建或更新 `【产品修复】` Issue，附同版测试报告、复现证据及相关脱敏产物，通过受支持的研发入口直接交给 development。先核已有任务并去重；没有产品缺陷不造修复任务，未执行/凭据问题不冒称产品故障，Harness/测试设施问题分开处理。分支准备、材料核验和 Issue 关联仍须完成；明确问题和原验收依据齐全时跳过需求/设计，后续保留固定测试、独立 QA 和交付，不能用改运行状态模拟阶段交接。
 
 Keep real behavior verifiable. Repair supported paths rather than patching individual conversations. Never silently replace a missing native session or replay uncertain side effects. Secrets, native histories, generated workspaces and screenshots from local experiments stay in ignored storage.

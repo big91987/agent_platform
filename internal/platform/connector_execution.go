@@ -148,6 +148,10 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 var githubClient = &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 func githubRequest(ctx context.Context, v Connector, method, path string, payload any, out any) error {
+	return githubRequestBeforeWrite(ctx, v, method, path, payload, out, nil)
+}
+
+func githubRequestBeforeWrite(ctx context.Context, v Connector, method, path string, payload any, out any, beforeWrite func() error) error {
 	token, err := githubCredential(ctx, v)
 	if err != nil {
 		return err
@@ -169,6 +173,11 @@ func githubRequest(ctx context.Context, v Connector, method, path string, payloa
 	req.Header.Set("Content-Type", "application/json")
 	if method == "GET" {
 		req.Header.Set("Cache-Control", "no-cache")
+	}
+	if beforeWrite != nil {
+		if err := beforeWrite(); err != nil {
+			return &githubNotSentError{err}
+		}
 	}
 	resp, err := githubClient.Do(req)
 	if err != nil {
@@ -259,6 +268,12 @@ func updateGitHubPR(ctx context.Context, v Connector, request connectorRequest, 
 }
 
 func executeGitHub(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool) (ConnectorReceipt, error) {
+	return executeGitHubBeforeWrite(ctx, v, request, lookupOnly, nil)
+}
+
+// beforeWrite checks mutable notification conditions after external reconciliation.
+// It is never invoked for an uncertain write recovery.
+func executeGitHubBeforeWrite(ctx context.Context, v Connector, request connectorRequest, lookupOnly bool, beforeWrite func() error) (ConnectorReceipt, error) {
 	if request.UpdatePR > 0 {
 		return updateGitHubPR(ctx, v, request, lookupOnly)
 	}
@@ -321,7 +336,7 @@ func executeGitHub(ctx context.Context, v Connector, request connectorRequest, l
 		return ConnectorReceipt{}, errors.New("no matching GitHub receipt found; outcome remains unknown, no write was replayed; inspect the repository, then stop and return explicitly if a new operation is needed")
 	}
 	var obj githubObject
-	if err := githubRequest(ctx, v, "POST", request.Endpoint, request.Payload, &obj); err != nil {
+	if err := githubRequestBeforeWrite(ctx, v, "POST", request.Endpoint, request.Payload, &obj, beforeWrite); err != nil {
 		return ConnectorReceipt{}, err
 	}
 	if obj.URL == "" {

@@ -169,6 +169,10 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 - 通知正文使用字段白名单：`event`、`run_id`、`node`、`node_name`、`seq`、`text`、`summary`、`target`、`artifacts`、`conversation_url`、`run_url`。不执行表达式，不从自由文本推断“已批准”。Issue 由 `input.issue_node` 引用创建节点的真实回执，或用 `issue_number` 显式指定。
 - 通知持久化去重，失败与执行状态分开显示。发送结果未知时只读查证原评论，不盲目重复发布。画布“通知 Hook”可以编辑，运行页可以查看链接、错误及重试/复核。
 
+配置了 `agent.reply.completed` 的通知通道也接收执行审批状态：真实原生审批挂起时发送“等待执行审批”及会话入口，处理后发送批准、拒绝或失效结果。通知不替用户审批、不解析自由文本，也不公开审批请求中的命令、原因或环境。可显式配置 `approval.requested` / `approval.resolved` 替换对应默认正文；`approval_status` 是结果字段。没有回复通知通道且没有显式审批规则时不对外发布。
+
+该能力随平台二进制标准升级生效，复用冻结 Run 已授权的评论 Connector 与 Issue 来源，不改图、工作区或执行权限。不会回补升级前已处理的审批；审批已处理而等待通知尚未发出时，该通知显示“已跳过”，避免再提示用户处理失效申请。发送结果未知仍只查外部回执，后续审批处理通知不能证明此前发送失败。新装和升级沿原安装器及 manifest；运行服务升级先检查在途执行，按正式停止/备份/升级/恢复路径保护当前任务。
+
 用原安装命令加 `--upgrade` 同步模板、Agent 策略和评论 Connector，继续使用原 manifest。安装器会拒绝覆盖安装后在界面另行编辑过的对象；应先核对差异。服务升级使用正常源码构建和数据库迁移，不手改运行记录。
 
 ### 通用协作验收
