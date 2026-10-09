@@ -1984,3 +1984,7 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 真实 GitHub 创建入口已到 Confirm access，Chrome 再次确认仍需用户网页二次验证，未读取或处理验证码。公开 App 查询404不证明名称可用；未创建 agent-platform、生成/安装私钥、切服务凭据或发真实 bot 评论。标准实际升级、实际 [bot] 作者、Hook 去重/不反馈与失败恢复均 Not Run；在途产品测试保持，定时仍暂停。
 
 后续用户已完成二次验证，CUA真实创建表单提交：名称 agent-platform，仓库权限 Issues read/write + mandatory Metadata read-only，OAuth/Device Flow/Webhook 关闭，仅 big91987 账号安装。返回 `Application could not be saved` 与 `Name is reserved for the account @agent-platform`。真实失败证明原404不代表可注册；App 未创建，没有私钥或 installation token，未切运行凭据/改在途 Run/发表评论。替代名称已向用户询问，不静默改变其指定名称。
+
+第二次经用户明确选择 agent-platform-bot，表单真实提交返回 `Name is already taken`，App仍未创建，未生成任何私钥/token或发表评论。前缀/后缀改名尚待用户选择。8793运行清单 API只读结果：c41e804…/e2e seq5与b7f93c24…/研发seq17均running；未中断或重放，为实际升级保留现场。首次本机网络查询被sandbox拒绝，授权只读重试成功；不是平台服务故障。
+
+第三次经用户指定 big91987-agent-platform-bot，CUA实际创建后 General 页显示 Registration successful、App ID5245414、Owner @big91987；key_pairs页明确 You have no key pairs / Key pairs0 / Client secrets0。尚未生成私钥、安装或验证真实 bot 评论。浏览器操作规则要求新增长期凭据和实际授予仓库访问时确认，已提出精确最小权限/范围的单次确认，未执行 New key。随后 Chrome 被其他操作切换，CUA拒绝旧状态动作；停止使用过期索引，没有在其他页面输入或点击。

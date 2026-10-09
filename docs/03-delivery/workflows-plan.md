@@ -384,3 +384,7 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 代码定向回归与独立复审通过；复审发现 JSON null 注册表可能回退个人身份，已真实红→绿并关闭 Important。最终全量 scripts/verify.sh exit0，包含前端/安装升级/SDK/Controller、go vet、全包 race 与构建。Chrome GitHub 创建入口停在 Confirm access，需用户直接完成网页二次验证；尚未创建 App、下载私钥、安装仓库或切换运行服务。App 实际作者、正式 Hook 去重/失败恢复及标准实际升级仍待验证，不能把本地测试当机器人已上线。原定时任务保持暂停。
 
 后续用户完成 Confirm access；真实创建表单填 agent-platform、Issues read/write、强制 Metadata read-only、Webhook 关闭、仅本人账号安装。提交后 GitHub 明确拒绝：`Name is reserved for the account @agent-platform`，App 未创建。名称为用户指定，不自行改名，已询问替代名称（候选 agent-platform-bot / big91987-agent-platform 可用性尚未核验）。源码49f1aa8已推开发分支；实际安装、私钥、服务切换和机器人评论仍待。
+
+用户随后选择 agent-platform-bot；真实提交再次拒绝 `Name is already taken`，仍未创建 App。已请求是否可用账号前缀及必要后缀，不能把候选名当可注册。接入前只读 API 核到8793两条 running（产品测试seq5、研发seq17），运行服务未重启、冻结图未改；实际应用需安全窗口或受支持独立验证安装。
+
+用户随后指定 `big91987-agent-platform-bot`，真实注册成功，App ID 5245414，Owner big91987。当前 Key pairs 0 / Client secrets 0，未安装仓库或应用到服务。浏览器操作规则要求生成长期私钥及实际仓库授权时确认，已提交合并确认（仅 model-relay、Issues 读写/Metadata 只读），尚待用户答复；不扩大权限或跳过确认。源码与本机完整门禁完成不同于机器人真实发布完成。

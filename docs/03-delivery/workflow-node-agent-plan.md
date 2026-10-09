@@ -315,3 +315,7 @@
 最终 scripts/verify.sh exit0：前端、SDK、标准安装升级与 Controller、模板回归、go vet、全包 race 和二进制构建通过。8793 运行服务及冻结在途 Run 未改；尚无实际 App 安装和机器人评论验证。
 
 后续实际注册：用户完成网页二次验证后创建 App 表单提交，GitHub 拒绝 agent-platform 名称（保留给 @agent-platform 账号），不是本机凭据或平台实现失败。未改名重试或扩大权限；替代名称需用户决定。没有 App/installation/key，正式运行接入仍未发生。
+
+用户明确选择 agent-platform-bot 后仅重试该名称，GitHub Name is already taken；权限保持，未扩大仓库范围。名称冲突仍阻塞，账号前缀/后缀选择待用户。8793正式API仍两条 running，未为了换评论身份重启服务或修改冻结图。
+
+最终用户指定 big91987-agent-platform-bot，GitHub Registration successful/App5245414；未生成密钥、未安装或切换运行身份。实际凭据生成/仓库授权的浏览器规则确认已发出，待用户决定。当前原生 Agent/产品 Run 不受注册操作影响。
