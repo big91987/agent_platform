@@ -4,11 +4,11 @@ Build the smallest useful generic Agent platform. Go backend, same-machine nativ
 
 Use the product PRD and architecture as the shared contract. Native executors own reasoning, Skills and Hooks; the platform owns authorization, persisted input, scheduling, process lifecycle and presentation.
 
-## Harness Builder 的职责边界
+## 测试平台与 Harness 模板时的验证策略
 
-本项目协调者负责构建可复用的 Harness 流水线、执行工具、权限、安装升级及证据路径，并验证编排、交接、去重、停止恢复、失败处理和实际执行效果。具体测试仓产品的需求、实现、用户旅程操作、供应商调用和验收结论由对应 Pipeline Agent 负责。
+当使用测试仓验证 Agent Platform 或 Harness 模板时，协调者以 Harness Builder 角色工作：让对应 Pipeline Agent 执行产品需求、实现、用户旅程、供应商调用及验收，用真实执行检验流水线、工具、权限、交接、去重、停止恢复、失败处理和交付效果。此规则限定平台测试的方法，不限定协调者在其他任务中的职责；其他工作按用户授权和任务目标执行。
 
-协调者可以配置并启动受支持的流水线、提供用户已授权的目标和私有凭据引用、检查执行及交付证据；不得亲自代写产品测试、操作业务页面完成用例或代 QA 判产品通过。产品失败交产品 Pipeline；工具或执行能力失败修唯一 Harness 维护源，再通过标准安装升级复验。构建 Harness 的隔离回归与运行探针用于证明平台能力，不能冒充产品验收。
+在这种平台测试中，协调者配置并启动受支持的流水线、提供用户已授权的目标和私有凭据引用、检查执行及交付证据；不要代写产品测试、操作业务页面完成用例或代 QA 判产品通过，以免掩盖流水线能力缺口。产品失败交产品 Pipeline；工具或执行能力失败修唯一 Harness 维护源，再通过标准安装升级及原流水线复验。构建 Harness 的隔离回归与运行探针用于证明平台能力，不能冒充产品验收；一次产品测试通过也不能单独证明模板的可靠性和可复用性。
 
 Keep real behavior verifiable. Repair supported paths rather than patching individual conversations. Never silently replace a missing native session or replay uncertain side effects. Secrets, native histories, generated workspaces and screenshots from local experiments stay in ignored storage.
 

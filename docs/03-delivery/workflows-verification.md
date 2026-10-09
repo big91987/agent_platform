@@ -1943,3 +1943,16 @@ API实时Runb7f93c24bc1ea4d0fe182f12aa7622ae running/error空/max100；prepare1/
 
 
 本轮独立只读复审完成（00:12:02Z）：同152件d787815…，未发现新增Critical/Important/Minor明确缺陷；没有代跑测试或编辑产品。正式tests5仍running/error空、完整回执和QA待；原automation_update回读ACTIVE/30分钟/最新候选及tests锚点生效，不增加预算/权限或重复任务。
+
+
+### 2026-10-09 专用产品端到端测试 Harness：标准安装、权限保持与真实失败恢复
+
+用户要求新增【产品测试】，并澄清Builder是测试平台与Harness模板时的角色：由Pipeline执行具体产品验证，协调者以真实任务核验流水线能力、可靠性与效果，不代做用例掩盖缺口；其他任务职责按用户授权执行。维护源6d1c57b新增独立product-e2e模板/四角色及network/elevation显式授予/省略升级保留/明确撤销、现有Playwright Skill。图无产品研发/发布PR节点：prepare→issue→plan→execute测试准备→tests固定Python→review成功或失败均进入→report→done，test_repair仅设施。报告结束不自动写产品Pass。固定1800秒宿主Connector与原生network/granular permission approval分开，未改平台引擎/核内沙箱，不开放全机无限权限。
+
+新权限参数/新模板先实际缺参数红，源实现后模板回归绿。独立review发现浏览器Skill参数省略升级移除P2，新增两次安装无writes/clear撤销用例在旧实现真实红后最小修复，独立只读复审关闭无新Critical/Important。完整标准PYTHONPATH=sdk/python Python模板/仓库/API测试75项6.467s/exit0及ruff/diff通过；随后参数null修复后76项7.496s/exit0。最初完整测试未设置文档规定PYTHONPATH而SDK import失败，正确标准入口重跑通过，属Builder执行命令错误，不当平台/产品故障；新增测试插入缩进错误已修，首语法错误不冒充目标红。
+
+标准install.py使用独立prefix model-relay-e2e、独立manifest/workspace root，安装Workflow3155ddd1206d4ebc19da94e5b489091f；实际API GET四原生Agent Codex/gpt-6.1-sol、network_access/allow_elevation true，execute/review Playwright Skill实际存在。浏览器/联网真实操作尚待Pipeline，不以配置字段判实操Pass。再次正式--upgrade省略授权及browser-skill，同Workflow ID/revision/完整配置保持；旧软件研发8f497…revision2/network与elevation均false、没有重复研发Run，定时状态PAUSED保持。标准新装/升级证据ignored product-e2e/{installed-workflow,standard-upgrade,isolation-check}。
+
+通过正式Owner Run API request_id model-relay:product-e2e:deepseek-user-journey:20261009创建唯一Run c41e8047001414b96d327c39fb9c1eeb。首次prepare1失败完整output EOF：materials.install_material对parameters:null使用dict.get抛AttributeError，原准备分支已创建，未进产品测试或创建Issue。源materials.py install/verify两个guard改(run.get(parameters) or {})，实际None无材料/无文件回归旧红→绿，独立复审无新增重要问题；提交28b6469后原manifest标准upgrade应用（路径加载修复源码，无需换图/engine）。Builder首次stop未传seq得到409、未变状态，核正式API契约后携带seq1停止；真实stopped后return(seq1,targetprepare,原因)HTTP202进入seq2，冻结definition/工作区逐值保持，原首失败+正式返工原因保留，未新Run或补造回执。prepare2真实exit0后issue3创建唯一 https://github.com/big91987/model-relay/issues/33 ，标题【产品测试】验证真实DeepSeek下用户、模型授权、Key配额与调用诊断；GitHub实际title/平台marker匹配、无凭据，API核默认研发入口无重复Run。
+
+e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30有界，测试生成请求跨attempt最多24次/每次输出64/90秒，具体计数及用例由Pipeline落实。用户提供的密钥仅存忽略目录0600私有配置，Task/Issue只含引用、端点和模型名，不输出值。Builder未操作产品网页、调用真实Provider、代写测试脚本或给产品Go/No-Go；后续测试Agent亲自浏览器/固定宿主/独立实操证据分别保留。此轮证明安装/授权保持、真实准备红→源修→标准恢复绿、自动Issue及原生接单，未宣称整条E2E及所有权限已实操完成。

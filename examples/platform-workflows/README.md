@@ -71,7 +71,7 @@ python3 examples/platform-workflows/install.py \
 
 ## 专用产品端到端测试
 
-由测试 Pipeline Agent 定义、执行和验收产品旅程，Harness Builder 只建设并核验工具、权限、交接及回执。使用 `--template product-e2e` 配合独立 `--prefix`、工作区和 manifest 安装，不升级正在研发的流程。配置 `--test-command-json` 为该项目的固定 Python/浏览器入口；执行节点负责创建测试入口和准备独立受测实例，不能要求协调者代写产品用例。
+使用测试仓验证平台和本模板时，由测试 Pipeline Agent 定义、执行和验收产品旅程，协调者以 Harness Builder 角色建设并核验工具、权限、交接及回执，用真实产品任务检验模板的可靠性与效果。这是平台测试策略，不限制协调者在其他任务中的职责。使用 `--template product-e2e` 配合独立 `--prefix`、工作区和 manifest 安装，不升级正在研发的流程。配置 `--test-command-json` 为该项目的固定 Python/浏览器入口；执行节点负责创建测试入口和准备独立受测实例，不能要求协调者代写产品用例。
 
 需要真实网页与外部供应商时，安装显式指定 `--agent-network-access --allow-agent-elevation`，并用 `--browser-skill /path/to/playwright` 挂载现有真实浏览器 Skill。浏览器 Skill 挂载在省略参数升级时同样保留，显式 `--clear-browser-skill` 才删除。默认新安装不授予这两项权限；省略参数升级时保留原授权，可用对应 `--no-...` 参数显式撤销。联网允许原生 Agent 网络操作；elevation 允许通过平台管理员原生审批申请所需执行权限，不是自动接受所有请求。Python/Chromium/系统浏览器运行仍需实际探针和合法审批回执，不能以两个配置值判运行成功。受信固定 Connector 的宿主执行与 Agent 亲自操作分别记录。
 

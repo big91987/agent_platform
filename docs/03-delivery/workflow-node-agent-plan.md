@@ -294,3 +294,8 @@
 
 
 本轮独立只读复审完成（00:12:02Z）：同152件d787815…，未发现新增Critical/Important/Minor明确缺陷；没有代跑测试或编辑产品。正式tests5仍running/error空、完整回执和QA待；原automation_update回读ACTIVE/30分钟/最新候选及tests锚点生效，不增加预算/权限或重复任务。
+
+
+2026-10-09 新增产品测试专用模板：维护源examples/platform-workflows/product-e2e.json与e2e角色指令，复用原安装器、原生执行配置、固定Connector日志和权限审批；平台引擎不内置DeepSeek或产品旅程。Agent联网/allow_elevation显式参数授权，保留workspace-write与管理员原生审批，不自动danger-full-access。新权限只用于独立测试安装，不改变主研发节点；当前浏览器权限配置不当实际Chromium已成功或产品QA绿。
+
+独立复审先发现省略browser-skill升级静默丢挂载P2；以真实MemoryAPI两次安装回归红→绿，保留原挂载、missing资产拒绝、互斥clear显式移除，复审关闭。标准实际upgrade同新Workflow ID/revision/grants/mounts逐值保持，验证并非只Mock安装。原准备helper的参数null问题也由真实新Run捕获、修维护源和标准应用，同Run正式恢复后exit0；没给测试仓/DB/冻结图打补丁，旧失败保留。平台与模板测试的角色分工已进入AGENTS，实际产品验证由专用Pipeline Agent负责，用执行结果检验Harness；此分工不限定协调者在其他任务中的职责。

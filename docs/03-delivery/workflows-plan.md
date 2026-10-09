@@ -349,3 +349,14 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 
 
 本轮独立只读复审完成（00:12:02Z）：同152件d787815…，未发现新增Critical/Important/Minor明确缺陷；没有代跑测试或编辑产品。正式tests5仍running/error空、完整回执和QA待；原automation_update回读ACTIVE/30分钟/最新候选及tests锚点生效，不增加预算/权限或重复任务。
+
+
+### 2026-10-09 平台测试策略与专用产品测试流水线
+
+用户澄清：Harness Builder是协调者测试Agent Platform和Harness模板时的角色，影响验证策略，不是协调者所有工作的唯一职责。在这种测试中让Pipeline Agent执行具体产品任务、页面操作、供应商调用及验收，用实际执行检验流水线的可靠性、能力缺口与效果，不由协调者代做用例掩盖问题。其他工作按用户授权和任务目标执行；不恢复已停止的30分钟自动任务。AGENTS.md已加入限定范围的测试策略及【产品测试】类别，Issue/PR正文仍遵循问题、目标、范围和实际证据规则。
+
+本轮Harness能力切片：新增标准product-e2e模板（源6d1c57b）及显式network/elevation授权、真实浏览器Skill挂载和可保留/明确撤销的标准升级。入口独立工作区→产品测试Issue→旅程计划→测试准备→固定Python实际执行→独立浏览器复核→报告；测试失败仍到复核，test_repair仅测试设施，不代产品修复/发布。产品测试范围来自用户：真实DeepSeek、两个指定模型、用户/租户角色/模型授权/应用Key配额/普通SSE与诊断恢复；测试计划/脚本/产品判断由测试Agent制定。凭据只在本机私有忽略文件，不写公共材料。
+
+已标准安装新编排3155ddd1206d4ebc19da94e5b489091f（http://127.0.0.1:8793/workflows/3155ddd1206d4ebc19da94e5b489091f），实际GET确认原生Codex/gpt-6.1-sol、network_access/allow_elevation true、执行/复核挂载Playwright Skill；省略可选授权和浏览器参数的标准upgrade后同ID/revision/配置逐值保持。原研发编排8f497…revision2/权限均false不变，没有修改在途Run。
+
+正式新Run c41e8047001414b96d327c39fb9c1eeb首次prepare失败暴露通用materials空parameters缺陷，先修唯一源28b6469并完整回归/独立复审，再标准upgrade及stop→return同Run续验，prepare2真实exit0。Pipeline自动创建唯一【产品测试】Issue33（https://github.com/big91987/model-relay/issues/33），e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running。此状态证明Harness支持启动/恢复/自动Issue，不等于已执行DeepSeek或产品通过；实际浏览器、外部调用及独立实操效果由后续Pipeline证据核验。本次平台测试中协调者处理执行能力和故障/复验，产品缺陷包交产品研发流水线，不亲自改用例或操作产品完成验收；该分工不扩大为其他任务的全局限制。
