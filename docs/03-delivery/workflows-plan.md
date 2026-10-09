@@ -4,7 +4,7 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-10 00:07）：PR35已正式部署main692937/schema3；PR36仍Draft/head8917f942。原研发17实际Git写锁拒绝后已正式停止，Harness维护源d59417b修复受信候选整合，19项真实Git回归/完整标准门禁/独立复审通过并标准升级。原Run正式return17→prepare18 exit0，实际整合main692937，无冲突、未提交推送；issue19完成，当前development21 running。原16步骤和冻结配置保持，联合完整冷门禁/新QA/合并部署尚未完成。旧tests9/QA10只覆盖M01单候选；Issue33 No-Go、真实供应商/费用未验及历史budget not_attested保持。动态独立QA、无人值守报告发布仍待完善。
+当前状态（2026-10-10 00:47）：Issue34/Run637705186406b80a2ee4afaf0d6b2167已development21完成、tests22完整联合冷make verify exit0/959549bytes/truncated=false，30页正式output读至EOF；158件6e359667…源码前后与维护者独立库存重算一致。QA23/conversation8ddf683e0552cf0e658329ed5298e268 running，原生独立回归通过只是进度，尚无最终QA交接。PR36仍Draft/head8917f942，尚未发布联合新head/合并/部署；5545仍已部署PR35 main692937/schema3。Harness源d59417b标准升级后prepare18实际接续已证，不重复return或扩大权限。Issue33 No-Go、真实供应商/费用未验及历史budget not_attested保持；动态独立QA、无人值守报告发布待完善。
 
 历史状态（2026-10-09 07:10）：Issue30/Run2574d6be275f9eb630f8738837507e1e已12步completed，report9→publish10 exit0→pr11 PR31→done12真实完成。PR31/head8c8b155c007686311706ee1f8cec8262a1258bb9经维护者150件Git对象与tests7/QA8源码0384f115…逐字节及26QA归档SHA/bytes核证、树干净、GitGuardian成功；15任务分支证据链接远端非空。已按授权ready并精确SHA合并main3f9cee1615e87e002a2c2300f2d29778072ec3f5。正式push prepare37858024406 in_progress、Owner dispatch37858041523 pending（preview/main3f9cee），不要重复合并/触发或复活完成Run。controller2d456…仍标准安装，新600私有verify-3f9cee…-jt63zgxe.log由真实prepare创建但尚未完整结束；目前5545仍9bf6ecaf/schema3健康，5546旧9851177/schema2保持，未新部署。下一步核实际Actions/Deployment/新health/page；若新红保留首回执最小归因不盲试。R30完成契约候选已测/QA通过，旧R28-04 Open/P2与动态独立QA/供应商/登录未测保持；成功部署后推进长期阶段2其他P3，不停留完成Run。
 
@@ -530,3 +530,14 @@ Pipeline需取得联合新源码指纹、固定make verify完整冷门禁与独�
 Issue34既有去重进展评论6083355376已更新并核远端正文，说明原Git卡点、已修受信入口和等待联合测试/QA，非新Issue/Run。私有upgrade.log、run-before/after-upgrade.json、return17-prepare.json、run-after-prepare18.json、integration18-staged-stat.txt及platform-verify-r4.log保留；未恢复旧产品Run、未重复部署，5545还是已验PR35版本。产品新指纹/完整冷门禁/独立QA与同PR36交付由Pipeline负责，本轮Harness修复和prepare接续不改变产品No-Go。
 
 实际后续承接：intake20正式handoff→development21/conversation5cd1db5d235469b1074304c7b5af5c72 running；原生32838明确恢复规范/交接/整合状态、核联合候选与固定入口，不写Git元数据或调用供应商。当前approval_count0，不把承接当完整测试。既有model-relay小时自动化已更新本锚点与修复边界、保持ACTIVE及安静通知策略。
+
+
+### 2026-10-10 联合冷门禁22与独立QA接续（小时检查）
+
+本轮先读AGENTS与三交付文档，正式API核研发21/tests22均completed、QA23实际running且审批列表空；GitHub核同PR36仍Draft/head8917f942。没有重复Issue/Run/return/resume/合并/dispatch，Harness代码未改。原prepare18受信整合后的Pipeline正常进入新候选完整固定门禁，不再靠协调者本地merge或代make。
+
+正式tests22 output分30页读至959549bytes EOF，exit0/truncated=false，SHA256629a483306279ca0db9d1a71c08abf84a259c9610e70139ad4188f8052e4bbb1。按第一条主verification_receipt定位唯一20261009T162225Z-2545185297，16:22:25.516679Z至16:33:19.244284Z；主runner实际959452bytes/SHAad3d5808e2f16420ed7ffd0ebda3955d37c1d1932091528e715c91ecccaf8746与state重核一致，不混Connector长度或后续故障夹具目录。源前后/冷副本158件摘要6e359667d5f7521f6b8c421454c6fc7cbe5ccb8c74aa87bb1e5955c194c202cc一致，维护者逐文件bytes/SHA和完整库存哈希独立重算匹配；冷起点无node_modules/npm cache、NODE_PATH unset、未手工预装；gate_exit0/exit0、自有gate组及10项辅助组absent=true，candidate_removed。最终候选解析Playwright/core1.59.1与Chromium147.0.7727.15探针通过。
+
+本轮同源278Node/全包Go race、受控RPM/TPM非零窗口/并发隔离/安全拒绝与计量终止及取消/预算UTC和迁移/三视口管理连续旅程及首次self_hosted通过。内层故障夹具exit23等保留其预期分类，不把它们当主门禁失败或抹去；顶层跳过项目和真实worker恢复仍沿原完整日志区分。受控HTTP通过不证明真实Provider/实际Token费用、非零网页供应商链通过。QA23原生33261/33280/33301承接独立复核并报告局部通过，但正式result仍空，不能放行。等待其最终QA文件级产物及handoff→report/publish更新同PR36，精确比对联合源和新Git对象后才合并和正式部署。
+
+原Issue34去重评论6083355376已回写联合绿/QA进行中与未验边界，并核远端回执。本轮私有证据check-20261009-hourly-1643/run-before/current.json、tests22.log、tests22-state.json、source-independent-review.json、pr36.json及comment回执保留；旧Git锁拒绝/原16步骤/冻结输入/旧单候选tests9与QA10证据均保持。无代码新修复、无Supplier调用或预算重置；实际管理预览仍PR35版本，不冒称联合上线。
