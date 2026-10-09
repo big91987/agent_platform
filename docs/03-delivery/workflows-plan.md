@@ -479,3 +479,14 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 - 正式交付补证：报告展示返工report10→done11已实际完成，原seq1–9及189历史不变，产品结论仍No-Go。GitHub已上传6个资产，Dashboard资产624829907/154947bytes远端digest与7228f5ec…一致，48证据ZIP资产624829904/2623618bytes/digest e4d86700…一致；旧61文件材料资产未覆盖。原Issue33同评论6080204048更新为真实报告、HTML下载、ZIP和研发Run链接，不新刷评论，保持private可见范围。没有在线Dashboard站点；浏览器展示检查不改变产品验收或真实供应商Not Run。
 - 通用报告交付职责fea7565已提交推送开发分支，79模板回归/独立源码契约复审无Critical/Important。报告Run完成后原安装器--upgrade成功应用同产品测试工作流revision3→4；完整旧Run逐值保持、主研发图不变，未来报告节点明确HTML/白名单/GitHub回执并保持auto_review。私有回执check-20261009-report-handoff/{published-assets,presentation-audit,standard-upgrade}.json。当前发布由用户授权Builder完成，模板未实现无人值守上传/托管Connector，不伪称自动发布能力已交付。
 - 最终实时研发核验：Issue34唯一Run637705…仍development4 running，报告包/原设计已正式承接，尚无新候选make verify/QA/PR/合并/部署。Actions37925548923第二次尝试仍failure，原GH评论POST底层原因未解决，不再盲试；已有正式Hook记录intake直接development及材料校验。任务承接、材料完整性和直达研发已证，外部接单通知可靠性未闭合，后续须最小诊断与通用维护源修复。
+
+
+### 2026-10-09 按小时核验：两候选已发布，任务关联不等于完成
+
+正式 API 核到 Issue34/Run637705186406b80a2ee4afaf0d6b2167 已14步 completed，PR36 head8917f942cb38af2f56aa93914ab62e763bf9cc6e；Issue32/Runb7f93c24bc1ea4d0fe182f12aa7622ae 已61步 completed，PR35 head794e493e69a91f7aae90878e1c27be551e4a5883。不继续引用 development4/report58 为现状，不新增任务或重放产品执行。PR36 是受控计量/安全回归资产，不是生产算法缺陷修复，确认生产缺陷仍0；真实供应商、两屏非零限额与费用实扣仍 Blocked/Not Run，原Issue33 No-Go保留，历史预算未知不清零。
+
+维护者通过正式 output API 分页读 tests9/56 至 EOF：各499596/729568字节、truncated=false、exit0；Connector日志与runner原档分别核验。PR36 runner499499字节/SHA c93e9625…、PR35 runner729471字节/SHA5f9b70c0…均与state匹配。用两个精确提交的git对象独立重算154件源码，分别2dfe14a3c305c13621f23b7dd287a8313b7e4f39ab64b8281d283450d125d8ed、dc667be6f0f5db892748ac8a214d799264c2d451004da8c80a5e06e6c38f338c，与固定测试/QA候选同版，冷起点/source前后/清理均有真实证据；两个工作树干净。QA10仅M01受控回归Go，QA57仅Issue32受控旅程Go with known issues，不把独立材料审查当QA亲自完整浏览器实操。合并及新部署未发生，5545仍正式3f9cee/schema3健康。
+
+发现通用发布缺陷：github.pull_request Connector 根据Issue关联无条件添加 Closes，PR36因此会误关仍有未验项的Issue34。最小设计只默认Refs关联，正文显式关闭声明保持，不新增开关/任务状态机。隔离回归先编译字段纠错再真实旧红→新绿，独立源码复审无Critical/Important/Minor，四项PR/丢回执回归通过。维护源完整scripts/verify.sh已真实exit0（Go race及前端/浏览器/模板/安装/vet/build完整门禁，日志/private/tmp/agent-platform-pr-association-verify.log），正式运行应用与原PR支持入口复验待后续记录；不把源码绿冒充8793已应用。外部PR35/36分类/发布事实已纠正，默认关闭声明已移除，原Agent报告及receipt不手改。私有核验 check-20261009-hourly-1439。
+
+通知故障证据纠正：37925548923 attempt1为评论POST失败，attempt2实际上在读取Issue GET即失败，不是再次评论POST失败。两轮只保留通用subprocess非零且stderr未展示，底层HTTP/传输原因未知；不得据此宣称权限或网络已定位、通知恢复或入站Actions全绿。不再盲重试。任务接单与通知结果分开，已有唯一研发任务和Hooks成功事实保持；下一步需安全诊断能力而非补造原失败细节。无人值守报告发布仍未交付，不趁本轮新增通用发布框架。

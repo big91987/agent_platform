@@ -117,7 +117,9 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 	case "github.pull_request":
 		head, base := connectorExpand(p.Head, r), connectorExpand(p.Base, r)
 		if issue > 0 {
-			body += "\n\nCloses #" + strconv.Itoa(issue)
+			// Association alone is not evidence that this PR completes the Issue.
+			// Preserve any closing statement authored in the supplied body.
+			body += "\n\nRefs #" + strconv.Itoa(issue)
 		}
 		out.Endpoint = repo + "/pulls"
 		out.Lookup = out.Endpoint + "?" + url.Values{"state": {"all"}, "head": {strings.Split(v.Repository, "/")[0] + ":" + head}, "base": {base}, "per_page": {"100"}}.Encode()

@@ -385,6 +385,23 @@ func TestConnectorBodyFileUsesRunDirectoryAndRejectsEscapingSymlink(t *testing.T
 	}
 }
 
+func TestPullRequestIssueAssociationDoesNotDeclareCompletion(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TEST_PR_TOKEN", "test-only")
+	c := Connector{Kind: "github.pull_request", WorkspaceRoot: dir, Repository: "owner/repo", TokenEnv: "TEST_PR_TOKEN"}
+	for _, body := range []string{"Partial delivery; supplier validation remains blocked.", "Full delivery verified.\n\nCloses #42"} {
+		r := WorkflowRun{ID: "run", WorkspacePath: dir, Input: body, Definition: Workflow{Nodes: []WorkflowNode{{ID: "pr", ConnectorInput: ConnectorInput{Head: "feature", Base: "main", IssueNumber: 42}}}}}
+		request, err := prepareConnectorRequest(c, r, WorkflowStep{NodeID: "pr", Seq: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := body + "\n\n<!-- agent-platform:run:1 -->\n\nRefs #42"
+		if request.Payload["body"] != want {
+			t.Fatalf("connector changed completion intent: %q", request.Payload["body"])
+		}
+	}
+}
+
 func TestConnectorTimeoutRecoveryKeepsIdentityAndRequiresExplicitReturn(t *testing.T) {
 	s := testStore(t)
 	c, config, w, dir := connectorFixture(t, s, Connector{Name: "bounded test", Kind: "command", Enabled: true, Executable: "/bin/sh", Args: []string{"-c", "printf started; sleep 1.2; printf finished"}, TimeoutSeconds: 1})
