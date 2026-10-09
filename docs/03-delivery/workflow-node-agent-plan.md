@@ -319,3 +319,5 @@
 用户明确选择 agent-platform-bot 后仅重试该名称，GitHub Name is already taken；权限保持，未扩大仓库范围。名称冲突仍阻塞，账号前缀/后缀选择待用户。8793正式API仍两条 running，未为了换评论身份重启服务或修改冻结图。
 
 最终用户指定 big91987-agent-platform-bot，GitHub Registration successful/App5245414；未生成密钥、未安装或切换运行身份。实际凭据生成/仓库授权的浏览器规则确认已发出，待用户决定。当前原生 Agent/产品 Run 不受注册操作影响。
+
+后续用户自行完成密钥/安装。GitHub正式设置将默认All repositories收窄为唯一model-relay，installation169456895；公钥指纹核验后配置标准服务私有registry，秘密不进入工作流。独立8794同源码实际Hook先401→配置纠正→官方retry成功，GitHub可见Bot作者，重复retry409、重启后评论仍1、实际入站Actions skipped无反馈Run；无数据库/回执改写。该链验证正式App身份和通知恢复，不验证原生Agent文本或代替标准模板实际升级。8793两条在途Run仍running，主服务/manifest切换待安全窗口，冻结图原样。

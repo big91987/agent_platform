@@ -388,3 +388,7 @@ PR31合并版本3f9cee1615e87e002a2c2300f2d29778072ec3f5已正式prepare/deploy�
 用户随后选择 agent-platform-bot；真实提交再次拒绝 `Name is already taken`，仍未创建 App。已请求是否可用账号前缀及必要后缀，不能把候选名当可注册。接入前只读 API 核到8793两条 running（产品测试seq5、研发seq17），运行服务未重启、冻结图未改；实际应用需安全窗口或受支持独立验证安装。
 
 用户随后指定 `big91987-agent-platform-bot`，真实注册成功，App ID 5245414，Owner big91987。当前 Key pairs 0 / Client secrets 0，未安装仓库或应用到服务。浏览器操作规则要求生成长期私钥及实际仓库授权时确认，已提交合并确认（仅 model-relay、Issues 读写/Metadata 只读），尚待用户答复；不扩大权限或跳过确认。源码与本机完整门禁完成不同于机器人真实发布完成。
+
+后续用户自行生成私钥并完成 installation169456895。安装最初为 All repositories，按此次既定范围通过正式 GitHub 设置收窄并保存为唯一 big91987/model-relay，权限 Issues write/Metadata read 保持。下载文件两份，仅原文件 SHA256公钥指纹与 GitHub key_pairs 一致，匹配私钥复制到忽略的私有目录（key/registry0600、目录0700），未发送给 Agent 或提交仓库。
+
+同已验平台二进制在8794独立数据/工作区通过公开 API 走 approval→end→run.completed Hook。私有验证配置无效 issuer 实际401，通知failed但Run completed；恢复合法配置并正式 retry 后succeeded，实际评论6073250016作者 big91987-agent-platform-bot[bot]/Bot。再次retry实际409，正常重启8794后同通知/评论唯一，GitHub Actions37876468415 skipped、8793未新增反馈Run。证据 .data/github-app-validation/acceptance.json。8793仍产品测试seq5、研发seq20两条running，未重启或升级在途模板；主服务切换与标准安装器实际notification身份升级仍待安全窗口。不得将8794验证成功说成8793已换作者。

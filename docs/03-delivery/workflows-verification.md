@@ -1988,3 +1988,9 @@ e2e_plan4/c81a84d7933adfb6592450d5f68d0fc4 running/error空；新Run总预算30�
 第二次经用户明确选择 agent-platform-bot，表单真实提交返回 `Name is already taken`，App仍未创建，未生成任何私钥/token或发表评论。前缀/后缀改名尚待用户选择。8793运行清单 API只读结果：c41e804…/e2e seq5与b7f93c24…/研发seq17均running；未中断或重放，为实际升级保留现场。首次本机网络查询被sandbox拒绝，授权只读重试成功；不是平台服务故障。
 
 第三次经用户指定 big91987-agent-platform-bot，CUA实际创建后 General 页显示 Registration successful、App ID5245414、Owner @big91987；key_pairs页明确 You have no key pairs / Key pairs0 / Client secrets0。尚未生成私钥、安装或验证真实 bot 评论。浏览器操作规则要求新增长期凭据和实际授予仓库访问时确认，已提出精确最小权限/范围的单次确认，未执行 New key。随后 Chrome 被其他操作切换，CUA拒绝旧状态动作；停止使用过期索引，没有在其他页面输入或点击。
+
+后续用户自行生成key_pairs1（10:39 GMT+8）并安装169456895（10:42），浏览器显示All repositories。按原既定model-relay范围正式选择Only select repositories/Selected1/save，页面返回updated且保存后唯一big91987/model-relay；Issues write/Metadata read。依据GitHub官方 openssl public DER/SHA256方法比对下载文件，两份之一匹配页面指纹；只复制匹配项到.data/private/github-app/，目录0700、key/registry0600、git check-ignore通过，不输出私钥/JWT/token。
+
+8794隔离验证复用bin/agent-platform标准-listen/-data入口、同维护源二进制，公开API创建approval→end及run.completed Hook。Run e9ea3c04f9f058176e1fbad71282ecd1 completed；验证私有registry初始无效issuer实际GitHub401→通知f8029a8d…failed（无评论回执）。将验证registry恢复合法App配置后，正式通知retry→succeeded，评论 https://github.com/big91987/model-relay/issues/33#issuecomment-6073250016，独立gh API实际author big91987-agent-platform-bot[bot]/typeBot、唯一Hook标记评论1。成功通知再次retry真实HTTP409（诊断脚本因API封装异常exit1，不当功能失败）；正常TERM/同目录重启8794后通知succeeded与同评论1保持。实际issue_comment Actions37876468415 completed/skipped，8793运行列表无新Run，未反馈启动产品任务。
+
+私有证据.data/github-app-validation/acceptance.json、first-delivery.json、retry-delivery.json及platform.log保留。当前8793产品测试Run c41e804…seq5和研发b7f93c24…seq20均running，未升级服务或在途模板/凭据。标准安装器真实identity升级、8793实际Bot作者、原生Agent原文回写与真实令牌到期续期仍未验（续期已有定向回归）；本次actual Hook验证不是整体上线完成。原定时暂停，不借新自动化或重放Run取得升级窗口。
