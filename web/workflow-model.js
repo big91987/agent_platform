@@ -3,7 +3,7 @@
 globalThis.WorkflowGraph = class WorkflowGraph {
   static kinds = {agent:'Agent', approval:'人工确认', connector:'Connector', end:'结束'};
   static agentConfig(source) {
-    const fields=['executor','model','instructions','skills','tool_servers','sandbox','network_access','allow_elevation','native_config','trust_hooks','inherit_env','env','seed_dir'];
+    const fields=['executor','model','instructions','skills','tool_servers','sandbox','network_access','allow_elevation','approvals_reviewer','native_config','trust_hooks','inherit_env','env','seed_dir'];
     return JSON.parse(JSON.stringify(Object.fromEntries(fields.filter(key=>Object.hasOwn(source,key)).map(key=>[key,source[key]]))));
   }
   constructor(value) {
@@ -111,6 +111,8 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       if(a.tool_servers!=null&&(!Array.isArray(a.tool_servers)||a.tool_servers.some(b=>!object(b)||typeof b.server_id!=='string'||!strings(b.tools)||b.approvals!=null&&(!object(b.approvals)||Object.values(b.approvals).some(v=>!['auto','confirm'].includes(v))))))throw new Error('工具配置必须是包含服务、工具名称数组与审批设置的数组');
       if(a.env!=null&&(!object(a.env)||Object.values(a.env).some(v=>v!==null&&typeof v!=='string')))throw new Error('环境配置必须是对象，变量值使用字符串或 null');
       for(const key of ['executor','model','instructions','sandbox','native_config','seed_dir'])if(a[key]!=null&&typeof a[key]!=='string')throw new Error('节点配置 '+key+' 必须是字符串');
+      if(a.approvals_reviewer!=null&&!['user','auto_review'].includes(a.approvals_reviewer))throw new Error('权限申请审批方式无效');
+      if(a.approvals_reviewer==='auto_review'&&(a.tool_servers||[]).some(b=>b.tools.some(t=>b.approvals?.[t]==='confirm')))throw new Error('自动审核不能与工具的每次确认混用，请选择人工审批或调整工具设置');
       for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
     }
     if(node.exit_mode){

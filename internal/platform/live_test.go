@@ -185,7 +185,10 @@ func TestLiveToolApprovalAndResume(t *testing.T) {
 	remote := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server { return service }, nil))
 	defer remote.Close()
 	a := Agent{Executor: "codex", Name: "approval proof", Sandbox: "read-only", InheritEnv: true, ResolvedTools: map[string]ResolvedToolServer{"proof": {Connection: MCPConnection{URL: remote.URL}, Tools: []string{"save_marker"}}}}
-	x := &Codex{Root: root}
+	if os.Getenv("AGENT_PLATFORM_LIVE_REVIEWER") == "1" {
+		a.ApprovalsReviewer = "auto_review"
+	}
+	x := &Codex{Root: root, Binary: os.Getenv("AGENT_PLATFORM_LIVE_BINARY")}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
 	var events []json.RawMessage
@@ -224,6 +227,16 @@ func TestLiveToolApprovalAndResume(t *testing.T) {
 	server.Approvals = map[string]string{"save_marker": "confirm"}
 	a.ResolvedTools["proof"] = server
 	c = Conversation{ID: "manual", Snapshot: a}
+	if a.ApprovalsReviewer == "auto_review" {
+		if err := x.Execute(ctx, c, Message{Content: "Call save_marker with value MUST_NOT_WRITE."}, callback); err == nil || !strings.Contains(err.Error(), "manual confirmation") {
+			t.Fatal("conflicting explicit tool confirmation was not rejected", err)
+		}
+		if calls.Load() != 1 {
+			t.Fatal("conflicting tool ran before rejection", calls.Load())
+		}
+		t.Log("automatic reviewer cannot override a tool requiring explicit manual confirmation")
+		return
+	}
 	thread = ""
 	decision := "accept"
 	requests := 0

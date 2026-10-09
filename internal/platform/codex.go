@@ -94,7 +94,7 @@ func nativeConfig(a Agent) ([]byte, error) {
 			return nil, fmt.Errorf("invalid native TOML: %w", e)
 		}
 	}
-	for _, k := range []string{"approval_policy", "sandbox_mode", "sqlite_home", "skills", "profiles", "active_profile", "sandbox_workspace_write", "permissions"} {
+	for _, k := range []string{"approval_policy", "approvals_reviewer", "auto_review", "sandbox_mode", "sqlite_home", "skills", "profiles", "active_profile", "sandbox_workspace_write", "permissions"} {
 		if _, ok := cfg[k]; ok {
 			return nil, fmt.Errorf("native option %s is managed by the platform", k)
 		}
@@ -105,11 +105,18 @@ func nativeConfig(a Agent) ([]byte, error) {
 	if a.Sandbox != "" && a.Sandbox != "workspace-write" && a.Sandbox != "read-only" {
 		return nil, errors.New("sandbox must be workspace-write or read-only")
 	}
+	if err := validateApprovalReviewer(a); err != nil {
+		return nil, err
+	}
+	if err := validateNativeReviewConfig(a, cfg); err != nil {
+		return nil, err
+	}
 	if a.Instructions != "" {
 		previous, _ := cfg["developer_instructions"].(string)
 		cfg["developer_instructions"] = strings.TrimSpace(previous + "\n\n" + a.Instructions)
 	}
 	cfg["approval_policy"] = nativeApprovalPolicy(a)
+	cfg["approvals_reviewer"] = nativeApprovalReviewer(a)
 	cfg["sandbox_workspace_write"] = map[string]any{"network_access": a.NetworkAccess}
 	cfg["sandbox_mode"] = "workspace-write"
 	if a.Sandbox != "" {
@@ -252,6 +259,9 @@ func copySeed(src, dst string) error {
 	})
 }
 func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, error) {
+	if _, err := nativeConfig(c.Snapshot); err != nil {
+		return "", "", err
+	}
 	workspace, home := x.paths(c.ID)
 	finalRoot := filepath.Dir(workspace)
 	if c.WorkspacePath != "" {
@@ -266,6 +276,19 @@ func (x *Codex) prepare(ctx context.Context, c Conversation) (string, string, er
 	}
 	marker := filepath.Join(home, "prepared")
 	if _, e := os.Stat(marker); e == nil {
+		if nativeApprovalReviewer(c.Snapshot) == "auto_review" {
+			raw, err := os.ReadFile(filepath.Join(home, "config.toml"))
+			if err != nil {
+				return "", "", err
+			}
+			var config map[string]any
+			if err := toml.Unmarshal(raw, &config); err != nil {
+				return "", "", err
+			}
+			if err := validateNativeReviewConfig(c.Snapshot, config); err != nil {
+				return "", "", err
+			}
+		}
 		return workspace, home, nil
 	}
 	if _, e := os.Stat(finalRoot); e == nil {

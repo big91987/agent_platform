@@ -151,7 +151,7 @@ func TestIndependentNodeWaitResumeAndPermissionReset(t *testing.T) {
 		t.Fatal(err)
 	}
 	scheduler := NewScheduler(s, nil, 1)
-	if err = scheduler.SetConversationPermissions(conv.ID, false, false); err != nil {
+	if err = scheduler.SetConversationPermissions(conv.ID, false, false, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err = scheduler.ApplyAgentPermissions(conv.ID); err != nil {

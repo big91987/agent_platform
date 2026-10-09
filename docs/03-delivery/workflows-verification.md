@@ -2021,3 +2021,16 @@ AGENTS标准和安装说明已同步；已有软件交付/product-e2e模板配�
 排查验证：TestNativePermissionDecisions/TestNetworkPolicyKeepsWorkspaceSandbox实际exit0/0.640s，确认现有逐请求策略，而非自动浏览器授权修复。未批准当前申请、改冻结权限、改HOME、绕过沙箱或执行任何产品登录/provider请求。
 
 优先整改归属【Harness修复】：复用已有浏览器工具及锁定运行时，优先验证任务独立的daemon/cache和标准安装准备；若原生沙箱仍不能启动/连接浏览器，则补既有受信browser工具对动态独立服务的支持，由明确任务范围授权承载连续网页操作，不能用全宿主无沙箱或自动accept任意shell替代。现有browser MCP只app/静态原型不足以承担本Run，缺口保持Open。验收必须经真实原生入口连续打开/导航/登录/浏览器操作无需重复越权申请，同时跨任务隔离、停止清理与超范围拒绝成立；异常提权才保留审批。权限与工具新实现须进入唯一维护源和标准安装升级，并让Pipeline原生Agent复验；当前仅诊断及整改方向，未修改Runner执行行为。
+
+
+### 2026-10-09 原生自动审核：频繁浏览器审批修复
+
+- 用户要求修复 Issue33 产品测试中每条浏览器命令都需要管理员审批。根因是平台线程启动/恢复与 turn 启动硬编码 `approvalsReviewer=user`；`allow_elevation` 只允许申请，一次 accept 不授予后续命令。
+- 唯一维护源增加 Agent `approvals_reviewer=user|auto_review`，独立 Agent/节点共用表单、保存校验、执行协议及标准安装器 `--agent-approvals-reviewer`。旧配置默认 user；省略升级参数保留原值。工作区沙箱、联网与允许申请提权仍分别生效；不全盘放行、不改变原生审核策略。
+- 管理员正式会话权限 API 可在轮次之间显式选择自动审核，原线程、模型、指令、工具与工作目录保持。运行中返回409，普通用户403；Apply Agent 当前权限可以撤销。只读自动审核禁止提权，旧 prepared 原生目录存在自定义审核策略时明确拒绝恢复并保留现场。
+- 真实隔离 Harness 回归：Codex/gpt-6.1-sol 原生 Agent 操作 HTML fixture，Chromium 打开/导航/虚拟登录三项均产生实际截图/结果，4次实际HTTP访问；原生三次 `item/autoApprovalReview` 均 approved，平台人工审批回调0，250.96秒通过。私有 evidence 在临时目录 `platform-reviewer-browser-3124073872`；不是 Model Relay 产品验收，不使用真实凭据/provider。
+- 完整 `scripts/verify.sh` exit0，Go race53.224秒、安装器78项、前端/浏览器与其余标准门禁通过；独立复审发现并关闭只读边界、旧 prepared 策略两项问题，无剩余Critical/Important。全量日志 `/private/tmp/agent-platform-auto-review-source-verify.log`；首次 native fixture 因未按正式prepare初始化失败已保留，纠正后实际回归通过，不改写为原故障。
+- 运行环境应用与当前 E2E 接续尚待安全升级回执；不把源码及隔离回归绿当8793已生效或产品全旅程通过。当前实际任务保持唯一Run，不创建替代测试任务。
+
+- 补充实际兼容验证：原生自动审核会连同 MCP `prompt` 一起审核。第一次真实确认工具回归64.91秒失败（工具写入2次、人工回调0），未掩盖历史。最小修复为禁止 auto_review 与显式每次确认工具混用，含注册配置、冻结 NativeConfig 和旧 prepared 目录；第二次真实回归28.51秒通过，冲突在执行前拒绝，工具副作用计数保持1。证据为 `/private/tmp/agent-platform-auto-review-mcp-confirm.log` 和 `-r2.log`。
+- Apply 权限兼容回归先红后绿：共享 Agent 改自动审核时，旧会话若仍有原生 prompt 工具，API 在保存前拒绝，Snapshot 保持不变。独立复审关闭该 Important，无剩余 Critical/Important。完整第二轮 scripts/verify.sh exit0（Go race54.337秒、安装器78项）；最终 Apply 修复后 Go vet/race/build再次 exit0，race54.623秒，定向权限回归1.059秒。运行环境应用仍待正式回执。

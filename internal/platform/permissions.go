@@ -7,7 +7,61 @@ import (
 	"net/http"
 )
 
+func nativeApprovalReviewer(a Agent) string {
+	if a.ApprovalsReviewer == "" {
+		return "user"
+	}
+	return a.ApprovalsReviewer
+}
+
+func validateApprovalReviewer(a Agent) error {
+	if reviewer := nativeApprovalReviewer(a); reviewer != "user" && reviewer != "auto_review" {
+		return errors.New("approvals_reviewer must be user or auto_review")
+	}
+	if nativeApprovalReviewer(a) != "auto_review" {
+		return nil
+	}
+	for _, b := range a.ToolServers {
+		for _, name := range b.Tools {
+			if b.Approvals[name] == "confirm" {
+				return errors.New("automatic review conflicts with a tool requiring manual confirmation; select user review or explicitly change that tool's approval setting")
+			}
+		}
+	}
+	if needsToolConfirmation(a) {
+		return errors.New("automatic review conflicts with a tool requiring manual confirmation; select user review or explicitly change that tool's approval setting")
+	}
+	return nil
+}
+
+func validateNativeReviewConfig(a Agent, config map[string]any) error {
+	if nativeApprovalReviewer(a) != "auto_review" {
+		return nil
+	}
+	if _, ok := config["auto_review"]; ok {
+		return errors.New("saved native auto_review policy conflicts with managed automatic review; inspect the existing configuration before resuming")
+	}
+	servers, _ := config["mcp_servers"].(map[string]any)
+	for _, value := range servers {
+		server, _ := value.(map[string]any)
+		tools, _ := server["tools"].(map[string]any)
+		for _, value := range tools {
+			tool, _ := value.(map[string]any)
+			if tool["approval_mode"] == "prompt" {
+				return errors.New("native manual tool confirmation conflicts with automatic review; inspect the existing configuration before resuming")
+			}
+		}
+	}
+	return nil
+}
+
 func nativeApprovalPolicy(a Agent) any {
+	// Automatic native review happens before platform permission callbacks. A
+	// read-only workspace must not regain writes through that path. Networking
+	// for such turns must be pre-authorized through NetworkAccess.
+	if a.Sandbox == "read-only" && nativeApprovalReviewer(a) == "auto_review" {
+		a.AllowElevation = false
+	}
 	if !a.AllowElevation && !needsToolConfirmation(a) {
 		return "never"
 	}
@@ -15,6 +69,11 @@ func nativeApprovalPolicy(a Agent) any {
 		"sandbox_approval": a.AllowElevation, "request_permissions": a.AllowElevation,
 		"rules": false, "skill_approval": false, "mcp_elicitations": needsToolConfirmation(a),
 	}}
+}
+func nativeConversationApprovalPolicy(c Conversation) any {
+	a := c.Snapshot
+	a.Sandbox = nativeSandboxMode(c)
+	return nativeApprovalPolicy(a)
 }
 func nativeSandboxMode(c Conversation) string {
 	if c.ReadOnly || c.Snapshot.Sandbox == "read-only" {
@@ -88,10 +147,14 @@ func (s *Scheduler) ApplyAgentPermissions(id string) error {
 	}
 	c.Snapshot.NetworkAccess = a.NetworkAccess
 	c.Snapshot.AllowElevation = a.AllowElevation
+	c.Snapshot.ApprovalsReviewer = a.ApprovalsReviewer
+	if _, err := nativeConfig(c.Snapshot); err != nil {
+		return err
+	}
 	return s.saveConversationPermissions(c)
 }
 
-func (s *Scheduler) SetConversationPermissions(id string, network, elevation bool) error {
+func (s *Scheduler) SetConversationPermissions(id string, network, elevation bool, reviewer *string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, active := s.active[id]; active {
@@ -103,6 +166,15 @@ func (s *Scheduler) SetConversationPermissions(id string, network, elevation boo
 	}
 	c.Snapshot.NetworkAccess = network
 	c.Snapshot.AllowElevation = elevation
+	if reviewer != nil {
+		if *reviewer != "user" && *reviewer != "auto_review" {
+			return errors.New("approvals_reviewer must be user or auto_review")
+		}
+		c.Snapshot.ApprovalsReviewer = *reviewer
+	}
+	if _, err := nativeConfig(c.Snapshot); err != nil {
+		return err
+	}
 	return s.saveConversationPermissions(c)
 }
 
@@ -142,8 +214,9 @@ func (h *Server) conversationPermissions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	var input struct {
-		Network   *bool `json:"network_access"`
-		Elevation *bool `json:"allow_elevation"`
+		Network   *bool   `json:"network_access"`
+		Elevation *bool   `json:"allow_elevation"`
+		Reviewer  *string `json:"approvals_reviewer"`
 	}
 	if err := decode(w, r, &input); err != nil {
 		fail(w, err)
@@ -153,7 +226,7 @@ func (h *Server) conversationPermissions(w http.ResponseWriter, r *http.Request,
 		fail(w, errors.New("network_access and allow_elevation are required"))
 		return
 	}
-	if err := h.scheduler.SetConversationPermissions(c.ID, *input.Network, *input.Elevation); err != nil {
+	if err := h.scheduler.SetConversationPermissions(c.ID, *input.Network, *input.Elevation, input.Reviewer); err != nil {
 		fail(w, err)
 		return
 	}

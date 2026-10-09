@@ -26,6 +26,7 @@ AGENT_EXECUTION_FIELDS = frozenset(
         "sandbox",
         "network_access",
         "allow_elevation",
+        "approvals_reviewer",
         "native_config",
         "trust_hooks",
         "inherit_env",
@@ -388,7 +389,13 @@ def main():
         "--allow-agent-elevation",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="Allow native permission requests through administrator approval; not automatic approval",
+        help="Allow native permission requests for the selected reviewer; does not grant blanket access",
+    )
+    parser.add_argument(
+        "--agent-approvals-reviewer",
+        choices=["user", "auto_review"],
+        default=None,
+        help="Native permission reviewer; explicit auto_review uses Codex review, not blanket approval; preserve on upgrade",
     )
     browser_skill = parser.add_mutually_exclusive_group()
     browser_skill.add_argument(
@@ -643,6 +650,13 @@ def main():
             "allow_elevation": args.allow_agent_elevation
             if args.allow_agent_elevation is not None
             else prior.get("allow_elevation", False),
+            **(
+                {"approvals_reviewer": args.agent_approvals_reviewer}
+                if args.agent_approvals_reviewer is not None
+                else {"approvals_reviewer": prior["approvals_reviewer"]}
+                if "approvals_reviewer" in prior
+                else {}
+            ),
             "trust_hooks": False,
             "native_config": "",
             "seed_dir": "",

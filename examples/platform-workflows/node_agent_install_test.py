@@ -215,6 +215,20 @@ class NodeAgentInstallTest(unittest.TestCase):
                 self.assertFalse(node["agent"]["network_access"])
                 self.assertFalse(node["agent"]["allow_elevation"])
 
+    def test_automatic_reviewer_requires_selection_and_survives_upgrade(self):
+        self.run_install("--agent-approvals-reviewer", "auto_review")
+        self.api.writes.clear()
+        self.run_install("--upgrade")
+        self.assertEqual(self.api.writes, [])
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertEqual(node["agent"]["approvals_reviewer"], "auto_review")
+                self.assertFalse(node["agent"]["allow_elevation"])
+        self.run_install("--upgrade", "--agent-approvals-reviewer", "user")
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertEqual(node["agent"]["approvals_reviewer"], "user")
+
     def test_product_e2e_keeps_product_failure_for_review_without_publish(self):
         self.run_install("--template", "product-e2e")
         graph = self.api.objects["workflows"][0]

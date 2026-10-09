@@ -259,7 +259,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 					if e = toml.Unmarshal(raw, &config); e != nil {
 						return e
 					}
-					options := map[string]any{"cwd": workspace, "approvalPolicy": nativeApprovalPolicy(c.Snapshot), "sandbox": nativeSandboxMode(c), "approvalsReviewer": "user"}
+					options := map[string]any{"cwd": workspace, "approvalPolicy": nativeConversationApprovalPolicy(c), "sandbox": nativeSandboxMode(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot)}
 					guidance, _ := config["developer_instructions"].(string)
 					if c.ReadOnly {
 						options["sandbox"] = "read-only"
@@ -293,7 +293,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 					if err = emit(map[string]any{"type": "thread.started", "thread_id": thread}); err != nil {
 						return err
 					}
-					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeApprovalPolicy(c.Snapshot), "approvalsReviewer": "user", "sandboxPolicy": turnSandbox(c), "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
+					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeConversationApprovalPolicy(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot), "sandboxPolicy": turnSandbox(c), "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
 						return err
 					}
 				}

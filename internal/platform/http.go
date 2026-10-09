@@ -361,7 +361,7 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	respond(w, 200, map[string]any{"workflow_run_id": workflowRunID, "workflow_input_open": workflowInputOpen, "conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]bool{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation}})
+	respond(w, 200, map[string]any{"workflow_run_id": workflowRunID, "workflow_input_open": workflowInputOpen, "conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]any{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation, "approvals_reviewer": nativeApprovalReviewer(v.Snapshot)}})
 }
 func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, ok := h.authorize(w, r, c)

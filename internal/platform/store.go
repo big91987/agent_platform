@@ -112,6 +112,9 @@ func (s *Store) Close() error {
 	return e
 }
 func (s *Store) SaveAgent(a Agent) (Agent, error) {
+	if err := validateApprovalReviewer(a); err != nil {
+		return a, err
+	}
 	if len(a.ResolvedTools) > 0 {
 		return a, errors.New("resolved_tools is managed by the platform")
 	}

@@ -95,7 +95,7 @@ Connector 的 `token_env` 是 GitHub 凭据名称：注册表中该名称存在�
 
 使用测试仓验证平台和本模板时，由测试 Pipeline Agent 定义、执行和验收产品旅程，协调者以 Harness Builder 角色建设并核验工具、权限、交接及回执，用真实产品任务检验模板的可靠性与效果。这是平台测试策略，不限制协调者在其他任务中的职责。使用 `--template product-e2e` 配合独立 `--prefix`、工作区和 manifest 安装，不升级正在研发的流程。配置 `--test-command-json` 为该项目的固定 Python/浏览器入口；执行节点负责创建测试入口和准备独立受测实例，不能要求协调者代写产品用例。
 
-需要真实网页与外部供应商时，安装显式指定 `--agent-network-access --allow-agent-elevation`，并用 `--browser-skill /path/to/playwright` 挂载现有真实浏览器 Skill。浏览器 Skill 挂载在省略参数升级时同样保留，显式 `--clear-browser-skill` 才删除。默认新安装不授予这两项权限；省略参数升级时保留原授权，可用对应 `--no-...` 参数显式撤销。联网允许原生 Agent 网络操作；elevation 允许通过平台管理员原生审批申请所需执行权限，不是自动接受所有请求。Python/Chromium/系统浏览器运行仍需实际探针和合法审批回执，不能以两个配置值判运行成功。受信固定 Connector 的宿主执行与 Agent 亲自操作分别记录。
+需要真实网页与外部供应商时，安装显式指定 `--agent-network-access --allow-agent-elevation`，并用 `--browser-skill /path/to/playwright` 挂载现有真实浏览器 Skill。浏览器 Skill 挂载在省略参数升级时同样保留，显式 `--clear-browser-skill` 才删除。默认新安装不授予这两项权限；省略参数升级时保留原授权，可用对应 `--no-...` 参数显式撤销。联网允许原生 Agent 网络操作；elevation 允许申请所需执行权限，不是自动接受所有请求。为已授权的自动化任务显式增加 `--agent-approvals-reviewer auto_review`，由 Codex 原生审核权限申请；默认 `user` 保持管理员逐次审批。省略参数升级时保留原审批方式，显式 `--agent-approvals-reviewer user` 可恢复人工审批。自动审核不改变工作区沙箱，不能与外部工具的“每次确认”混用；冲突须选择人工模式或明确修改工具设置，原生拒绝或失败须保留真实记录并在 Issue 反馈，不循环绕行。浏览器缓存尽量使用任务目录；Chromium 仍可能需要原生审核。Python/Chromium/系统浏览器运行仍需实际探针和合法审批回执，不能以两个配置值判运行成功。受信固定 Connector 的宿主执行与 Agent 亲自操作分别记录。
 
 私有供应商配置放本次工作区的忽略目录或用户指定私有文件，只把文件引用交给 Agent。秘密不放 Issue、PR、命令行、普通环境说明、日志、截图或 trace/HAR；准备与独立复核分别检查脱敏。真实调用必须有用户授权和有界额度，不默默换模型或退回受控上游。工作流本身不内置某家供应商或某个产品的旅程。
 

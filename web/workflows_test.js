@@ -116,14 +116,14 @@ test('save submits the visible independent execution settings and migrates unope
  const {ctx,el}=editorPage();
  vm.runInContext("state.agents=[{id:'old',name:'Shared',executor:'codex',instructions:'Old role',env:{MODE:'source'},authorized_users:['private'],resolved_tools:[{}]}];c.kind='agent';c.agent_id='old';c.prompt='旧任务';renderWorkflowInspector(editor)",ctx);
  for(const [id,value]of Object.entries({'#wf-agent-model':'model-local','#wf-agent-instructions':'节点职责','#wf-agent-skills':'/skills/a\n/skills/b','#wf-agent-native':'model_reasoning_effort = "high"','#wf-agent-env':'{"MODE":"node","REMOVE":null}','#wf-agent-seed':'/template','#wf-node-prompt':'当前工作 {{handoff}}'}))el(id).value=value;
- el('#wf-agent-network').checked=true;el('#wf-agent-elevation').checked=true;el('#wf-agent-trust').checked=true;el('#wf-agent-inherit').checked=false;
+ el('#wf-agent-network').checked=true;el('#wf-agent-elevation').checked=true;el('#wf-agent-reviewer').value='auto_review';el('#wf-agent-trust').checked=true;el('#wf-agent-inherit').checked=false;
  ctx.requests=[];vm.runInContext("history={replaceState(){}};api=async(path,method,body)=>{requests.push(JSON.parse(JSON.stringify({path,method,body})));return {...body,id:'saved',revision:1}}",ctx);
  await vm.runInContext('saveWorkflow(editor)',ctx);
  assert.equal(ctx.requests.length,1,el('#toast').textContent);
  const nodes=JSON.parse(JSON.stringify(ctx.requests[0].body.nodes));
  assert.equal(nodes[0].agent_id,undefined);assert.equal(nodes[0].agent.instructions,'节点职责');assert.equal(nodes[0].agent.model,'model-local');
  assert.deepEqual(nodes[0].agent.skills,['/skills/a','/skills/b']);assert.deepEqual(nodes[0].agent.env,{MODE:'node',REMOVE:null});
- assert.equal(nodes[0].agent.network_access,true);assert.equal(nodes[0].agent.allow_elevation,true);assert.equal(nodes[0].agent.trust_hooks,true);assert.equal(nodes[0].agent.inherit_env,false);assert.equal(nodes[0].agent.seed_dir,undefined);assert.equal(nodes[0].agent.native_config,'model_reasoning_effort = "high"');
+ assert.equal(nodes[0].agent.network_access,true);assert.equal(nodes[0].agent.allow_elevation,true);assert.equal(nodes[0].agent.approvals_reviewer,'auto_review');assert.equal(nodes[0].agent.trust_hooks,true);assert.equal(nodes[0].agent.inherit_env,false);assert.equal(nodes[0].agent.seed_dir,undefined);assert.equal(nodes[0].agent.native_config,'model_reasoning_effort = "high"');
  assert.equal(nodes[2].agent_id,undefined);assert.equal(nodes[2].agent.instructions,'Old role\n\n旧任务');assert.equal(nodes[2].agent.authorized_users,undefined);assert.equal(nodes[2].agent.resolved_tools,undefined);
  vm.runInContext("state.agents[0].env.MODE='changed'",ctx);assert.equal(vm.runInContext('editor.graph.value.nodes[2].agent.env.MODE',ctx),'source');
 });

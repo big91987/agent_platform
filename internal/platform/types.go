@@ -13,24 +13,25 @@ var ErrForbidden = errors.New("access denied")
 var ErrConflict = errors.New("request conflicts with existing state")
 
 type Agent struct {
-	NetworkAccess   bool                          `json:"network_access"`
-	AllowElevation  bool                          `json:"allow_elevation"`
-	ToolServers     []ToolBinding                 `json:"tool_servers,omitempty"`
-	ResolvedTools   map[string]ResolvedToolServer `json:"resolved_tools,omitempty"`
-	ID              string                        `json:"id"`
-	AuthorizedUsers []string                      `json:"authorized_users"`
-	Name            string                        `json:"name"`
-	Executor        string                        `json:"executor"`
-	Model           string                        `json:"model"`
-	Instructions    string                        `json:"instructions"`
-	SeedDir         string                        `json:"seed_dir"`
-	Skills          []string                      `json:"skills"`
-	NativeConfig    string                        `json:"native_config"`
-	InheritEnv      bool                          `json:"inherit_env"`
-	Env             map[string]*string            `json:"env"`
-	Sandbox         string                        `json:"sandbox"`
-	TrustHooks      bool                          `json:"trust_hooks"`
-	Enabled         bool                          `json:"enabled"`
+	NetworkAccess     bool                          `json:"network_access"`
+	AllowElevation    bool                          `json:"allow_elevation"`
+	ApprovalsReviewer string                        `json:"approvals_reviewer,omitempty"`
+	ToolServers       []ToolBinding                 `json:"tool_servers,omitempty"`
+	ResolvedTools     map[string]ResolvedToolServer `json:"resolved_tools,omitempty"`
+	ID                string                        `json:"id"`
+	AuthorizedUsers   []string                      `json:"authorized_users"`
+	Name              string                        `json:"name"`
+	Executor          string                        `json:"executor"`
+	Model             string                        `json:"model"`
+	Instructions      string                        `json:"instructions"`
+	SeedDir           string                        `json:"seed_dir"`
+	Skills            []string                      `json:"skills"`
+	NativeConfig      string                        `json:"native_config"`
+	InheritEnv        bool                          `json:"inherit_env"`
+	Env               map[string]*string            `json:"env"`
+	Sandbox           string                        `json:"sandbox"`
+	TrustHooks        bool                          `json:"trust_hooks"`
+	Enabled           bool                          `json:"enabled"`
 }
 type Caller struct {
 	Username string
