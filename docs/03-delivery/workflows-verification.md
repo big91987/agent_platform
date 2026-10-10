@@ -2,7 +2,9 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-10 08:58）：Issue37/Run29efc188f089daf1d3890bef1b56496d当前独立e2e_review28/52280fed0ecd77e370bde783367339c6 running/审批0；原生40956/40978承接tests27冷却采证首红并拟同版独立实跑，尚无最终结论。QA22/25已通过标准权限亲自真实Go/Chromium两宽双身份操作，聚焦TPM拒绝纠正/RPM-only/轮换/unknown核对/取消子集有动态证据，不再沿用“QA完全未动态实操”作为现状；全量自然窗与同步竞争仍未独立全验。E22受控cap协议、E25重复累计核对过强/取消等待/首红清理设施已正式返工，不改产品。tests24exit2/226bytes/301.059秒、业务清理未闭合保留；tests27exit2/223bytes/87.560秒，36受控dispatch、runner完成11链/8窗口见证/清理Pass，P09冷却证据TypeError阻断，HTTP502和失败状态匹配，不据此造产品缺陷。三个固定attempt均未整体Go、capacity/window认证仍false。max30当前28尚未触顶，不提前增限；HEAD0c197c8/tracked diff空、5545health200/schema3同版、供应商0/旧预算not_attested/#33 No-Go保持，无新PR部署。
+当前状态（2026-10-10 09:56）：Issue37/Run29efc188f089daf1d3890bef1b56496d在tests30 completed exit2后30/30正式触顶failed，原budget失败/末次回执保持。QA28归因错采证接口，29已修同ID正式路由；tests30真实39受控dispatch/103.331秒/220bytes EOF，在P14新operation重复累计核对断言失败，费用99/21保持、旧账本排序/守恒是否误判待独立核，产品缺陷尚0。末次网页/进程/监听/runtime清理产物Pass。Owner已核副作用、历次设施返工与剩余结论路径，正式return30→e2e_review31/c640f6efe0ebdbed2e0ae384626705e3 running，总预算仅30→33；原图/input/workspace及旧30steps逐值不变，41645实际承接不新增生成。此三步只作最新独立归因→Markdown/HTML/白名单报告→done，不再设施返工或全套求绿/连续加预算。整体仍Blocked/No-Go，供应商0/旧预算not_attested/#33 No-Go、HEAD0c197c8/tracked diff空、5545schema3同版保持。模板触顶后关联Issue无自动明确停顿通知已记录为通用缺口，恢复启动机器人6092408153已核；后续复用既有Hook正式事实投影最小修，不能用每次Builder评论冒称自动能力。
+
+历史状态（2026-10-10 08:58）：Issue37/Run29efc188f089daf1d3890bef1b56496d当前独立e2e_review28/52280fed0ecd77e370bde783367339c6 running/审批0；原生40956/40978承接tests27冷却采证首红并拟同版独立实跑，尚无最终结论。QA22/25已通过标准权限亲自真实Go/Chromium两宽双身份操作，聚焦TPM拒绝纠正/RPM-only/轮换/unknown核对/取消子集有动态证据，不再沿用“QA完全未动态实操”作为现状；全量自然窗与同步竞争仍未独立全验。E22受控cap协议、E25重复累计核对过强/取消等待/首红清理设施已正式返工，不改产品。tests24exit2/226bytes/301.059秒、业务清理未闭合保留；tests27exit2/223bytes/87.560秒，36受控dispatch、runner完成11链/8窗口见证/清理Pass，P09冷却证据TypeError阻断，HTTP502和失败状态匹配，不据此造产品缺陷。三个固定attempt均未整体Go、capacity/window认证仍false。max30当前28尚未触顶，不提前增限；HEAD0c197c8/tracked diff空、5545health200/schema3同版、供应商0/旧预算not_attested/#33 No-Go保持，无新PR部署。
 
 历史状态（2026-10-10 07:56）：Issue37/Run29efc188f089daf1d3890bef1b56496d已正式完成16返评审→17返规划→18 r4-risk3→19独立READY→20完整准备→21固定tests首轮exit2/223bytes至EOF→独立e2e_review22/780a85b8ad99a3bed7263c619603607f running，审批0。冷却方案仅计划闭合：保留两500及原失败计量，31秒保护/32秒门并重排P14，293秒暖缓存方案余量7秒仍风险，非实跑认证。真实attempt235000Z-fda465fa产物标Fail/Preparation Blocked，在390 P05 AssertionError中断；P01/P04为runner自报完成链，3受控invocation与2完整receipts，不能外推全部维度通过。容量/自然窗未证，完整旅程No-Go；清理产物记业务/进程/监听/runtime Pass。QA原生39951/39972实际承接区分产品与设施采证缺口、拟全新实例实操，尚无最终独立结论或确认产品缺陷，Builder不代验或重跑。HEAD0c197c8/tracked diff空、5545health200/schema3同版；供应商请求0/授权0、旧预算not_attested与#33 No-Go保持。原Run图/input/workspace/max30及前15步逐值不变，无新PR/部署/权限增限。
 
@@ -2282,3 +2284,18 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - **预算与连续性**：current28/max30，尚未触顶；本轮未提前扩大预算或建重复Run。若触顶，先核已经发生dispatch/清理、剩余路径、具体返工根因及报告交付，再用正式Owner有界接续，不循环加限。Run id/workflow/definition/input/workspace/max30、前21steps与上轮逐值一致。
 - **可见反馈**：机器人6091720934明确Blocked/产品缺陷0/设施3并正式返工，6091721257启动execute26，6091843640回写准备与交tests，6091857736启动QA28；未Builder重复评论。模板现有失败→独立动态复核→设施返工→固定新attempt路径真实执行；模板工程效果仍受重复设施错误/全链未过限制，不把接力次数当提效证明。
 - 实时5545health200/schema3/version0c197c8b3d98346107e65dbf0c41ef5d6b73d437保持，产品HEAD同版/tracked diff空，没有新产品PR/合并/部署。供应商授权请求0、旧24/64/90/H-X not_attested、#33 Incomplete-No-Go/R06/R07保持；受控fixtureTokens/四价不冒称真实Provider扣费。原“动态QA工具只app/静态”的历史限制保留，但本轮标准原生CLI已证实际独立Go/浏览器子集能力，不继续用旧Blocked快照描述这些已做操作。
+
+
+## 触顶副作用审查与仅结论交付的有界接续（2026-10-10 09:56）
+
+证据ignored `.data/fresh-8793/check-20261010-hourly-0151/`：run-before、output30完整EOF、budget-exhaustion-review及87文件库存、正式return/原30steps一致性、新原生31、Issue回执。Builder未测试或修改产品、未重跑旧命令。
+
+1. 原独立QA28正式Blocked、产品缺陷0：E28-H01是workspace详情没有selection_decisions，正确请求详情路由已真实浏览器只读核；E28-H02新固定探针390 P05 HTTP200 SSE requestfailed缺安全原因/最终计量未决，不能弱化finished断言。QA补充两宽次数限额拒绝纠正、轮换旧401新SSE成功，原三attempt及标准审批/清理和六端口拒连证据保持，不替完整自然窗/同步竞争/容量。
+2. execute29仅修测试资产同IDrequests路径，增加白名单网络码及有界同ID首红诊断；原P05未决不关闭。Python36/Node10设施回归、新禁生成prepare011719Z-4e03477e/17.375秒exit0/清理Pass，不改产品/业务断言/现价/时钟/原READY；正式交tests30。
+3. tests30唯一attempt012227Z-10914253，正式exit2/220bytes/eoftrue/truncatedfalse，103.330823秒，39受控dispatch/0供应商；runner11链完成、P14 last_verified7。same-ID新operation累计核对revision2→3、entries4→5、cost99/fee21前后相同，原safe numeric assertion比较前四行，旧ordinal3记录与新增ordinal2零差额位置不同。列为测试排序前缀假设与真实旧账本/数值偏差竞争假设，尚未独立裁决，不先判设施或产品Bug。旧HTTP/错误/SSE未决及首失败均保留。末次cleanup业务Pass/自有process stopped/listeners closed/runtime removed，两fixture去arm/release；87真实文件SHA/bytes库存独立保存。
+4. Run因maximum node executions reached在30/30 failed，不是仍running或服务挂掉。平台有限停止行为正确，不能自动新Run/回放或改数据库/冻结图。Owner读取上述真实结果、已经发生的调用与清理、历次返工，以及仅剩最新独立归因/报告/完成路径后，使用正式return API(seq30,targete2e_review,max_steps33,summary记录原因)获202。仅追加3步做结论交付，不为反复求绿增加空间，不新增生成预算。最新QA可保留Blocked/No-Go并建议后续最小整改。
+5. 正式seq31会话c640f6efe0ebdbed2e0ae384626705e3 running，41644 User Input/41645 Agent实际承接“不再生成请求”，approval0。旧30steps、id/workflow/definition/input/workspace逐值保持，独立runtime max_steps33与冻结图分列，不篡改原最大30历史。接受返回≠QA完成或产品放行；下一检查核最终handoff→report32→done33及报告产物，不重复return/增限。
+6. Issue机器人6092028744/6092029122核独立Blocked返设施，6092129120核29准备及交tests，6092408153核31独立复核已启动；无Builder重复评论。原#33 No-Go、0供应商/旧24/64/90-HX not_attested、长周期/未dispatch/R07发布限制保持，没有确认产品修复包。
+7. 发现通用通知缺口：1:24:10Z预算停止后至本轮恢复，Issue仅最后准备/交tests，无明确预算耗尽反馈；既有workflow_hooks.go只支持node.started/agent.reply.completed/handoff.after/run.completed/审批两类，触顶后没有下一Agent回合可原生回复。用户影响为只看Issue无法知道QA/报告被预算阻断；非Github失败原因猜测。先保留真实hook/Issue/API证据，最小后续修复候选为复用既有持久通知渠道投影受信“运行因执行上限停止”的事实并保留去重/恢复语义，不增加新流水线/对象或公开原生错误。此轮未实现/升级，不能把恢复启动评论称为停顿自动通知已交付。
+
+实时health200/schema3/version0c197c8、产品tracked diff空；本轮仅3既有文档维护、源只开发分支提交推送。完整产品与模板全链验收尚未达成，报告和看板待Pipeline产出/已授权私有GitHub入口发布后核远端，不自行制作产品结论、公开证据或冒称自动上传。
