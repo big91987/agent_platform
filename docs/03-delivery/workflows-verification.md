@@ -2,7 +2,9 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-10 07:56）：Issue37/Run29efc188f089daf1d3890bef1b56496d已正式完成16返评审→17返规划→18 r4-risk3→19独立READY→20完整准备→21固定tests首轮exit2/223bytes至EOF→独立e2e_review22/780a85b8ad99a3bed7263c619603607f running，审批0。冷却方案仅计划闭合：保留两500及原失败计量，31秒保护/32秒门并重排P14，293秒暖缓存方案余量7秒仍风险，非实跑认证。真实attempt235000Z-fda465fa产物标Fail/Preparation Blocked，在390 P05 AssertionError中断；P01/P04为runner自报完成链，3受控invocation与2完整receipts，不能外推全部维度通过。容量/自然窗未证，完整旅程No-Go；清理产物记业务/进程/监听/runtime Pass。QA原生39951/39972实际承接区分产品与设施采证缺口、拟全新实例实操，尚无最终独立结论或确认产品缺陷，Builder不代验或重跑。HEAD0c197c8/tracked diff空、5545health200/schema3同版；供应商请求0/授权0、旧预算not_attested与#33 No-Go保持。原Run图/input/workspace/max30及前15步逐值不变，无新PR/部署/权限增限。
+当前状态（2026-10-10 08:58）：Issue37/Run29efc188f089daf1d3890bef1b56496d当前独立e2e_review28/52280fed0ecd77e370bde783367339c6 running/审批0；原生40956/40978承接tests27冷却采证首红并拟同版独立实跑，尚无最终结论。QA22/25已通过标准权限亲自真实Go/Chromium两宽双身份操作，聚焦TPM拒绝纠正/RPM-only/轮换/unknown核对/取消子集有动态证据，不再沿用“QA完全未动态实操”作为现状；全量自然窗与同步竞争仍未独立全验。E22受控cap协议、E25重复累计核对过强/取消等待/首红清理设施已正式返工，不改产品。tests24exit2/226bytes/301.059秒、业务清理未闭合保留；tests27exit2/223bytes/87.560秒，36受控dispatch、runner完成11链/8窗口见证/清理Pass，P09冷却证据TypeError阻断，HTTP502和失败状态匹配，不据此造产品缺陷。三个固定attempt均未整体Go、capacity/window认证仍false。max30当前28尚未触顶，不提前增限；HEAD0c197c8/tracked diff空、5545health200/schema3同版、供应商0/旧预算not_attested/#33 No-Go保持，无新PR部署。
+
+历史状态（2026-10-10 07:56）：Issue37/Run29efc188f089daf1d3890bef1b56496d已正式完成16返评审→17返规划→18 r4-risk3→19独立READY→20完整准备→21固定tests首轮exit2/223bytes至EOF→独立e2e_review22/780a85b8ad99a3bed7263c619603607f running，审批0。冷却方案仅计划闭合：保留两500及原失败计量，31秒保护/32秒门并重排P14，293秒暖缓存方案余量7秒仍风险，非实跑认证。真实attempt235000Z-fda465fa产物标Fail/Preparation Blocked，在390 P05 AssertionError中断；P01/P04为runner自报完成链，3受控invocation与2完整receipts，不能外推全部维度通过。容量/自然窗未证，完整旅程No-Go；清理产物记业务/进程/监听/runtime Pass。QA原生39951/39972实际承接区分产品与设施采证缺口、拟全新实例实操，尚无最终独立结论或确认产品缺陷，Builder不代验或重跑。HEAD0c197c8/tracked diff空、5545health200/schema3同版；供应商请求0/授权0、旧预算not_attested与#33 No-Go保持。原Run图/input/workspace/max30及前15步逐值不变，无新PR/部署/权限增限。
 
 历史状态（2026-10-10 06:54）：Issue37/Run29efc188f089daf1d3890bef1b56496d已自然推进plan12→独立review13 READY→执行准备14发现上游地址门禁冲突→独立review15 READY→e2e_execute16/bd4c08da275a39d483526da042bd51e6 running，审批0。R03-CAP仅规划层关闭：14链114动作/42dispatch的280秒+20余量估计获评审，实跑容量仍未认证。E14-NET-01独立裁决原评审loopback上游误写，沿正式产品私网精确authority修正，不改产品/注入TestAuthority/扩大外部授权。16原生38376报告P09 HTTP500后30秒冷却与10秒槽冲突，拟正式交回复审，当前尚无handoff或最终准备报告。固定全旅程未开始，Agent双fixture/清理准备复验仅自报进度，不当产品或独立QA通过。HEAD0c197c8/tracked diff空，5545health200/schema3同版，供应商新请求授权0、旧预算not_attested、#33 No-Go保持。模板职责澄清已实际进入执行准备并触发实质前置返评审，不代表tests/QA整链闭合。
 
@@ -2265,3 +2267,18 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 原Run id/workflow/definition/input/workspace/max30及前15steps与上轮逐值一致；HEAD0c197c8b3d98346107e65dbf0c41ef5d6b73d437/tracked diff空，5545实际health200/schema3同版。没有新产品PR/合并/部署或提前加预算；供应商新授权0/请求0、旧24/64/90/H-X not_attested及#33 Incomplete-No-Go不改。Harness完整准备→固定真实失败→同Run独立复核路由已发生，完整产品Go和模板全链验收仍未达到。
 
 最后原生核验：QA22新增40003进度报告Chromium启动受沙箱阻止，已保留首失败并拟申请标准权限继续；正式API仍running/approvals0。尚无最终实操或拒绝回执，不将申请意图当授权通过、永久恢复或必要用户审批。
+
+
+## 独立动态网页复核、设施返工与第三次固定实跑（2026-10-10 08:58）
+
+证据：ignored `.data/fresh-8793/check-20261010-hourly-0055/` 的完整Run、output24/27至EOF、receipt-and-qa-evidence-audit（两attempt67/86文件SHA与bytes）、独立原文报告摘要、QA28原生及Issue/health回执。协调者仅只读复核，不操作业务或代写修复/测试。
+
+- **QA22实际动态证据**：亲自标准审批后的真实Chromium/全新正式Go、两宽两个真实developer身份，完成TPM0/200/206/207拒绝与纠正、0h轮换旧401新Key成功等子集；不是静态原型或Connector自报。独立RPM-only合法无cap被fixture强制cap错误拒绝，造成同ID400→产品代理502；E22-H01/H02为具体测试设施错误，不补TPM遮蔽RPM用例或把502改成产品预期。确认产品缺陷0，正式test_repair→execute23，仅改测试资产。旧独立探针末预期误写及首次沙箱/包装脚本失败保留。
+- **tests24固定回执**：原命令，exit2/226bytes/eoftrue/truncatedfalse，唯一attempt001954Z-e51e0f9b整体301.059376秒，真实28受控invocation/48网页POST。顶层product Not Run、preparation Blocked与内层Fail并存，是原汇聚缺口，不能掩盖已发生生成。runner标P01/P02/P04/P05/P10/P11完成，8自然窗口因果见证。runtime/process/listener清理true，business_cleanup原Not Run，QA判业务清理未完成；不倒写成Pass。
+- **QA25独立归因与实操**：原重复新operation网页累计核对entries2→3、cost/fee差额0且旧前缀及两scope/终态保持，测试误强求结构相等；相同operation幂等仍要严验。取消已真实requestfailed/canceled/释放一次但response.finished无界等待，加上首红上下文误指旧成功ID、汇聚等待导致超时/清理遗漏。独立QA经标准权限真实新Go/Chromium两身份实操RPM-only、TPM拒绝纠正、轮换、unknown核对/重复零差额、SSE取消；聚焦成功attempt8.984秒/6dispatch/9POST及网页runtime清理Pass，前两失败保留。此为独立动态子集，不替全14链、完整自然窗或同步竞争；确认产品缺陷0、Blocked正式返设施。
+- **execute26**：E25-H01/H02/H03最小资产修正，新operation允许有零差额追加但保留计费/Token/旧前缀/价/两scope全守恒；同operation保持严格幂等。取消采真实Request.requestfailed终态，正常成功路径仍完整transport；所有等待同共享deadline、首红同ID持久化、有界并行网页清理。Python36/Node9设施回归、最新禁生成准备16.055秒/整体18.255秒/清理1.240秒Pass、binding26-final2与70白名单文件核验由Pipeline完成，不冒称产品Pass。计划/断言业务语义/预算未变，产品tracked diff空。
+- **tests27正式首红**：exit2/223bytes/eoftrue/truncatedfalse；唯一attempt005241Z-ee4df061整体87.560499秒、36受控dispatch（1280为13、390为23），不是300/1800秒触顶。runner标11链P01/P02/P03/P04/P05/P06/P07/P08/P10/P11/P12完成，8clock见证但capacity及accepted_window全链标false。P09 last_verified2冷却采证TypeError，正确同IDexpected/actual HTTP502、state upstream_failed、fixture500均已保存；不把采证TypeError确认成业务缺陷。P09/P13/P14整链未过。新首红与清理汇聚形成，业务及自有process/listener/runtime/fixture清理产物Pass；新绿不修写旧24缺清理历史。
+- **当前QA28**：会话52280fed0ecd77e370bde783367339c6 running/approvals0，40934/40956实际承接首红、指出失败计量符合，40978拟同版固定入口亲自新attempt实跑；没有最终独立result/handoff。后续要核独立attempt真实事实/原红/同版产物，不能将意图当全验或盲重跑求绿。仅已证产品问题才创建产品修复Issue交development，设施错误由测试Pipeline返工，不造产品缺陷。
+- **预算与连续性**：current28/max30，尚未触顶；本轮未提前扩大预算或建重复Run。若触顶，先核已经发生dispatch/清理、剩余路径、具体返工根因及报告交付，再用正式Owner有界接续，不循环加限。Run id/workflow/definition/input/workspace/max30、前21steps与上轮逐值一致。
+- **可见反馈**：机器人6091720934明确Blocked/产品缺陷0/设施3并正式返工，6091721257启动execute26，6091843640回写准备与交tests，6091857736启动QA28；未Builder重复评论。模板现有失败→独立动态复核→设施返工→固定新attempt路径真实执行；模板工程效果仍受重复设施错误/全链未过限制，不把接力次数当提效证明。
+- 实时5545health200/schema3/version0c197c8b3d98346107e65dbf0c41ef5d6b73d437保持，产品HEAD同版/tracked diff空，没有新产品PR/合并/部署。供应商授权请求0、旧24/64/90/H-X not_attested、#33 Incomplete-No-Go/R06/R07保持；受控fixtureTokens/四价不冒称真实Provider扣费。原“动态QA工具只app/静态”的历史限制保留，但本轮标准原生CLI已证实际独立Go/浏览器子集能力，不继续用旧Blocked快照描述这些已做操作。
