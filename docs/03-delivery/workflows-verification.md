@@ -2,7 +2,13 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-11 07:35）：用户明确“继续改造修复”后，沿Issue37启动新的正式整改阶段Run05ca062f4dfde04e5ac7848fc02d6674，复用测试workflow3155ddd1206d4ebc19da94e5b489091f revision7/max100。此前所有Run completed已实时核验，无在途冲突；新独立checkout通过标准gh clone核同仓/根/HEAD0c197c8/干净，未接管旧脏分支。正式prepare1真实exit0/862bytes EOF/truncated=false，下载逐项核验214材料；issue2实际复用Issue37，没有重复Issue；e2e_plan3/23240d2ea5e849fd6d190c51e27a4bc0 running/审批0，原生47631已承接冻结材料、旅程断言和预算规划。当前尚无新计划独立READY、设施修复或业务实测，不把启动当完成。
+当前状态（2026-10-11 07:52）：整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan3正式handoff→独立e2e_plan_review4/717605bd72d856c83d594911ba24c291 running/审批0。原生47785最终规划回复、正式step.result与7件86258bytes产物逐SHA库存已核；r1规划覆盖原14风险链、两宽自然窗口、S1–8、非零双身份五维竞争/隔离及价格/重启/取消/清理，推导execution63/96、QA48/48及POST122/100、业务1420秒。以上仅文档规划，capacity未认证、业务生成0/产品Not Run，没有设施修复或新QA结论。评审47955进度拟判NOT READY，当前无正式result/handoff，不能写成最终裁决。
+
+规划source-audit明确输入选择遗漏旧plan-r1.md、journeys-matrix-r1.md、plan-audit-r16.json，114编号齐全但原动作语义不可核。Builder已补6件原文/摘要伴随文件：前两原文与source-audit逐SHA匹配旧plan-validation，audit-r16匹配旧独立r17校验；不是代写用例或修产品。原字节副本放本Run文档inputs/original-actions-supplement-r1，原prepare214的ZIP/manifest/回执未改；另经已授权私有Release409276807/asset629282860提供可复核输入ZIP，35758bytes/SHAe601cc57f140e7de39bcfcf6b1ee5432b1510a6058313bb9047324ca7107c490，远端bytes/digest匹配。正式User Input request_id model-relay:issue37:remediation-r3:supplement-and-budget:20261011/message47974已唯一受理到当前独立评审；最后GET仍queued，未冒称实际承接或关闭原文缺口，不重发/重启或强迫READY。
+
+同一正式输入裁决96/48/总144按实际受控上游dispatch/attempt（含失败/取消/诊断/重试/未知发送）累计，网页生成POST另须完整记录及独立评审核可有限硬界；未改数额、最多两次各角色attempt、1800/1500或外部0。完整make verify仍为后续产品候选研发交付门禁；本阶段只修测试设施并复测精确已部署产品，保留原固定Python命令及实际安装/build/health证据，不把旧绿当新绿、工程fixture当网页验收，若选择工程门禁则真实单列来源/边界且本Run上游生成全部计额，不静默豁免。新输入不解决QA关联/容量等实质门槛，也不覆盖旧六marker字节缺口或允许读旧私有runtime。旧Run/Blocked/Unknown/#33 No-Go、214冻结材料、0c197c8产品与模板revision7/max100/模型权限均保持；本轮新增的仅原文输入和受支持澄清，没有生成/新PR/部署/临时权限。证据ignored check-20261011-remediation；下一步核47974实际处理及正式评审返工/交接，沿原Run继续，不用输入受理或文件存在冒称整改完成。
+
+历史状态（2026-10-11 07:35）：用户明确“继续改造修复”后，沿Issue37启动新的正式整改阶段Run05ca062f4dfde04e5ac7848fc02d6674，复用测试workflow3155ddd1206d4ebc19da94e5b489091f revision7/max100。此前所有Run completed已实时核验，无在途冲突；新独立checkout通过标准gh clone核同仓/根/HEAD0c197c8/干净，未接管旧脏分支。正式prepare1真实exit0/862bytes EOF/truncated=false，下载逐项核验214材料；issue2实际复用Issue37，没有重复Issue；e2e_plan3/23240d2ea5e849fd6d190c51e27a4bc0 running/审批0，原生47631已承接冻结材料、旅程断言和预算规划。当前尚无新计划独立READY、设施修复或业务实测，不把启动当完成。
 
 本阶段目标是Pipeline修FAC-R20-01安全错误码白名单遗漏、查清UNK-R20-02自然窗口SSE中止因果，保留严格浏览器finished/DONE/EOF、数值/账本多重集/幂等/双scope与价格守卫，完成剩余R-AUTH/价格/重启/最终清理及原14风险链必要回归、独立QA两宽完整自然窗与五维共享竞争/隔离/取消。不是产品新功能或冻结基线改写。确认产品缺陷后，依据同版报告与复现材料经正式研发入口直交development，完整make verify/独立QA/精确PR/授权merge/Actions部署后再测；当前确认缺陷仍0，不把设施/Unknown造产品修复任务。Pipeline负责计划、用例、业务页、诊断、测试与QA，Builder只核Harness工具、交接及证据。
 
