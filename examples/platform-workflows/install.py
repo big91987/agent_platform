@@ -674,7 +674,10 @@ def main():
         node["continuation_limit"] = 3
         node["execution_timeout_seconds"] = 14400
     connectors = {}
-    for role in ("prepare", "issue", "tests", "publish", "pr", "comment"):
+    connector_roles = ["prepare", "issue", "tests", "publish", "pr", "comment"]
+    if args.template == "product-e2e":
+        connector_roles.append("report_publish")
+    for role in connector_roles:
         spec = {
             "name": args.prefix + " · " + role,
             "enabled": True,
@@ -695,10 +698,24 @@ def main():
                 else args.token_env,
             )
         else:
+            command = repository_command(role, args.repository, args.base, test_command)
+            if role == "report_publish":
+                state_root = args.manifest.resolve().parent / "report-publication"
+                if state_root.is_relative_to(root):
+                    raise ValueError(
+                        "Publication state must be outside Agent workspaces"
+                    )
+                command = [
+                    str(HERE / "report_publication.py"),
+                    "--repository",
+                    args.repository,
+                    "--state-root",
+                    str(state_root),
+                ]
             spec.update(
                 kind="command",
                 executable=sys.executable,
-                args=repository_command(role, args.repository, args.base, test_command),
+                args=command,
             )
             if role == "prepare":
                 spec["args"] += [

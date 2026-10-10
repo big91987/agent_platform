@@ -95,11 +95,31 @@
       "exit_mode": "handoff"
     },
     {
+      "id": "report_publish",
+      "name": "上传并核验报告附件",
+      "kind": "connector",
+      "x": 660,
+      "y": 470,
+      "connector_id": "report_publish"
+    },
+    {
+      "id": "report_notify",
+      "name": "在Issue提供报告链接",
+      "kind": "connector",
+      "x": 60,
+      "y": 670,
+      "connector_id": "comment",
+      "connector_input": {
+        "issue_node": "issue",
+        "body_file": "docs/workflow/runs/{{run_id}}/report-publication-receipt.md"
+      }
+    },
+    {
       "id": "done",
       "name": "测试报告完成",
       "kind": "end",
       "x": 660,
-      "y": 470
+      "y": 670
     }
   ],
   "edges": [
@@ -190,9 +210,30 @@
     {
       "source": "e2e_report",
       "route": "next",
-      "target": "done",
+      "target": "report_publish",
       "mode": "handoff",
       "description": "交接"
+    },
+    {
+      "source": "report_publish",
+      "route": "next",
+      "target": "report_notify",
+      "mode": "automatic",
+      "description": "远端附件摘要已核验"
+    },
+    {
+      "source": "report_publish",
+      "route": "failed",
+      "target": "e2e_report",
+      "mode": "automatic",
+      "description": "记录发布阻断，核外部回执后再决定接续"
+    },
+    {
+      "source": "report_notify",
+      "route": "next",
+      "target": "done",
+      "mode": "automatic",
+      "description": "Issue报告链接已确认"
     }
   ],
   "hooks": [
@@ -202,7 +243,7 @@
       "input": {
         "issue_node": "issue"
       },
-      "body": "**{{node_name}} 已启动**\n\n[查看 Agent 会话]({{conversation_url}})"
+      "body": "**{{node_name}} 已启动**\n\n[查看本次运行]({{run_url}})"
     },
     {
       "event": "agent.reply.completed",
