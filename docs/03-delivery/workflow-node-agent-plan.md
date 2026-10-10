@@ -2,7 +2,17 @@
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
 
-当前状态（2026-10-10 20:33）：Issue37/Runccc683faf1fe6876a0be6bd3e7c4cd79已正式完成独立复审15 NOT READY→plan16/c027a514f3743e2c6bd200ae5387d3e9 running/审批0。r15按实际PRD/AC及四marker独立核累计消费，REV15-CAP/PERMIT/SCOPE仍为执行前置阻断，非脚本未实现退规划；新增受控及供应商请求0，产品确认缺陷0沿用QA13而非本轮判定无缺陷。原390前缀24>余额22/已消费r11许可/四处变更未绑定保持。45503/45528/45562仅规划进度，拟风险等价方案、逐宽上界及精确隔离断言，尚无最终修订计划/handoff或新独立READY，不提升产品通过。
+当前状态（2026-10-10 22:09）：Issue37/Runccc683faf1fe6876a0be6bd3e7c4cd79已正式completed24：plan16→独立review17 READY→execute18→固定tests19 exit2→独立QA20 Blocked→report21→固定report_publish22 exit0→机器人report_notify23→done24。正式User Input45590已completed，45847/45878及45924实际parent45590承接与交接；此前queued保护和原失败保持。r17仅批准风险等价新绑定后的有限执行：execution37/21、QA21/21逐宽上界，原预算及一次许可不扩；规划READY不等于产品通过。执行18同版零生成准备和28项设施检查只证明准备。固定tests19唯一attempt132236Z-15d4cf47真实exit2/183.551902秒，47受控dispatch/96POST、220bytes完整EOF/truncated=false/SHAac4244fe54ea671add069ee7ec53cc75b086d50e01feedec35a86943af323d9e，P01–14为runner本段完成记录，R-AUTH安全错误分类守卫首红后后续隔离/价格/重启/最终清理旅程未完整执行，不能外推全量Go。
+
+独立QA20亲自通过标准权限新隔离Go/Chromium执行一次attempt133316Z-bb61ef5c，exit2/82.352147秒、7dispatch/12POST。两宽P05及RPM拒绝纠正恢复有局部证据；1280自然窗口第二A会话SSE同ID HTTP200/net::ERR_ABORTED，受控上游DONE和服务端success、3+4=7 tokens/成本33费用7 microUSD/零预留不替浏览器DONE/EOF，根因Unknown，完整自然窗、五维双身份竞争及取消仍Blocked。新零生成隔离网页scope诊断得到安全404/scope_unavailable且无业务字段，是设施白名单遗漏；原tests19响应body未留存，原错误码仅同版源码和新诊断推断，不补造原字节。QA确认产品缺陷0，正式triage区分FAC-R20-01设施Open与UNK-R20-02未决，不创建产品修复Issue。合法执行attempt业务/14角色退出及自有进程监听runtime清理Pass，首Chromium沙箱红/未创建业务的cleanup Fail单列保留。累计execution76/QA10/Run86、POST144/16，六marker与本次执行/QA一次许可已消费；数字余额不代表新许可，不重开completed Run、重置旧红、自动新增生成或连续重跑。后续生成须明确新范围和必要授权及独立评审，旧#33 No-Go/旧QA28与r7 SSE Unknown/P14历史及供应商budget not_attested保持，真实供应商请求0。
+
+报告已由正式固定publisher22自动发布到私有Release408987058，9附件远端bytes/digest与原描述符及本机文件逐项一致；证据ZIP1857853bytes/SHA24b2b552d89dcff7b6a8d5a1688281540469cdeea22d05f65a161bb42592582b，68成员与白名单完全同集且原文件/ZIP逐项bytes/SHA匹配。report_publish22完整2647bytes/EOF/truncated=false/exit0，机器人big91987-agent-platform-bot[bot]评论6098294485真实提供链接，done通知6098294829。看板1280/390及11链接由Pipeline展示检查，只证明报告可查看，HTML仍下载附件，非在线托管。真实ZIP含risk-browser-operations设施名，维护源efc8448扫描误报修复已在真实外部publisher复验；285cee4报告交付已证本次Agent规划、返工、测试、QA、报告、固定发布、机器人至done实际整链，但产品Blocked、全模板变体、新仓首次安装及外部丢响应/强杀尚未验。原人工发布报告不改为自动历史。
+
+本轮只核Harness接续、完整回执、原层证据和实际远端，未代写产品用例或代QA；原11completed Run逐值不变、workflow revision7/max100及原权限模型保持，无新PR或产品部署，5545实际healthz200/version0c197c8/schema3。协调者只读误请求github评论节点23的command output返回404，已改正式connector_receipt链接并核真实GH评论，原工具错误保留，不判产品/平台故障。证据ignored check-20261010-1403；三现有交付文档保留旧历史，90分钟定时频率不变。
+
+正式交付入口：[完整报告、看板和脱敏证据](https://github.com/big91987/model-relay/releases/tag/workflow-report-ccc683faf1fe6876a0be6bd3e7c4cd79)、[机器人发布回执](https://github.com/big91987/model-relay/issues/37#issuecomment-6098294485)、[已完成Run](http://127.0.0.1:8793/workflow-runs/ccc683faf1fe6876a0be6bd3e7c4cd79)。
+
+历史状态（2026-10-10 20:33）：Issue37/Runccc683faf1fe6876a0be6bd3e7c4cd79已正式完成独立复审15 NOT READY→plan16/c027a514f3743e2c6bd200ae5387d3e9 running/审批0。r15按实际PRD/AC及四marker独立核累计消费，REV15-CAP/PERMIT/SCOPE仍为执行前置阻断，非脚本未实现退规划；新增受控及供应商请求0，产品确认缺陷0沿用QA13而非本轮判定无缺陷。原390前缀24>余额22/已消费r11许可/四处变更未绑定保持。45503/45528/45562仅规划进度，拟风险等价方案、逐宽上界及精确隔离断言，尚无最终修订计划/handoff或新独立READY，不提升产品通过。
 
 协调者依据用户已授权持续推进及普通选择，通过正式User Input seq16/request_id model-relay:issue37:plan16:owner-bounded-permit:20261010/message45590明确一次有限接续许可：须新计划/矩阵及逐宽容量、scope和安全证据经独立复审READY，执行节点新绑定/零生成prepare后仅固定Connector一次新受控补验；后续QA仍原剩余范围。不是新用户供应商授权、不解决CAP/SCOPE或自授READY，不扩额、借QA、删必跑、重置marker/旧红、换Run/HEAD或重放旧绑定，失败/无法合法闭合则清理转正式报告而非连续重跑。原消费execution29/QA3/Run32及余额67(45/22)、45(23/22)、Run112/POST112与92、1800/1500保持；生成前必须再核最新消费。HTTP202实际入站45590仍queued，尚未原生承接，不宣称许可条件已落实或卡点已解；原16节点及冻结图/input/workspace/max100、前15steps逐值保持，无重复消息/resume/新Run。
 
