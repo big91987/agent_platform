@@ -230,6 +230,35 @@ class ReportPublicationTest(unittest.TestCase):
         )
         self.assertEqual(self.publish(), result)
 
+    def test_attested_facility_name_does_not_masquerade_as_credential(self):
+        path = self.descriptor["body_file"]
+        data = b"# Blocked\nThe risk-browser-operations facility awaits repair."
+        (self.root / path).write_bytes(data)
+        for item in self.descriptor["files"]:
+            if item["path"] == path:
+                item.update(bytes=len(data), sha256=publication.digest(data))
+        whitelist_path = self.descriptor["whitelist"]
+        whitelist = json.loads((self.root / whitelist_path).read_text())
+        for item in whitelist["files"]:
+            if item["path"] == path:
+                item.update(bytes=len(data), sha256=publication.digest(data))
+        raw = json.dumps(whitelist).encode()
+        (self.root / whitelist_path).write_bytes(raw)
+        with zipfile.ZipFile(self.root / self.descriptor["archive"], "w") as z:
+            for item in whitelist["files"]:
+                z.writestr(item["path"], (self.root / item["path"]).read_bytes())
+        for item in self.descriptor["files"]:
+            content = (self.root / item["path"]).read_bytes()
+            item.update(bytes=len(content), sha256=publication.digest(content))
+        self.save_descriptor()
+        self.assertTrue(self.publish()["remote_digest_verified"])
+        for key in [b"sk-" + b"x" * 24, b"ghp_" + b"x" * 24]:
+            for prefix in [b"", b" ", b"/", b"=", b'"']:
+                self.assertIsNotNone(publication.SECRET.search(prefix + key))
+        self.assertIsNotNone(
+            publication.SECRET.search(b"text-----BEGIN PRIVATE KEY-----")
+        )
+
     def test_title_credential_is_rejected_before_writes(self):
         self.descriptor["title"] = "【Harness验证】sk-" + "x" * 24
         self.save_descriptor()

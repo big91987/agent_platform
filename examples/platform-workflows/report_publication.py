@@ -18,7 +18,7 @@ from pathlib import Path
 
 LIMIT = 64 * 1024 * 1024
 SECRET = re.compile(
-    rb"(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)"
+    rb"(?:(?<![A-Za-z0-9_-])(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,})|-----BEGIN [A-Z ]*PRIVATE KEY-----)"
 )
 
 
