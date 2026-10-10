@@ -34,9 +34,10 @@ type WorkflowHookDelivery struct {
 }
 
 var errApprovalResolved = errors.New("approval already resolved before notification write")
+var errWorkflowLimitRecovered = errors.New("workflow execution limit stop already recovered before notification write")
 
 var hookField = regexp.MustCompile(`\{\{\s*([a-z_]+)\s*\}\}`)
-var hookFields = map[string]bool{"event": true, "run_id": true, "node": true, "node_name": true, "seq": true, "text": true, "summary": true, "target": true, "artifacts": true, "conversation_url": true, "run_url": true, "approval_status": true}
+var hookFields = map[string]bool{"event": true, "run_id": true, "node": true, "node_name": true, "seq": true, "text": true, "summary": true, "target": true, "artifacts": true, "conversation_url": true, "run_url": true, "approval_status": true, "execution_limit": true}
 
 // A configured Agent reply channel also carries execution approval lifecycle.
 // Explicit rules replace these defaults. The frozen graph is never rewritten.
@@ -70,6 +71,23 @@ func workflowNotificationHooks(w Workflow) []WorkflowHook {
 			seen[key] = true
 		}
 	}
+	// Append after all existing approval defaults: persisted hook indexes must
+	// keep identifying the same action across an upgrade. A run-level stop uses
+	// each reply destination once, even when replies are scoped to Agent nodes.
+	for _, h := range w.Hooks {
+		if h.Event != "agent.reply.completed" {
+			continue
+		}
+		key := destination{"run.execution_limit_reached", "", h.ConnectorID, h.Input}
+		if seen[key] {
+			continue
+		}
+		copy := h
+		copy.Event, copy.Node = key.event, ""
+		copy.Body = "**流水线已达到执行次数上限，自动推进已停止**\n\n已执行 {{seq}} 次节点，上限 {{execution_limit}} 次；最后节点：{{node_name}}。后续节点尚未启动。\n\n请在运行页核对已完成动作和返工原因，再选择接续方式。\n\n[查看运行并处理]({{run_url}})"
+		hooks = append(hooks, copy)
+		seen[key] = true
+	}
 	return hooks
 }
 
@@ -79,7 +97,7 @@ func validateWorkflowHooks(w Workflow) error {
 	}
 	for _, h := range w.Hooks {
 		switch h.Event {
-		case "node.started", "agent.reply.completed", "handoff.after", "run.completed", "approval.requested", "approval.resolved":
+		case "node.started", "agent.reply.completed", "handoff.after", "run.completed", "approval.requested", "approval.resolved", "run.execution_limit_reached":
 		default:
 			return errors.New("unsupported Hook event")
 		}
@@ -156,7 +174,7 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 		for i := range order {
 			order[i] = i
 		}
-		rank := map[string]int{"node.started": 0, "approval.requested": 1, "approval.resolved": 2, "agent.reply.completed": 3, "handoff.after": 4, "run.completed": 5}
+		rank := map[string]int{"node.started": 0, "approval.requested": 1, "approval.resolved": 2, "agent.reply.completed": 3, "handoff.after": 4, "run.completed": 5, "run.execution_limit_reached": 6}
 		sort.SliceStable(order, func(i, j int) bool {
 			return rank[hooks[order[i]].Event] < rank[hooks[order[j]].Event]
 		})
@@ -197,6 +215,16 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 					return err
 				}
 				switch h.Event {
+				case "run.execution_limit_reached":
+					if r.Status == "failed" && r.Error == workflowExecutionLimitError && r.atExecutionLimit() && step.Seq == r.Seq {
+						// Publish trusted lifecycle facts, never the last business
+						// result, error detail, command or workspace artifacts.
+						delete(fields, "summary")
+						delete(fields, "target")
+						delete(fields, "artifacts")
+						fields["execution_limit"] = strconv.Itoa(r.executionLimit())
+						err = emit("")
+					}
 				case "approval.requested", "approval.resolved":
 					if step.ConversationID == "" {
 						continue
@@ -346,6 +374,12 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			return errors.New("notification rule is unavailable")
 		}
 		h := hooks[p.index]
+		if h.Event == "run.execution_limit_reached" && p.request == "" && (r.Status != "failed" || r.Error != workflowExecutionLimitError || r.Seq != p.seq || !r.atExecutionLimit()) {
+			if _, err = e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status='skipped',error='',updated=? WHERE id=? AND status='pending' AND request=''`, now(), p.id); err != nil {
+				return err
+			}
+			continue
+		}
 		if h.Event == "approval.requested" && p.request == "" {
 			fields := map[string]string{}
 			if err = json.Unmarshal([]byte(p.fields), &fields); err != nil {
@@ -406,12 +440,23 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 		jobKey := p.run + ":" + p.id
 		e.hookJobs[jobKey] = true
 		e.connectorWG.Add(1)
-		go func(id, key string, v Connector, request connectorRequest, recoverOnly, approvalWait bool, fieldsRaw string) {
+		go func(id, key string, v Connector, request connectorRequest, recoverOnly bool, event, fieldsRaw, runID string, seq int) {
 			defer e.connectorWG.Done()
 			callCtx, cancel := context.WithTimeout(ctx, time.Duration(v.TimeoutSeconds)*time.Second)
 			defer cancel()
 			var beforeWrite func() error
-			if approvalWait {
+			if event == "run.execution_limit_reached" {
+				beforeWrite = func() error {
+					r, err := e.store.WorkflowRun(Caller{Admin: true}, runID)
+					if err != nil {
+						return err
+					}
+					if r.Status != "failed" || r.Error != workflowExecutionLimitError || r.Seq != seq || !r.atExecutionLimit() {
+						return errWorkflowLimitRecovered
+					}
+					return nil
+				}
+			} else if event == "approval.requested" {
 				beforeWrite = func() error {
 					fields := map[string]string{}
 					if err := json.Unmarshal([]byte(fieldsRaw), &fields); err != nil {
@@ -435,7 +480,7 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 				var notSent *githubNotSentError
 				if errors.As(err, &notSent) {
 					status, clearRequest = "failed", true
-					if errors.Is(err, errApprovalResolved) {
+					if errors.Is(err, errApprovalResolved) || errors.Is(err, errWorkflowLimitRecovered) {
 						status, message = "skipped", ""
 					}
 				}
@@ -447,7 +492,7 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			if _, saveErr := e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status=?,receipt=?,error=?,request=CASE WHEN ? THEN '' ELSE request END,updated=? WHERE id=?`, status, string(raw), message, clearRequest, now(), id); saveErr != nil {
 				log.Printf("save hook delivery: %v", saveErr)
 			}
-		}(p.id, jobKey, v, request, recoverOnly, h.Event == "approval.requested", p.fields)
+		}(p.id, jobKey, v, request, recoverOnly, h.Event, p.fields, p.run, p.seq)
 	}
 	return nil
 }
