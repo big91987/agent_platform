@@ -2,7 +2,13 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-11 08:31）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已正式plan7 r3 completed/49193原生最终回复与step.result next→独立review8/c8c171b615577a282d2f06df4d23e73b running/审批0；49352/49377已承接核原文、确认返工修正跨窗配置连续性并继续核复用/容量，尚无READY或设施实施/固定tests。九件正式handoff产物226339bytes库存，validation_path所指r3校验八件原SHA/bytes全匹配；原1–6steps及id/workflow/definition/input/workspace/max100逐值保持，未重发输入/resume/新Run。原Issue37机器人6103758552/6103758877实证交接及复审启动，完整分页101评论核到第二页，不把单页未见回执当未发送；通用Connector源码已有分页核对，未据协调者只读命令限制新增平台修复。
+当前状态（2026-10-11 08:39）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674已独立review8正式READY next→e2e_execute9/5c4285706aed1736098b62d5aeef42c3 running/审批0。READY仅批准r3设施准备，不是产品Pass/动态容量认证/FAC关闭/SSE归因；step.result accepted及执行9原生49716/49736已核，后者确认旧设施绑定历史Run不可直接运行，正核材料与浏览器设施并落实新固定入口。机器人6103819977/6103820314已实际原Issue回写READY与准备启动；完整分页103评论去重核对，不再凭第一百条误判无回执。三件正式评审产物119308bytes库存，277处可读引用文件SHA/bytes独立全匹配，原1–7steps及id/workflow/definition/input/workspace/max100逐值保持，没有新Run/resume/Owner输入或权限升级。
+
+REV6计划阻断关闭；两宽P03整链同配置/revision、P05完整独立晚段恢复兼AUTH/V2、原114/冷却/五维/价格/多重集幂等/pending重启/取消保留已获文档评审。r8正式核准阶段累计POST硬界execution198/QA120/总318，上游dispatch96/48/144、最多各两attempt、外部供应商0均未扩大；E额外POST仍须已证设施根因/正式test_repair/剩余完整容量，不是自动调用许可。拟完整E63/132POST、Q48/120、总1480秒及六自然边界480只是计划估计，capacity=false。准备须新Go build/init/serve/health与页面同版、FAC反例回归、安全页面EOF/DONE只读probe、真实时长与剩余容量；业务1300切finally120+flush60，不能省断言/延时求绿或继承旧绑定/旧密钥。
+
+本轮只核计划与正式接续，未由Builder写测试或操作业务页；review8阶段生成0，execute9尚无最终准备交接、固定tests或新独立动态QA回执，消费和实际结果以后续原receipt核验，不拿进度推断实跑通过。产品仍Not Run、旧FAC首红/各SSE Unknown/not_attested/#33 No-Go保持，前序确认缺陷0沿原QA不代表本轮证明产品无缺陷。无产品新PR/部署或平台源码行为变更；三docs及90分钟ACTIVE任务已同步真实入口，证据ignored check-20261011-remediation。下一步核执行9新资产绑定/零生成准备与清理→正式固定Python tests→独立QA，已证产品缺陷才development并完整verify/QA/精确PR/正式部署后复测，不能止于Ready或报告发布。
+
+历史状态（2026-10-11 08:31）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已正式plan7 r3 completed/49193原生最终回复与step.result next→独立review8/c8c171b615577a282d2f06df4d23e73b running/审批0；49352/49377已承接核原文、确认返工修正跨窗配置连续性并继续核复用/容量，尚无READY或设施实施/固定tests。九件正式handoff产物226339bytes库存，validation_path所指r3校验八件原SHA/bytes全匹配；原1–6steps及id/workflow/definition/input/workspace/max100逐值保持，未重发输入/resume/新Run。原Issue37机器人6103758552/6103758877实证交接及复审启动，完整分页101评论核到第二页，不把单页未见回执当未发送；通用Connector源码已有分页核对，未据协调者只读命令限制新增平台修复。
 
 r3保持QA P03首known至旧窗known/unknown/407拒绝、新窗carry及known SSE整链配置/revision不变。P05独立晚段SSE→同窗普通RPM拒→调额→普通恢复，恢复同ID兼该宽AUTH本B对照，1280兼V2样本；原冷却/五维/幂等多重集/价格/pending重启/取消等断言仍待独立复审确认复用前置。E63dispatch/132POST、Q48/120，共111/252；阶段POST提案198/120/318未获执行核准，QA六自然边界480秒及prepare/UI各160、总1480仅估计/capacity=false。r3计划/静态校验不是新测试结果，新增生成/供应商0、product Not Run，无产品或设施代码变更、新PR部署或权限。旧Unknown/FAC首红/No-Go/not_attested不关闭。下一步核review8正式裁决→同Run准备/固定Python/独立QA，已证产品缺陷才development并完整交付后复测；原90分钟任务持续保持，证据ignored check-20261011-remediation。
 
