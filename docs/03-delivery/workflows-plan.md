@@ -4,7 +4,11 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-11 08:00）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674的独立review4已处理User Input47974、保留首版r4并追加正式裁决；48384原生最终回复和step.result route=rework已接受，自然交回e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0。48452已实际承接补充原文与评审差异，修容量及逐动作计划；不是重复Run/resume或协调者代写案例。原1–3步、id/workflow/definition/input/workspace/max100逐值保持，原生执行进程链实际存活。机器人6103532138/6103532454已真实回写NOT READY及规划启动，不重复Builder评论。
+当前状态（2026-10-11 08:10）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674仍e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0，48484实际报告r2修订已写入并校验来源摘要/算术；最新step.result仍null，没有正式handoff/新独立READY或固定tests。两次有限观察均等待已核实际原生进程74131，期间新增原生diff及工具完成事件、r2文件真实产出，不因观察到期重启或重发。原114动作来源、自然UTC窗口403哨兵/有限POST、页面source绑定EOF/DONE观察方案、QA同scope连续恢复及同候选冷却、P01/P04/P12/P14原断言等已进入r2候选，是否业务等价和覆盖完整仍交独立复审，不能由Builder校验替代。
+
+本轮采r2十文件254614bytes候选库存，规划validation声明的八件文件逐bytes/SHA维护者复核一致；planning验证只记录214材料/六补原文/114身份顺序、摘要与算术，不是业务QA。候选推导execution63/96、QA48/48，上游总111；单完整attempt生成POST132/114，跨执行attempt有限硬界另列，内部1480秒只是估计/capacity=false。QA通过同宽同role同动作复用容纳新增冷却恢复，具体前置/修改revision及窗口checkpoint条件须独立审查，失败不能借额或删必跑求绿。产品Not Run、固定入口false、控制生成0/供应商0，历史#33 No-Go/SSE Unknown/FAC首红和费用未认证不改；新设施实现/实际复测/独立QA仍待，未新产品PR/部署。证据ignored check-20261011-remediation，下一步核r2正式交接与复审回执，无法合法闭合按正式范围处理，不停止在材料/报告交付。
+
+历史状态（2026-10-11 08:00）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674的独立review4已处理User Input47974、保留首版r4并追加正式裁决；48384原生最终回复和step.result route=rework已接受，自然交回e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0。48452已实际承接补充原文与评审差异，修容量及逐动作计划；不是重复Run/resume或协调者代写案例。原1–3步、id/workflow/definition/input/workspace/max100逐值保持，原生执行进程链实际存活。机器人6103532138/6103532454已真实回写NOT READY及规划启动，不重复Builder评论。
 
 补充六文件及历史关联摘要由QA独立核一致，预算dispatch/attempt单位、完整make verify本阶段边界和114原动作来源已解决；追加裁决仍NOT READY。REV4-WINDOW真实准入UTC窗口证据、REV4-QA同宽同scope连续拒绝纠正恢复、REV4-SSE冻结页面EOF/DONE同ID证据方案仍Open；原文新增具体保留缺口为P01错误登录恢复、P04普通/SSE协议边界、P12同取消ID重复核对、P14首hold双scope600，以及独立Q-H同候选known/unknown失败后的自然冷却恢复，不能拿换候选或取消路径代替。Pipeline须修计划/矩阵/逐动作预算并独立复审，不删必跑、扩96/48/144或自动READY；旧首版接受Q-H单列未验的结论由实际原文追加裁决收窄，历史r4原字节保留。最多各两attempt、外1800/内1500和供应商0不变。
 
