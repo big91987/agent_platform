@@ -4,7 +4,13 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-11 07:52）：整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan3正式handoff→独立e2e_plan_review4/717605bd72d856c83d594911ba24c291 running/审批0。原生47785最终规划回复、正式step.result与7件86258bytes产物逐SHA库存已核；r1规划覆盖原14风险链、两宽自然窗口、S1–8、非零双身份五维竞争/隔离及价格/重启/取消/清理，推导execution63/96、QA48/48及POST122/100、业务1420秒。以上仅文档规划，capacity未认证、业务生成0/产品Not Run，没有设施修复或新QA结论。评审48144原生最终回复对首版r1判NOT READY、六项整改已保存；handoff因新输入尚未处理被正常队列保护拒绝，step.result尚未完成，不冒称已正式返工。
+当前状态（2026-10-11 08:00）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674的独立review4已处理User Input47974、保留首版r4并追加正式裁决；48384原生最终回复和step.result route=rework已接受，自然交回e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0。48452已实际承接补充原文与评审差异，修容量及逐动作计划；不是重复Run/resume或协调者代写案例。原1–3步、id/workflow/definition/input/workspace/max100逐值保持，原生执行进程链实际存活。机器人6103532138/6103532454已真实回写NOT READY及规划启动，不重复Builder评论。
+
+补充六文件及历史关联摘要由QA独立核一致，预算dispatch/attempt单位、完整make verify本阶段边界和114原动作来源已解决；追加裁决仍NOT READY。REV4-WINDOW真实准入UTC窗口证据、REV4-QA同宽同scope连续拒绝纠正恢复、REV4-SSE冻结页面EOF/DONE同ID证据方案仍Open；原文新增具体保留缺口为P01错误登录恢复、P04普通/SSE协议边界、P12同取消ID重复核对、P14首hold双scope600，以及独立Q-H同候选known/unknown失败后的自然冷却恢复，不能拿换候选或取消路径代替。Pipeline须修计划/矩阵/逐动作预算并独立复审，不删必跑、扩96/48/144或自动READY；旧首版接受Q-H单列未验的结论由实际原文追加裁决收窄，历史r4原字节保留。最多各两attempt、外1800/内1500和供应商0不变。
+
+七件评审产物141519bytes逐SHA库存；维护者对两校验文件中实际可读的48处原文件摘要/大小独立核一致，原plan-check-r1.md一处历史索引引用未提供仍明确未核，不因递归校验读缺文件的首FileNotFoundError补造原文。该校验仅交接完整性，非产品测试或QA业务Go。固定tests/设施修复/新独立动态QA仍未执行，capacity未认证，新生成0/产品Not Run；前序确认产品缺陷0仅沿原QA结论，不是本轮证明产品无缺陷，FAC设施缺陷和SSE Unknown仍待整改。无新产品PR/部署或权限配置变更，旧Blocked/#33 No-Go不关闭。90分钟自动任务保持ACTIVE，原提示已读回匹配；证据ignored check-20261011-remediation。下一步核plan5真实修订及独立复审后准备→固定tests→QA，确认产品缺陷才走正式development及部署后复测。
+
+历史状态（2026-10-11 07:52）：整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan3正式handoff→独立e2e_plan_review4/717605bd72d856c83d594911ba24c291 running/审批0。原生47785最终规划回复、正式step.result与7件86258bytes产物逐SHA库存已核；r1规划覆盖原14风险链、两宽自然窗口、S1–8、非零双身份五维竞争/隔离及价格/重启/取消/清理，推导execution63/96、QA48/48及POST122/100、业务1420秒。以上仅文档规划，capacity未认证、业务生成0/产品Not Run，没有设施修复或新QA结论。评审48144原生最终回复对首版r1判NOT READY、六项整改已保存；handoff因新输入尚未处理被正常队列保护拒绝，step.result尚未完成，不冒称已正式返工。
 
 规划source-audit明确输入选择遗漏旧plan-r1.md、journeys-matrix-r1.md、plan-audit-r16.json，114编号齐全但原动作语义不可核。Builder已补6件原文/摘要伴随文件：前两原文与source-audit逐SHA匹配旧plan-validation，audit-r16匹配旧独立r17校验；不是代写用例或修产品。原字节副本放本Run文档inputs/original-actions-supplement-r1，原prepare214的ZIP/manifest/回执未改；另经已授权私有Release409276807/asset629282860提供可复核输入ZIP，35758bytes/SHAe601cc57f140e7de39bcfcf6b1ee5432b1510a6058313bb9047324ca7107c490，远端bytes/digest匹配。正式User Input request_id model-relay:issue37:remediation-r3:supplement-and-budget:20261011/message47974已唯一受理到当前独立评审；初始queued，最新GET已running，原生48230实际承接核补包原字节并更新受澄清影响的评审。尚未有新正式handoff或READY，不冒称缺口已关闭，不重发/重启或强迫通过。
 
