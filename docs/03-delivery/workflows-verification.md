@@ -2,7 +2,13 @@
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
 
-当前状态（2026-10-11 08:12）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan5 r2正式handoff route=next→独立e2e_plan_review6/948b6010fa1b153dd8662aa904352cf0 running/审批0。48561原生最终回复和正式step.result已核；48719复审实际承接原文/返工差异并核覆盖容量。机器人6103628140/6103628499在原Issue37真实回写r2交接和复审启动，没有重发UserInput/resume/新Run。十件正式handoff产物254614bytes已逐SHA库存，当前plan-validation-r2-final声明的八件bytes/SHA全部独立匹配；此前r2初次校验及r1/r4原字节保留。原1–4steps及id/workflow/definition/input/workspace/max100逐值保持。
+当前状态（2026-10-11 08:20）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成独立review6 NOT READY→plan7/69c54b35e0a9bb771037f733d14dc47e running/审批0。正式step.result rework、review6末次原生消息48965及plan7实际承接49043已核；后者仅调整窗口配置连续性与容量推导，尚无新版READY/设施实施/固定tests。机器人6103692233/6103692466真实在原Issue回写阻断和规划启动，不重复协调者评论/消息/Run/resume。三件正式评审产物41654bytes逐SHA库存，校验所列50处实际文件bytes/SHA独立核一致，原1–5steps和id/workflow/definition/input/workspace/max100逐值保持。
+
+唯一核心阻断REV6-WINDOW-CONFIG/B1：QA在旧窗407拒绝后把B RPM NULL→1，再建立跨窗checkpoint，未保留原P03从首准入/旧窗known及unknown/407拒绝到新窗carry与known SSE全程同配置/revision的自然恢复。目标TPM400未变不能替原配置连续性，也不能用execution事实代独立QA。Pipeline须重排两宽P05严格SSE→普通同scope RPM拒→调额→普通恢复，保留P09冷却、五维、原幂等/多重集、价格/pending重启/取消等必跑后复算容量并独立复审，不删原断言、扩48或借角色额度。其余r4补充的真实403/witness、source绑定页面EOF/DONE、连续/冷却方法、114映射与预算算术获文档可行裁决，不是脚本实现或动态产品Pass；缺完整脚本/容量未实跑本身没有造成重复退规划。
+
+r2提案E63/132POST、Q48/114、内部1480秒仍只估计；POST阶段198/114未被批准执行，capacity=false，新增产品生成/供应商0、product Not Run。未修改产品或测试设施/新PR部署/权限，前序确认缺陷0沿原QA，不把本轮未测试解释为产品无缺陷；旧FAC首红/Unknown/not_attested/#33 No-Go不改。当前无需新用户输入或权限，沿同Run直接计划返工；若实证无法在预算内合法闭合才列最小差量与不能复用原因走正式范围决定，不自降断言求绿。90分钟任务保持ACTIVE，证据ignored check-20261011-remediation；下一步核plan7修订/独立复审，获READY后真实准备/固定Python/独立QA，已证产品缺陷才正式development并部署后复测。
+
+历史状态（2026-10-11 08:12）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan5 r2正式handoff route=next→独立e2e_plan_review6/948b6010fa1b153dd8662aa904352cf0 running/审批0。48561原生最终回复和正式step.result已核；48719复审实际承接原文/返工差异并核覆盖容量。机器人6103628140/6103628499在原Issue37真实回写r2交接和复审启动，没有重发UserInput/resume/新Run。十件正式handoff产物254614bytes已逐SHA库存，当前plan-validation-r2-final声明的八件bytes/SHA全部独立匹配；此前r2初次校验及r1/r4原字节保留。原1–4steps及id/workflow/definition/input/workspace/max100逐值保持。
 
 r2是候选文档方案而非实施/业务Pass： execution63/96、QA48/48、单attempt POST132/114，阶段有限POST198/114，内部1480秒估计。正式交接明确复审重点为两宽B非目标RPM在跨窗checkpoint前调整且目标TPM400不变、QA同动作复用是否保留全部连续前置和八元数值、403哨兵真实POST/effective准入UTC夹定、冻结source新成功notice+form/epoch/同ID及PW/CDP严格finished能否证明页面EOF/DONE。独立READY仅批准进入设施准备，不代替实际动态容量和固定tests/QA；无缺脚本循环退规划或Builder代裁决。新增生成0/供应商0、product Not Run、capacity=false，无产品/设施代码改动、新PR或部署；旧FAC首红/SSE Unknown/#33 No-Go及not_attested不改。下一步核review6最终裁决和正式路由，获READY后沿同Run准备→固定Python→独立QA，若已证产品缺陷再正式development/交付部署后复测，不停在报告或规划交付。证据ignored check-20261011-remediation。
 
