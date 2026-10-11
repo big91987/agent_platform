@@ -4,7 +4,19 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-11 09:39）：独立review10已正式NOT READY/route rework→plan11/63d27a548aebdfcc6107caa27d37cc6b running/审批0。50643最终原生回复及step.result接受已核，50795/50818承接逐项补容量及重准备/清理累计占用；新原生9743存活，未发新Owner输入/增预算或重启。原前9steps和id/workflow/definition/input/workspace/max100逐值保持。三件r10产物34928bytes，25处评审引用原文件SHA/bytes维护者独立全匹配，评审本身核214材料/六补原文及114沿袭，不把后者当Builder重跑产品或新实测。交付文档顶部旧08:39状态已移为按时间保留历史，当前首段改为真实节点，原记录没有删除。
+当前状态（2026-10-11 10:42）：用户明确把通用测试Example作为独立优化线，落到唯一维护源与使用文档；不是用Example完成替代Model Relay验收。examples/platform-workflows/README.md新增“测试Example的使用与维护实践”，说明五Agent职责、流程、三类约束、设施自验、有限返工、标准安装升级及各层证据；五角色同步工程估计/授权区分、最小计划与独立复审、设施质量、归因和交付。新增的计划Blocked→已有e2e_report出口没有新节点、权限、框架或配置开关。原用户docs/README.md和software-factory-assessment.md脏改保持排除。该README是通用实践说明，实时状态仍在本三交付文档维护。
+
+源码真实旧红→新绿的Store/Engine消费回归证明Blocked能交到报告且原回合未结束不提前推进；它不证明发布整链。角色/README更新后完整scripts/verify.sh真实exit0/115923bytes/SHAe16a85a1d7f619efcae5d99d4e74c7e90f8dbef2e6c1de8abba2902fe5c43f43，107模板测试及Go race保持cached如实记录。独立只读review C/I=0；Minor升级后出口断言已补，随后107模板回归exit0/8008bytes/SHAb6ce955f8cf01701e2a7fec86c2ca12057f5067fabd21cafe40cd5731011c0c1，未新增镜像角色措辞的测试。证据ignored check-20261011-remediation。
+
+正式原manifest升级先7→8补Blocked出口及两角色，再8→9同步五角色实践；本轮原参数标准upgrade exit0。真实API核revision9/default100，最后一次只五角色instructions及workflow revision/updated_at变化，edges和所有执行器/model/Skills/env/权限、Agent/Connector对象逐值不变。旧整改Run05ca062f4dfde04e5ac7848fc02d6674仍冻结revision7；正式stop15→原CID90fe775cc7d827ba72171cfd6b0c8550 resume15，原14steps及definition/input/workspace/max100逐值保持，52062实际承接核中断副作用，不静默换会话或重放。模板真实新仓首次安装及完整所有分支仍未证，不以升级或源码绿宣称整链通过。
+
+产品整改同一Issue37/Run05ca先review12确认Blocked并正式等待缺报告target；维护者修模板但不改冻结图，Owner stop12→return13规划提供新的执行9脱敏元数据入口及工程边界澄清。GET2000/管理写500原为执行者自定工程估计，允许原目标内按具体操作推导有限前瞻方案独立复审，不改旧计数或将未知清零；生成96/48/144、POST198/120/318、最多各2attempt、1500/1800及供应商0保持。plan13已完成，review14正式READY/next→execute15，目前执行准备running/审批0，原114断言保持，旧绑定仍关闭，业务tests与新独立动态QA尚未运行。原SSE Unknown/#33 No-Go/历史供应商not_attested不变；产品HEAD0c197c8/schema3，无新产品PR/部署。READY只批准新绑定、零生成准备及设施完成，不是产品Pass。
+
+新增真实出口回归复用既有隔离Harness workflow20db851b571a5307547ea4cd2c40588c，取已安装revision8的评审/报告和固定发布链，无产品用例或供应商动作。首Run19f87804f8a825b199ffa4723204acb9因旧checkout脏被prepare拒绝，原753bytes回执保留并正式cancel。全新checkout的Run3fef01138d509ce913ad217a6d0ce394又因Builder未等clone完成提前启动，prepare1 exit128/46bytes HEAD缺失；属协调者顺序错误，不是产品bug/保护失效。标准clone真实exit0、同main/根/干净核验后，同Run正式stop1→return1→prepare2 exit0/282bytes EOF/truncatedfalse；当前review3/CID41b72e9606a6f30323b498bcef08499e running/审批0，51975/52033承接合成Blocked/Not Run。新增原生Blocked交接/报告/远端发布仍等待最终回执，不能提前宣称绿；两首红不改，完成后停用探针定义。
+
+用户已停用model-relay定时任务，正式automation_update状态PAUSED及文件读回已证，后续不自动90分钟检查。当前工作来自明确“继续改造修复”和本次Example优化授权，不重开定时任务。后续以正式Pipeline回执、同版产物和远端摘要更新，确认产品缺陷才交development，不造缺陷或把模板质量改造当产品重测。
+
+历史状态（2026-10-11 09:39）：独立review10已正式NOT READY/route rework→plan11/63d27a548aebdfcc6107caa27d37cc6b running/审批0。50643最终原生回复及step.result接受已核，50795/50818承接逐项补容量及重准备/清理累计占用；新原生9743存活，未发新Owner输入/增预算或重启。原前9steps和id/workflow/definition/input/workspace/max100逐值保持。三件r10产物34928bytes，25处评审引用原文件SHA/bytes维护者独立全匹配，评审本身核214材料/六补原文及114沿袭，不把后者当Builder重跑产品或新实测。交付文档顶部旧08:39状态已移为按时间保留历史，当前首段改为真实节点，原记录没有删除。
 
 NOT READY四项是REV10-READ-BOUND读点/循环/分页包络未绑具体来源、REV10-TIME各关键30秒自然批及Q总480/业务1300未给可行墙钟关键路径、REV10-DEBIT-PREP历史估计与新零生成准备累计扣账不足、REV10-WRITE-CLEANUP写及finally容量未按动作闭合。不是因QA runner未实现退规划，也不是产品P1缺陷；无需新用户输入，Pipeline在原114完整范围给调用图/等价类来源、fresh复用条件、相位预算、历史保守上界和新准备/清理预占后独立复审。E48000/QA38000提案未批准或应用，原2000守卫和execution_ready/capacityfalse保持。另加一次同量准备可能使E GET48354>48000、写612>500仅条件算术风险，不是新实际消耗；不能补造历史计量、把任意大上限当可行证据、扩大500/生成/时间或删退出/原断言求绿。当前新生成/供应商0、产品Not Run、SSE Unknown及#33 No-Go/旧not_attested保持；新fixed业务/QA、产品开发PR或新部署均未发生。证据ignored check-20261011-remediation，后续继续同一plan11补证→独立复审→执行准备/固定tests/QA，确认产品缺陷才正式development及完整交付部署后复测。
 

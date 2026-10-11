@@ -258,7 +258,11 @@ class NodeAgentInstallTest(unittest.TestCase):
         self.assertEqual(outgoing("e2e_plan"), {"next": "e2e_plan_review"})
         self.assertEqual(
             outgoing("e2e_plan_review"),
-            {"next": "e2e_execute", "rework": "e2e_plan"},
+            {
+                "next": "e2e_execute",
+                "rework": "e2e_plan",
+                "blocked": "e2e_report",
+            },
         )
         nodes = {node["id"]: node for node in graph["nodes"]}
         self.assertEqual(nodes["e2e_plan_review"]["kind"], "agent")
@@ -285,6 +289,7 @@ class NodeAgentInstallTest(unittest.TestCase):
         graph = self.api.objects["workflows"][0]
         self.assertEqual(graph["id"], workflow_id)
         self.assertEqual(outgoing("e2e_plan"), {"next": "e2e_plan_review"})
+        self.assertEqual(outgoing("e2e_plan_review")["blocked"], "e2e_report")
         self.api.writes.clear()
         self.run_install("--template", "product-e2e", "--upgrade")
         self.assertEqual(self.api.writes, [])

@@ -159,6 +159,13 @@
       "description": "补齐计划后复审"
     },
     {
+      "source": "e2e_plan_review",
+      "route": "blocked",
+      "target": "e2e_report",
+      "mode": "handoff",
+      "description": "无法继续测试，交付阻断及未执行报告"
+    },
+    {
       "source": "e2e_execute",
       "route": "next",
       "target": "tests",
