@@ -4,7 +4,11 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-11 08:20）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成独立review6 NOT READY→plan7/69c54b35e0a9bb771037f733d14dc47e running/审批0。正式step.result rework、review6末次原生消息48965及plan7实际承接49043已核；后者仅调整窗口配置连续性与容量推导，尚无新版READY/设施实施/固定tests。机器人6103692233/6103692466真实在原Issue回写阻断和规划启动，不重复协调者评论/消息/Run/resume。三件正式评审产物41654bytes逐SHA库存，校验所列50处实际文件bytes/SHA独立核一致，原1–5steps和id/workflow/definition/input/workspace/max100逐值保持。
+当前状态（2026-10-11 08:31）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已正式plan7 r3 completed/49193原生最终回复与step.result next→独立review8/c8c171b615577a282d2f06df4d23e73b running/审批0；49352/49377已承接核原文、确认返工修正跨窗配置连续性并继续核复用/容量，尚无READY或设施实施/固定tests。九件正式handoff产物226339bytes库存，validation_path所指r3校验八件原SHA/bytes全匹配；原1–6steps及id/workflow/definition/input/workspace/max100逐值保持，未重发输入/resume/新Run。原Issue37机器人6103758552/6103758877实证交接及复审启动，完整分页101评论核到第二页，不把单页未见回执当未发送；通用Connector源码已有分页核对，未据协调者只读命令限制新增平台修复。
+
+r3保持QA P03首known至旧窗known/unknown/407拒绝、新窗carry及known SSE整链配置/revision不变。P05独立晚段SSE→同窗普通RPM拒→调额→普通恢复，恢复同ID兼该宽AUTH本B对照，1280兼V2样本；原冷却/五维/幂等多重集/价格/pending重启/取消等断言仍待独立复审确认复用前置。E63dispatch/132POST、Q48/120，共111/252；阶段POST提案198/120/318未获执行核准，QA六自然边界480秒及prepare/UI各160、总1480仅估计/capacity=false。r3计划/静态校验不是新测试结果，新增生成/供应商0、product Not Run，无产品或设施代码变更、新PR部署或权限。旧Unknown/FAC首红/No-Go/not_attested不关闭。下一步核review8正式裁决→同Run准备/固定Python/独立QA，已证产品缺陷才development并完整交付后复测；原90分钟任务持续保持，证据ignored check-20261011-remediation。
+
+历史状态（2026-10-11 08:20）：Issue37同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成独立review6 NOT READY→plan7/69c54b35e0a9bb771037f733d14dc47e running/审批0。正式step.result rework、review6末次原生消息48965及plan7实际承接49043已核；后者仅调整窗口配置连续性与容量推导，尚无新版READY/设施实施/固定tests。机器人6103692233/6103692466真实在原Issue回写阻断和规划启动，不重复协调者评论/消息/Run/resume。三件正式评审产物41654bytes逐SHA库存，校验所列50处实际文件bytes/SHA独立核一致，原1–5steps和id/workflow/definition/input/workspace/max100逐值保持。
 
 唯一核心阻断REV6-WINDOW-CONFIG/B1：QA在旧窗407拒绝后把B RPM NULL→1，再建立跨窗checkpoint，未保留原P03从首准入/旧窗known及unknown/407拒绝到新窗carry与known SSE全程同配置/revision的自然恢复。目标TPM400未变不能替原配置连续性，也不能用execution事实代独立QA。Pipeline须重排两宽P05严格SSE→普通同scope RPM拒→调额→普通恢复，保留P09冷却、五维、原幂等/多重集、价格/pending重启/取消等必跑后复算容量并独立复审，不删原断言、扩48或借角色额度。其余r4补充的真实403/witness、source绑定页面EOF/DONE、连续/冷却方法、114映射与预算算术获文档可行裁决，不是脚本实现或动态产品Pass；缺完整脚本/容量未实跑本身没有造成重复退规划。
 
