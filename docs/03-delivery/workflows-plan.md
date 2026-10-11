@@ -4,7 +4,11 @@
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
 
-当前状态（2026-10-11 08:10）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674仍e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0，48484实际报告r2修订已写入并校验来源摘要/算术；最新step.result仍null，没有正式handoff/新独立READY或固定tests。两次有限观察均等待已核实际原生进程74131，期间新增原生diff及工具完成事件、r2文件真实产出，不因观察到期重启或重发。原114动作来源、自然UTC窗口403哨兵/有限POST、页面source绑定EOF/DONE观察方案、QA同scope连续恢复及同候选冷却、P01/P04/P12/P14原断言等已进入r2候选，是否业务等价和覆盖完整仍交独立复审，不能由Builder校验替代。
+当前状态（2026-10-11 08:12）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674已自然完成plan5 r2正式handoff route=next→独立e2e_plan_review6/948b6010fa1b153dd8662aa904352cf0 running/审批0。48561原生最终回复和正式step.result已核；48719复审实际承接原文/返工差异并核覆盖容量。机器人6103628140/6103628499在原Issue37真实回写r2交接和复审启动，没有重发UserInput/resume/新Run。十件正式handoff产物254614bytes已逐SHA库存，当前plan-validation-r2-final声明的八件bytes/SHA全部独立匹配；此前r2初次校验及r1/r4原字节保留。原1–4steps及id/workflow/definition/input/workspace/max100逐值保持。
+
+r2是候选文档方案而非实施/业务Pass： execution63/96、QA48/48、单attempt POST132/114，阶段有限POST198/114，内部1480秒估计。正式交接明确复审重点为两宽B非目标RPM在跨窗checkpoint前调整且目标TPM400不变、QA同动作复用是否保留全部连续前置和八元数值、403哨兵真实POST/effective准入UTC夹定、冻结source新成功notice+form/epoch/同ID及PW/CDP严格finished能否证明页面EOF/DONE。独立READY仅批准进入设施准备，不代替实际动态容量和固定tests/QA；无缺脚本循环退规划或Builder代裁决。新增生成0/供应商0、product Not Run、capacity=false，无产品/设施代码改动、新PR或部署；旧FAC首红/SSE Unknown/#33 No-Go及not_attested不改。下一步核review6最终裁决和正式路由，获READY后沿同Run准备→固定Python→独立QA，若已证产品缺陷再正式development/交付部署后复测，不停在报告或规划交付。证据ignored check-20261011-remediation。
+
+历史状态（2026-10-11 08:10）：同一整改Run05ca062f4dfde04e5ac7848fc02d6674仍e2e_plan5/4b8251b40b20b52856e206f2cf33d7cb running/审批0，48484实际报告r2修订已写入并校验来源摘要/算术；最新step.result仍null，没有正式handoff/新独立READY或固定tests。两次有限观察均等待已核实际原生进程74131，期间新增原生diff及工具完成事件、r2文件真实产出，不因观察到期重启或重发。原114动作来源、自然UTC窗口403哨兵/有限POST、页面source绑定EOF/DONE观察方案、QA同scope连续恢复及同候选冷却、P01/P04/P12/P14原断言等已进入r2候选，是否业务等价和覆盖完整仍交独立复审，不能由Builder校验替代。
 
 本轮采r2十文件254614bytes候选库存，规划validation声明的八件文件逐bytes/SHA维护者复核一致；planning验证只记录214材料/六补原文/114身份顺序、摘要与算术，不是业务QA。候选推导execution63/96、QA48/48，上游总111；单完整attempt生成POST132/114，跨执行attempt有限硬界另列，内部1480秒只是估计/capacity=false。QA通过同宽同role同动作复用容纳新增冷却恢复，具体前置/修改revision及窗口checkpoint条件须独立审查，失败不能借额或删必跑求绿。产品Not Run、固定入口false、控制生成0/供应商0，历史#33 No-Go/SSE Unknown/FAC首红和费用未认证不改；新设施实现/实际复测/独立QA仍待，未新产品PR/部署。证据ignored check-20261011-remediation，下一步核r2正式交接与复审回执，无法合法闭合按正式范围处理，不停止在材料/报告交付。
 
