@@ -25,21 +25,18 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err != nil || result.ExitCode == nil || *result.ExitCode != 0 || !result.Stopped {
 		return errors.Join(errors.New("sandbox TypeScript completion was not proved"), err)
 	}
-	if err := service.nativeHome(ctx, id, run, "/tmp/probe-native-home"); err != nil {
+	home, selectedSkill, err := probeSandboxRoleInputs(ctx, service, id, run, record)
+	if err != nil {
 		return err
 	}
-	if err := record("native_home_prepared", map[string]any{"mode": "0700"}); err != nil {
+	// This unselected project Skill checks scope exclusion in the same native
+	// process that consumes the prepared role home.
+	unselected := "/workspace/.agents/skills/probe-unselected/SKILL.md"
+	if err = service.nativeHome(ctx, id, run, strings.TrimSuffix(unselected, "/SKILL.md")); err != nil {
 		return err
 	}
-	selectedSkill := "/tmp/probe-native-home/skills/probe-selected/SKILL.md"
-	for _, fixture := range []struct{ path, name string }{{selectedSkill, "probe-selected"}, {"/workspace/.agents/skills/probe-unselected/SKILL.md", "probe-unselected"}} {
-		if err := service.nativeHome(ctx, id, run, strings.TrimSuffix(fixture.path, "/SKILL.md")); err != nil {
-			return err
-		}
-		raw := "---\nname: " + fixture.name + "\ndescription: Credential-free native Skill scope probe.\n---\nThis probe sends no model task.\n"
-		if err := service.upload(ctx, id, run, fixture.path, []byte(raw), 0600); err != nil {
-			return err
-		}
+	if err = service.upload(ctx, id, run, unselected, []byte("---\nname: probe-unselected\ndescription: Credential-free scope fixture.\n---\nNo model task is sent.\n"), 0600); err != nil {
+		return err
 	}
 	token := newID() + newID()
 	if err = service.upload(ctx, id, run, "/tmp/probe-native-token", []byte(token), 0600); err != nil {
@@ -48,7 +45,7 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err = record("native_launch_intent", map[string]any{"port": 8080, "model_turn": false}); err != nil {
 		return err
 	}
-	process, launchErr := service.startNative(ctx, id, run, opensandbox.RunCommandRequest{Command: "exec codex app-server --strict-config --listen ws://0.0.0.0:8080 --ws-auth capability-token --ws-token-file /tmp/probe-native-token", Cwd: "/workspace", Envs: map[string]string{"CODEX_HOME": "/tmp/probe-native-home"}, Timeout: 120000}, events)
+	process, launchErr := service.startNative(ctx, id, run, opensandbox.RunCommandRequest{Command: "exec codex app-server --strict-config --listen ws://0.0.0.0:8080 --ws-auth capability-token --ws-token-file /tmp/probe-native-token", Cwd: "/workspace", Envs: map[string]string{"HOME": home, "CODEX_HOME": home}, Timeout: 120000}, events)
 	if process.ID != "" {
 		defer func() {
 			cleanup, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -113,55 +110,59 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err = probeSandboxNativeSkillScope(stream, selectedSkill, record); err != nil {
 		return err
 	}
-	return probeSandboxRoleInputs(ctx, service, id, run, record)
+	return record("native_role_process_confirmed", map[string]any{"home": home, "selected": selectedSkill, "same_process": process.ID, "credentials": "empty_fixture_only", "platform_conversation": "not_run", "model_turn": "not_run"})
 }
 
 // The real SDK exercises role files using an empty authentication object. No
 // platform conversation, credential validity or model result is asserted here.
-func probeSandboxRoleInputs(ctx context.Context, service *OpenSandbox, id, run string, record func(string, any) error) error {
+func probeSandboxRoleInputs(ctx context.Context, service *OpenSandbox, id, run string, record func(string, any) error) (string, string, error) {
 	root, err := os.MkdirTemp("", "agent-platform-role-probe-")
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	defer os.RemoveAll(root)
 	auth, skill := filepath.Join(root, "auth-fixture"), filepath.Join(root, "selected-skill")
 	for _, directory := range []string{auth, skill} {
 		if err = os.Mkdir(directory, 0700); err != nil {
-			return err
+			return "", "", err
 		}
 	}
 	if err = os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600); err != nil {
-		return err
+		return "", "", err
 	}
 	if err = os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: role-input-probe\ndescription: Credential-free role transfer fixture.\n---\nNo model task is sent.\n"), 0600); err != nil {
-		return err
+		return "", "", err
 	}
 	c := Conversation{ID: newID(), Snapshot: Agent{Executor: "codex", Model: "gpt-6.1-sol", Skills: []string{skill}, Instructions: "Credential-free SDK role preparation fixture."}}
 	r := WorkflowRun{ID: run, WorkspacePath: "/workspace", Definition: Workflow{Environment: "opensandbox"}, Environment: &RunEnvironment{ID: id, Status: "ready", ConnectionHash: service.connectionHash}}
 	x := Codex{Root: root, AuthHome: auth}
 	home, cfg, selected, _, err := x.prepareSandboxRole(ctx, service, r, c)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	if len(selected) != 1 || len(cfg) == 0 {
-		return errors.New("SDK role inputs were not prepared")
+		return "", "", errors.New("SDK role inputs were not prepared")
 	}
 	if err = os.Remove(filepath.Join(auth, "auth.json")); err != nil {
-		return err
+		return "", "", err
 	}
 	// Resume uses the recorded assets, not mutable host sources or refreshed
-	// credentials. This probe never starts another native app-server.
+	// credentials. The caller then starts one native process in this role home.
 	if err = os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("changed host fixture"), 0600); err != nil {
-		return err
+		return "", "", err
 	}
 	home2, cfg2, selected2, _, err := x.prepareSandboxRole(ctx, service, r, c)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	if home2 != home || !bytes.Equal(cfg, cfg2) || len(selected2) != 1 || selected2[0] != selected[0] {
-		return errors.New("SDK role resume replaced its frozen inputs")
+		return "", "", errors.New("SDK role resume replaced its frozen inputs")
 	}
-	return record("native_role_inputs_confirmed", map[string]any{"home": home, "selected_count": 1, "same_preparation": true, "host_auth_removed": true, "host_skill_changed": true, "credentials": "empty_fixture_only", "platform_conversation": "not_run", "model_turn": "not_run"})
+	err = record("native_role_inputs_confirmed", map[string]any{"home": home, "selected_count": 1, "same_preparation": true, "host_auth_removed": true, "host_skill_changed": true, "credentials": "empty_fixture_only", "platform_conversation": "not_run", "model_turn": "not_run"})
+	if err != nil {
+		return "", "", err
+	}
+	return home, selected[0], nil
 }
 
 // A diagnostic uses the same schema and scope comparison as native execution,

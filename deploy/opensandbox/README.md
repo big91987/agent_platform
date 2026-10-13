@@ -97,9 +97,12 @@ bin/opensandbox-probe --service-config "$HOME/agent-platform-opensandbox/sandbox
   --report "$HOME/agent-platform-opensandbox/runtime-sdk-probe-01.jsonl" --runtime
 ```
 
-除前置Python/文件/取消门禁外，此模式用正式SDK实际执行TypeScript、启动原生
-Codex app-server、以私有capability完成WebSocket initialize，在同一原生进程中发现两份无凭据Skill、禁用非所选项并重新读取确认只有所选项启用，再按所属执行ID
-停止进程并删除环境。固定Docker端口映射使用8080；原生进程运行时项目服务选其他端口。
+除前置Python/文件/取消门禁外，此模式用正式SDK实际执行TypeScript，再沿正式
+角色准备路径上传空认证夹具与所选Skill，在宿主夹具变化后确认复用原材料。
+随后仅启动一个使用该角色HOME/CODEX_HOME的Codex app-server，以私有capability
+完成WebSocket initialize，发现所选及项目未选Skill、禁用非所选项并重新读取确认
+只有所选项启用，再按所属执行ID停止进程并删除环境。固定Docker端口映射使用8080；
+原生进程运行时项目服务选其他端口。
 启动等待只在同一进程仍运行且没有HTTP响应的短暂连接错误时有界进行；HTTP认证拒绝
 不会反复尝试，不发送模型turn、不复制登录凭据。报告写入或停止失败均使探针失败，
 保留原回执与未确认原因。此探针不能代替平台Run、真实角色交接、登录或产品QA。
@@ -113,7 +116,7 @@ Python目录描述符完成，拒绝链接、隐藏路径和越界路径；单�
 产物应先经流水线归档并核验发布回执，再明确释放环境。
 
 基础SDK探针也使用同一文件读取实现验证列表和逐字节结果，报告
-`artifact_access_confirmed`；运行时模式另验证无凭据角色材料准备与接续复用。
+`artifact_access_confirmed`；运行时模式另验证无凭据角色材料准备、接续复用及同一原生进程实际读取所选Skill。
 这些探针没有启动正式平台角色会话，也没有发送模型任务。
 
 ### 当前原生命令隔离限制与待授权方案

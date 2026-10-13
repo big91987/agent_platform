@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -96,8 +97,13 @@ func TestOpenSandboxUnconfirmedNativeLaunchNeverReposts(t *testing.T) {
 
 func TestRuntimeProbeStopsNativeProcessWhenReceiptPersistenceFails(t *testing.T) {
 	var base string
+	var filesMu sync.Mutex
+	files := map[string][]byte{}
 	var stopped atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if serveProbeRoleFiles(t, w, r, &filesMu, files) {
+			return
+		}
 		switch {
 		case r.URL.Path == "/sandboxes/owned":
 			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
@@ -146,9 +152,14 @@ func TestRuntimeProbeStopsNativeProcessWhenReceiptPersistenceFails(t *testing.T)
 
 func TestRuntimeProbeRejectedNativeAuthenticationIsNotRetried(t *testing.T) {
 	var base string
+	var filesMu sync.Mutex
+	files := map[string][]byte{}
 	var handshakes atomic.Int32
 	var stopped atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if serveProbeRoleFiles(t, w, r, &filesMu, files) {
+			return
+		}
 		switch {
 		case r.URL.Path == "/sandboxes/owned":
 			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
@@ -197,41 +208,19 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 	var base string
 	var handshakes, launches atomic.Int32
 	var stopped atomic.Bool
+	var roleLaunched atomic.Bool
 	var filesMu sync.Mutex
 	files := map[string][]byte{}
+	var selectedSkill string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if serveProbeRoleFiles(t, w, r, &filesMu, files) {
+			return
+		}
 		switch {
 		case r.URL.Path == "/sandboxes/owned":
 			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
 		case strings.Contains(r.URL.Path, "/endpoints/"):
 			json.NewEncoder(w).Encode(opensandbox.Endpoint{Endpoint: base})
-		case r.URL.Path == "/files/info":
-			w.WriteHeader(404)
-		case r.URL.Path == "/files/download":
-			filesMu.Lock()
-			raw, ok := files[r.URL.Query().Get("path")]
-			filesMu.Unlock()
-			if !ok {
-				w.WriteHeader(404)
-				return
-			}
-			w.Write(raw)
-		case r.Method == "POST" && r.URL.Path == "/files/upload":
-			if err := r.ParseMultipartForm(1 << 20); err != nil {
-				t.Error(err)
-				return
-			}
-			defer r.MultipartForm.RemoveAll()
-			metadata, _ := r.MultipartForm.File["metadata"][0].Open()
-			var info opensandbox.FileMetadata
-			json.NewDecoder(metadata).Decode(&info)
-			metadata.Close()
-			file, _ := r.MultipartForm.File["file"][0].Open()
-			raw, _ := io.ReadAll(file)
-			file.Close()
-			filesMu.Lock()
-			files[info.Path] = raw
-			filesMu.Unlock()
 		case r.Method == "POST" && r.URL.Path == "/directories":
 			w.WriteHeader(200)
 		case r.Method == "POST" && r.URL.Path == "/command":
@@ -241,6 +230,14 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 			if in.Background {
 				id = "native"
 				launches.Add(1)
+				home := in.Envs["CODEX_HOME"]
+				filesMu.Lock()
+				config, configOK := files[home+"/config.toml"]
+				_, markerOK := files[home+"/prepared.json"]
+				_, skillOK := files[home+"/skills/selected-0/SKILL.md"]
+				selectedSkill = home + "/skills/selected-0/SKILL.md"
+				filesMu.Unlock()
+				roleLaunched.Store(strings.HasPrefix(home, "/var/lib/agent-platform/roles/") && in.Envs["HOME"] == home && configOK && markerOK && skillOK && bytes.Contains(config, []byte("gpt-6.1-sol")))
 			}
 			w.Header().Set("Content-Type", "text/event-stream")
 			fmt.Fprintf(w, "data: {\"type\":\"init\",\"text\":%q}\n\ndata: {\"type\":\"execution_complete\"}\n\n", id)
@@ -293,7 +290,10 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 				var result any
 				switch req.Method {
 				case "skills/list":
-					result = map[string]any{"data": []any{map[string]any{"cwd": "/workspace", "errors": []any{}, "skills": []nativeSkill{{Path: "/tmp/probe-native-home/skills/probe-selected/SKILL.md", Enabled: true}, {Path: "/workspace/.agents/skills/probe-unselected/SKILL.md", Enabled: unselected}}}}}
+					filesMu.Lock()
+					selected := selectedSkill
+					filesMu.Unlock()
+					result = map[string]any{"data": []any{map[string]any{"cwd": "/workspace", "errors": []any{}, "skills": []nativeSkill{{Path: selected, Enabled: true}, {Path: "/workspace/.agents/skills/probe-unselected/SKILL.md", Enabled: unselected}}}}}
 				case "skills/config/write":
 					unselected = false
 					result = map[string]any{"effectiveEnabled": false}
@@ -329,8 +329,8 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil || !initialized || !skillChecked || !roleChecked || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
-		t.Fatal("native readiness failed or relaunched", err, initialized, handshakes.Load(), launches.Load(), stopped.Load())
+	if err != nil || !initialized || !skillChecked || !roleChecked || !roleLaunched.Load() || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
+		t.Fatal("native readiness failed, role inputs unused or relaunched", err, initialized, roleLaunched.Load(), handshakes.Load(), launches.Load(), stopped.Load())
 	}
 }
 
@@ -424,4 +424,57 @@ func TestSandboxCommandsRetainOwnedIDWhenEventPersistenceFails(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Serve only the SDK file operations needed before a native probe launch.
+func serveProbeRoleFiles(t *testing.T, w http.ResponseWriter, r *http.Request, mu *sync.Mutex, files map[string][]byte) bool {
+	t.Helper()
+	switch {
+	case r.URL.Path == "/files/info":
+		w.WriteHeader(404)
+	case r.URL.Path == "/files/download":
+		mu.Lock()
+		raw, ok := files[r.URL.Query().Get("path")]
+		mu.Unlock()
+		if !ok {
+			w.WriteHeader(404)
+		} else {
+			w.Write(raw)
+		}
+	case r.Method == "POST" && r.URL.Path == "/files/upload":
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Error(err)
+			return true
+		}
+		defer r.MultipartForm.RemoveAll()
+		metadata, err := r.MultipartForm.File["metadata"][0].Open()
+		if err != nil {
+			t.Error(err)
+			return true
+		}
+		var info opensandbox.FileMetadata
+		err = json.NewDecoder(metadata).Decode(&info)
+		metadata.Close()
+		if err != nil {
+			t.Error(err)
+			return true
+		}
+		file, err := r.MultipartForm.File["file"][0].Open()
+		if err != nil {
+			t.Error(err)
+			return true
+		}
+		raw, err := io.ReadAll(file)
+		file.Close()
+		if err != nil {
+			t.Error(err)
+			return true
+		}
+		mu.Lock()
+		files[info.Path] = raw
+		mu.Unlock()
+	default:
+		return false
+	}
+	return true
 }

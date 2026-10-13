@@ -992,3 +992,12 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 已安装API的expected_environment边界实测：向该OpenSandbox流程传local或unknown均400，对应稳定请求键查询404、没有创建Run，原完成Run不变。标准check-03正向请求省略该可选字段，保持旧调用兼容；不将此描述为非空expected_environment正向112验证。源码/SDK的正向字段及冻结去重已在verify-22中验证。
 - 本轮已部署角色准备/正式Execute、沙箱产物与仓库自有入口源码；公开OpenSandbox Agent启动保护仍保留。真实Codex/gpt-6.1-sol模型turn、正式角色会话/交接、新测试仓Issue类型及Pipeline尚未执行，native_agent/product_acceptance明确not_run。原namespace权限扩展仍待明确授权；没有增加SYS_ADMIN或放开AppArmor/seccomp。现有SDK探针启动的app-server也未消费新角色home，此证据缺口仍需原层补验，不能把文件上传成功冒称角色执行通过。
 - 原始回执保存在ignored .data/opensandbox-verification/platform-check-03-readback.json及112私有platform-upgrade-05/platform-check-03/platform-environment-guard-01文件；不另建公共状态源，不改旧回执。完整源码verify-22结果保持原119482bytes/SHA8f5ec520b5d8c2788053f40cc16443f0012b8987081e39b777bf52605b748043；此次仅部署与记录，不称新产品QA通过。
+
+
+### 2026-10-14 — 正式角色材料被112同一原生进程读取
+
+- 用户影响与归因：先前runtime探针把角色材料准备到正式home，但实际app-server仍使用/tmp探针home；文件接续成功不能证明角色材料被原生进程使用。已将标准探针改为先调用正式prepareSandboxRole，再在唯一原生进程中设置同角色HOME/CODEX_HOME；不新增模型替代、公共配置或第二个进程。宿主空auth删除/Skill改动后的接续仍复用原材料。生产执行源码未因探针改动改变。
+- 定向回归真实红native-role-consumed-red-03（246bytes/SHA9f6aad00b478aa248a73b6314bfd3ad755524e2833ced43677c115d7048d9707）证明roleLaunched=false；green01 race2.226s/exit0。red01缺bytes import编译失败、red02受本机端口沙箱阻断，均单独保留，不冒充行为红。后续标准verify23实际exit0：119472bytes/SHA2e53a30bb7f7f3bf110b20b4e0f4bed530c425eb76998e773e17da278f2c5109，平台race67.091s；原浏览器/供应链/SDK/113模板、vet/race/build通过，macOS linker警告保持。
+- 同源Linux探针12501684bytes/SHA7e6ec5781e9392ab6649f580a4ae1374801697e6db56d29f33e9ba020503ecb6与112传输ACK一致；native-role-process-runtime-05实际exit0，44事件/10425bytes/SHA c27024d4dcf5e5617c5ddd1f47560f0789852c3d81fe023bec7fc707e20541f0，原文件及独立只读readback同摘要。正式角色2fec7855…home中的selected-0/SKILL.md与原生skills/list返回路径完全相同；该同进程仅发现所选/项目未选两项，未选项effectiveEnabled=false，forceReload后所选仍true/未选false/errors0。没有把早期系统Skill七项禁用事实套用到此角色配置。
+- 唯一native进程3acd5524b7c742509c4b110f13ba266a实际exit0/stopped；取消命令7f1082c83f32439f822bc0cf2b3a45fd实际deadline/exit-1/stopped；所属环境dbf150cd-a946-4c74-a0f1-4dbfbe656e65 DELETE后GET404。没有真实认证/模型turn/平台角色会话，此证据仅关闭“准备的Skill没有被原生进程实际读取”的探针缺口，不证明角色指令推理、原线程重启连续或产品验收。权限、镜像及已有8795实例保持。
+- 最新112平台仍86add21（本轮探针改动尚未标准升级）；公开Agent门槛仍保留。真实模型、namespace权限兼容诊断、新测试仓Issue/Pipeline和独立整链QA仍未完成，原新增权限选择尚未收到明确回答。原报告、完整回归、readback保存在ignored .data/opensandbox-verification，不补造旧证据、不重试原native任务或恢复旧Run。
