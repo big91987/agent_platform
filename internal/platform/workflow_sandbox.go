@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
+	"io"
+	"syscall"
 	"time"
 )
 
@@ -128,9 +130,13 @@ func (s *Store) sandboxFor(r WorkflowRun) (*OpenSandbox, error) {
 	return &client, nil
 }
 func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {
+	return s.waitReadyObserved(ctx, id, run, nil)
+}
+
+func (s *OpenSandbox) waitReadyObserved(ctx context.Context, id, run string, observe func(int, string) error) error {
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	for {
+	for attempt := 1; ; attempt++ {
 		info, err := s.owned(ctx, id, run)
 		if err != nil {
 			return err
@@ -141,7 +147,25 @@ func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {
 			if err != nil {
 				return err
 			}
-			return sandboxError("execution readiness", execd.Ping(ctx))
+			pingErr := execd.Ping(ctx)
+			result := "ready"
+			if pingErr != nil {
+				result = "refused"
+				if execdListenerStarting(pingErr) {
+					result = "transport_wait"
+				}
+			}
+			if observe != nil {
+				if err := observe(attempt, result); err != nil {
+					return err
+				}
+			}
+			if pingErr == nil {
+				return nil
+			}
+			if !execdListenerStarting(pingErr) {
+				return sandboxError("execution readiness", pingErr)
+			}
 		case opensandbox.StateFailed, opensandbox.StateTerminated:
 			return errors.New("sandbox failed or expired; its environment was not recreated")
 		}
@@ -152,6 +176,18 @@ func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {
 		}
 	}
 }
+
+// Read-only readiness may wait for a port that Docker exposed before execd
+// listens. An actual HTTP/authentication refusal, timeout, TLS error or ownership
+// failure is final. No create, execution or uncertain write is replayed.
+func execdListenerStarting(err error) bool {
+	var api *opensandbox.APIError
+	if errors.As(err, &api) {
+		return false
+	}
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.ECONNRESET)
+}
+
 func (e *WorkflowEngine) ensureSandbox(ctx context.Context, r WorkflowRun) (bool, error) {
 	client, err := e.store.sandboxFor(r)
 	if err != nil {

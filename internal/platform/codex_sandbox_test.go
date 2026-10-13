@@ -115,6 +115,8 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 						switch packet.Method {
 						case "initialize":
 							send(map[string]any{"id": packet.ID, "result": map[string]any{}})
+						case "skills/list":
+							send(map[string]any{"id": packet.ID, "result": map[string]any{"data": []any{map[string]any{"cwd": "/workspace", "skills": []any{}, "errors": []any{}}}}})
 						case "thread/start":
 							if packet.Params["cwd"] != "/workspace" || packet.Params["sandbox"] != "workspace-write" || packet.Params["model"] != "gpt-6.1-sol" || packet.Params["allowProviderModelFallback"] != false {
 								t.Error("native task configuration changed", packet.Params)
@@ -157,7 +159,7 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 				}()
 			}
 			var events strings.Builder
-			err = executor.executeSandboxAppServer(ctx, store, client, run, c, m, "/var/lib/agent-platform/roles/"+c.ID, []byte("model='gpt-6.1-sol'\n"), map[string]string{}, func(raw []byte) error {
+			err = executor.executeSandboxAppServer(ctx, store, client, run, c, m, "/var/lib/agent-platform/roles/"+c.ID, []byte("model='gpt-6.1-sol'\n"), map[string]string{}, []string{}, func(raw []byte) error {
 				if mode == "event fail lost stop" && strings.Contains(string(raw), "native.launch_output") {
 					return errors.New("event persistence unavailable")
 				}

@@ -10,12 +10,12 @@
 
 **Spec:** `docs/01-product/software-factory-assessment.md` 第 0 节，加本节记录的用户后续确定项：四类节点；Agent 内部 Hook 保留原生职责，外部动作复用执行能力；外部工具统一 MCP；项目脚本不限制 Go；Example 复制入项目后按需调整；112 实际部署及独立新 Issue 入口是完成条件。
 
-## 当前实施状态（2026-10-13）
+## 当前实施状态（2026-10-14）
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
 | 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过 | 原生Agent及测试仓真实Pipeline |
-| 112 OpenSandbox | 1.1.1/8095；SDK文件/取消及认证原生initialize/停止/删除404通过；8795正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
+| 112 OpenSandbox | 1.1.1/8095；SDK文件/取消、认证原生initialize和同进程实际Skill范围/停止/删除404通过；8795正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
 | 四类画布与112平台8795 | 8912141标准Linux/CGO构建升级exit0，Mac/112 health同SHA、原完成Run保留；真实1440画布和390Run截图核验通过 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
 | 测试仓独立入口 | 尚未创建新Issue/Pipeline | 仓库自有Harness、新类型去重、真实整链 |
 
@@ -292,3 +292,20 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 新建及同原线程接续的匹配/不匹配四场景、原生审批/身份及桥接回归race2.953s exit0；原native-model-binding-green-01夹具缺固定Schema模型字段而红的证据保留，隔离服务已按实际响应补齐。因共同协议新改，完整verify15正在运行，完成回执待读取；不沿用verify14作为此版本完整绿。
 
 - 标准verify15原进程已明确exit0，原日志118098bytes/SHAb0382b30e5971da206cdbc9c84b97c8b977576cd4cc507345da48a87dcc7aa60，平台全包race73.662s；包含上述模型约束四场景、生命周期/角色输入及原完整浏览器/供应链/vet/build。macOS linker warning保留。此结果是维护源完整验证，112仍8912141，未称新代码已部署或真实模型可用。
+
+### 2026-10-14 — 同进程Skill核验与112首次就绪故障
+
+- 角色桥接现显式传入所选Skill路径（空集合也须检查），同一已归属app-server依次skills/list、仅修正启用差异的skills/config/write、forceReload再读后才thread/start/resume。所选缺失、发现错误/错误cwd、启用回执缺失或拒绝、重读仍多启用均拒绝任务；缺enabled字段不默认为disabled。宿主既有预制路径保持原校验入口，未新增可编辑策略/任务ID。
+- native-skill-scope-red-02实际证明未经原生范围核验就进入thread。green04隔离官方SDK/HTTP/WS race3.434s exit0，包括空所选集和同进程正常/取消/未知launch-stop；green02夹具未处理skills/list导致deadline红保留，补齐固定协议后green03与04绿。native-skill-scope-red-03证明缺enabled错误接受，修后绿。这是协议回归，不是实际112模型通过。
+- 原完整verify16明确exit0、平台race66.293s，覆盖本次Skill路径与扩展标准无凭据探针；全文bytes/SHA待最终入账。此轮不含之后就绪等待缺陷修复。
+- 新探针binary12126683bytes/SHA06429c27764e45bcdb305edbac173010a4edd6c8c8d1b0f610681d4f04326532，112传输ACK一致，基于10d00dc+本次未提交源码；单独库存同时涵盖新增未跟踪文件，diff摘要不能独自代表全部源码。保持原容器权限、无原生认证/模型turn，原8795未升级。
+- 实际native-skill-runtime-01 exit1：报告911bytes/SHA4d4463bf6a2d20f5f68746b7fa852c07f57f131b16754e6f4e5b0b7c200212e4，首次create Running后execution readiness失败，尚未Python或Skill；环境38781c58-b769-4aca-b474-04031150a7da原DELETE及GET404确认，不保留为未知运行、也未重发创建。服务日志同时间容器启动成功，首Ping具体网络错误因现有安全错误摘要尚无法恢复，未假称已定位为namespace/Skill/模型故障。
+- 用户影响：新环境创建偶发在execd可服务前即失败，平台/探针都仅在生命周期Running后做一次Ping。原因假设为端口或execd启动延迟；最小隔离复现检查相同ID只读就绪等待、实际HTTP拒绝不重试、取消/环境终止而不重建。新回归红结果待核验，原首次失败证据保持；不盲目重跑整探针或扩大权限。
+
+- 补充原verify16全文118098bytes/SHA c62116722977dcf22775dfbb5c336434115ef75a00cc9f3a585e7480e2e53362，exit0、平台race66.293s。共享就绪路径后又改源码，verify17尚运行，不能用16证明之后版本。
+- sandbox-readiness-red-01真实隔离HTTP复现首次Ping连接EOF立即失败，取消/环境终止检查也被同一早退遮蔽；SDK自身可对复用GET连接补一次新连接，夹具保留两次初始EOF。共享waitReady只在同一所属Running环境对连接拒绝/reset/EOF作有界只读等待；实际HTTP、TLS/超时/归属拒绝即失败，取消/过期不重建。原SDK及Run/探针统一入口，green01 race5.214s exit0，原取消、认证/未知及Skill回归绿。
+- 根因修复后标准native-skill-runtime-02独立attempt真实exit0；同源binary12131993bytes/SHA5847b4473aeab0ba3a820d81de730e4340df87b63ed781d7dbef9f377f50597b与远端ACK一致。原报告47事件/22238bytes/SHA03da65d3d7c9686db3af2c0c2023851abf3072a171382a174d23ca1db0ce2c0d，重新只读检查原文件bytes/SHA与status一致，独立白名单readback同时保存。原01失败与清理未改；02实际首Ping就是ready，不能倒推01具体EOF或证明02发生过延迟。
+- 112固定Codex0.151.0在同一个认证WebSocket进程实际skills/list发现所选/项目未选/六个系统Skill共8项原enabled=true；7次skills/config/write回执effectiveEnabled=false，forceReload再次读取只有所选保持true、其余7项false且errors=0。不是仅从上传配置推定启用范围，也不是第二个app-server进程。
+- 同一新环境129c0dd0-ebd6-4862-aeaa-b656ff576aa2原Python/TS/42byte文件逐字节0600、取消原command e3be01d2…deadline/exit-1/stopped、native 38f10fd6…实际exit0/stopped；DELETE后GET404确认释放。实际原生用户代理为0.151.0/Linux；没有原生登录/模型turn/产品验收，权限不变。SYS_ADMIN/AppArmor/seccomp新增诊断仍待用户选择；公开Agent门禁、8795旧8912141及测试仓未创建新Pipeline的事实保持。
+
+- 新版本标准verify17原进程已明确exit0：118100bytes/SHA407ebad416ca4b59147f010a15b4d5c282da2a03a5369bdd5d2463562669ed07，平台race66.281s，真实浏览器、供应链/SDK/部署/权限/恢复、go vet/race/build原门禁全部保留通过；包括共享就绪等待及同进程Skill范围原红→绿。准备维护源提交与标准8795升级，当前部署仍8912141，真实角色/模型/测试仓整链待完成。

@@ -28,6 +28,16 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err := record("native_home_prepared", map[string]any{"mode": "0700"}); err != nil {
 		return err
 	}
+	selectedSkill := "/tmp/probe-native-home/skills/probe-selected/SKILL.md"
+	for _, fixture := range []struct{ path, name string }{{selectedSkill, "probe-selected"}, {"/workspace/.agents/skills/probe-unselected/SKILL.md", "probe-unselected"}} {
+		if err := service.nativeHome(ctx, id, run, strings.TrimSuffix(fixture.path, "/SKILL.md")); err != nil {
+			return err
+		}
+		raw := "---\nname: " + fixture.name + "\ndescription: Credential-free native Skill scope probe.\n---\nThis probe sends no model task.\n"
+		if err := service.upload(ctx, id, run, fixture.path, []byte(raw), 0600); err != nil {
+			return err
+		}
+	}
 	token := newID() + newID()
 	if err = service.upload(ctx, id, run, "/tmp/probe-native-token", []byte(token), 0600); err != nil {
 		return err
@@ -91,5 +101,80 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if initialized.ID != 1 || len(initialized.Error) > 0 || len(initialized.Result) == 0 {
 		return errors.New("native initialization was not proved")
 	}
-	return record("native_initialized", map[string]any{"result": initialized.Result, "transport": "authenticated WebSocket", "native_login": "not_run", "model_turn": "not_run"})
+	if err = record("native_initialized", map[string]any{"result": initialized.Result, "transport": "authenticated WebSocket", "native_login": "not_run", "model_turn": "not_run"}); err != nil {
+		return err
+	}
+	if err = json.NewEncoder(stream).Encode(map[string]any{"method": "initialized"}); err != nil {
+		return err
+	}
+	return probeSandboxNativeSkillScope(stream, selectedSkill, record)
+}
+
+// A diagnostic uses the same schema and scope comparison as native execution,
+// while deliberately sending neither a thread nor a model turn.
+func probeSandboxNativeSkillScope(stream io.ReadWriter, selected string, record func(string, any) error) error {
+	decoder, encoder := json.NewDecoder(stream), json.NewEncoder(stream)
+	request := func(id int, method string, params any) (json.RawMessage, error) {
+		if err := encoder.Encode(map[string]any{"id": id, "method": method, "params": params}); err != nil {
+			return nil, err
+		}
+		for count := 0; count < 32; count++ {
+			var reply struct {
+				ID     int             `json:"id"`
+				Result json.RawMessage `json:"result"`
+				Error  json.RawMessage `json:"error"`
+			}
+			if err := decoder.Decode(&reply); err != nil {
+				return nil, err
+			}
+			if reply.ID != id {
+				continue
+			}
+			if err := record("native_skill_reply", map[string]any{"method": method, "reply": reply}); err != nil {
+				return nil, err
+			}
+			if len(reply.Error) > 0 {
+				return nil, errors.New("native Skill request rejected")
+			}
+			return reply.Result, nil
+		}
+		return nil, errors.New("native Skill response was not received within the diagnostic bound")
+	}
+	params := map[string]any{"cwds": []string{"/workspace"}, "forceReload": true}
+	raw, err := request(10, "skills/list", params)
+	if err != nil {
+		return err
+	}
+	actual, err := sandboxNativeSkills(raw, "/workspace")
+	if err != nil {
+		return err
+	}
+	choices, err := sandboxSkillChoices(actual, []string{selected}, false)
+	if err != nil {
+		return err
+	}
+	for _, choice := range choices {
+		raw, err = request(11, "skills/config/write", map[string]any{"path": choice.Path, "enabled": choice.Enabled})
+		if err != nil {
+			return err
+		}
+		var reply struct {
+			Enabled *bool `json:"effectiveEnabled"`
+		}
+		if json.Unmarshal(raw, &reply) != nil || reply.Enabled == nil || *reply.Enabled != choice.Enabled {
+			return errors.New("native Skill setting was not confirmed")
+		}
+	}
+	raw, err = request(12, "skills/list", params)
+	if err != nil {
+		return err
+	}
+	actual, err = sandboxNativeSkills(raw, "/workspace")
+	if err != nil {
+		return err
+	}
+	if _, err = sandboxSkillChoices(actual, []string{selected}, true); err != nil {
+		return err
+	}
+	return record("native_skill_scope_confirmed", map[string]any{"selected": selected, "enabled_count": 1, "native_login": "not_run", "model_turn": "not_run"})
 }

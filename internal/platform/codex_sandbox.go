@@ -15,7 +15,10 @@ import (
 // The shared workspace and process association come from the owned Run, never
 // an external conversation path. Public sandbox Agent entry stays gated until
 // role preparation, credentials, Skills and native execution are verified.
-func (x *Codex) executeSandboxAppServer(ctx context.Context, store *Store, client *OpenSandbox, run WorkflowRun, c Conversation, m Message, home string, configRaw []byte, env map[string]string, onEvent func([]byte) error) (executeErr error) {
+func (x *Codex) executeSandboxAppServer(ctx context.Context, store *Store, client *OpenSandbox, run WorkflowRun, c Conversation, m Message, home string, configRaw []byte, env map[string]string, selectedSkills []string, onEvent func([]byte) error) (executeErr error) {
+	if selectedSkills == nil {
+		return errors.New("sandbox native Skill scope must be explicitly checked")
+	}
 	if store == nil || client == nil || run.Environment == nil || run.Environment.Status != "ready" || run.WorkspacePath != "/workspace" || !validSandboxRun(c.ID) || home != "/var/lib/agent-platform/roles/"+c.ID {
 		return errors.New("native role context does not match its owned Run")
 	}
@@ -117,5 +120,5 @@ func (x *Codex) executeSandboxAppServer(ctx context.Context, store *Store, clien
 		return err
 	}
 	defer stream.Close()
-	return x.executeAppServerTransport(ctx, c, m, "/workspace", configRaw, stream, stream, func() string { return "Native diagnostics are retained with the owned execution receipt." }, onEvent)
+	return x.executeAppServerTransport(ctx, c, m, "/workspace", configRaw, stream, stream, func() string { return "Native diagnostics are retained with the owned execution receipt." }, onEvent, selectedSkills)
 }

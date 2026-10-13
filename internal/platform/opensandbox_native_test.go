@@ -243,6 +243,40 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 				return
 			}
 			conn.Write(r.Context(), websocket.MessageText, []byte(`{"id":1,"result":{}}`))
+			unselected := true
+			for {
+				_, raw, err := conn.Read(r.Context())
+				if err != nil {
+					return
+				}
+				var req struct {
+					ID     int            `json:"id"`
+					Method string         `json:"method"`
+					Params map[string]any `json:"params"`
+				}
+				if json.Unmarshal(raw, &req) != nil {
+					return
+				}
+				if req.Method == "initialized" {
+					continue
+				}
+				var result any
+				switch req.Method {
+				case "skills/list":
+					result = map[string]any{"data": []any{map[string]any{"cwd": "/workspace", "errors": []any{}, "skills": []nativeSkill{{Path: "/tmp/probe-native-home/skills/probe-selected/SKILL.md", Enabled: true}, {Path: "/workspace/.agents/skills/probe-unselected/SKILL.md", Enabled: unselected}}}}}
+				case "skills/config/write":
+					unselected = false
+					result = map[string]any{"effectiveEnabled": false}
+				default:
+					t.Error("unexpected probe request", req.Method)
+					return
+				}
+				reply, _ := json.Marshal(map[string]any{"id": req.ID, "result": result})
+				if err := conn.Write(r.Context(), websocket.MessageText, reply); err != nil {
+					return
+				}
+			}
+
 		default:
 			w.WriteHeader(404)
 		}
@@ -251,13 +285,17 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 	base = server.URL
 	service, _ := newOpenSandbox(base, "private", "fixed-runtime", 600)
 	initialized := false
+	skillChecked := false
 	err := probeSandboxRuntime(context.Background(), service, "owned", sandboxTestRun, func(event string, _ any) error {
 		if event == "native_initialized" {
 			initialized = true
 		}
+		if event == "native_skill_scope_confirmed" {
+			skillChecked = true
+		}
 		return nil
 	})
-	if err != nil || !initialized || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
+	if err != nil || !initialized || !skillChecked || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
 		t.Fatal("native readiness failed or relaunched", err, initialized, handshakes.Load(), launches.Load(), stopped.Load())
 	}
 }

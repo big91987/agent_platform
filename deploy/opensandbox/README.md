@@ -98,7 +98,7 @@ bin/opensandbox-probe --service-config "$HOME/agent-platform-opensandbox/sandbox
 ```
 
 除前置Python/文件/取消门禁外，此模式用正式SDK实际执行TypeScript、启动原生
-Codex app-server、以私有capability完成WebSocket initialize，再按所属执行ID
+Codex app-server、以私有capability完成WebSocket initialize，在同一原生进程中发现两份无凭据Skill、禁用非所选项并重新读取确认只有所选项启用，再按所属执行ID
 停止进程并删除环境。固定Docker端口映射使用8080；原生进程运行时项目服务选其他端口。
 启动等待只在同一进程仍运行且没有HTTP响应的短暂连接错误时有界进行；HTTP认证拒绝
 不会反复尝试，不发送模型turn、不复制登录凭据。报告写入或停止失败均使探针失败，

@@ -139,31 +139,18 @@ func probeOpenSandbox(ctx context.Context, config, image, reportPath string, run
 	if err = record("created", info); err != nil {
 		return err
 	}
-	ready, cancel := context.WithTimeout(ctx, 120*time.Second)
-	defer cancel()
-	for {
-		info, err = service.owned(ready, sandboxID, run)
-		if err != nil {
-			return err
-		}
-		if info.Status.State == opensandbox.StateRunning {
-			break
-		}
-		if info.Status.State == opensandbox.StateFailed || info.Status.State == opensandbox.StateTerminated {
-			return errors.New("probe sandbox failed before execution")
-		}
-		select {
-		case <-ready.Done():
-			return ready.Err()
-		case <-time.After(time.Second):
-		}
+	if err = service.waitReadyObserved(ctx, sandboxID, run, func(attempt int, result string) error {
+		return record("execution_readiness", map[string]any{"attempt": attempt, "result": result})
+	}); err != nil {
+		return err
 	}
-	execd, err := service.execd(ready, sandboxID, run)
+	info, err = service.owned(ctx, sandboxID, run)
 	if err != nil {
 		return err
 	}
-	if err = execd.Ping(ready); err != nil {
-		return sandboxError("execution readiness", err)
+	execd, err := service.execd(ctx, sandboxID, run)
+	if err != nil {
+		return err
 	}
 	if err = record("running", info); err != nil {
 		return err

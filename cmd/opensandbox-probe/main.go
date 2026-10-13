@@ -27,6 +27,6 @@ func main() {
 	}
 	fmt.Println("OPENSANDBOX_PROBE_PASS: lifecycle, Python, file round-trip and remote cancellation; not product acceptance")
 	if *runtime {
-		fmt.Println("OPENSANDBOX_RUNTIME_PASS: TypeScript, authenticated native initialization and owned process stop; native login/model turn Not Run")
+		fmt.Println("OPENSANDBOX_RUNTIME_PASS: TypeScript, authenticated native initialization, Skill scope and owned process stop; native login/model turn Not Run")
 	}
 }

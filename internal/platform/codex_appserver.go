@@ -100,12 +100,12 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 		return err
 	}
 	diagnostics := func() string { stderrMu.Lock(); defer stderrMu.Unlock(); return stderrText.String() }
-	return x.executeAppServerTransport(runCtx, c, m, workspace, configRaw, input, output, diagnostics, onEvent)
+	return x.executeAppServerTransport(runCtx, c, m, workspace, configRaw, input, output, diagnostics, onEvent, nil)
 }
 
 // Local stdio and sandbox WebSocket transports share native identity, steering,
 // approvals and presentation. Only process ownership differs between executors.
-func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m Message, workspace string, configRaw []byte, input io.Writer, output io.Reader, diagnostics func() string, onEvent func([]byte) error) (err error) {
+func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m Message, workspace string, configRaw []byte, input io.Writer, output io.Reader, diagnostics func() string, onEvent func([]byte) error, selectedSkills []string) (err error) {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	send := func(v any) error { return json.NewEncoder(input).Encode(v) }
@@ -166,6 +166,53 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 			req.Finish(errors.New("引导接收结果未知，请检查会话；未自动重发"), false)
 		}
 	}()
+	startThread := func() error {
+		raw := configRaw
+		if len(raw) == 0 {
+			var e error
+			raw, e = nativeConfig(c.Snapshot)
+			if e != nil {
+				return e
+			}
+		}
+		var config map[string]any
+		if e := toml.Unmarshal(raw, &config); e != nil {
+			return e
+		}
+		options := map[string]any{"cwd": workspace, "approvalPolicy": nativeConversationApprovalPolicy(c), "sandbox": nativeSandboxMode(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot)}
+		guidance, _ := config["developer_instructions"].(string)
+		if c.ReadOnly {
+			options["sandbox"] = "read-only"
+			guidance += "\nCurrent workspace access is read-only. Do not modify workspace files. Use registered management tools to pass corrections or stop/redirect delegated work."
+		}
+		options["developerInstructions"] = strings.TrimSpace(guidance + "\n\nThis turn is a conversation with the user in Agent Platform. Reply in natural language/Markdown unless the current user input explicitly requests a structured format. Do not apply an output envelope from a different integration context to this conversation.")
+		if c.Snapshot.TrustHooks {
+			options["config"] = map[string]any{"bypass_hook_trust": true}
+		}
+		method := "thread/start"
+		if c.Snapshot.Model != "" {
+			options["model"] = c.Snapshot.Model
+		}
+		if c.ThreadID != "" {
+			method = "thread/resume"
+			options["threadId"] = c.ThreadID
+		} else {
+			options["allowProviderModelFallback"] = false
+		}
+		if err = request(2, method, options); err != nil {
+			return err
+		}
+		return nil
+	}
+	var skillWrites []nativeSkill
+	skillWriteIndex := 0
+	writeNextSkill := func() error {
+		if skillWriteIndex == len(skillWrites) {
+			return request(12, "skills/list", map[string]any{"cwds": []string{workspace}, "forceReload": true})
+		}
+		choice := skillWrites[skillWriteIndex]
+		return request(11, "skills/config/write", map[string]any{"path": choice.Path, "enabled": choice.Enabled})
+	}
 	textByItem := map[string]string{}
 	for {
 		select {
@@ -261,39 +308,45 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 					if err = send(map[string]any{"method": "initialized"}); err != nil {
 						return err
 					}
-					raw := configRaw
-					if len(raw) == 0 {
-						var e error
-						raw, e = nativeConfig(c.Snapshot)
-						if e != nil {
-							return e
+					if selectedSkills == nil {
+						if err = startThread(); err != nil {
+							return err
 						}
+					} else if err = request(10, "skills/list", map[string]any{"cwds": []string{workspace}, "forceReload": true}); err != nil {
+						return err
 					}
-					var config map[string]any
-					if e := toml.Unmarshal(raw, &config); e != nil {
+				case "10":
+					actual, e := sandboxNativeSkills(p.Result, workspace)
+					if e != nil {
 						return e
 					}
-					options := map[string]any{"cwd": workspace, "approvalPolicy": nativeConversationApprovalPolicy(c), "sandbox": nativeSandboxMode(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot)}
-					guidance, _ := config["developer_instructions"].(string)
-					if c.ReadOnly {
-						options["sandbox"] = "read-only"
-						guidance += "\nCurrent workspace access is read-only. Do not modify workspace files. Use registered management tools to pass corrections or stop/redirect delegated work."
+					skillWrites, e = sandboxSkillChoices(actual, selectedSkills, false)
+					if e != nil {
+						return e
 					}
-					options["developerInstructions"] = strings.TrimSpace(guidance + "\n\nThis turn is a conversation with the user in Agent Platform. Reply in natural language/Markdown unless the current user input explicitly requests a structured format. Do not apply an output envelope from a different integration context to this conversation.")
-					if c.Snapshot.TrustHooks {
-						options["config"] = map[string]any{"bypass_hook_trust": true}
+					if err = writeNextSkill(); err != nil {
+						return err
 					}
-					method := "thread/start"
-					if c.Snapshot.Model != "" {
-						options["model"] = c.Snapshot.Model
+				case "11":
+					var result struct {
+						Enabled *bool `json:"effectiveEnabled"`
 					}
-					if c.ThreadID != "" {
-						method = "thread/resume"
-						options["threadId"] = c.ThreadID
-					} else {
-						options["allowProviderModelFallback"] = false
+					if json.Unmarshal(p.Result, &result) != nil || skillWriteIndex >= len(skillWrites) || result.Enabled == nil || *result.Enabled != skillWrites[skillWriteIndex].Enabled {
+						return errors.New("native Skill enable result is not confirmed; no task was sent")
 					}
-					if err = request(2, method, options); err != nil {
+					skillWriteIndex++
+					if err = writeNextSkill(); err != nil {
+						return err
+					}
+				case "12":
+					actual, e := sandboxNativeSkills(p.Result, workspace)
+					if e != nil {
+						return e
+					}
+					if _, e = sandboxSkillChoices(actual, selectedSkills, true); e != nil {
+						return e
+					}
+					if err = startThread(); err != nil {
 						return err
 					}
 				case "2":
