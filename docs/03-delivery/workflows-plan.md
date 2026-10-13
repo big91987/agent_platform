@@ -852,3 +852,20 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 实际Chromium→平台API保存重载Python、TypeScript和任意项目命令、切换MCP、启动独立Run、仅一次MCP调用、释放环境及390px页面验证已纳入原scripts/verify.sh；生命周期为SDK HTTP夹具，不冒称112真实Run。已释放环境无继续/回退控件，也不再提示可回退。前一轮浏览器红为两个同名应用按钮定位歧义，已限定设置表单；未force点击。
 - 当前完整scripts/verify.sh exit0：verify-06.log 117165bytes/SHA256 da26e7b1d0109946bc8d66dc044487af188d9e60552b9745933a8144bc4bfef1，Go平台全包race64.939s；原全部工程检查、真实浏览器、vet与构建均完成。独立相关race门禁7.841s绿、前端59项绿；日志均在ignored .data/opensandbox-verification。一次构建红为新增输入上限检查放在raw声明前，修正后实际重测；本机受限listener红与原测试失败日志保留。macOS链接器警告仍保留。
 - 112 OpenSandbox8095的此前真实SDK完整probe-04仍是基础设施证据。平台8795尚未部署，原生Codex沙箱会话仍显式拒绝，TypeScript实际执行及测试仓独立新Issue/Pipeline尚未验证。当前不提交产品通过或上线结论；正在准备固定Linux运行镜像，之后接通原生双向会话与正式隔离部署。8788/8793及旧产品任务未改。
+
+
+### 2026-10-13 — 112固定运行镜像首次构建失败（未部署）
+
+用户影响：原生Agent与TypeScript/浏览器真实Run仍不能上线，不能创建测试仓任务冒称可执行。维护源新增Dockerfile/锁文件/标准build.sh/无凭据check.py，固定Node22.22.0、Go1.25.6的Linux/amd64官方镜像摘要，Codex0.151.0/tsx4.20.6/Playwright1.59.1及完整npm锁。112 source tar40960bytes/SHA c5d3cd5da33629324b577253f77583b49dc9e3da2f46c309ce3b1d65b1e61930逐字节核验，唯一runtime-build-01真实exit100。
+
+实际证据：两个官方镜像摘要拉取成功；APT的三个http://deb.debian.org InRelease均80端口连接超时，update忽略失败后缺python3-venv候选。已证软件源未成功取得，不是包已被证明不存在。原build.log/status保留；未启动8795或真实产品任务。下一步最小核验同容器网络下官方HTTPS源；确认可达后改唯一Dockerfile与APT严格失败设置，再通过标准构建入口新attempt复验，不手装依赖/host network/删除原失败日志。当前未证HTTPS可达，镜像运行检查/原生登录/产品QA均NotRun。
+
+
+### 2026-10-13 — 原生双向协议共用与网络根因确认
+
+- 原生Codex0.151.0本机stdio与候选远端WebSocket复用同一 executeAppServerTransport：实际cwd、thread/resume身份、turn/start、引导回执、审批及原生消息处理不复制第二套协议。新增共用传输回归先缺接口红，接通后同线程恢复/交互审批与拒绝换线程通过；原全部原生/停止/引导相关race回归6.614s绿。
+- 固定官方coder/websocket v1.8.15；真实HTTP/WebSocket帧与认证回归先缺接口红，接通后同原生相关race5.139s绿。只接受文本JSON帧，4MiB上限；拒绝无原生capability或转发OpenSandbox控制面API key；错误不公开endpoint或header，也不重放未知请求。此仍是隔离协议测试，未连接112真实原生Agent，不冒称实际模型执行。
+- 修改后的原完整scripts/verify.sh exit0：verify-07.log 117184bytes/SHA256 024bc5171604ded217aef2025f4c1d2cb01ac953bee950b66cc7c29d16330c3c，平台全包race63.608s。原流程、审批、停止、恢复、浏览器、Python供应链门禁与构建保持通过。
+- 112首runtime-build-01的APT失败继续保留。直连HTTPS单探针exit28/1963bytes/SHA c0d778071211374322ac7ec68c33cb4adf17d3422b474cfde401c41f99209549；宿主Debian/npm及容器npm/镜像源直连均超时，未盲改镜像源或host网络。随后只检查代理存在/是否含凭据：112原有小写http_proxy/https_proxy及Docker代理（均非回环、无凭据）。容器显式引用原代理后Debian/npm分别HTTP200，证明构建未带入现有代理的配置缺口。
+- 标准build.sh只显式复用现有代理的Docker预定义build args（大小写兼容），不打印值、不写ENV、不拷贝宿主环境/凭据；官方Debian源改HTTPS，APT索引更新任何错误即失败、禁重试并限时。第二批源tar40960bytes/SHA e58eef714bfd1d4bb9fbc8f81ef2cc9b6043e56ae5bf7da581645000b57b2f8a已核对并进入独立runtime-build-02。目前实际构建/运行检查结果仍待核验；未跳检查，首失败目录未覆盖。
+- 仍缺平台原生沙箱进程归属/停止持久恢复、角色文件/Skills/最小认证准备、正式112平台8795及测试仓独立新入口。沙箱Agent启动当前继续明确拒绝，不把协议SDK就绪当整条Pipeline已打通。

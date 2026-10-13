@@ -79,18 +79,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 	if _, err = io.WriteString(input, nonce+"\n"); err != nil {
 		return err
 	}
-	send := func(v any) error { return json.NewEncoder(input).Encode(v) }
-	request := func(id int, method string, params any) error {
-		return send(map[string]any{"id": id, "method": method, "params": params})
-	}
 	redact := x.redactor(c.Snapshot)
-	emit := func(v any) error {
-		raw, e := json.Marshal(v)
-		if e != nil {
-			return e
-		}
-		return onEvent(redactJSON(raw, redact))
-	}
 	var stderrMu sync.Mutex
 	var stderrText strings.Builder
 	stderrDone := make(chan struct{})
@@ -105,6 +94,32 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 			stderrMu.Unlock()
 		}
 	}()
+
+	configRaw, err := os.ReadFile(filepath.Join(home, "config.toml"))
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	diagnostics := func() string { stderrMu.Lock(); defer stderrMu.Unlock(); return stderrText.String() }
+	return x.executeAppServerTransport(runCtx, c, m, workspace, configRaw, input, output, diagnostics, onEvent)
+}
+
+// Local stdio and sandbox WebSocket transports share native identity, steering,
+// approvals and presentation. Only process ownership differs between executors.
+func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m Message, workspace string, configRaw []byte, input io.Writer, output io.Reader, diagnostics func() string, onEvent func([]byte) error) (err error) {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	send := func(v any) error { return json.NewEncoder(input).Encode(v) }
+	request := func(id int, method string, params any) error {
+		return send(map[string]any{"id": id, "method": method, "params": params})
+	}
+	redact := x.redactor(c.Snapshot)
+	emit := func(v any) error {
+		raw, e := json.Marshal(v)
+		if e != nil {
+			return e
+		}
+		return onEvent(redactJSON(raw, redact))
+	}
 	type packet struct {
 		ID     json.RawMessage `json:"id"`
 		Method string          `json:"method"`
@@ -171,9 +186,7 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 		case p, ok := <-frames:
 			if !ok {
 				err = <-readErrors
-				stderrMu.Lock()
-				detail := stderrText.String()
-				stderrMu.Unlock()
+				detail := diagnostics()
 				return fmt.Errorf("Codex app-server ended before turn completion: %w %s", err, detail)
 			}
 			if req, ok := pendingSteers[string(p.ID)]; ok && p.Method == "" {
@@ -248,15 +261,16 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 					if err = send(map[string]any{"method": "initialized"}); err != nil {
 						return err
 					}
-					raw, e := os.ReadFile(filepath.Join(home, "config.toml"))
-					if os.IsNotExist(e) {
+					raw := configRaw
+					if len(raw) == 0 {
+						var e error
 						raw, e = nativeConfig(c.Snapshot)
-					}
-					if e != nil {
-						return e
+						if e != nil {
+							return e
+						}
 					}
 					var config map[string]any
-					if e = toml.Unmarshal(raw, &config); e != nil {
+					if e := toml.Unmarshal(raw, &config); e != nil {
 						return e
 					}
 					options := map[string]any{"cwd": workspace, "approvalPolicy": nativeConversationApprovalPolicy(c), "sandbox": nativeSandboxMode(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot)}
