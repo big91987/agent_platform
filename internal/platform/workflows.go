@@ -15,6 +15,7 @@ import (
 // Workflow is a saved graph. A running instance will own its definition snapshot.
 // Node names and routes have no built-in business-stage semantics.
 type Workflow struct {
+	Environment     string         `json:"environment,omitempty"`
 	ContextVersion  int            `json:"context_version,omitempty"`
 	Hooks           []WorkflowHook `json:"hooks,omitempty"`
 	ID              string         `json:"id"`
@@ -59,6 +60,19 @@ type WorkflowEdge struct {
 var workflowKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,63}$`)
 
 func validateWorkflow(w Workflow) error {
+	if w.Environment != "" && w.Environment != "opensandbox" {
+		return errors.New("unsupported workflow environment")
+	}
+	if w.Environment == "opensandbox" {
+		if len(w.Hooks) > 0 {
+			return errors.New("sandbox workflows use execution nodes for external actions; host Connector hooks are not supported")
+		}
+		for _, n := range w.Nodes {
+			if n.Kind == "connector" {
+				return errors.New("host Connector nodes cannot run in OpenSandbox")
+			}
+		}
+	}
 	if strings.TrimSpace(w.Name) == "" || len(w.Name) > 200 {
 		return errors.New("workflow name is required (up to 200 bytes)")
 	}
@@ -225,7 +239,10 @@ func (s *Store) initWorkflows() error {
 	if e = s.initConnectors(); e != nil {
 		return e
 	}
-	return s.initWorkflowHooks()
+	if e = s.initWorkflowHooks(); e != nil {
+		return e
+	}
+	return s.initRunEnvironments()
 }
 func workflowAllowed(c Caller, w Workflow) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(w.AuthorizedUsers, c.UserID)

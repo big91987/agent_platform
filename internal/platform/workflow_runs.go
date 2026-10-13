@@ -61,6 +61,7 @@ func (s WorkflowStep) actionReceipt() *ConnectorReceipt {
 }
 
 type WorkflowRun struct {
+	Environment    *RunEnvironment                 `json:"environment,omitempty"`
 	ExecutionTools map[string]RegisteredToolServer `json:"-"`
 	Parameters     map[string]string               `json:"parameters,omitempty"`
 	Connectors     map[string]Connector            `json:"connectors,omitempty"`
@@ -146,6 +147,10 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 		return r, e
 	}
 	if e = json.Unmarshal([]byte(raw), &r.Definition); e != nil {
+		return r, e
+	}
+	r.Environment, e = loadRunEnvironment(tx, id)
+	if e != nil {
 		return r, e
 	}
 	r.MaxSteps = r.Definition.MaxSteps
@@ -327,22 +332,6 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 			return zero, errors.New("invalid workflow parameter")
 		}
 	}
-	if in.WorkspacePath == "" {
-		return zero, errors.New("choose an existing workspace directory")
-	}
-	path, e := normalizeWorkspace(in.WorkspacePath)
-	if e != nil {
-		return zero, e
-	}
-	in.WorkspacePath = path
-	data, e := normalizeWorkspace(s.Dir)
-	if e != nil {
-		return zero, e
-	}
-	if containsPath(data, path) || containsPath(path, data) {
-		return zero, errors.New("workspace must be outside platform data")
-	}
-	fingerprint, _ := json.Marshal(in)
 	tx, e := s.DB.Begin()
 	if e != nil {
 		return zero, e
@@ -352,6 +341,15 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		var id, hash string
 		e = tx.QueryRow(`SELECT id,request_hash FROM workflow_runs WHERE owner=? AND request_key=?`, c.UserID, in.RequestID).Scan(&id, &hash)
 		if e == nil {
+			previous, err := loadWorkflowRun(tx, id)
+			if err != nil {
+				return zero, err
+			}
+			in.WorkspacePath, err = workflowStartupWorkspace(previous.Definition, in.WorkspacePath, s.Dir)
+			if err != nil {
+				return zero, err
+			}
+			fingerprint, _ := json.Marshal(in)
 			if hash != hashText(string(fingerprint)) {
 				return zero, ErrConflict
 			}
@@ -377,6 +375,23 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if !w.Enabled {
 		return zero, errors.New("workflow is disabled")
 	}
+	path, e := workflowStartupWorkspace(w, in.WorkspacePath, s.Dir)
+	if e != nil {
+		return zero, e
+	}
+	in.WorkspacePath = path
+	fingerprint, _ := json.Marshal(in)
+	if w.Environment == "opensandbox" {
+		if s.sandbox == nil {
+			return zero, errors.New("OpenSandbox service is not configured")
+		}
+		for _, node := range w.Nodes {
+			if node.Kind == "agent" {
+				return zero, errors.New("sandbox native executor integration is not yet configured")
+			}
+		}
+	}
+
 	executionTools, err := freezeExecutionTools(tx, w)
 	if err != nil {
 		return zero, err
@@ -445,8 +460,10 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		}
 		entry = in.StartNode
 	}
-	if e = workflowWorkspaceAvailable(tx, path, ""); e != nil {
-		return zero, e
+	if w.Environment == "" {
+		if e = workflowWorkspaceAvailable(tx, path, ""); e != nil {
+			return zero, e
+		}
 	}
 	id, stamp := newID(), now()
 	var key any
@@ -456,6 +473,14 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	_, e = tx.Exec(`INSERT INTO workflow_runs(id,workflow_id,owner,username,definition,input,workspace,status,seq,created,updated,request_key,request_hash) VALUES(?,?,?,?,?,?,?,'running',1,?,?,?,?)`, id, w.ID, c.UserID, c.Username, raw, in.Input, path, stamp, stamp, key, hashText(string(fingerprint)))
 	if e != nil {
 		return zero, e
+	}
+	if w.Environment == "opensandbox" {
+		if _, e = tx.Exec(`INSERT INTO workflow_run_environments(run_id,status,image,ttl,connection_hash,updated) VALUES(?,'pending',?,?,?,?)`, id, s.sandbox.image, s.sandbox.ttl, s.sandbox.connectionHash, stamp); e != nil {
+			return zero, e
+		}
+		if _, e = tx.Exec(`INSERT INTO workflow_environment_events(run_id,status,sandbox_id,error,created) VALUES(?,'pending','','',?)`, id, stamp); e != nil {
+			return zero, e
+		}
 	}
 	if len(in.Parameters) > 0 {
 		rawParameters, _ := json.Marshal(in.Parameters)
@@ -492,7 +517,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 // Stopped/failed runs remain resumable and keep their workspace reservation.
 // Starting and returning a completed run both acquire it inside their transaction.
 func workflowWorkspaceAvailable(tx *sql.Tx, path, exceptID string) error {
-	rows, err := tx.Query(`SELECT workspace FROM workflow_runs WHERE status NOT IN ('completed','cancelled') AND id != ?`, exceptID)
+	rows, err := tx.Query(`SELECT workspace FROM workflow_runs WHERE status NOT IN ('completed','cancelled') AND id != ? AND NOT EXISTS(SELECT 1 FROM workflow_run_environments env WHERE env.run_id=workflow_runs.id)`, exceptID)
 	if err != nil {
 		return err
 	}
@@ -717,4 +742,28 @@ func (s *Store) WorkflowRunByRequest(c Caller, key string) (WorkflowRun, error) 
 		return WorkflowRun{}, err
 	}
 	return s.WorkflowRun(c, id)
+}
+
+func workflowStartupWorkspace(w Workflow, workspace, dataDir string) (string, error) {
+	if w.Environment == "opensandbox" {
+		if workspace != "" && workspace != "/workspace" {
+			return "", errors.New("OpenSandbox Runs use their own /workspace; host paths are not accepted")
+		}
+		return "/workspace", nil
+	}
+	if workspace == "" {
+		return "", errors.New("choose an existing workspace directory")
+	}
+	resolved, err := normalizeWorkspace(workspace)
+	if err != nil {
+		return "", err
+	}
+	data, err := normalizeWorkspace(dataDir)
+	if err != nil {
+		return "", err
+	}
+	if containsPath(data, resolved) || containsPath(resolved, data) {
+		return "", errors.New("workspace must be outside platform data")
+	}
+	return resolved, nil
 }

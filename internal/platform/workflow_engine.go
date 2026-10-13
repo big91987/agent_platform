@@ -199,6 +199,15 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 	if _, err = e.store.Workflow(caller, r.WorkflowID); err != nil {
 		return fmt.Errorf("workflow authorization changed: %w", err)
 	}
+	if r.Definition.Environment == "opensandbox" {
+		ready, err := e.ensureSandbox(ctx, r)
+		if err != nil {
+			return err
+		}
+		if !ready {
+			return nil
+		}
+	}
 	node := r.Definition.node(step.NodeID)
 	if node.Kind == "execution" {
 		if _, err = e.executionAccess(r, node); err != nil {
@@ -380,6 +389,9 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed" && !limitFailure) || strings.TrimSpace(reason) == "" {
 		return ErrConflict
 	}
+	if r.Environment != nil && r.Environment.Status != "ready" {
+		return errors.New("Run environment is not ready; reconcile before returning")
+	}
 	newLimit := r.executionLimit()
 	if len(limits) > 1 {
 		return errors.New("provide one execution limit")
@@ -425,15 +437,17 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 		current.MaxSteps = newLimit
 	}
 	if current.Status == "completed" || limitFailure {
-		path, err := normalizeWorkspace(current.WorkspacePath)
-		if err != nil {
-			return err
-		}
-		if path != current.WorkspacePath {
-			return fmt.Errorf("%w: workspace location changed", ErrConflict)
-		}
-		if err = workflowWorkspaceAvailable(tx, path, current.ID); err != nil {
-			return err
+		if current.Environment == nil {
+			path, err := normalizeWorkspace(current.WorkspacePath)
+			if err != nil {
+				return err
+			}
+			if path != current.WorkspacePath {
+				return fmt.Errorf("%w: workspace location changed", ErrConflict)
+			}
+			if err = workflowWorkspaceAvailable(tx, path, current.ID); err != nil {
+				return err
+			}
 		}
 		current.Seq++
 		if err = insertWorkflowStep(tx, current, target); err != nil {
@@ -469,6 +483,9 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 	}
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "failed") {
 		return ErrConflict
+	}
+	if r.Environment != nil && r.Environment.Status != "ready" {
+		return errors.New("Run environment is not ready; reconcile before continuing")
 	}
 	owner, err := e.store.workflowCaller(r)
 	if err != nil {

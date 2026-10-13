@@ -22,6 +22,9 @@ func main() {
 	concurrency := flag.Int("concurrency", 2, "maximum simultaneous local executions")
 	binary := flag.String("codex", "codex", "native Codex binary")
 	auth := flag.String("auth-home", "", "native Codex authentication directory")
+	sandboxConfig := flag.String("sandbox-config", "", "private OpenSandbox service configuration")
+	sandboxImage := flag.String("sandbox-image", "agent-platform-runtime:0.1.0", "fixed image for new OpenSandbox Runs")
+	sandboxTTL := flag.Int("sandbox-ttl", 3600, "OpenSandbox environment lifetime in seconds")
 	flag.Parse()
 	if *concurrency < 1 || *concurrency > 32 {
 		log.Fatal("concurrency must be between 1 and 32")
@@ -31,6 +34,11 @@ func main() {
 		log.Fatal(e)
 	}
 	defer s.Close()
+	if *sandboxConfig != "" {
+		if e = s.ConfigureSandbox(*sandboxConfig, *sandboxImage, *sandboxTTL); e != nil {
+			log.Fatal(e)
+		}
+	}
 	password := os.Getenv("AGENT_PLATFORM_PASSWORD")
 	if password == "" {
 		password = "admin"

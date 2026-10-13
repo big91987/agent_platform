@@ -135,3 +135,12 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 
 
 - 本批源码最终标准验证verify-05真实exit0，116870bytes/SHA256 42f728f8692ecacb0a109038c38144726386c2ba64a5520503982f3678bee6e8；包含新增真实执行页面回归、安装器/SDK/模板/部署控制器原门禁、Go vet/race/build，平台全包race62.687s。测试期间源码保持稳定，未将旧verify-04红结果改为通过。基础设施适配完成；整体目标仍实施中。
+
+
+### 2026-10-13 — Run环境持久关联与正式恢复入口
+
+- 新流程可声明environment=opensandbox；Run自动分配其自己的/workspace，拒绝宿主路径。服务连接/镜像/TTL来自受信启动配置，任务不能传密钥；连接身份随Run冻结，变更时拒绝继续。旧本机流程的路径规范化、工作区占用及冻结历史保留。
+- 创建意图先落库再发送，平台重启/响应丢失不重建；显式Owner核对只读查所属Run环境，成功后还须正式resume/return继续。活动Run不能释放；已停止/失败/完成/取消且执行静止后可显式释放。删除丢响应保留release_unconfirmed，重复释放拒绝重发，核对404后记released。释放后resume/return均拒绝，不伪造新环境。
+- 环境生命周期/ID/失败原因在同一事务保留历史，服务身份摘要不公开。正式POST /api/workflow-runs/{id}/environment/reconcile和release已接权限边界；启动参数--sandbox-config/--sandbox-image/--sandbox-ttl不属于Agent输入。
+- 六项真实HTTP隔离回归含Run去重与跨Run隔离、创建丢响应重启核对、删除丢响应与历史、创建意图后崩溃、宿主路径/服务变更拒绝及正式HTTP授权。全Go vet/race真实exit0，平台65.004s；日志615bytes/SHA256 439667461d23323bdc60c3a367eeb51f69f5bf3dae6004a1efec317794a27df3。早期释放回归误置在运行中，收紧后发现检查阶段错误；修正夹具在真正释放之后检查，未把该红归因为线上产品故障。
+- 此为Harness环境生命周期实现和隔离回归，尚未在112平台8795通过正式Run应用；沙箱原生Agent仍明确拒绝启动，代码/项目命令、界面环境配置及独立测试仓入口待接通，不宣称整条Pipeline已完成。

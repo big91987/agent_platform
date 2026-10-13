@@ -21,10 +21,11 @@ import (
 // OpenSandbox uses the fixed official SDK. It owns no orchestration state:
 // the Run must persist its create/command intent before calling these methods.
 type OpenSandbox struct {
-	lifecycle  *opensandbox.LifecycleClient
-	httpClient *http.Client
-	image      string
-	ttl        int
+	connectionHash string
+	lifecycle      *opensandbox.LifecycleClient
+	httpClient     *http.Client
+	image          string
+	ttl            int
 }
 
 type SandboxCommandResult struct {
@@ -48,7 +49,7 @@ func newOpenSandbox(endpoint, key, image string, ttl int) (*OpenSandbox, error) 
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
 	client := &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("OpenSandbox redirects are refused") }}
-	return &OpenSandbox{lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl}, nil
+	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl}, nil
 }
 
 func sandboxError(operation string, err error) error {

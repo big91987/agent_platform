@@ -15,9 +15,10 @@ import (
 )
 
 type Store struct {
-	DB   *sql.DB
-	Dir  string
-	lock *os.File
+	sandbox *OpenSandbox
+	DB      *sql.DB
+	Dir     string
+	lock    *os.File
 }
 
 func OpenStore(dir string) (*Store, error) {

@@ -13,6 +13,27 @@ func (h *Server) workflowRunRoutes() {
 	h.workflowContextRoutes()
 	h.connectorRoutes()
 	h.workflowHookRoutes()
+	for _, action := range []string{"reconcile", "release"} {
+		h.mux.HandleFunc("POST /api/workflow-runs/{id}/environment/"+action, h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+			var err error
+			if strings.HasSuffix(r.URL.Path, "/reconcile") {
+				err = h.workflows.ReconcileSandbox(r.Context(), c, r.PathValue("id"))
+			} else {
+				err = h.workflows.ReleaseSandbox(r.Context(), c, r.PathValue("id"))
+			}
+			if err != nil {
+				fail(w, err)
+				return
+			}
+			run, err := h.store.WorkflowRun(c, r.PathValue("id"))
+			if err != nil {
+				fail(w, err)
+				return
+			}
+			respond(w, 200, workflowHTTPValue(c, run))
+		}))
+	}
+
 	h.mux.HandleFunc("GET /api/workflow-runs", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.WorkflowRunsPage(c, r.URL.Query().Get("workflow_id"), r.URL.Query().Get("before"))
 		if e != nil {
