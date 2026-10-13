@@ -2679,3 +2679,12 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 同一新环境129c0dd0-ebd6-4862-aeaa-b656ff576aa2原Python/TS/42byte文件逐字节0600、取消原command e3be01d2…deadline/exit-1/stopped、native 38f10fd6…实际exit0/stopped；DELETE后GET404确认释放。实际原生用户代理为0.151.0/Linux；没有原生登录/模型turn/产品验收，权限不变。SYS_ADMIN/AppArmor/seccomp新增诊断仍待用户选择；公开Agent门禁、8795旧8912141及测试仓未创建新Pipeline的事实保持。
 
 - 新版本标准verify17原进程已明确exit0：118100bytes/SHA407ebad416ca4b59147f010a15b4d5c282da2a03a5369bdd5d2463562669ed07，平台race66.281s，真实浏览器、供应链/SDK/部署/权限/恢复、go vet/race/build原门禁全部保留通过；包括共享就绪等待及同进程Skill范围原红→绿。准备维护源提交与标准8795升级，当前部署仍8912141，真实角色/模型/测试仓整链待完成。
+
+### 2026-10-14 — 8795标准升级fad8ade并通过正式API回归
+
+- 维护源提交10d00dc（原生桥接、模型约束和角色输入）及fad8adeb8eaae074f3833909fb755ce24f5fa37a（同进程Skill、共享就绪路径）。没有Platform PR/main合并或改另一脏工作树。精确源码tar4136960bytes/SHA02224bf0666634d1af535a58d0339b988936c1dfdb8d87be7fac5702763374e5与112传输ACK一致；逐文件对归档核验后标准Linux/CGO build-04 exit0、install-04 exit0。binary18965128bytes/SHA61552ab4f25e9420baa308c8452ae293877fcf60fdcf5d38151b4eb3ccb80aa4。
+- 远端原升级前Run与配置/凭据摘要在副作用前持久化，原有凭据实际登录成功；本次同一进程升级前后原Run全JSON、配置文件、凭据文件逐字节相同，completed/released保持。此是本次真实比较，不补造03包装脚本丢失的旧比较。远端及Mac只读health均HTTP200精确fad8ade。112服务实例仍独立8795/8095，未改变容器权限/其他端口。
+- 标准deploy/platform/check.py在已升级实例通过正式入口新建基础Workflow4769b9778f7bf636e5e1f622a6341d0f和Run96b7f9349c81e5719471caa895cd8c8d，原平台check-02 exit0；Python→TypeScript→Owner确认→Go项目命令→结束，共享同环境d61d40a7-2bab-4605-b552-628746a9008a，重复相同输入返回同Run，完成后正式release。可查看http://10.1.20.112:8795/workflow-runs/96b7f9349c81e5719471caa895cd8c8d。完整原报告摘要及每步回执正在独立只读核对；不以启动受理代表绿。
+- 主原生Agent Execute入口尚未接通角色文件准备/产物读取，公开Agent门禁保持；真实Codex/gpt-6.1-sol推理及测试仓独立新Issue/Pipeline尚未执行。当前成果是可复用源码和标准升级/原生无凭据SDK/正式API基础设施证据，不是Model Relay产品验收。容器namespace新增权限一次无凭据诊断仍待用户明确选择；未自动增加SYS_ADMIN/AppArmor/seccomp权限，后续真实角色和测试仓入口继续按计划接通。
+
+- 正式platform-check-02原报告32355bytes/SHA488108d6fbeeaa82277c3a055dafc9355dc0dbf9025e761171eee30f7a0bda35，独立只读核对步骤1/2/4各480/485/691bytes原日志均truncated=false、实际exit0/stopped，共5步completed、同环境最终released。scope明确native_agent/product_acceptance=not_run。该回归不是新产品Issue，不重复旧Run或另建状态源；当前权威计划继续保留未完成原生/测试仓部分。
