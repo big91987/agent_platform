@@ -21,13 +21,21 @@ import (
 // WorkflowExecution invokes an existing capability without a reasoning turn.
 // The graph carries arguments, while credentials remain in the tool registry.
 type WorkflowExecution struct {
-	Language  string          `json:"language,omitempty"`
-	Code      string          `json:"code,omitempty"`
-	Command   string          `json:"command,omitempty"`
-	Mode      string          `json:"mode"`
-	ServerID  string          `json:"server_id,omitempty"`
-	Tool      string          `json:"tool,omitempty"`
-	Arguments json.RawMessage `json:"arguments,omitempty"`
+	Language  string                      `json:"language,omitempty"`
+	Code      string                      `json:"code,omitempty"`
+	Command   string                      `json:"command,omitempty"`
+	Mode      string                      `json:"mode"`
+	ServerID  string                      `json:"server_id,omitempty"`
+	Tool      string                      `json:"tool,omitempty"`
+	Arguments json.RawMessage             `json:"arguments,omitempty"`
+	Bindings  map[string]ExecutionBinding `json:"bindings,omitempty"`
+}
+
+// A binding uses existing task data or a node's latest prior step. It carries
+// no independent identity, expression evaluator or ambient environment access.
+type ExecutionBinding struct {
+	Node string `json:"node,omitempty"`
+	Path string `json:"path"`
 }
 
 func validateWorkflowExecution(v *WorkflowExecution) error {
@@ -36,7 +44,7 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 	}
 	switch v.Mode {
 	case "code", "command":
-		if v.ServerID != "" || v.Tool != "" || len(v.Arguments) > 0 {
+		if v.ServerID != "" || v.Tool != "" || len(v.Arguments) > 0 || len(v.Bindings) > 0 {
 			return errors.New("code and commands cannot contain MCP settings")
 		}
 		text := v.Command
@@ -63,7 +71,7 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 		if len(v.Arguments) > 64000 || json.Unmarshal(v.Arguments, &args) != nil || args == nil {
 			return errors.New("tool arguments must be a JSON object up to 64000 bytes")
 		}
-		return nil
+		return validateExecutionBindings(v.Bindings)
 	default:
 		return errors.New("select a supported execution mode")
 	}
@@ -100,6 +108,12 @@ func validateExecutionTool(server RegisteredToolServer, v *WorkflowExecution) er
 	resolved, err := schema.Resolve(nil) // no remote schema loader or network access
 	if err != nil {
 		return errors.New("MCP tool input schema cannot be resolved locally")
+	}
+	if len(v.Bindings) > 0 {
+		// Task values and earlier results do not exist when the graph is saved.
+		// The complete, unchanged schema is enforced after resolution, before
+		// recording an action intent or calling the external tool.
+		return nil
 	}
 	var input any
 	if err = json.Unmarshal(v.Arguments, &input); err != nil {
@@ -163,6 +177,17 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 	if err != nil {
 		return err
 	}
+	request := *node.Execution
+	if request.Mode == "mcp" {
+		request.Arguments, err = resolveExecutionArguments(r, step, request)
+		if err != nil {
+			return err
+		}
+		request.Bindings = nil
+		if err = validateExecutionTool(server, &request); err != nil {
+			return err
+		}
+	}
 	var count int
 	if err = e.store.DB.QueryRow(`SELECT count(*) FROM workflow_connector_actions WHERE run_id=? AND seq=?`, r.ID, step.Seq).Scan(&count); err != nil {
 		return err
@@ -170,7 +195,7 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 	if count != 0 {
 		return errors.New("execution was already dispatched; inspect its effects, then stop and return explicitly; replay is refused")
 	}
-	raw, err := json.Marshal(node.Execution)
+	raw, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
@@ -190,7 +215,7 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 		var receipt ConnectorReceipt
 		var callErr error
 		if node.Execution.Mode == "mcp" {
-			result, err := callMCPTool(callCtx, server.Connection, node.Execution.Tool, node.Execution.Arguments)
+			result, err := callMCPTool(callCtx, server.Connection, request.Tool, request.Arguments)
 			receipt = ConnectorReceipt{Kind: "mcp", MCP: result}
 			callErr = err
 		} else {
@@ -264,15 +289,7 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	if err != nil {
 		return out, err
 	}
-	values := map[string]any{"input": r.Input, "parameters": r.Parameters, "previous_results": []any{}}
-	previous := []any{}
-	for _, old := range r.Steps {
-		if old.Seq < step.Seq {
-			previous = append(previous, map[string]any{"node": old.NodeID, "result": old.Result, "execution_receipt": old.actionReceipt(), "error": old.Error})
-		}
-	}
-	values["previous_results"] = previous
-	raw, err := json.Marshal(values)
+	raw, err := json.Marshal(executionInputValues(r, step))
 	if err != nil {
 		return out, err
 	}

@@ -144,6 +144,18 @@ func validateWorkflow(w Workflow) error {
 	if _, ok := nodes[w.Entry]; !ok {
 		return errors.New("entry node does not exist")
 	}
+	for _, node := range w.Nodes {
+		if node.Execution == nil {
+			continue
+		}
+		for _, binding := range node.Execution.Bindings {
+			if binding.Node != "" {
+				if _, ok := nodes[binding.Node]; !ok {
+					return fmt.Errorf("node %s references a missing result node", node.ID)
+				}
+			}
+		}
+	}
 	for _, id := range w.StartNodes {
 		if _, ok := nodes[id]; !ok {
 			return fmt.Errorf("start node does not exist: %s", id)

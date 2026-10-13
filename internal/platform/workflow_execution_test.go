@@ -95,6 +95,135 @@ func TestWorkflowExecutionMCPPersistsRawResultAndDeduplicates(t *testing.T) {
 	}
 }
 
+func TestWorkflowExecutionMCPReferencesTaskAndLatestNodeResult(t *testing.T) {
+	s := testStore(t)
+	var calls atomic.Int32
+	wanted := "quoted \"input\"\n$(never evaluated)"
+	c, w, dir, config := executionFixture(t, s, func(_ context.Context, text string) (*mcp.CallToolResult, any, error) {
+		calls.Add(1)
+		return nil, map[string]any{"text": text}, nil
+	})
+	first, _ := json.Marshal(map[string]any{"mode": "mcp", "server_id": config.ID, "tool": "deliver", "arguments": map[string]any{"text": "old literal"}, "bindings": map[string]any{"text": map[string]any{"path": "/parameters/message"}}})
+	if err := json.Unmarshal(first, w.Nodes[0].Execution); err != nil {
+		t.Fatal(err)
+	}
+	second := WorkflowNode{ID: "consume", Name: "Consume result", Kind: "execution", Execution: &WorkflowExecution{}}
+	raw, _ := json.Marshal(map[string]any{"mode": "mcp", "server_id": config.ID, "tool": "deliver", "arguments": map[string]any{}, "bindings": map[string]any{"text": map[string]any{"node": "call", "path": "/execution_receipt/mcp/structuredContent/text"}}})
+	if err := json.Unmarshal(raw, second.Execution); err != nil {
+		t.Fatal(err)
+	}
+	w.Nodes = append(w.Nodes, second)
+	w.Edges = []WorkflowEdge{{Source: "call", Route: "next", Target: "consume"}, {Source: "consume", Route: "next", Target: "done"}}
+	w, err := s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := s.Workflow(c, w.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved, _ := json.Marshal(reloaded.Nodes[0].Execution)
+	if !strings.Contains(string(saved), `"bindings"`) {
+		t.Fatal("task references were dropped on save/reload")
+	}
+	in := WorkflowStart{WorkflowID: w.ID, WorkspacePath: dir, Input: "task", RequestID: "bound-once", Parameters: map[string]string{"message": wanted}}
+	r, err := s.StartWorkflow(c, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	duplicate, err := s.StartWorkflow(c, in)
+	if err != nil || duplicate.ID != r.ID {
+		t.Fatal("bound task was not deduplicated", err)
+	}
+	r = waitConnectorRun(t, NewWorkflowEngine(s, nil, ""), r.ID, "completed")
+	for _, step := range r.Steps[:2] {
+		raw, _ := json.Marshal(step.ExecutionReceipt.MCP.StructuredContent)
+		var value map[string]any
+		json.Unmarshal(raw, &value)
+		if value["text"] != wanted {
+			t.Fatal("reference changed, interpolated or fell back to a literal", string(raw))
+		}
+	}
+	if calls.Load() != 2 {
+		t.Fatal("reference calls replayed", calls.Load())
+	}
+}
+
+func TestWorkflowExecutionMCPReferenceFailureSendsNothing(t *testing.T) {
+	for _, scenario := range []struct {
+		parameters map[string]string
+		path       string
+	}{{map[string]string{}, "/parameters/message"}, {map[string]string{"message": "private value"}, "/parameters"}} {
+		s := testStore(t)
+		var calls atomic.Int32
+		c, w, dir, config := executionFixture(t, s, func(_ context.Context, text string) (*mcp.CallToolResult, any, error) {
+			calls.Add(1)
+			return nil, map[string]any{"text": text}, nil
+		})
+		raw, _ := json.Marshal(map[string]any{"mode": "mcp", "server_id": config.ID, "tool": "deliver", "arguments": map[string]any{"text": "do not use this fallback"}, "bindings": map[string]any{"text": map[string]any{"path": scenario.path}}})
+		json.Unmarshal(raw, w.Nodes[0].Execution)
+		w, err := s.SaveWorkflow(c, w)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, WorkspacePath: dir, Input: "task", Parameters: scenario.parameters})
+		if err != nil {
+			t.Fatal(err)
+		}
+		r = waitConnectorRun(t, NewWorkflowEngine(s, nil, ""), r.ID, "failed")
+		if calls.Load() != 0 || r.Error == "" {
+			t.Fatal("invalid reference was sent to the external tool", calls.Load(), r.Error)
+		}
+		var actions int
+		s.DB.QueryRow(`SELECT count(*) FROM workflow_connector_actions WHERE run_id=?`, r.ID).Scan(&actions)
+		if actions != 0 {
+			t.Fatal("invalid reference recorded a dispatch intent", actions)
+		}
+	}
+}
+
+func TestWorkflowExecutionMCPReferenceTypesAndLatestAttempt(t *testing.T) {
+	values := json.RawMessage(`{"zero":0,"off":false,"nil":null,"items":["first",{"a/b~c":9007199254740993}]}`)
+	prior := WorkflowStep{Seq: 1, NodeID: "report", Status: "completed", ExecutionReceipt: &ConnectorReceipt{MCP: &mcp.CallToolResult{StructuredContent: values}}}
+	run := WorkflowRun{ID: "this-run", Steps: []WorkflowStep{prior}}
+	current := WorkflowStep{Seq: 4, NodeID: "consume"}
+	args, err := resolveExecutionArguments(run, current, WorkflowExecution{Arguments: json.RawMessage(`{"literal":9007199254740995}`), Bindings: map[string]ExecutionBinding{
+		"zero":  {Node: "report", Path: "/execution_receipt/mcp/structuredContent/zero"},
+		"off":   {Node: "report", Path: "/execution_receipt/mcp/structuredContent/off"},
+		"nil":   {Node: "report", Path: "/execution_receipt/mcp/structuredContent/nil"},
+		"large": {Node: "report", Path: "/execution_receipt/mcp/structuredContent/items/1/a~1b~0c"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var actual map[string]json.RawMessage
+	if err = json.Unmarshal(args, &actual); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"zero": "0", "off": "false", "nil": "null", "large": "9007199254740993", "literal": "9007199254740995"} {
+		if string(actual[name]) != want {
+			t.Fatalf("%s changed type or precision: %s", name, actual[name])
+		}
+	}
+	execution := WorkflowExecution{Arguments: json.RawMessage(`{"value":"never fall back"}`), Bindings: map[string]ExecutionBinding{"value": {Node: "report", Path: "/execution_receipt/mcp/structuredContent/off"}}}
+	for _, latest := range []WorkflowStep{{Seq: 3, NodeID: "report", Status: "completed"}, {Seq: 3, NodeID: "report", Status: "running"}} {
+		run.Steps = []WorkflowStep{prior, latest}
+		if _, err = resolveExecutionArguments(run, current, execution); err == nil {
+			t.Fatal("used an older attempt after the latest lacked a result")
+		}
+	}
+	run.Steps = []WorkflowStep{{Seq: 5, NodeID: "report", Status: "completed", ExecutionReceipt: prior.ExecutionReceipt}}
+	if _, err = resolveExecutionArguments(run, current, execution); err == nil {
+		t.Fatal("used a future step")
+	}
+	for _, path := range []string{"/credentials", "/execution_tools", "/owner"} {
+		execution.Bindings["value"] = ExecutionBinding{Path: path}
+		if _, err = resolveExecutionArguments(run, current, execution); err == nil {
+			t.Fatal("exposed private Run field", path)
+		}
+	}
+}
+
 func TestWorkflowExecutionMCPRejectsSchemaAndChangedConnection(t *testing.T) {
 	s := testStore(t)
 	var calls atomic.Int32

@@ -14,7 +14,7 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过 | 原生Agent及测试仓真实Pipeline |
+| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过，任务/前序结果引用源码及浏览器通过 | 本批112升级、原生Agent及测试仓真实Pipeline |
 | 112 OpenSandbox | 1.1.1/8095；SDK文件/取消、正式角色home的同进程实际Skill范围/停止/删除404通过；8795标准升级后正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
 | 四类画布与112平台8795 | 86add21标准Linux/CGO升级exit0，Mac/112 health同SHA，旧Run/配置/凭据保持；check-03正式五步完成并释放。早期1440画布/390Run截图证据保留 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
 | 测试仓独立入口 | 仓库自有Harness标准导出/安装候选、入站回归已过；测试仓草稿PR38已标准同步bb698c9，head acd96f7与140件源库存一致，当前GitGuardian success；真实新入口尚未启用 | 项目适配/安装、新Issue及真实原生整链 |
@@ -66,7 +66,7 @@ Interfaces: Run 关联实际 sandbox ID；受信环境配置声明服务与镜�
 Files: `web/workflow-model.js`、`web/workflow-panel.js`、`web/workflows.js`、`web/workflow-runs.js`、现有 MCP 管理页及对应测试。
 
 - [x] 新建流程只呈现 Agent/执行/人工确认/结束；执行按 code/command/mcp 显示必要字段。（真实保存/重载与112画布截图已验；后续Agent真实整链另列。）
-- [ ] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。
+- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批112升级及真实新Pipeline仍待验证。）
 - [ ] Agent 配置基础/高级分组，角色与任务分离；人工确认与权限审批区分；固定测试不能被人审跳过开关跳过。
 - [ ] 浏览器实际保存重载、执行结果、失败/停止恢复及窄屏可用验证。
 
@@ -400,3 +400,13 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 48fbfe28的GitGuardian/check115490164161仍failure；私有原check明细明确报告的是初稿997b08c的假常量，当前文件源码已不包含固定编码。没有关扫描/加忽略/假造成功。参照官方GraphQL RefUpdate.beforeOid原子前置条件，将自己唯一未合并草稿分支整理为同一tree的单提交acd96f752fa5dab0e009d597a12babe71d7bb765、parent为原main0c197c8b…；仅当实际旧head=48fbfe28时更新。真正回执及ref/main只读核对通过，所有源/项目文件内容相同，原失败check和本机原回执保持；没有无租约强推或修改运行/原生历史。官方接口依据：https://docs.github.com/en/graphql/reference/git 。
 - PR38现远端head精确acd96f7、draft/open、146件范围保持，main仍0c197c8b…。当前GitGuardian Security Checks实际completed/success；其他combined status=pending、Actions列表空，不能统称全部CI/部署通过。当前正文同步实际源版本、22/114入站/模板回归及首失败处理，source24 Go未改/缓存命中与原23实际race67.091s分开。
 - 当前状态：已实现、已做维护源/候选局部测试、已标准分发到真实仓库草稿分支、当前安全检查通过；未合并、未在112升级本批Example源码、未建立实际新Agent Workflow/配置/标签/Issue、未运行真实模型/Pipeline或独立整链QA。112平台86add21和原基础Run保持；原namespace兼容诊断新增权限仍待明确答复。后续仍需源计划中MCP参数/结果引用与节点配置核验、原生条件、正式新入口和真实研发交付验证，不把本次草稿准备缩减为最终目标。
+
+
+### 2026-10-14 — 执行节点使用任务参数与前序结果（维护源验证）
+
+- 用户影响：原 MCP 执行节点只有固定 JSON 参数，项目不能直接将任务输入或前序 Agent/工具的结果传给下一工具，容易退回每次人工拼接。Ruling: 在已有 execution 配置中增加可选 bindings（工具参数名→已有节点/JSON Pointer），复用 Run 输入和前序步骤；不新增变量注册表、表达式语言或第二套工作区身份。代码/命令共享现有 WORKFLOW_INPUT_FILE，新增 run_id/workspace_path/步骤seq与status；parameters仍是原字符串键值契约。
+- 引用保持 JSON 类型，缺值不使用固定参数兜底；只读同 Run 最近一次前序执行，最新一次缺值或未结束时不回退到更早结果。保存校验节点与引用格式，运行时按实际值重新校验完整工具 Schema，校验失败前不写 action intent、不发外部请求。内部凭据、连接、Owner及Agent home不进入可引用输入。画布提供可选参数引用 JSON 编辑、示例和现有节点列表；保存/关闭重开/重绘/导出保持草稿，无效内容阻止保存。具体契约见 workflow-session-input.md。
+- TDD：行为红 red-02真实exit1（236bytes/SHA2961f89d78a8b82dbb1eaffeac820eb5a9492cf3d7c8d8e6538d047e215aac8d），原节点在保存阶段丢引用/缺参数失败；green-01真实race2.848s/exit0（314bytes/SHAafba7bc24e479e1697554522fd112bd5755f6541dd79e08dd2dc4cd651fa8b5b），官方SDK真实本机MCP HTTP两次调用传递任务和前序原始结果，重复入口同Run。缺字段/对象替代string均失败且0外部调用/0intent。typed回归另覆盖0/false/null/数组转义路径、原始JSON整数精度和最新/未来步骤拒绝；不将原始精度隔离回归扩大为所有MCP服务的精度保证。首次测试stringmap类型编译红、green-02本机监听被沙箱拒绝分别保留，不冒充产品缺陷或有效业务红。
+- UI回归red-01实际exit1（3982bytes/SHA17a9e04ee2756329e5cebccb53b3ffa3809b2da815668b72f402a70e835328a2），green-01实际exit0（5065bytes/SHAa3aa7a02ef9e58f50a5b31cdf759ee818ec0247459b86ecdd53d022b854e9a0a）。原实际Chromium测试新增引用保存重载→平台API启动→外部MCP收到input→原始回执展示→释放环境；390截图52036bytes/SHA6222d2a060b4be3a6bd459a03385f9c1d75683b48afcc9bdbfa9bda5ccef85a5已查看。此为隔离平台/真实HTTP工具服务回归，OpenSandbox服务为夹具，不是112原生Agent或产品QA。
+- 标准verify25实际exit0：119764bytes/SHA28ff5a6d9e6854d854bea47bb1b92c5a2695b057b03c20375e17f5cb0f9066d5；Go race实际68.656s，原114模板、供应链/SDK/部署/浏览器、go vet及两binary构建通过，macOS linker警告保留。完整日志及截图在ignored存储，未补造历史回执。整个分支最终独立复审尚未进行。
+- 实时核对：112 /api/health200仍86add21；PR38仍draft/head acd96f752fa5dab0e009d597a12babe71d7bb765，当前GitGuardian success/main未改/Actions为空。新参数引用源码尚未112标准升级或真实新Pipeline验证。namespace额外权限诊断仍无明确答复，公共Agent启动门槛保留；真实模型、新Issue/Pipeline及独立整链QA均未完成。下一步标准升级本批源码、112正式接口复验，然后继续原生条件与测试仓独立入口，不重复创建或恢复旧任务。

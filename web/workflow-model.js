@@ -111,9 +111,17 @@ globalThis.WorkflowGraph = class WorkflowGraph {
         if(typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
         if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
         if(v.code||v.command||v.language)throw new Error('MCP 配置不能混入代码或命令');
+        if(v.bindings!=null){
+          if(typeof v.bindings!=='object'||Array.isArray(v.bindings)||Object.keys(v.bindings).length>64)throw new Error('参数引用须为最多 64 项的 JSON 对象');
+          for(const [name,b] of Object.entries(v.bindings)){
+            if(!name.trim()||name.length>256||name.includes('\0')||!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!['node','path'].includes(k)))throw new Error('参数引用须填写工具参数名、node 和 path');
+            if(b.node!=null&&(typeof b.node!=='string'||b.node&&!this.node(b.node)))throw new Error('参数引用的节点不存在');
+            if(typeof b.path!=='string'||!b.path.startsWith('/')||b.path.length>2048||b.path.includes('\0')||b.path.slice(1).split('/').length>64||/~(?![01])/u.test(b.path))throw new Error('参数引用路径须为以 / 开头的 JSON Pointer');
+          }
+        }
       }else{
         if(this.value.environment!=='opensandbox')throw new Error('代码和项目命令需要 OpenSandbox 执行环境');
-        if(v.server_id||v.tool||v.arguments!=null)throw new Error('代码和命令不能混入 MCP 配置');
+        if(v.server_id||v.tool||v.arguments!=null||Object.keys(v.bindings||{}).length)throw new Error('代码和命令不能混入 MCP 配置');
         if(v.mode==='code'&&(!['python','typescript'].includes(v.language)||v.command))throw new Error('请选择 Python 或 TypeScript；其他语言使用项目命令');
         if(v.mode==='command'&&(v.language||v.code))throw new Error('项目命令不能混入代码配置');
         const text=v.mode==='code'?v.code:v.command;

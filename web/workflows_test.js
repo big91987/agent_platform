@@ -294,3 +294,22 @@ test('workflow environment setting is retained and project command supports arbi
  el('#wf-execution-command').value='mvn verify';el('#wf-panel-close').onclick();
  assert.equal(vm.runInContext('a.execution.command',ctx),'mvn verify');
 });
+
+
+test('MCP input references survive drawer closure, redraw and export; invalid drafts block save',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext("const run=graph.add('execution',0,300);editor.selected=run.id;run.execution={mode:'mcp',server_id:'github',tool:'create_issue',arguments:{title:'fallback'}};renderWorkflowInspector(editor)",ctx);
+ const raw='{"title":{"path":"/input"},"body":{"node":"'+vm.runInContext('a.id',ctx)+'","path":"/result/inputs/report"}}';
+ el('#wf-execution-bindings').value=raw;el('#wf-execution-bindings').oninput();
+ el('#wf-panel-close').onclick();vm.runInContext('editor.selected=run.id;renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-bindings').value,raw);
+ vm.runInContext('saved=workflowPayload(graph.value,workflowNodeDraft(editor,run),{},[],{},editor.executionDrafts,editor.bindingDrafts)',ctx);
+ assert.equal(vm.runInContext('saved.nodes.at(-1).execution.bindings.title.path',ctx),'/input');
+ el('#wf-execution-bindings').value='{broken';el('#wf-execution-bindings').oninput();
+ el('#wf-panel-close').onclick();
+ assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},editor.executionDrafts,editor.bindingDrafts)',ctx),/JSON/);
+ vm.runInContext('editor.selected=run.id;renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-bindings').value,'{broken');
+ el('#wf-execution-bindings').value='{"title":{"node":"absent","path":"/result"}}';el('#wf-execution-bindings').oninput();
+ assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},editor.executionDrafts,editor.bindingDrafts)',ctx),/节点/);
+});
