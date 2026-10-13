@@ -157,6 +157,9 @@ func (e *WorkflowEngine) quiet(id string) bool {
 func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 	step := r.Steps[len(r.Steps)-1]
 	if r.Status == "stopping" {
+		if err := e.store.nativeRunReady(r.ID); err != nil {
+			return err
+		}
 		if !e.stopConnector(r.ID) {
 			return nil
 		}
@@ -393,6 +396,9 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed" && !limitFailure) || strings.TrimSpace(reason) == "" {
 		return ErrConflict
 	}
+	if err := e.store.nativeRunReady(r.ID); err != nil {
+		return err
+	}
 	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {
 		return errors.New("Run environment is not ready; reconcile before returning")
 	}
@@ -487,6 +493,9 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 	}
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "failed") {
 		return ErrConflict
+	}
+	if err := e.store.nativeRunReady(r.ID); err != nil {
+		return err
 	}
 	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {
 		return errors.New("Run environment is not ready; reconcile before continuing")

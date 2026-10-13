@@ -103,3 +103,27 @@ Codex app-server、以私有capability完成WebSocket initialize，再按所属�
 启动等待只在同一进程仍运行且没有HTTP响应的短暂连接错误时有界进行；HTTP认证拒绝
 不会反复尝试，不发送模型turn、不复制登录凭据。报告写入或停止失败均使探针失败，
 保留原回执与未确认原因。此探针不能代替平台Run、真实角色交接、登录或产品QA。
+
+### 当前原生命令隔离限制与待授权方案
+
+固定运行镜像在112的SDK创建、Python/TypeScript、文件、取消，以及
+Codex认证WebSocket initialize/停止/释放已实际通过。原生模型turn尚未执行。
+在Docker默认过滤下，`codex sandbox linux`仍不能创建namespace；降为非root用户
+也真实失败。112内核已允许user namespace，不应盲改宿主sysctl或反复重发命令。
+
+固定OpenSandbox1.1.1有以下官方创建扩展：
+
+```json
+{"extensions":{"bootstrap.execd.isolation":"enable"}}
+```
+
+该扩展会为任务容器增加`SYS_ADMIN`，设置`apparmor=unconfined`和
+`seccomp=unconfined`，并调整bwrap所需系统路径及临时存储。它扩大容器权限，
+不是通常的工作区准备。**当前没有启用，也没有通过平台任务输入暴露。**
+
+待审查的诊断范围仅为112独立8095实例的一次新无凭据测试容器；不更改宿主
+sysctl，不用privileged/hostnetwork，不挂载宿主目录，不提供模型认证或产品凭据。
+先验证原生workspace写入、边界拒绝和进程取消，再讨论正式受信配置及更窄的
+AppArmor/seccomp策略。未经新增权限授权，保持原策略；不切成无限权限原生Agent
+或复用旧Run来绕过限制。未来正式配置必须由运维入口选择、在新Run中冻结并展示，
+保持旧Run的原权限，不依赖Agent解释Issue正文自行授权。

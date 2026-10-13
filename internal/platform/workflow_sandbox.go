@@ -52,7 +52,10 @@ func (s *Store) initRunEnvironments() error {
  INSERT INTO workflow_environment_events(run_id,status,sandbox_id,error,created) SELECT run_id,'release_unconfirmed',sandbox_id,'Platform restarted during environment release; reconcile before continuing.',updated FROM workflow_run_environments WHERE status='releasing';
  UPDATE workflow_run_environments SET status='unconfirmed',error='Platform restarted during environment creation; reconcile before continuing.' WHERE status='creating';
  UPDATE workflow_run_environments SET status='release_unconfirmed',error='Platform restarted during environment release; reconcile before continuing.' WHERE status='releasing';`)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.initSandboxNativeProcesses()
 }
 func loadRunEnvironment(tx *sql.Tx, id string) (*RunEnvironment, error) {
 	var env RunEnvironment
@@ -98,6 +101,11 @@ func (s *Store) updateRunEnvironment(run, oldState, id, state, reason string) er
 	}
 	if oldState != state || reason != "" {
 		if _, err = tx.Exec(`INSERT INTO workflow_environment_events(run_id,status,sandbox_id,error,created) VALUES(?,?,?,?,?)`, run, state, id, reason, stamp); err != nil {
+			return err
+		}
+	}
+	if state == "released" {
+		if err = confirmSandboxNativeAbsence(tx, run, stamp); err != nil {
 			return err
 		}
 	}
@@ -151,6 +159,9 @@ func (e *WorkflowEngine) ensureSandbox(ctx context.Context, r WorkflowRun) (bool
 	}
 	switch r.Environment.Status {
 	case "ready":
+		if err := e.store.nativeRunReady(r.ID); err != nil {
+			return false, err
+		}
 		return true, nil
 	case "pending":
 		if !e.connectorQuiet(r.ID) || len(e.connectorJobs) >= 8 {
@@ -249,6 +260,9 @@ func (e *WorkflowEngine) ReconcileSandbox(ctx context.Context, c Caller, id stri
 		return errors.New("no environment was found; creation remains unconfirmed and was not replayed")
 	}
 	if err = client.waitReady(ctx, info.ID, r.ID); err != nil {
+		return err
+	}
+	if err = e.store.reconcileSandboxNativeProcesses(ctx, client, r); err != nil {
 		return err
 	}
 	return e.store.updateRunEnvironment(r.ID, r.Environment.Status, info.ID, "ready", "")

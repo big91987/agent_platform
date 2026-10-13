@@ -909,3 +909,15 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 
 - 本阶段最终标准scripts/verify.sh实际exit0：verify-10.log117163bytes/SHA 9a5992e51e51b67dbd33fd1915cfd38b0643a6e74a38860aee4e43ab29cdfa4b，平台race结果另见完整原日志；全部工程门禁/vet/build通过，不替代112模型执行。verify-09旧handle已失效，仅原日志证明race65.079s绿，未补造父进程exit回执。
 - 官方固定OpenSandbox1.1.1源码确认bootstrap.execd.isolation=enable会自动增加SYS_ADMIN、移除AppArmor/seccomp限制并调整系统路径；不是普通目录准备。现阶段不启用该权限扩展。112内核允许userns而当前容器原生命令仍红，下一步优先验证更小的运行配置，若确需扩展则提供明确受信配置/影响再请求授权。无privileged、无宿主挂载/hostnetwork改动。
+
+
+### 2026-10-13 — 原生意图持久化与只读恢复保护（尚未开放Agent）
+
+- 新原生进程归属直接使用既有输入message_id，保存Run/会话/所属sandbox和实际command_id。启动意图及状态事件同事务保存；拒绝别的消息、会话、替换执行ID及已完成消息重发。重启中launching/running/stopping转unconfirmed，既有队列、继续和Run回退均不能越过待核对状态。
+- Owner原环境reconcile只读核对相同执行ID：Running或404历史缺失保持未知，只有相同ID明确Stopped才闭合；不interrupt、不restart、不新建线程。正式release确认容器不存在后才闭合未知进程，明确个人exit状态不可得，不伪称exit0。Run/API保留native_processes，页面提示待核对并隐藏继续/回退，仍提供核对/释放入口。
+- Scheduler对原生停止未知错误保留failed与原因，不再因用户Stop吞成stopped；原正常停止/队列接续保持。定向durable回归先缺接口红，再真实隔离HTTP/重启/误归属/只读/释放回归race3.152s绿；停止结果回归race2.519s、页面12项绿。此为Harness回归；原生Agent后台总入口尚未使用这些记录，仍待角色准备及真实整链，不冒称产品Pipeline已有此证明。
+- 更低权限诊断native-sandbox-nonroot-01真实exit1，394bytes/SHA e0b13441631363df6f8d6458cc740a3a5ac1a093ba8f4579a473dfb4d3a4006f；非root且原安全策略仍拒绝namespace。未改宿主或扩大容器权限。README提供官方兼容扩展及实际SYS_ADMIN/AppArmor/seccomp变化、限定的一次无凭据诊断提案，当前未启用；正式权限入口和新Run冻结也未接入。
+
+
+- 本阶段最终标准scripts/verify.sh实际exit0：verify-11.log117279bytes/SHA ef337cee10ff15d91933f51dbe30d0f34d97d400ecfe57d7f5cfb10c84c56391，平台全包race67.483s；原浏览器、Python供应链、所有流程/权限/停止恢复、vet及两项构建全部通过。仍是维护源门禁，不冒称112实际Agent/Pipeline已通过。
+- 已就README中一次无凭据官方兼容模式诊断提出新增权限问题，等待用户明确选择；默认维持原权限，不把等待或预选项当授权。非依赖该权限的源码/部署准备可以继续；实际SYS_ADMIN/过滤变化尚未应用。

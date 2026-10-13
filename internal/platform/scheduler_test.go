@@ -124,3 +124,40 @@ func TestSchedulerLimitsConcurrencyAndRunsIndependentConversations(t *testing.T)
 		t.Fatal("capacity not enforced")
 	}
 }
+
+type uncertainNativeExecutor struct{ started chan struct{} }
+
+func (x uncertainNativeExecutor) Execute(ctx context.Context, _ Conversation, _ Message, _ func([]byte) error) error {
+	close(x.started)
+	<-ctx.Done()
+	return &nativeExecutionUnconfirmed{"Native stop could not be confirmed"}
+}
+func TestSchedulerStopRetainsUnconfirmedNativeOutcome(t *testing.T) {
+	s := testStore(t)
+	a := testAgent(t, s)
+	started := make(chan struct{})
+	scheduler := NewScheduler(s, uncertainNativeExecutor{started}, 1)
+	scheduler.Start()
+	defer scheduler.Close()
+	receipt, err := s.Submit(Caller{Source: "console", Admin: true}, Input{AgentID: a.ID, UserID: "operator", Message: "stop evidence"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("executor did not start")
+	}
+	if err = scheduler.Stop(receipt.ConversationID, false); err != nil {
+		t.Fatal(err)
+	}
+	waitStatus(t, s, receipt.ConversationID, "failed")
+	conversation, _ := s.Conversation(receipt.ConversationID)
+	if conversation.Error != "Native stop could not be confirmed" {
+		t.Fatal("stop uncertainty erased", conversation)
+	}
+	messages, _ := s.Messages(receipt.ConversationID)
+	if messages[0].Status != "failed" {
+		t.Fatal("uncertain stop presented as confirmed", messages)
+	}
+}

@@ -526,7 +526,7 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 	}
 	defer tx.Rollback()
 	key := workspaceReservationSQL("c")
-	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE ` + workspaceReservationSQL("active") + `=` + key + ` AND active.read_only=0 AND active.status IN('running','stopping')))`
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND NOT EXISTS(SELECT 1 FROM workflow_native_processes np JOIN workflow_steps nws ON nws.run_id=np.run_id WHERE nws.conversation_id=c.id AND np.status!='stopped') AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE ` + workspaceReservationSQL("active") + `=` + key + ` AND active.read_only=0 AND active.status IN('running','stopping')))`
 	args := []any{}
 	for _, path := range busyWorkspaces {
 		if path != "" {
@@ -642,6 +642,15 @@ func (s *Store) HaltExpected(id, status, reason string, expected int64, discard 
 	return tx.Commit()
 }
 func (s *Store) Continue(id string) error {
+	run, err := s.sandboxRunForConversation(id)
+	if err != nil {
+		return err
+	}
+	if run != nil {
+		if err = s.nativeRunReady(run.ID); err != nil {
+			return err
+		}
+	}
 	tx, e := s.DB.Begin()
 	if e != nil {
 		return e

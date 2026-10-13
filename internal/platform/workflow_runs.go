@@ -61,24 +61,25 @@ func (s WorkflowStep) actionReceipt() *ConnectorReceipt {
 }
 
 type WorkflowRun struct {
-	Environment    *RunEnvironment                 `json:"environment,omitempty"`
-	ExecutionTools map[string]RegisteredToolServer `json:"-"`
-	Parameters     map[string]string               `json:"parameters,omitempty"`
-	Connectors     map[string]Connector            `json:"connectors,omitempty"`
-	ID             string                          `json:"id"`
-	WorkflowID     string                          `json:"workflow_id"`
-	Owner          string                          `json:"owner"`
-	Username       string                          `json:"-"`
-	Definition     Workflow                        `json:"definition"`
-	Input          string                          `json:"input"`
-	WorkspacePath  string                          `json:"workspace_path"`
-	Status         string                          `json:"status"`
-	Seq            int                             `json:"seq"`
-	MaxSteps       int                             `json:"max_steps"`
-	Error          string                          `json:"error,omitempty"`
-	Created        string                          `json:"created_at"`
-	Updated        string                          `json:"updated_at"`
-	Steps          []WorkflowStep                  `json:"steps"`
+	NativeProcesses []SandboxNativeProcess          `json:"native_processes,omitempty"`
+	Environment     *RunEnvironment                 `json:"environment,omitempty"`
+	ExecutionTools  map[string]RegisteredToolServer `json:"-"`
+	Parameters      map[string]string               `json:"parameters,omitempty"`
+	Connectors      map[string]Connector            `json:"connectors,omitempty"`
+	ID              string                          `json:"id"`
+	WorkflowID      string                          `json:"workflow_id"`
+	Owner           string                          `json:"owner"`
+	Username        string                          `json:"-"`
+	Definition      Workflow                        `json:"definition"`
+	Input           string                          `json:"input"`
+	WorkspacePath   string                          `json:"workspace_path"`
+	Status          string                          `json:"status"`
+	Seq             int                             `json:"seq"`
+	MaxSteps        int                             `json:"max_steps"`
+	Error           string                          `json:"error,omitempty"`
+	Created         string                          `json:"created_at"`
+	Updated         string                          `json:"updated_at"`
+	Steps           []WorkflowStep                  `json:"steps"`
 }
 
 const workflowExecutionLimitError = "maximum node executions reached; inspect loop before starting another run"
@@ -150,6 +151,10 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 		return r, e
 	}
 	r.Environment, e = loadRunEnvironment(tx, id)
+	if e != nil {
+		return r, e
+	}
+	r.NativeProcesses, e = loadSandboxNativeProcesses(tx, id)
 	if e != nil {
 		return r, e
 	}

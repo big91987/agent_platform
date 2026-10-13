@@ -144,3 +144,13 @@ test('released Run environment displays its history and offers no resume or retu
  assert.match(el('#wf-run-controls').innerHTML,/creation response lost/);
  assert.doesNotMatch(el('#wf-run-controls').innerHTML,/id="wf-resume-form"|id="wf-return-form"/);
 });
+
+test('unknown native process blocks continuation and preserves explicit environment recovery',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
+ const run={id:'run',workflow_id:'workflow',status:'failed',seq:1,input:'task',definition:{name:'原生恢复',revision:1,max_steps:10,nodes:[{id:'dev',name:'研发',kind:'agent'}],edges:[]},steps:[{seq:1,node_id:'dev',status:'failed',conversation_id:'conv'}],environment:{status:'ready',id:'owned',image:'runtime',history:[]},native_processes:[{status:'unconfirmed',error:'原进程结果未知'}]};
+ const ctx=vm.createContext({esc:x=>String(x??''),$:el,document:{querySelectorAll:()=>[]},api:async path=>path.endsWith('/notifications')?[]:run});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run'}",ctx);await vm.runInContext("refreshWorkflowRun('run')",ctx);
+ const html=[...elements.values()].map(x=>x.innerHTML).join('');
+ assert.match(html,/原生执行结果待核对/);assert.match(html,/核对环境/);assert.match(html,/释放环境/);assert.doesNotMatch(html,/id="wf-resume-form"|id="wf-return-form"/);
+});

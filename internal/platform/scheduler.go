@@ -132,7 +132,8 @@ func (s *Scheduler) execute(ctx context.Context, c Conversation, m Message) {
 		cancel()
 		delete(s.active, c.ID)
 	}
-	if current, err := s.store.Conversation(c.ID); err == nil && current.Status == "stopping" {
+	var uncertain *nativeExecutionUnconfirmed
+	if current, err := s.store.Conversation(c.ID); err == nil && current.Status == "stopping" && !errors.As(e, &uncertain) {
 		s.store.Halt(c.ID, "stopped", "")
 		status = "stopped"
 		reason = ""
