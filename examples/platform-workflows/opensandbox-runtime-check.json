@@ -1,0 +1,90 @@
+{
+  "name": "OpenSandbox 执行节点基础验证",
+  "environment": "opensandbox",
+  "context_version": 2,
+  "enabled": true,
+  "authorized_users": [],
+  "entry": "python",
+  "start_nodes": [],
+  "max_steps": 10,
+  "nodes": [
+    {
+      "id": "python",
+      "name": "Python 输入与共享文件",
+      "kind": "execution",
+      "x": 60,
+      "y": 100,
+      "execution_timeout_seconds": 60,
+      "execution": {
+        "mode": "code",
+        "language": "python",
+        "code": "import json,os\nfrom pathlib import Path\ncontext=json.loads(Path(os.environ[\"WORKFLOW_INPUT_FILE\"]).read_text())\nassert context[\"parameters\"][\"check\"]==\"shared-workspace\"\nassert context[\"previous_results\"]==[]\nPath(\"/workspace/proof.json\").write_text(json.dumps({\"input\":context[\"input\"],\"python\":True}))\nPath(\"/workspace/main.go\").write_text('package main\\nimport(\"fmt\";\"os\";\"encoding/json\")\\nfunc main(){b,e:=os.ReadFile(\"/workspace/proof.json\");if e!=nil{panic(e)};var p map[string]any;if e=json.Unmarshal(b,&p);e!=nil{panic(e)};if p[\"typescript\"]!=true{panic(\"previous node proof lost\")};fmt.Println(\"PLATFORM_PROJECT_COMMAND_PASS\")}\\n')\nprint(\"PLATFORM_PYTHON_PASS\")\n"
+      }
+    },
+    {
+      "id": "typescript",
+      "name": "TypeScript 读取上游结果",
+      "kind": "execution",
+      "x": 380,
+      "y": 100,
+      "execution_timeout_seconds": 60,
+      "execution": {
+        "mode": "code",
+        "language": "typescript",
+        "code": "import fs from 'node:fs';\nconst context=JSON.parse(fs.readFileSync(process.env.WORKFLOW_INPUT_FILE!,'utf8'));\nif(context.parameters.check!=='shared-workspace'||context.previous_results.length!==1)throw Error('full input or previous result lost');\nconst proof=JSON.parse(fs.readFileSync('/workspace/proof.json','utf8'));\nif(!proof.python||proof.input!==context.input)throw Error('shared workspace or input changed');\nproof.typescript=true;fs.writeFileSync('/workspace/proof.json',JSON.stringify(proof));\nconsole.log('PLATFORM_TYPESCRIPT_PASS');\n"
+      }
+    },
+    {
+      "id": "confirm",
+      "name": "确认继续基础验证",
+      "kind": "approval",
+      "x": 700,
+      "y": 100
+    },
+    {
+      "id": "project",
+      "name": "项目 Go 命令",
+      "kind": "execution",
+      "x": 1020,
+      "y": 100,
+      "execution_timeout_seconds": 90,
+      "execution": {
+        "mode": "command",
+        "command": "go run /workspace/main.go"
+      }
+    },
+    {
+      "id": "done",
+      "name": "基础验证结束",
+      "kind": "end",
+      "x": 1340,
+      "y": 100
+    }
+  ],
+  "edges": [
+    {
+      "source": "python",
+      "route": "next",
+      "target": "typescript",
+      "mode": "automatic"
+    },
+    {
+      "source": "typescript",
+      "route": "next",
+      "target": "confirm",
+      "mode": "automatic"
+    },
+    {
+      "source": "confirm",
+      "route": "next",
+      "target": "project",
+      "mode": "automatic"
+    },
+    {
+      "source": "project",
+      "route": "next",
+      "target": "done",
+      "mode": "automatic"
+    }
+  ]
+}

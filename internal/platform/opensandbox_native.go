@@ -25,12 +25,18 @@ func (s *OpenSandbox) startNative(ctx context.Context, id, run string, in opensa
 		return result, err
 	}
 	err = execd.RunCommand(ctx, in, func(event opensandbox.StreamEvent) error {
+		// The service has already launched this process. Retain its real identity
+		// before a presentation/persistence callback can fail, so cleanup still
+		// targets this one process and never needs a guessed ID or another launch.
+		if err := acceptSandboxCommandID(event.Data, &result); err != nil {
+			return err
+		}
 		if onEvent != nil {
 			if err := onEvent(event); err != nil {
 				return err
 			}
 		}
-		return acceptSandboxCommandID(event.Data, &result)
+		return nil
 	})
 	if result.ID == "" {
 		return result, errors.Join(errors.New("native process launch is unconfirmed; reconcile before continuing; replay is refused"), sandboxError("native launch", err))

@@ -14,9 +14,9 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| 执行节点 | MCP、Python代码、项目命令同Run编排/回执/下游完整文件输入，隔离HTTP及实际页面回归通过；TypeScript保存重载通过 | TypeScript正式Run、原生Agent、112实际Pipeline |
-| 112 OpenSandbox | 1.1.1/8095；SDK Python/TS/文件/取消及认证原生initialize/停止/删除404通过；Run归属隔离回归通过 | 原生命令namespace配置、模型角色会话/恢复、正式平台Run、服务登出重启 |
-| 四类画布与112平台8795 | 代码/命令/MCP及环境配置保存重载、运行环境核对/释放和390px页面回归通过；8795未部署 | 原生远程会话、正式部署核验（112固定运行镜像实际检查已过） |
+| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过 | 原生Agent及测试仓真实Pipeline |
+| 112 OpenSandbox | 1.1.1/8095；SDK文件/取消及认证原生initialize/停止/删除404通过；8795正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
+| 四类画布与112平台8795 | 489a07e精确标准Linux/CGO构建安装exit0，Mac/112 health同SHA，真实1440画布和390Run截图核验通过 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
 | 测试仓独立入口 | 尚未创建新Issue/Pipeline | 仓库自有Harness、新类型去重、真实整链 |
 
 112 基础设施探针 ID `a2548a85-d279-4b82-93e2-4991d11feaa8`，已删除；报告6事件、SHA256 `671c0e833897ad2882a4f5951b323469652a46a4632465830f93b9bb776cfbe5`。当次 execd 镜像摘要 `6cf7dba2f21f0b536e100563d841ac58a9f31c2b0a081b7ac76796a24d6f47e2`，Python镜像摘要 `a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`。服务目录0700/配置0600已实测。此为基础设施回归，不是产品验收。
@@ -74,7 +74,7 @@ Files: `web/workflow-model.js`、`web/workflow-panel.js`、`web/workflows.js`、
 
 Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工具及 SDK；测试仓复制后的独立 `.github/workflows/` 与项目 Harness 目录。
 
-- [ ] 112 新实例通过标准命令部署，独立数据/端口，健康版本与源码一致；最小凭据配置不公开。
+- [x] 112 新实例通过标准命令部署，独立数据/端口，健康版本与源码一致；最小凭据配置不公开。（489a07e；原生模型/Pipeline另列未完成。）
 - [ ] 新 Example 入站仅使用仓库文件/固定工具版本与平台 API，申请环境后在其中准备项目；不执行平台源码路径。
 - [ ] 检查既有 Issue/PR/Actions，再配置新 label/Issue 模板及互斥路由，旧类型不触发新 Pipeline，新类型不触发旧 Pipeline。
 
@@ -235,3 +235,33 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 
 
 - 安装候选完整标准scripts/verify.sh exit0：verify-12.log118087bytes/SHA cb7cba8079bb975e35ab4eeb61273910b5c86fe3e19e757a57ebf36c8d3dfd08，平台全包race66.086s；新增安装器4项、health版本、原浏览器和全部供应链/权限/恢复/vet/build均实际通过。接下来只部署此精确源码候选到独立8795，不改旧8788/8793。
+
+
+### 2026-10-13 — 112独立8795标准构建与实际部署
+
+- 经完整verify12通过的精确维护源489a07e72047d8c8bcbf5da0140b11eea28ce2c9，私有归档4003840bytes/SHA ee30a663d25f84d408b780fbbd6b604fede723deac2a27abd16eb29cc7646379经现有SSH传输、原始摘要重核后在112标准build.sh构建。实际exit0；固定Go1.25.6/Linux/CGO、go.sum校验均成功，未替换宿主Go1.21.6。
+- 实际binary18945056bytes/SHA184344b5872f4e649a6804422f9b937d9bbeb760a13b9fe5acb2452b03db38fa；独立源码manifest11962bytes/SHAbd4cafe840ae5e4d890442ca4ea14d65b09b97edd279c9c238d4167769873953、模块验证与原构建日志保留在私有platform-build-01。原安装入口--activate真实exit0，agent-platform-8795.service已链接启动，仅独立目录/端口；未改8788/8793或既有账号。
+- http://10.1.20.112:8795/api/health远端及Mac无代理实际HTTP200，revision为同489a07e、version0.1.0。初始admin凭据仅保存在新实例0600文件，未打印/发送；数据0700、不复制旧实例。用户服务logout/reboot持久性未验，不把启动成功当模型会话或产品验收。
+- 新标准check.py与独立基础模板已传输30720bytes/SHAdfd0d2047bcb39eaf5ab6c4bd86d0fa10550af9befa55926e189ce296dfbfc11；通过正式API验证Python→TypeScript→人工确认→Go项目命令→结束/去重/环境释放，原报告platform-check-01.jsonl独立保留。当前运行结果待核，非原生Agent或产品QA。
+- GitHub连接器读取测试仓404不当作仓库消失；同现有gh凭据仅进程内存经官方REST已确认big91987/model-relay私有仓存在，main为0c197c8b3d98346107e65dbf0c41ef5d6b73d437。gh原TLS超时及目录/Issue读取URLError保留，尚未创建新任务，不依赖旧快照重放。
+- 容器命名空间扩展授权问题仍待答复；未启用SYS_ADMIN或放开过滤。公开沙箱Agent门禁保留，角色文件/原生生命周期总入口与测试仓独立Pipeline仍待连接。8795基础实例已部署，不宣称整链完成。
+
+
+### 2026-10-13 — 8795正式基础链路与真实页面绿
+
+- 原check-01唯一Run d0988dbd35a5218864aba04a8f4939e1/workflow97af7cbeb711b313bf282aa7ddd706c3真实exit0，报告32355bytes/SHAea6fb8312ee3dd8fd9488f2bc258bab0ec515d239781126acb95f95ef650dea1。重复相同request_id得到同Run；同一个sandbox5269f9f9-09fe-471a-bad1-dc80ea92b495中Python480/TypeScript485/Go691bytes完整未截断原日志、实际exit0。literal输入与全parameters/previous_results经私有文件传入，共享文件跨节点读取保持。
+- seq3真实waiting后经正式decision进入seq4项目Go命令、seq5结束；人工确认者为Harness基础回归操作者，不是产品QA。之后原environment/release确认released，原history pending→creating→ready→releasing→released完整保留。没有后台Agent/model turn；不以该证明替代新测试仓独立Pipeline。
+- 固定runtime镜像内真实Chromium147.0.7727.15检查原8795部署页面，browser-check-01 exit0/stderr0，四类节点及已保存Python/TypeScript/Go字段正确，Run completed和环境已释放、原命令输出及不再显示继续/回退均正确、page_errors空；1440画布PNG140987bytes/SHA1319bf207a2c754a879ef0e965cfb854d33fd6b075531d51d85a81a3f5f6d761，390Run PNG105421bytes/SHAb91aa8e8363f02a3eb2f6a650e07c3a39a381d664bf2fe409cca6ce192195d65已独立摘要一致后视觉复核。会话正式logout、浏览器及临时容器结束；凭据只在远端stdin/内存，不进入日志或截图。
+- 首截图回传读取tmux250物理行不足，未重拍重发；只读扩至原10000行取得同份图像、核对摘要成功。原报告与原失败保留。视觉观察发现执行结果区域有两处同义退出码，后续展示简化候选；不影响本次链路结果，不隐去原回执。
+- 8795访问链接http://10.1.20.112:8795；实际基础验证Run链接http://10.1.20.112:8795/workflow-runs/d0988dbd35a5218864aba04a8f4939e1。原生权限/生命周期总入口和测试仓新Pipeline仍未完成，既有审批问题待用户回答。
+
+
+### 2026-10-13 — 原生事件保存失败保留真实执行ID
+
+- 维护源新隔离HTTP用例实际复现：SDK已返回init执行ID，而onEvent失败前未解析ID，原startNative返回空ID/未知且未interrupt实际已启动进程。native-launch-persistence-red-01 exit1，收到1次launch/0次stop，未补写为已清理。
+- 先解析真实执行身份再调用事件保存；回调失败时仅停止该已知ID，返回原失败和实际停止/exit回执，身份未收到时原未知不重放策略保持。定向原生/初始化/认证不重试/就绪/唯一launch回归race5.023s exit0，1次launch/1次interrupt/同ID停止-1真实证明；原macOS linker warning保留。
+- 这是通用源码修复及隔离回归，尚未应用8795二进制；8795继续489a07e，不能把新维护源局部绿当已部署完整Agent。标准全量验证及后续同配置升级待执行。
+
+
+- 本阶段标准scripts/verify.sh原进程明确exit0，verify-13.log118098bytes/SHA66365f0a765dfa767f57d3988246720e51c9c83cec2af641f1b5feabf69c88c6，平台全包race66.261s。部署检查Python lint/format与新浏览器脚本语法检查绿，原全套浏览器/供应链/SDK/权限/恢复/vet/build保持；新原生事件保存失败回归包含在全量。维护源后续提交包含该修复与可复用部署回归工具，8795实际部署仍为489a07e，不把提交完成冒充升级。
+- 后续GitHub正式同身份只读读取已成功：Open Issue37/34/33/32及旧历史任务保持；仓库仅agent-platform-entry.yml/deploy-local.yml。当前旧entry blob5b3b98ae556954edc3ac5017391a564752985296仍以平台checkout路径运行github_entry.py，需新入口复制依赖为仓库自有并互斥路由；本次未修改旧入口或创建新Issue/PR，避免未接通Agent时制造空任务。

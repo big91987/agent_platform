@@ -49,3 +49,24 @@ curl --noproxy '*' --fail http://127.0.0.1:8795/api/health
 OpenSandbox的服务/执行可用性、原生角色会话和实际Pipeline是不同门槛；
 健康页面证明平台与数据库工作，不证明模型登录或任务通过。当前沙箱Agent入口
 仍在维护源门禁下；未完成原生执行能力验证前不会回退宿主或自动放宽容器权限。
+
+
+已部署实例可通过正式API做基础链路检查：
+
+```sh
+python3 deploy/platform/check.py \
+  --root "$HOME/agent-platform-8795" \
+  --template examples/platform-workflows/opensandbox-runtime-check.json \
+  --report NEW_PRIVATE_REPORT.jsonl
+```
+
+检查读取本实例私有初始凭据，仅在进程内登录；完整意图、API回执和原执行日志
+写入独立0600报告。模板验证Python、TypeScript、任意项目命令、同Run共享文件、
+重复请求去重、人工确认与环境释放；人工确认由基础回归操作者完成。它不执行模型
+或产品验收。失败保持原Run、环境与报告，先核对现场，不能用另一报告名盲重试。
+报告存在时拒绝覆盖；写请求发送结果未知也不重放。默认等待各阶段有界120秒。
+
+`browser-check.cjs`只读检查实际画布和Run呈现，供已安装固定Playwright运行时使用；
+通过stdin传入url/workflow/run和临时password，禁止把该输入写入日志、命令参数或
+截图。输出含原始截图base64，须由受信调用者存入私有文件，只公开检查范围及摘要。
+浏览器检查与命令执行、原生Agent及产品QA分别报告。

@@ -304,3 +304,44 @@ func TestOpenSandboxNativeHomePreparationAndBoundedLogs(t *testing.T) {
 		t.Fatal("untrusted execution log path accepted")
 	}
 }
+
+func TestNativeLaunchRetainsOwnedIDWhenEventPersistenceFails(t *testing.T) {
+	var base string
+	var launches, interrupts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/sandboxes/owned":
+			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
+		case strings.Contains(r.URL.Path, "/endpoints/"):
+			json.NewEncoder(w).Encode(opensandbox.Endpoint{Endpoint: base})
+		case r.Method == "POST" && r.URL.Path == "/command":
+			launches.Add(1)
+			w.Header().Set("Content-Type", "text/event-stream")
+			io.WriteString(w, "data: {\"type\":\"init\",\"text\":\"owned-launch\"}\n\n")
+		case r.Method == "DELETE" && r.URL.Path == "/command":
+			if r.URL.Query().Get("id") != "owned-launch" {
+				t.Error("interrupt targeted a different process")
+			}
+			interrupts.Add(1)
+		case r.URL.Path == "/command/status/owned-launch":
+			value := opensandbox.CommandStatusResponse{ID: "owned-launch", Running: interrupts.Load() == 0}
+			if !value.Running {
+				exit := int32(-1)
+				value.ExitCode = &exit
+			}
+			json.NewEncoder(w).Encode(value)
+		default:
+			t.Error("unexpected request", r.Method, r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	base = server.URL
+	service, _ := newOpenSandbox(base, "private", "fixed-runtime", 600)
+	result, err := service.startNative(context.Background(), "owned", sandboxTestRun, opensandbox.RunCommandRequest{Command: "exec codex app-server", Cwd: "/workspace", Timeout: 600000}, func(opensandbox.StreamEvent) error {
+		return errors.New("event persistence unavailable")
+	})
+	if err == nil || result.ID != "owned-launch" || !result.Stopped || result.ExitCode == nil || *result.ExitCode != -1 || launches.Load() != 1 || interrupts.Load() != 1 {
+		t.Fatal("received launch identity was lost or owned cleanup skipped", result, err, launches.Load(), interrupts.Load())
+	}
+}
