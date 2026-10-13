@@ -66,7 +66,7 @@ Interfaces: Run 关联实际 sandbox ID；受信环境配置声明服务与镜�
 Files: `web/workflow-model.js`、`web/workflow-panel.js`、`web/workflows.js`、`web/workflow-runs.js`、现有 MCP 管理页及对应测试。
 
 - [x] 新建流程只呈现 Agent/执行/人工确认/结束；执行按 code/command/mcp 显示必要字段。（真实保存/重载与112画布截图已验；后续Agent真实整链另列。）
-- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批已112标准升级且引用正式API实操通过；引用112网页及真实新Pipeline仍待验证。）
+- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批已112标准升级且引用正式API实操通过；引用112网页已通过；真实新Pipeline仍待验证。）
 - [ ] Agent 配置基础/高级分组，角色与任务分离；人工确认与权限审批区分；固定测试不能被人审跳过开关跳过。
 - [ ] 浏览器实际保存重载、执行结果、失败/停止恢复及窄屏可用验证。
 
@@ -426,3 +426,11 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 反向Run6677a90913e8f53873db74c551b54aa8实际failed/seq1，错误为text引用不可用，execution_dispatched=false；工具原日志仍只有2件，即缺输入新增调用0。该Run所属环境也经正式release到released。两个Run原始失败/完成历史均保留；检查后唯一受控工具通过正式API停用，不删除回执或配置，未创建测试仓Issue。
 - 有界原检查进程真实exit0；原report52644bytes/SHA208dbf7b7ccb86b4cf2704fc7a2ed655d55173e35514ae200a82fb4d5b887b33与独立文件readback核对。随后展示包装脚本把已关闭TextIOWrapper当Path调用read_text触发AttributeError；仅影响把日志打印到终端，不是平台/产品失败。原包装脚本和driver log保持，另做只读原文件及正式API核对，未重建工具、重复Run/调用或更改原回执。当前API independently confirms两Run上述状态/环境已释放、字面结果相同、tool.enabled=false、health ae4a2e9。readback位于ignored .data/opensandbox-verification。
 - 完成范围：维护源全量verify25、实际浏览器隔离回归、112标准升级以及新增引用112正式实操。仍缺新增引用112网页编辑实操、原生模型会话/命令/恢复、新测试仓独立Issue/Pipeline和整个分支最终独立评审。公开Agent启动门槛及namespace权限阻塞保持，待用户对新增权限诊断选择；不能以这条受控MCP回归替代目标中的原生研发流水线。
+
+
+### 2026-10-14 — 引用配置112实际网页保存重载与原生权限等待
+
+- 基于已部署ae4a2e9及原受控MCP正向Run，通过固定镜像内Chromium147.0.7727.15访问真实112:8795页面；登录凭据仅私有stdin传入，没有写入脚本、日志、截图或Issue。只编辑自有验证Workflow的同值引用JSON并保存，实际PUT200、重载第一节点任务引用及第二节点前序结果引用逐值一致；原Run冻结定义/回执逐值保持不变，未重新启动Run或重复工具调用。
+- 浏览器实际查看原第二步原始字面返回和已释放状态、390窄屏Run。browser-check06真实exit0/无stderr/page_errors=[]；1440画布PNG120679bytes/SHA c3d321f94242d064263fe98934e2a130f47bce774fcee79453ff21aa322675ca，390Run PNG59849bytes/SHA73bc2f71a32403f4663bc7dac0dbefb4141adc63c8af1e143eb0f5d7e35c4afe，两图按原摘要接收并查看。画布截图展示MCP配置上半部，引用字段的保存/重载由真实DOM及HTTP断言证明，不假称截图展示所有字段。仅在保存检查期间正式API启用自有受控工具，结束已停用；唯一带所属label的浏览器容器已退出/不存在，没有产品操作或原生modelturn。
+- 原操作包装生成时一次过宽字符串替换造成Python语法错误，发生在向112发送任何命令之前；改为单独占位符并先compile后才执行。图片接收首包装仅取250行缺起始marker而IndexError，原传输已完成；随后只读现有2000行终端范围取得两张原图，同bytes/SHA，没有重跑浏览器或重发图片。原错误工具记录/脚本保留，这些不是平台/产品失败。
+- 当前受支持网页、代码/命令、MCP与基础环境路径的已实现验证均保留；整套目标仍未完成。原生Agent启动校验仍拒绝，namespace权限已证阻塞，未扩大权限或使用宿主fallback。已向用户重新列明唯一一次无凭据诊断的具体边界（新容器/独立8095/官方isolation扩展/SYS_ADMIN与该容器AppArmor/seccomp；不改宿主/无凭据/不privileged/不挂载宿主，检查结束释放），等待明确选择；自动goal继续不当作权限答复。后续不能以更多基础探针替代实际模型会话/新测试仓独立Issue/Pipeline和整链验证。全分支最终独立评审尚待实现与实际门禁满足。
