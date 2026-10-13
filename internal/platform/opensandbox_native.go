@@ -90,6 +90,7 @@ func (s *OpenSandbox) stopNative(ctx context.Context, id, run, commandID string)
 			return result, nil
 		}
 		if !interrupted {
+			result.interruptSent = true
 			if err = execd.InterruptCommand(ctx, commandID); err != nil {
 				return result, sandboxError("native interruption is unconfirmed", err)
 			}

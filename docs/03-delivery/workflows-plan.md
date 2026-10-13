@@ -971,3 +971,22 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 操作者临时核验包装脚本02在构建前因http变量遮蔽模块UnboundLocalError中止，已核无build/install派发；03标准构建安装成功后，同名cookiejar引用造成AttributeError，未把该错误归因平台安装失败。原失败与阶段事实独立归档。随后仅读回，不重复构建/安装：原d0988dbd…Run全JSON与升级前正式API原文件逐值相同，completed/released保持、原web源码字节相同、配置值匹配及现有凭据实际登录/logout成功。
 - 原包装脚本未持久化凭据文件的升级前字节，进程退出后该比较无法补造；报告明确exact_credentials_before_after=not_verified_after_operator_wrapper_failure，不以mtime/正常登录冒称文件字节前后相同。标准安装器保持凭据/配置的隔离回归和实际现有凭据登录分别成立。
 - 可查看独立实例http://10.1.20.112:8795与原基础Run。原生启动事件保存失败的维护源修复已纳入本二进制，但公开Agent入口仍保护；原生模型/角色会话/真实新测试仓Pipeline未执行。新增SYS_ADMIN/AppArmor/seccomp诊断权限仍待用户明确选择。目标持续active，本轮实际部署/升级进展不等于整链完成。
+
+
+### 2026-10-14 — 原生生命周期桥接与最小角色输入（尚未接通公开入口）
+
+- 私有executeSandboxAppServer将官方SDK后台进程、同一Codex原生协议与既有message_id进程记录连接：init到达即持久化实际执行ID，认证WebSocket沿原thread/turn/approval协议，无新的任务ID。停止后保留实际回执与完整原诊断；未知launch/interrupt进入unconfirmed，阻止后续输入执行，不猜ID、不换线程/服务、不中断重放。连接须匹配Run冻结来源，工作区固定同Run/workspace，角色Home只用已有conversation ID派生。
+- 隔离SDK/HTTP/WebSocket服务证明正常轮次、取消、launch响应丢失、stop响应丢失和事件保存失败；这是协议及生命周期回归，模拟的回复/模型不当作112真实账号、模型或Pipeline证据。早期夹具误把模型配置当作必然thread帧、又混读multipart metadata/file导致非稳定能力token已定位纠正，原红保持，不放宽认证或状态断言。
+- 实际红native-bridge-red-03（716bytes/SHAd7ba93822cc409e87cb69c9a19c8a993e39964656041b47d14abf5d026b9af02）证明两层清理对仍Running的未知结果发送2次interrupt。结果对象保留同调用已发送中断事实，外层/标准runtime探针不再重发，实际只1次interrupt并保持unconfirmed。该字段是内部同调用事实，不新增公共权限/配置，重启仍依赖原持久记录核对。
+- 普通执行命令也有事件写入先于ID解析导致漏清理：command-event-persistence-red-01（512bytes/SHA592037b8123fa1f7d5fe6c1caa942958ab6fac77ab070757cee45c8be1b83a91）实际launch1/stop0。现统一先保留实际ID、仍归档收到的原事件，日志失败时只清理同ID；原停止/输出上限/归属及未知不重放回归保持。
+- 新私有角色包仅含所选Skill的规则及支持文件、原生配置和私有owned auth.json，不复制整个HOME或宿主环境。os.Root+NOFOLLOW+打开前后身份验证拒绝源外链接/非普通资产/非私有认证；每角色独立Home、可执行资源保持0700，其余0600，512文件/64MiB总界限。仅临时认证夹具被读取测试，不为此读取真实Mac认证。明确拒绝把宿主stdio程序当容器工具、角色seed替换共享工作区和全宿主继承/未接通的变量删除，不静默丢指令。
+- native-role-inputs-green-03 race4.859s exit0；阶段标准verify14 exit0/118109bytes/SHA515559e9ae5b2cc3f039af49a609820a2389b1d9fd928db055498a1b38751a00、平台race66.246s，覆盖上述生命周期/角色输入及原完整供应链/浏览器/vet/build。此轮尚不包括之后的模型约束改动。
+- 模块仍待正式角色文件准备标记、原生skills/list及skills/config/write复核、远端产物访问和main执行器入口连接；纯收集接口未保留无标记的盲覆盖上传入口。112仍8912141，公开沙箱Agent门禁保持，不冒称角色会话/测试仓新Pipeline已跑通。新增容器权限问题仍待明确回答，没有增加SYS_ADMIN或改变过滤。
+
+### 2026-10-14 — 所选模型进入原生请求并拒绝替代模型
+
+- 查阅官方App Server文档https://learn.chatgpt.com/docs/app-server，并由实际Codex0.151.0只生成实验Schema到私有临时目录；未登录/推理。固定Schema确认thread/start支持model/allowProviderModelFallback，resume支持model，二者响应含有效model；skills/config/write按path控制enabled并返回effectiveEnabled。文档的其他新字段不直接套入固定0.151协议。
+- native-model-binding-red-01实际证明原请求没传所选model且收到不同model后仍发送用户turn。共同协议已对新建/接续显式传入快照Model，新建禁provider fallback；先保留真实原线程ID，再核对返回model，不符时在发送用户内容前失败。不能以此声称gpt-6.1-sol账号可用，实际推理仍未验。
+- 新建及同原线程接续的匹配/不匹配四场景、原生审批/身份及桥接回归race2.953s exit0；原native-model-binding-green-01夹具缺固定Schema模型字段而红的证据保留，隔离服务已按实际响应补齐。因共同协议新改，完整verify15正在运行，完成回执待读取；不沿用verify14作为此版本完整绿。
+
+- 标准verify15原进程已明确exit0，原日志118098bytes/SHAb0382b30e5971da206cdbc9c84b97c8b977576cd4cc507345da48a87dcc7aa60，平台全包race73.662s；包含上述模型约束四场景、生命周期/角色输入及原完整浏览器/供应链/vet/build。macOS linker warning保留。此结果是维护源完整验证，112仍8912141，未称新代码已部署或真实模型可用。

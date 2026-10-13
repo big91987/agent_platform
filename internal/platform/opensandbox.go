@@ -30,9 +30,10 @@ type OpenSandbox struct {
 }
 
 type SandboxCommandResult struct {
-	ID       string `json:"id"`
-	ExitCode *int32 `json:"exit_code,omitempty"`
-	Stopped  bool   `json:"stopped"`
+	interruptSent bool   // same-call fact; an uncertain interrupt must not be repeated by an outer cleanup
+	ID            string `json:"id"`
+	ExitCode      *int32 `json:"exit_code,omitempty"`
+	Stopped       bool   `json:"stopped"`
 }
 
 var errSandboxOutputLimit = errors.New("sandbox command output exceeded 16 MiB; retain large outputs as files")
@@ -264,13 +265,16 @@ func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbo
 		return result, err
 	}
 	err = execd.RunCommand(ctx, in, func(event opensandbox.StreamEvent) error {
-		// Preserve the received execution event even if its identity is invalid.
+		// Capture the received identity before a log write can fail. Still retain
+		// the actual event when its identity is invalid; neither failure can
+		// justify guessing an execution ID or sending another command.
+		identityErr := acceptSandboxCommandID(event.Data, &result)
 		if onEvent != nil {
 			if eventErr := onEvent(event); eventErr != nil {
-				return eventErr
+				return errors.Join(identityErr, eventErr)
 			}
 		}
-		return acceptSandboxCommandID(event.Data, &result)
+		return identityErr
 	})
 	if result.ID == "" {
 		return result, errors.Join(errors.New("sandbox command result is unconfirmed; no execution ID was received; replay is refused"), sandboxError("command start", err))
@@ -280,6 +284,7 @@ func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbo
 	cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
 	if err != nil {
+		result.interruptSent = true
 		if interruptErr := execd.InterruptCommand(cleanup, result.ID); interruptErr != nil {
 			return result, sandboxError("command interruption unconfirmed", interruptErr)
 		}

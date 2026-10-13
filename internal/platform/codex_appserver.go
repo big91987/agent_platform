@@ -284,15 +284,21 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 						options["config"] = map[string]any{"bypass_hook_trust": true}
 					}
 					method := "thread/start"
+					if c.Snapshot.Model != "" {
+						options["model"] = c.Snapshot.Model
+					}
 					if c.ThreadID != "" {
 						method = "thread/resume"
 						options["threadId"] = c.ThreadID
+					} else {
+						options["allowProviderModelFallback"] = false
 					}
 					if err = request(2, method, options); err != nil {
 						return err
 					}
 				case "2":
 					var result struct {
+						Model  string `json:"model"`
 						Thread struct {
 							ID string `json:"id"`
 						} `json:"thread"`
@@ -306,6 +312,9 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 					}
 					if err = emit(map[string]any{"type": "thread.started", "thread_id": thread}); err != nil {
 						return err
+					}
+					if c.Snapshot.Model != "" && result.Model != c.Snapshot.Model {
+						return errors.New("native effective model differs from the selected model; the original thread was retained and no model turn was sent")
 					}
 					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeConversationApprovalPolicy(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot), "sandboxPolicy": turnSandbox(c), "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
 						return err

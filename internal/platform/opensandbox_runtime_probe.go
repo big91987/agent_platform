@@ -44,7 +44,11 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 				probeErr = errors.Join(probeErr, err)
 				return
 			}
-			stopped, err := service.stopNative(cleanup, id, run, process.ID)
+			stopped := process
+			var err error
+			if !process.Stopped && !process.interruptSent {
+				stopped, err = service.stopNative(cleanup, id, run, process.ID)
+			}
 			logErr := record("native_stop_result", map[string]any{"receipt": stopped, "error": errorText(err)})
 			if err != nil || !stopped.Stopped {
 				probeErr = errors.Join(probeErr, errors.New("native process stop was not proved"), err)

@@ -3,8 +3,10 @@ package platform
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -78,5 +80,78 @@ func TestCodexTransportResumesIdentityAndKeepsInteractiveApproval(t *testing.T) 
 				t.Fatal("native transport continuity failed", err, approved, events.String())
 			}
 		})
+	}
+}
+
+func TestNativeTransportUsesRequestedModelAndRefusesFallbackBeforeTurn(t *testing.T) {
+	for _, resumed := range []bool{false, true} {
+		for _, actualModel := range []string{"gpt-6.1-sol", "different-model"} {
+			t.Run(fmt.Sprintf("%s/resume=%t", actualModel, resumed), func(t *testing.T) {
+				inbound, toNative := io.Pipe()
+				fromNative, outbound := io.Pipe()
+				defer inbound.Close()
+				defer toNative.Close()
+				defer outbound.Close()
+				defer fromNative.Close()
+				var turns atomic.Int32
+				go func() {
+					defer inbound.Close()
+					defer outbound.Close()
+					decoder, encoder := json.NewDecoder(inbound), json.NewEncoder(outbound)
+					for {
+						var packet struct {
+							ID     json.RawMessage `json:"id"`
+							Method string          `json:"method"`
+							Params map[string]any  `json:"params"`
+						}
+						if decoder.Decode(&packet) != nil {
+							return
+						}
+						switch packet.Method {
+						case "initialize":
+							encoder.Encode(map[string]any{"id": packet.ID, "result": map[string]any{}})
+						case "thread/start", "thread/resume":
+							if packet.Params["model"] != "gpt-6.1-sol" || (!resumed && packet.Params["allowProviderModelFallback"] != false) || (resumed && packet.Params["threadId"] != "new-stable-thread") {
+								t.Error("requested model could be replaced by project/default configuration", packet.Params)
+							}
+							encoder.Encode(map[string]any{"id": packet.ID, "result": map[string]any{"model": actualModel, "thread": map[string]any{"id": "new-stable-thread"}}})
+						case "turn/start":
+							turns.Add(1)
+							encoder.Encode(map[string]any{"method": "turn/completed", "params": map[string]any{"turn": map[string]any{"status": "completed"}}})
+							return
+						}
+					}
+				}()
+				executor := Codex{AuthHome: t.TempDir()}
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				persistedThread := ""
+				conversation := Conversation{ID: "model-binding", Snapshot: Agent{Executor: "codex", Model: "gpt-6.1-sol"}}
+				if resumed {
+					conversation.ThreadID = "new-stable-thread"
+				}
+				err := executor.executeAppServerTransport(ctx, conversation, Message{Content: "original task"}, "/workspace", nil, toNative, fromNative, func() string { return "" }, func(raw []byte) error {
+					var event struct {
+						Type     string `json:"type"`
+						ThreadID string `json:"thread_id"`
+					}
+					json.Unmarshal(raw, &event)
+					if event.Type == "thread.started" {
+						persistedThread = event.ThreadID
+					}
+					return nil
+				})
+				if persistedThread != "new-stable-thread" {
+					t.Fatal("created native identity not retained", persistedThread, err)
+				}
+				if actualModel == "gpt-6.1-sol" {
+					if err != nil || turns.Load() != 1 {
+						t.Fatal("requested model turn refused", err, turns.Load())
+					}
+				} else if err == nil || turns.Load() != 0 {
+					t.Fatal("fallback model received a task", err, turns.Load())
+				}
+			})
+		}
 	}
 }
