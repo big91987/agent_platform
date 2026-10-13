@@ -14,9 +14,9 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| 执行节点 | MCP、Python代码、项目命令同Run编排/回执/下游完整文件输入，隔离HTTP及实际页面回归通过；TypeScript保存重载通过 | TypeScript真实运行、原生Agent、112实际Pipeline |
+| 执行节点 | MCP、Python代码、项目命令同Run编排/回执/下游完整文件输入，隔离HTTP及实际页面回归通过；TypeScript保存重载通过 | TypeScript正式Run、原生Agent、112实际Pipeline |
 | 112 OpenSandbox | 1.1.1/8095；实际SDK Python/文件0600/取消/删除404通过；Run归属持久化与恢复隔离回归通过 | 原生Agent、正式平台Run、服务登出重启 |
-| 四类画布与112平台8795 | 代码/命令/MCP及环境配置保存重载、运行环境核对/释放和390px页面回归通过；8795未部署 | 原生远程会话、正式部署核验 |
+| 四类画布与112平台8795 | 代码/命令/MCP及环境配置保存重载、运行环境核对/释放和390px页面回归通过；8795未部署 | 原生远程会话、正式部署核验（112固定运行镜像实际检查已过） |
 | 测试仓独立入口 | 尚未创建新Issue/Pipeline | 仓库自有Harness、新类型去重、真实整链 |
 
 112 基础设施探针 ID `a2548a85-d279-4b82-93e2-4991d11feaa8`，已删除；报告6事件、SHA256 `671c0e833897ad2882a4f5951b323469652a46a4632465830f93b9bb776cfbe5`。当次 execd 镜像摘要 `6cf7dba2f21f0b536e100563d841ac58a9f31c2b0a081b7ac76796a24d6f47e2`，Python镜像摘要 `a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`。服务目录0700/配置0600已实测。此为基础设施回归，不是产品验收。
@@ -171,3 +171,12 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 112首runtime-build-01的APT失败继续保留。直连HTTPS单探针exit28/1963bytes/SHA c0d778071211374322ac7ec68c33cb4adf17d3422b474cfde401c41f99209549；宿主Debian/npm及容器npm/镜像源直连均超时，未盲改镜像源或host网络。随后只检查代理存在/是否含凭据：112原有小写http_proxy/https_proxy及Docker代理（均非回环、无凭据）。容器显式引用原代理后Debian/npm分别HTTP200，证明构建未带入现有代理的配置缺口。
 - 标准build.sh只显式复用现有代理的Docker预定义build args（大小写兼容），不打印值、不写ENV、不拷贝宿主环境/凭据；官方Debian源改HTTPS，APT索引更新任何错误即失败、禁重试并限时。第二批源tar40960bytes/SHA e58eef714bfd1d4bb9fbc8f81ef2cc9b6043e56ae5bf7da581645000b57b2f8a已核对并进入独立runtime-build-02。目前实际构建/运行检查结果仍待核验；未跳检查，首失败目录未覆盖。
 - 仍缺平台原生沙箱进程归属/停止持久恢复、角色文件/Skills/最小认证准备、正式112平台8795及测试仓独立新入口。沙箱Agent启动当前继续明确拒绝，不把协议SDK就绪当整条Pipeline已打通。
+
+
+### 2026-10-13 — 112标准运行镜像真实构建/检查通过
+
+- 第二次runtime-build-02实际exit0，源码tar与维护源一致。不可变镜像ID sha256:8b6ea4396af7a1775eba7dfd4ec3f9c217670eddb93c4b829217e916c7b665c1，amd64/2704127407bytes；context源清单395bytes/SHA 6985905984b35c5c55d92ff41a8898f54550ea9fff528c1f307e192998b3df43。最终镜像Config.Env中HTTP_PROXY/HTTPS_PROXY/NO_PROXY大小写六项均不存在。
+- 原标准build.sh在无网络、2CPU/2Gi、256pids/no-new-privileges临时容器中完成check.py：实际Codex0.151.0、Node22.22.0、Python3.11.2、Go1.25.6、Git2.39.5、Chromium147.0.7727.15；Python/TypeScript/Go实际读取同一工作区文件，Go实际编译运行，浏览器真实启动/页面内容检查，原生app-server双向传输选项存在。所有程序来自锁定镜像；这不是完整SDK/平台Run或Model Relay产品验证。
+- 原build.log44992bytes/SHA dcd5286a281c55977137d2f748d5da659ac572020a43923761057be92574aa36，实际check.jsonl353bytes/SHA e51f2d450b8c651d7cd77a5b79c26fdb27145f6a3c1ded2a59f86d4f04b51ca5，check.log为空；112私有独立runtime-build-02保留。首runtime-build-01 exit100及所有有界诊断均保留，没有覆写或手装包。
+- Dockerfile/完整npm锁/标准build.sh/check.py/.dockerignore归唯一维护源；README给出标准构建、独立attempt、不可变image-id、构建代理及无凭据运行检查范围。ruff与格式检查5文件绿，bash语法绿。原verify-07覆盖当前Go/SDK/原生协议候选；之后构建脚本的代理大小写/HTTPS改动另有112实际构建和运行绿，未冒称前次verify已测后改动。
+- 剩余：运行环境自身代理要通过受信部署配置提供；原生沙箱启动/取消/重启及角色文件/Skills/认证尚待正式接通。Codex模型登录和调用仍NotRun，平台8795仍未部署、测试仓独立新Issue/Pipeline尚未启动、全分支独立复审未完成。目标保持进行中，不把镜像/局部传输通过当整链交付。

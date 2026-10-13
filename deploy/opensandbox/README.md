@@ -64,3 +64,26 @@ bin/opensandbox-probe \
 上传权限。平台适配器在首次请求前引用字面参数和转换权限，保留原始执行事件；
 这些版本兼容细节由平台承担，项目无需自行打补丁。服务升级需重新验证协议，
 不在请求失败后自动改表示形式再试。
+
+固定 Linux/amd64 任务运行镜像：
+
+```sh
+bash deploy/opensandbox/runtime/build.sh "$HOME/agent-platform-opensandbox/runtime-build-01"
+cat "$HOME/agent-platform-opensandbox/runtime-build-01/image-id"
+```
+
+构建目录必须不存在；每次保留独立源码摘要、完整构建日志、实际镜像ID及运行检查。
+基础Node/Go镜像固定到官方平台摘要，Codex/tsx/Playwright使用版本和npm锁文件。
+镜像包含Python、TypeScript、Go、Git及Chromium，预建`/workspace`；其他项目工具和
+依赖由项目自行准备，不能把此镜像描述成支持全部语言或项目。
+
+构建只显式复用受信运行用户已有的HTTP/HTTPS/NO_PROXY配置（兼容大小写），使用
+Docker预定义build args，不把代理写进最终镜像ENV。APT使用官方HTTPS源，索引更新
+失败即停止；不绕过签名/证书检查或换host网络。最终无网络临时容器实际验证Python、
+TypeScript与Go共享工作区文件、Chromium启动及Codex原生双向传输选项；此检查不复制
+登录凭据、不调用模型、不做产品QA。运行容器自身的出网配置仍需由受信部署配置提供。
+
+平台启动时`--sandbox-image`使用该次`image-id`的不可变值，而不是可变标签。
+镜像更新只影响新Run；旧Run保持其原镜像/TTL和环境归属。环境释放会删除容器内
+工作区与原生运行记录，先由流水线归档必要产物。默认TTL一小时并非无限保留保证，
+长任务需在启动平台时显式选择合适TTL（当前上限24小时）。
