@@ -40,3 +40,27 @@ curl --noproxy '*' --fail http://127.0.0.1:8095/health
 官方依据：
 [固定发行版](https://github.com/opensandbox-group/OpenSandbox/releases/tag/release-1.1.1)、
 [服务配置](https://github.com/opensandbox-group/OpenSandbox/blob/release-1.1.1/server/configuration.md)。
+
+平台同源命令／文件／取消探针：
+
+```sh
+go build -o bin/opensandbox-probe ./cmd/opensandbox-probe
+bin/opensandbox-probe \
+  --service-config "$HOME/agent-platform-opensandbox/sandbox.toml" \
+  --image python:3.12-slim \
+  --report "$HOME/agent-platform-opensandbox/sdk-probe-01.jsonl"
+```
+
+在运行服务的 Linux 主机执行；跨平台构建可用 `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/opensandbox-probe-linux ./cmd/opensandbox-probe`。
+探针通过平台固定官方 Go SDK v1.1.1 实际创建环境，执行 Python、上传/下载并
+逐字节核验文件及实际0600权限，取消远端命令后独立查询停止状态，最后删除并
+核对404。此探针使用2CPU/2Gi资源，环境TTL600秒，总执行有界。
+配置须为运行用户所有的私有普通文件；不把控制面密钥传入沙箱。报告独占创建、
+逐事件fsync，失败不覆盖、不自动重放创建或命令。已知ID只做归属核验及清理；
+无ID或结果未知需保留报告后人工核查。探针成功仍不代表Run、原生Agent、浏览器
+或产品验收通过。
+
+固定execd v1.1.0要求shell `command`、`init.text`执行ID以及八进制数字形式的
+上传权限。平台适配器在首次请求前引用字面参数和转换权限，保留原始执行事件；
+这些版本兼容细节由平台承担，项目无需自行打补丁。服务升级需重新验证协议，
+不在请求失败后自动改表示形式再试。

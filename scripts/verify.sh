@@ -30,3 +30,4 @@ PLATFORM_BROWSER_TEST=1 go test ./internal/platform -run '^TestWorkflowExecution
 go vet ./...
 go test -race ./... -timeout 120s
 go build -o bin/agent-platform ./cmd/agent-platform
+go build -o bin/opensandbox-probe ./cmd/opensandbox-probe

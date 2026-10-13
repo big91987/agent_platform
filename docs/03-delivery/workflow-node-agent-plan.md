@@ -725,3 +725,33 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 第三轮原完整 scripts/verify.sh exit0；116658bytes，SHA256 bba3f080c1375cf65ee432cc190a4fb14f4bbe132a7874bbf45b0cf266c6ba31，ignored .data/opensandbox-verification/verify-03.log。Go平台全包race62.772s；macOS链接器警告保留，未误判为失败。
 - 随后新增的真实 Chromium→平台 API→MCP 页面回归 exit0/4.274s，实际保存/刷新、冻结90秒配置、只调用一次及原始结果展示，390px截图 output/playwright/workflow-execution.png 已检查。首失败是夹具两个节点同坐标遮挡，已诊断修夹具而非 force 点击；截图入场动画采集改为禁用动画。回归已纳入标准 verify 入口，不能把新增检查倒记为 verify-03 当时已执行。
 - 112仍为 OpenSandbox8095基础设施已部署；平台8795、原生沙箱任务及测试仓新Issue/Pipeline尚未交付。此为 Harness 隔离回归，不代表 Model Relay 产品验收。
+
+### 2026-10-13 — 112官方SDK命令探针首红，环境已释放
+
+用户影响：候选执行节点的沙箱命令尚不能用于正式任务；环境能创建并就绪不代表程序能执行。SDK固定v1.1.1，已通过隔离HTTP的创建响应丢失不重放、归属、非零状态、取消前后边界及配置私有性6项race；尚未接Run或部署8795。
+
+证据：112同源Linux探针二进制11806922bytes/SHA256 d252490eb64344faba71411bd627043797510529268b4870188bd10ff4d60f70；sdk-probe-01实际exit1。报告1559bytes/SHA256 6b5a85cd3b8388e7fd54b3d5fb1a4454d92644609ea8479b98e3f93e86349f7b，事件create_intent→created→running→python_result→release_intent→absence_confirmed。未收到command_event/init，错误为执行ID未返回、结果未确认；没有自动重放。真实文件/取消未执行，不能写Pass。
+
+原因假设：固定execd镜像与Go SDK的原生argv字段兼容性、HTTP拒绝或流格式差异；目前未证实。已尝试：一次正式SDK调用、按所属Run元数据释放并GET404确认。发现本层无ID分支丢弃底层错误，下一步先修可复用诊断，核对固定execd协议/标签，再作最小有界诊断；保留原报告，不覆盖，不盲重试或宿主代执行。
+
+112通过Jumpserver现有ds112连接；直接112SSH一次连接超时，未转移凭据。二进制传输摘要最终一致；额外结束标记在接收结束后进入shell得到command not found，未产生服务或业务副作用。平台8795/测试仓新入口仍未交付。
+
+
+### 2026-10-13 — 固定execd协议的真实故障归因与通用适配
+
+- 最小command-diagnosis-01确认HTTP400：固定execd v1.1.0要求command，不接受SDK原生argv。平台在第一次发送前逐项POSIX引用字面参数，统一转为command；不在失败后换格式重试。真实shell回归覆盖引号、换行及命令替换字面值。
+- sdk-probe-02仍exit1，1624bytes/SHA256 2c734ef13a7ff4e12d84dd1ff347155d337365e5423f669fb0c07bfca97c9c91，环境删除404。command-diagnosis-02确认HTTP200及init.text执行ID；平台错误地读取init.id。真实响应格式回归先红，再修唯一解析源，原始事件先保留再验证身份。
+- sdk-probe-03的Python实际exit0/停止确认已通过；上传HTTP500导致文件/取消门槛未完成。报告2288bytes/SHA256 ae806df7dd191c70e3ba9f6afbdb5d08b0fe465516c59419679b8f738616b0b3，环境删除404。file-diagnosis-01确认服务把权限整数按八进制数字解析：Go 0600序列化384导致ParseUint失败，文件可能已写但权限失败，未重放。
+- 文件权限转换落在平台统一upload适配；二进制往返/真实文件0600回归先HTTP500红再绿。OpenSandbox八项race回归exit0/3.563s；macOS链接器警告保留。SDK固定v1.1.1，未升级运行镜像、未修改运行服务或产品。
+- 当前仍待修复后112完整SDK探针及标准全套verify；此前verify-04执行到新增错误回归的红版本，exit1原日志保留。不能把隔离HTTP绿当真实112通过；Run环境、原生执行、平台8795及新测试仓入口尚未交付。
+
+
+### 2026-10-13 — 112同源SDK完整基础设施验证通过
+
+- Linux二进制8192184bytes/SHA256 8a97e5748d85833d42e57a0ce148084203033f814b29c2970235b0144f8fbc2a，远端传输摘要一致；sdk-probe-04真实exit0，19事件/3982bytes/SHA256 7966140026a991c5052ba6cf8eaa9c7ca8ae44eb70f4098b6313ad00539b9f5b。
+- Python命令0154097e87554e7eb5f6c407655e06a1实际exit0/stopped；42bytes文件下载与上传逐字节相同，另一次沙箱Python stat证明0600；取消命令e6ffb984881a479a9d10045e51873409真实deadline、exit-1/stopped；所属环境219873b8-4932-44bc-8ba4-0da0c5f88e9b DELETE后GET404。完整原事件与三次失败均保留，不倒写旧回执。
+- 三次协议诊断为临时、有界基础设施诊断，未作为永久交付：command-diagnosis-01 606bytes/e98468921ec4fd5e184dd4086ca161109c53caa734137fdc67508da6d1c28262，command-diagnosis-02 740bytes/ce315b0116732db8f21e625f616e95d8f5ae209fa32b97eb1037ee9cc8c7ed19，file-diagnosis-01 975bytes/a65839e62f1262752e0674cf4c1cd18b418a337e9bf5807193a497bd8628fe39。正式改动归唯一Go适配源码及标准探针/文档。
+- 112只读核验：8795未占用，Codex不在PATH，当前用户私有auth.json存在（未读取内容，未证明登录有效）。下一步固定原生运行镜像/双向app-server、Run环境持久关联及标准8795部署。此次没有创建产品任务或代做产品QA。
+
+
+- 本批源码最终标准验证verify-05真实exit0，116870bytes/SHA256 42f728f8692ecacb0a109038c38144726386c2ba64a5520503982f3678bee6e8；包含新增真实执行页面回归、安装器/SDK/模板/部署控制器原门禁、Go vet/race/build，平台全包race62.687s。测试期间源码保持稳定，未将旧verify-04红结果改为通过。基础设施适配完成；整体目标仍实施中。
