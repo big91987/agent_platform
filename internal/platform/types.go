@@ -41,6 +41,7 @@ type Caller struct {
 	Agents   []string
 }
 type Input struct {
+	environmentRun string // trusted engine only; never accepted from JSON input
 	WorkflowRunID  string `json:"workflow_run_id,omitempty"`
 	WorkflowSeq    int    `json:"workflow_seq,omitempty"`
 	NetworkAccess  *bool  `json:"network_access,omitempty"`

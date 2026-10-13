@@ -62,7 +62,12 @@ func (s *Scheduler) dispatch() {
 				return
 			}
 			if !active.ReadOnly {
-				busy = append(busy, active.WorkspacePath)
+				key, err := s.store.conversationWorkspaceKey(active)
+				if err != nil {
+					log.Printf("scheduler environment: %v", err)
+					return
+				}
+				busy = append(busy, key)
 			}
 		}
 		c, m, e := s.store.Claim(busy...)

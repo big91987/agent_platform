@@ -77,7 +77,15 @@ func (s *OpenSandbox) remove(ctx context.Context, id, run string) error {
 // ProbeOpenSandbox is a bounded infrastructure check using the same client as
 // Run execution. It never performs product acceptance or supplies credentials to
 // the sandbox. The report is exclusive, private and retains uncertain outcomes.
-func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) (probeErr error) {
+func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) error {
+	return probeOpenSandbox(ctx, config, image, reportPath, false)
+}
+
+func ProbeOpenSandboxRuntime(ctx context.Context, config, image, reportPath string) error {
+	return probeOpenSandbox(ctx, config, image, reportPath, true)
+}
+
+func probeOpenSandbox(ctx context.Context, config, image, reportPath string, runtime bool) (probeErr error) {
 	service, err := loadOpenSandboxConfig(config, image, 600)
 	if err != nil {
 		return err
@@ -162,7 +170,7 @@ func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) (pr
 	}
 	events := func(e opensandbox.StreamEvent) error { return record("command_event", e) }
 	program := `from pathlib import Path; Path('/workspace').mkdir(exist_ok=True); Path('/workspace/run-proof.txt').write_text('literal $(no shell)'); print('SANDBOX_PYTHON_PASS')`
-	result, commandErr := service.command(ctx, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python", "-c", program}, Cwd: "/", Timeout: 30000}, events)
+	result, commandErr := service.command(ctx, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python3", "-c", program}, Cwd: "/", Timeout: 30000}, events)
 	if err = record("python_result", map[string]any{"receipt": result, "error": errorText(commandErr)}); err != nil {
 		return err
 	}
@@ -186,7 +194,7 @@ func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) (pr
 	if readErr != nil || !bytes.Equal(found, content) {
 		return errors.New("sandbox file round-trip did not preserve content")
 	}
-	result, commandErr = service.command(ctx, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python", "-c", "import os,stat; assert stat.S_IMODE(os.stat('/workspace/sdk-proof.json').st_mode)==0o600; print('SANDBOX_PRIVATE_FILE_PASS')"}, Timeout: 30000}, events)
+	result, commandErr = service.command(ctx, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python3", "-c", "import os,stat; assert stat.S_IMODE(os.stat('/workspace/sdk-proof.json').st_mode)==0o600; print('SANDBOX_PRIVATE_FILE_PASS')"}, Timeout: 30000}, events)
 	if commandErr != nil || result.ExitCode == nil || *result.ExitCode != 0 || !result.Stopped {
 		return errors.Join(errors.New("sandbox file permissions were not proved"), commandErr)
 	}
@@ -194,13 +202,18 @@ func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) (pr
 		return err
 	}
 	bounded, stop := context.WithTimeout(ctx, 2*time.Second)
-	result, commandErr = service.command(bounded, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python", "-c", "import time; time.sleep(30)"}, Timeout: 30000}, events)
+	result, commandErr = service.command(bounded, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python3", "-c", "import time; time.sleep(30)"}, Timeout: 30000}, events)
 	stop()
 	if err = record("cancel_result", map[string]any{"receipt": result, "error": errorText(commandErr)}); err != nil {
 		return err
 	}
 	if !errors.Is(commandErr, context.DeadlineExceeded) || result.ID == "" || !result.Stopped {
 		return errors.New("sandbox cancellation was not independently confirmed")
+	}
+	if runtime {
+		if err = probeSandboxRuntime(ctx, service, sandboxID, run, record); err != nil {
+			return err
+		}
 	}
 	return record("probe_pass", map[string]bool{"lifecycle": true, "python": true, "files": true, "cancel": true, "product_acceptance": false})
 }

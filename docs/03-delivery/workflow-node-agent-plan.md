@@ -800,3 +800,34 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 原build.log44992bytes/SHA dcd5286a281c55977137d2f748d5da659ac572020a43923761057be92574aa36，实际check.jsonl353bytes/SHA e51f2d450b8c651d7cd77a5b79c26fdb27145f6a3c1ded2a59f86d4f04b51ca5，check.log为空；112私有独立runtime-build-02保留。首runtime-build-01 exit100及所有有界诊断均保留，没有覆写或手装包。
 - Dockerfile/完整npm锁/标准build.sh/check.py/.dockerignore归唯一维护源；README给出标准构建、独立attempt、不可变image-id、构建代理及无凭据运行检查范围。ruff与格式检查5文件绿，bash语法绿。原verify-07覆盖当前Go/SDK/原生协议候选；之后构建脚本的代理大小写/HTTPS改动另有112实际构建和运行绿，未冒称前次verify已测后改动。
 - 剩余：运行环境自身代理要通过受信部署配置提供；原生沙箱启动/取消/重启及角色文件/Skills/认证尚待正式接通。Codex模型登录和调用仍NotRun，平台8795仍未部署、测试仓独立新Issue/Pipeline尚未启动、全分支独立复审未完成。目标保持进行中，不把镜像/局部传输通过当整链交付。
+
+
+### 2026-10-13 — Run会话归属/原生进程基础回归，112初始化首红
+
+- 原有workflow_steps→Run关联现在用于沙箱会话和内部工作区排队键；没有新任务ID或独立环境注册表。可信引擎提交携带非JSON字段environmentRun，校验Owner、Run环境ready及/workspace，不经过宿主目录解析；普通API不能提供此内部授权。后续会话输入仍固定相同工作区。不同Run同名/workspace不再互相占用，原本机排队/停止兼容回归通过。
+- focused回归先实际lstat /workspace不存在红，后一次夹具把人工确认当Agent而触发正确状态409；改为可信提交/关联的隔离单元夹具，核心归属及独立调度race6.351s绿。此不是正式Agent编排整链；公开沙箱Agent启动门禁仍保留。
+- 固定SDK新增仅供原生app-server的后台启动、所属执行ID核验与显式停止；普通执行节点仍不允许background。启动响应未知不重发，已停进程再次核对不重复interrupt；ID限制阻止响应路径注入。原生8080使用固定Docker版本实际支持的映射端口；官方已安装networking实现只把8080与execd44772分别映射，未假设任意端口可用。
+- 回执保存失败的原生清理先真实红后绿；认证拒绝原来被当就绪等待，10.11秒内99次握手红，改为有界TCP就绪检查后仅一次认证握手，同层绿。已有身份/授权/文件/取消/私有配置回归保持。probe CLI新增--runtime，在原SDK门禁后实测TS与无登录原生启动/认证initialize/停止，不送模型turn。
+- 原完整scripts/verify.sh exit0：verify-08.log117176bytes/SHA d6855812dbcc03628d9bb7a5e4bbf977570e91d9d81adf8df15258ce16f94153，平台全包race65.275s，原全部门禁/vet/build通过。实际SDK探针结果单独列，不把标准本机绿当112通过。
+- 112同源Linux探针12087518bytes/SHA c3d8c238c738ef8096e75e91b9922dd96c5fb8440ef676418e7d77710ac0c1aa，传输摘要一致。runtime-sdk-probe-01真实exit1，6061bytes/SHA 6f2c834f00216ea465cf90641a16c78fe7bedffe59c173b676a0087e668dcef0；Python/文件/取消前置通过，TS5a3ee6ce…实际exit0/stopped；native313e1f33…启动running但没有native_initialized。停止回执exit0/stopped，环境4c242c08-6829-4963-8e9d-c6ed085ef0d0 DELETE→GET404。原日志/事件全部保留，尚未证初始化原因，没有模型凭据或产品操作。
+- 影响：还不能启用沙箱Agent/8795或触发新产品任务。下一步从此唯一首失败日志定位握手/原生协议原因，在维护源修正后新独立attempt复验，不重放同一次启动。原生进程持久归属/重启恢复、角色文件/Skills/最小认证及远程产物API仍待连接。
+
+
+### 2026-10-13 — 原生启动退出码与缺失Home根因
+
+- runtime-sdk-probe-02真实exit1，6378bytes/SHA 6f1b987e8add1665d7bdece4f00e0c6199255566fbbd0e554b5334e68541c379：同源TS exit0；原生dc47663b…首次Running，两次纯传输未就绪后同ID已exit1，未重启/重发initialize/模型turn。已停原生与环境ab8660b9…DELETE→GET404，原日志保留。
+- 修正就绪检查：Docker代理TCP可连接不能证明Rust应用就绪；只对未发JSONRPC的瞬态传输失败，在同一所属ID仍Running时有界等待。实际HTTP拒绝仍一次即失败。相关就绪、认证不重试及回执失败清理回归绿。
+- 无网络固定镜像最小诊断native-start-diagnostic-01真实exit1，226bytes/SHA 6b8be9cb57e19c7935be8c5d8b6cdc881ce1dd7e4728ce203300c940dd8bafc0：原始stderr明确CODEX_HOME目录不存在；这证明当前启动准备缺口，不把前两次已删除环境的stderr补造。下一步通过SDK正式准备私有Home、保留后台日志后新独立探针复验。
+- 用户影响：沙箱Agent仍未开放，112平台8795和测试仓新Pipeline未交付。已有execute/MCP及镜像检查不能替代原生模型工作。
+
+
+### 2026-10-13 — 112正式SDK原生初始化绿，命令隔离前提红
+
+- nativeHome通过固定SDK CreateDirectory准备0700后再启动，后台日志在所属ID停止后、环境释放前通过官方GetCommandLogs保留，16MiB限制不会假成功截断；私有capability脱敏。定向race回归2.852s绿，包括Home、原输出/游标、超限、拒绝日志ID穿越及原生清理/认证不重试。首次普通受限运行因本机listener禁止失败，独立提权测试入口后通过，未修改用例。
+- runtime-sdk-probe-03真实exit0，7852bytes/SHA 2e9540b351fc4dd008f4e732c9bdc9a6228a0d62a245570fa981d8500a2f75be；探针binary12113520/SHA 3a24f4c1cbfa267db42778ce296699cfb4fb996bcf281b7b43927d8115329150。TS d30ed40e…exit0；native7ecc23f7…一次启动，同一ID首传输未就绪后第二次authenticated WS initialize实际成功，Codex0.151.0/Linux确认。随后native exit0/stopped，完整日志720字节保留，环境c8aec298…DELETE→GET404。未带登录、未送模型turn、不是产品QA。
+- 提前检验真正原生shell隔离：同镜像、无网络/no-new-privileges/无权限增加的native-sandbox-diagnostic-01实际exit1，414bytes/SHA f9fe3fb28b1a54108e183839424b01f5fbca1960c1538ac7ef6e88eea9bcff0f；bwrap报告无法创建namespace。112只读内核检查unprivileged_userns_clone=1、max_user_namespaces=4125642、apparmor_restrict_unprivileged_userns=0，不能归因内核全局关闭。下一步检查Docker限制与官方支持的最小运行配置；不启用privileged/hostnetwork、不把原生策略改成无限权限、不将initialize绿当命令执行通过。
+- 原生Home/协议本次已实际闭合，但完整角色会话持久恢复、远端文件/Skills/最小认证、8795正式平台、新Issue/Pipeline仍待实现，公开Agent门禁继续保留。
+
+
+- 本阶段最终标准scripts/verify.sh实际exit0：verify-10.log117163bytes/SHA 9a5992e51e51b67dbd33fd1915cfd38b0643a6e74a38860aee4e43ab29cdfa4b，平台race结果另见完整原日志；全部工程门禁/vet/build通过，不替代112模型执行。verify-09旧handle已失效，仅原日志证明race65.079s绿，未补造父进程exit回执。
+- 官方固定OpenSandbox1.1.1源码确认bootstrap.execd.isolation=enable会自动增加SYS_ADMIN、移除AppArmor/seccomp限制并调整系统路径；不是普通目录准备。现阶段不启用该权限扩展。112内核允许userns而当前容器原生命令仍红，下一步优先验证更小的运行配置，若确需扩展则提供明确受信配置/影响再请求授权。无privileged、无宿主挂载/hostnetwork改动。

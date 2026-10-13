@@ -5,13 +5,31 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"syscall"
 	"time"
 
 	"github.com/coder/websocket"
 )
+
+// Only safe facts escape a failed handshake. A startup transport failure and an
+// HTTP authentication refusal require different handling, without exposing URL,
+// headers or the response body.
+type nativeHandshakeError struct {
+	status    int
+	transient bool
+}
+
+func (e *nativeHandshakeError) Error() string {
+	if e.status != 0 {
+		return fmt.Sprintf("native WebSocket returned HTTP %d; no task was sent", e.status)
+	}
+	return "native WebSocket transport was not ready; no task was sent"
+}
 
 // This is only a framing adapter. Both transports use executeAppServerTransport
 // for identity, native approvals, steering and unchanged execution events.
@@ -35,9 +53,18 @@ func dialCodexWebSocket(ctx context.Context, address string, headers http.Header
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("native redirects are refused") }}
 	handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	connection, _, err := websocket.Dial(handshake, address, &websocket.DialOptions{HTTPClient: client, HTTPHeader: headers})
+	connection, response, err := websocket.Dial(handshake, address, &websocket.DialOptions{HTTPClient: client, HTTPHeader: headers})
 	if err != nil {
-		return nil, errors.New("sandbox native handshake failed; no task was sent")
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		failure := &nativeHandshakeError{}
+		if response != nil {
+			failure.status = response.StatusCode
+		}
+		var transportError net.Error
+		failure.transient = response == nil && (errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.ECONNRESET) || (errors.As(err, &transportError) && transportError.Timeout()))
+		return nil, failure
 	}
 	connection.SetReadLimit(4*1024*1024 - 1)
 	return &codexWebSocket{connection: connection, ctx: ctx}, nil

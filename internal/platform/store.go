@@ -295,6 +295,18 @@ func (s *Store) submitConfigured(c Caller, in Input, prepare func(*sql.Tx, *Agen
 		return out, e
 	}
 	defer tx.Rollback()
+	if in.environmentRun != "" {
+		if prepare == nil || in.ConversationID != "" || in.WorkspacePath != "/workspace" {
+			return out, ErrForbidden
+		}
+		run, err := loadWorkflowRun(tx, in.environmentRun)
+		if err != nil {
+			return out, err
+		}
+		if !runAllowed(c, run) || run.Owner != in.UserID || run.Environment == nil || run.Environment.Status != "ready" || run.WorkspacePath != in.WorkspacePath {
+			return out, ErrForbidden
+		}
+	}
 	if in.RequestID != "" {
 		var h, r string
 		e = tx.QueryRow(`SELECT hash,receipt FROM requests WHERE source=? AND key=?`, c.Source, in.RequestID).Scan(&h, &r)
@@ -354,9 +366,16 @@ func (s *Store) submitConfigured(c Caller, in Input, prepare func(*sql.Tx, *Agen
 			return out, ErrConflict
 		}
 		if in.WorkspacePath != "" {
-			workspace, err := normalizeWorkspace(in.WorkspacePath)
+			workspace := in.WorkspacePath
+			runID, err := sandboxConversationRunID(tx.QueryRow(sandboxConversationRunSQL, conv.ID))
 			if err != nil {
 				return out, err
+			}
+			if runID == "" {
+				workspace, err = normalizeWorkspace(in.WorkspacePath)
+				if err != nil {
+					return out, err
+				}
 			}
 			if workspace != conv.WorkspacePath {
 				return out, fmt.Errorf("workspace is fixed for this conversation: %w", ErrConflict)
@@ -400,7 +419,9 @@ func (s *Store) submitConfigured(c Caller, in Input, prepare func(*sql.Tx, *Agen
 			}
 		}
 		workspace := ""
-		if in.WorkspacePath != "" {
+		if in.environmentRun != "" {
+			workspace = in.WorkspacePath
+		} else if in.WorkspacePath != "" {
 			workspace, e = normalizeWorkspace(in.WorkspacePath)
 			if e != nil {
 				return out, e
@@ -504,11 +525,15 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 		return conv, m, e
 	}
 	defer tx.Rollback()
-	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE active.workspace_path=c.workspace_path AND active.read_only=0 AND active.status IN('running','stopping')))`
+	key := workspaceReservationSQL("c")
+	query := `SELECT m.id,m.conversation_id,m.content,m.created FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE NOT EXISTS(SELECT 1 FROM workflow_steps ws JOIN workflow_runs wr ON wr.id=ws.run_id WHERE ws.conversation_id=c.id AND (ws.seq!=wr.seq OR wr.status NOT IN ('running','waiting') OR ws.result!='')) AND m.role='user' AND m.status='queued' AND c.status IN('queued','idle') AND (c.read_only=1 OR c.workspace_path='' OR NOT EXISTS(SELECT 1 FROM conversations active WHERE ` + workspaceReservationSQL("active") + `=` + key + ` AND active.read_only=0 AND active.status IN('running','stopping')))`
 	args := []any{}
 	for _, path := range busyWorkspaces {
 		if path != "" {
-			query += ` AND (c.read_only=1 OR c.workspace_path!=?)`
+			query += ` AND (c.read_only=1 OR ` + key + `!=?)`
+			if !strings.HasPrefix(path, "sandbox:") {
+				path = "local:" + path
+			}
 			args = append(args, path)
 		}
 	}

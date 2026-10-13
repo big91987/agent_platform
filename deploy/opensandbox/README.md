@@ -87,3 +87,19 @@ TypeScript与Go共享工作区文件、Chromium启动及Codex原生双向传输�
 镜像更新只影响新Run；旧Run保持其原镜像/TTL和环境归属。环境释放会删除容器内
 工作区与原生运行记录，先由流水线归档必要产物。默认TTL一小时并非无限保留保证，
 长任务需在启动平台时显式选择合适TTL（当前上限24小时）。
+
+
+完整运行镜像的SDK探针：
+
+```sh
+bin/opensandbox-probe --service-config "$HOME/agent-platform-opensandbox/sandbox.toml" \
+  --image "$(cat "$HOME/agent-platform-opensandbox/runtime-build-01/image-id")" \
+  --report "$HOME/agent-platform-opensandbox/runtime-sdk-probe-01.jsonl" --runtime
+```
+
+除前置Python/文件/取消门禁外，此模式用正式SDK实际执行TypeScript、启动原生
+Codex app-server、以私有capability完成WebSocket initialize，再按所属执行ID
+停止进程并删除环境。固定Docker端口映射使用8080；原生进程运行时项目服务选其他端口。
+启动等待只在同一进程仍运行且没有HTTP响应的短暂连接错误时有界进行；HTTP认证拒绝
+不会反复尝试，不发送模型turn、不复制登录凭据。报告写入或停止失败均使探针失败，
+保留原回执与未确认原因。此探针不能代替平台Run、真实角色交接、登录或产品QA。

@@ -43,7 +43,7 @@ type sandboxCommandTransport struct{ http.RoundTripper }
 
 func (t sandboxCommandTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	response, err := t.RoundTripper.RoundTrip(r)
-	if err == nil && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/command") && response.StatusCode < 400 {
+	if err == nil && ((r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/command")) || (r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/command/") && strings.HasSuffix(r.URL.Path, "/logs"))) && response.StatusCode < 400 {
 		response.Body = &sandboxCommandBody{ReadCloser: response.Body, remaining: 16 * 1024 * 1024}
 	}
 	return response, err
@@ -173,7 +173,7 @@ func (s *OpenSandbox) owned(ctx context.Context, id, run string) (*opensandbox.S
 	return info, nil
 }
 
-func (s *OpenSandbox) execd(ctx context.Context, id, run string) (*opensandbox.ExecdClient, error) {
+func (s *OpenSandbox) executionEndpoint(ctx context.Context, id, run string, port int) (*opensandbox.Endpoint, error) {
 	info, err := s.owned(ctx, id, run)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (s *OpenSandbox) execd(ctx context.Context, id, run string) (*opensandbox.E
 		return nil, fmt.Errorf("sandbox is %s; preserve the environment and inspect before continuing", info.Status.State)
 	}
 	proxy := false
-	endpoint, err := s.lifecycle.GetEndpoint(ctx, id, 44772, &proxy)
+	endpoint, err := s.lifecycle.GetEndpoint(ctx, id, port, &proxy)
 	if err != nil {
 		return nil, sandboxError("execution endpoint", err)
 	}
@@ -196,7 +196,33 @@ func (s *OpenSandbox) execd(ctx context.Context, id, run string) (*opensandbox.E
 	}
 	// Only endpoint-scoped headers cross into the sandbox. The lifecycle API key
 	// remains in the control-plane SDK client.
-	return opensandbox.NewExecdClient(address, "", opensandbox.WithHTTPClient(s.httpClient), opensandbox.WithHeaders(endpoint.Headers)), nil
+	endpoint.Endpoint = address
+	return endpoint, nil
+}
+
+func (s *OpenSandbox) execd(ctx context.Context, id, run string) (*opensandbox.ExecdClient, error) {
+	endpoint, err := s.executionEndpoint(ctx, id, run, 44772)
+	if err != nil {
+		return nil, err
+	}
+	return opensandbox.NewExecdClient(endpoint.Endpoint, "", opensandbox.WithHTTPClient(s.httpClient), opensandbox.WithHeaders(endpoint.Headers)), nil
+}
+
+var sandboxCommandID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
+
+func validSandboxCommandID(id string) bool { return sandboxCommandID.MatchString(id) }
+func acceptSandboxCommandID(data string, result *SandboxCommandResult) error {
+	var meta struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if json.Unmarshal([]byte(data), &meta) == nil && meta.Type == "init" {
+		if !validSandboxCommandID(meta.Text) || result.ID != "" {
+			return errors.New("sandbox command identity is unconfirmed")
+		}
+		result.ID = meta.Text
+	}
+	return nil
 }
 
 func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbox.RunCommandRequest, onEvent opensandbox.EventHandler) (SandboxCommandResult, error) {
@@ -244,17 +270,7 @@ func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbo
 				return eventErr
 			}
 		}
-		var meta struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		}
-		if json.Unmarshal([]byte(event.Data), &meta) == nil && meta.Type == "init" {
-			if meta.Text == "" || result.ID != "" {
-				return errors.New("sandbox command identity is unconfirmed")
-			}
-			result.ID = meta.Text
-		}
-		return nil
+		return acceptSandboxCommandID(event.Data, &result)
 	})
 	if result.ID == "" {
 		return result, errors.Join(errors.New("sandbox command result is unconfirmed; no execution ID was received; replay is refused"), sandboxError("command start", err))

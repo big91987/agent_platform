@@ -306,7 +306,11 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 		}
 	}
 	token := newID() + newID()
-	_, err := e.store.submitConfigured(c, Input{AgentID: node.AgentID, UserID: r.Owner, Message: input, WorkspacePath: r.WorkspacePath, RequestID: "workflow:" + r.ID + ":" + fmt.Sprint(step.Seq)}, func(tx *sql.Tx, a *Agent, conversationID string) error {
+	in := Input{AgentID: node.AgentID, UserID: r.Owner, Message: input, WorkspacePath: r.WorkspacePath, RequestID: "workflow:" + r.ID + ":" + fmt.Sprint(step.Seq)}
+	if r.Environment != nil {
+		in.environmentRun = r.ID
+	}
+	_, err := e.store.submitConfigured(c, in, func(tx *sql.Tx, a *Agent, conversationID string) error {
 		var definition string
 		if err := tx.QueryRow(`SELECT definition FROM workflows WHERE id=?`, r.WorkflowID).Scan(&definition); err != nil {
 			return err
