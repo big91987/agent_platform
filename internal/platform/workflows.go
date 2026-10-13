@@ -30,22 +30,23 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
-	ExitMode                string          `json:"exit_mode,omitempty"`
-	CompletionSchema        json.RawMessage `json:"completion_schema,omitempty"`
-	CompletionInstructions  string          `json:"completion_instructions,omitempty"`
-	AllowUserInput          *bool           `json:"allow_user_input,omitempty"`
-	ContinuationLimit       int             `json:"continuation_limit,omitempty"`
-	ExecutionTimeoutSeconds int             `json:"execution_timeout_seconds,omitempty"`
-	ID                      string          `json:"id"`
-	Name                    string          `json:"name"`
-	Kind                    string          `json:"kind"`
-	AgentID                 string          `json:"agent_id,omitempty"`
-	Agent                   *Agent          `json:"agent,omitempty"`
-	ConnectorID             string          `json:"connector_id,omitempty"`
-	ConnectorInput          ConnectorInput  `json:"connector_input,omitempty"`
-	Prompt                  string          `json:"prompt,omitempty"`
-	X                       float64         `json:"x"`
-	Y                       float64         `json:"y"`
+	Execution               *WorkflowExecution `json:"execution,omitempty"`
+	ExitMode                string             `json:"exit_mode,omitempty"`
+	CompletionSchema        json.RawMessage    `json:"completion_schema,omitempty"`
+	CompletionInstructions  string             `json:"completion_instructions,omitempty"`
+	AllowUserInput          *bool              `json:"allow_user_input,omitempty"`
+	ContinuationLimit       int                `json:"continuation_limit,omitempty"`
+	ExecutionTimeoutSeconds int                `json:"execution_timeout_seconds,omitempty"`
+	ID                      string             `json:"id"`
+	Name                    string             `json:"name"`
+	Kind                    string             `json:"kind"`
+	AgentID                 string             `json:"agent_id,omitempty"`
+	Agent                   *Agent             `json:"agent,omitempty"`
+	ConnectorID             string             `json:"connector_id,omitempty"`
+	ConnectorInput          ConnectorInput     `json:"connector_input,omitempty"`
+	Prompt                  string             `json:"prompt,omitempty"`
+	X                       float64            `json:"x"`
+	Y                       float64            `json:"y"`
 }
 type WorkflowEdge struct {
 	Mode        string `json:"mode,omitempty"`
@@ -86,7 +87,17 @@ func validateWorkflow(w Workflow) error {
 				return fmt.Errorf("invalid position for node %s", n.ID)
 			}
 		}
+		if n.Kind != "execution" && n.Execution != nil {
+			return errors.New("execution settings require an execution node")
+		}
 		switch n.Kind {
+		case "execution":
+			if n.Agent != nil || n.AgentID != "" || n.ConnectorID != "" || n.ConnectorInput != (ConnectorInput{}) || n.Prompt != "" || n.ContinuationLimit != 0 || n.AllowUserInput != nil {
+				return errors.New("execution node contains settings for another node kind")
+			}
+			if err := validateWorkflowExecution(n.Execution); err != nil {
+				return fmt.Errorf("node %s: %w", n.ID, err)
+			}
 		case "agent":
 			if (n.AgentID == "") == (n.Agent == nil) || n.ConnectorID != "" {
 				return fmt.Errorf("node %s requires one agent", n.ID)
@@ -291,6 +302,9 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 		if n != 1 {
 			return w, fmt.Errorf("authorized user does not exist: %s", id)
 		}
+	}
+	if _, err := freezeExecutionTools(tx, w); err != nil {
+		return w, err
 	}
 	for _, n := range w.Nodes {
 		if n.Kind == "connector" {

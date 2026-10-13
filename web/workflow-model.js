@@ -1,7 +1,7 @@
 'use strict';
 // The editable graph is separate from DOM state; API validation remains authoritative.
 globalThis.WorkflowGraph = class WorkflowGraph {
-  static kinds = {agent:'Agent', approval:'人工确认', connector:'Connector', end:'结束'};
+  static kinds = {agent:'Agent', approval:'人工确认', execution:'执行', connector:'Connector', end:'结束'};
   static agentConfig(source) {
     const fields=['executor','model','instructions','skills','tool_servers','sandbox','network_access','allow_elevation','approvals_reviewer','native_config','trust_hooks','inherit_env','env','seed_dir'];
     return JSON.parse(JSON.stringify(Object.fromEntries(fields.filter(key=>Object.hasOwn(source,key)).map(key=>[key,source[key]]))));
@@ -50,6 +50,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
     if(kind==='agent'){if(this.value.context_version===2)n.exit_mode='handoff';n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;if(this.value.context_version!==2)n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
+    if(kind==='execution'){n.execution={mode:'mcp',server_id:'',tool:'',arguments:{}};n.execution_timeout_seconds=60;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
     return n;
@@ -103,6 +104,13 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     } catch(error) {this.value.edges=backup;throw error;}
   }
   validateAgent(node) {
+    if(node.kind==='execution'){
+      const v=node.execution;
+      if(!v||v.mode!=='mcp'||typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
+      if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
+      const seconds=node.execution_timeout_seconds??0;
+      if(!Number.isInteger(seconds)||seconds<0||seconds>86400)throw new Error('执行超时须为 0–86400 秒；0 使用默认值');
+    }
     if(node.kind==='agent'&&node.agent&&node.agent_id)throw new Error('节点不能同时使用独立配置和共享 Agent 引用');
     if(node.kind==='agent'&&node.agent!=null){
       const a=node.agent,object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value),strings=value=>Array.isArray(value)&&value.every(v=>typeof v==='string');

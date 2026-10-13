@@ -150,3 +150,16 @@ Agent 的 `read_command_output` 工具仅允许当前、未交接执行读取同
 `POST /api/workflow-runs/{id}/return` 也接受 completed，仍要求当前 seq、冻结图中的目标和非空原因。已完成步骤、回执、图版本不变；在新执行保存返工原因。事务按启动 Run 的同一互斥规则重新检查工作区：与其他未结束 Run 重叠时返回冲突，不挪用其工作区；原路径解析已变化时拒绝。停止、失败和活动状态的原控制语义保持，迟到输入与结果仍按当前执行拒绝。完成不等于自动重启；只有运行页或授权 API 的明确回退才会继续，外部评论不能隐式重开。
 
 返工后再次到达同一个 GitHub PR Connector 节点时，使用该 Run 中此节点最近的已确认 PR 回执，核对仓库、号码、head/base 后更新 title/body。PR 已关闭或身份变化时拒绝，不另建或重开。每次执行使用独立标记；PATCH 丢响应后仅查询该 PR 核对新标记，不重新写入。旧 PR 回执保留，最新确认回执供交付页比较当前 head。此恢复保证属于 API/隔离回归；真实重入发布证据单独记录。
+
+
+## 候选四类画布：执行节点（2026-10-13，开发分支）
+
+新建流程提供 Agent、执行、人工确认、结束；旧 connector 定义继续按原路径执行。当前 execution 节点通过官方 MCP SDK 调用管理员注册并实际发现的工具，不产生 Agent 推理轮次。
+
+```json
+{"id":"publish","name":"发布报告","kind":"execution","execution":{"mode":"mcp","server_id":"github","tool":"publish_report","arguments":{"report":"reports/latest.html"}},"execution_timeout_seconds":60}
+```
+
+连接/工具 Schema 随 Run 冻结；当前服务停用及连接/Schema变化会阻止继续调用。参数必须匹配实际发现的输入 Schema，凭据留在工具服务配置的私有引用。此参数对象目前为静态 JSON；上游参数绑定仍待实现，不执行隐式插值。工具 IsError 结果走 failed 路线，无配置失败目标则失败等待人工核验。工具原文和结构化结果进入 execution_receipt，下游输入保留原始 JSON。
+
+每步调用前保存动作意图，停止及重启不会自动重放已发出的调用。用户核对实际副作用后，通过 stop/return 开始新的节点执行；无法确认结果时保留失败。执行超时省略为60秒，允许1–86400秒。代码/仓库命令将使用 Run 的 OpenSandbox 环境，目前尚未开放，不能据 MCP 回归宣称该环境整链完成。

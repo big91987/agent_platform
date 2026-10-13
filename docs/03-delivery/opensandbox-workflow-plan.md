@@ -14,9 +14,9 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| MCP 调用基础 | 真实 HTTP/race、结构化结果、业务错误、取消、关闭超时和丢响应不重放通过 | 节点配置、冻结快照、调度与 UI 接入 |
+| MCP 执行节点 | 保存/冻结/调度/回执/下游输入/取消/重启、真实HTTP race及实际页面回归通过 | 上游参数引用、沙箱代码/命令、112实际Pipeline |
 | 112 OpenSandbox | 1.1.1，127.0.0.1:8095 healthy；未认证401；单个 sandbox 创建→Running→删除404 | Run/Agent/文件/命令集成、停止恢复、服务登出重启 |
-| 四类画布与112平台8795 | 尚未实现部署 | 配置、执行、页面、正式部署核验 |
+| 四类画布与112平台8795 | 四类画布及MCP配置/执行页面已回归；8795未部署 | 代码/命令及环境配置、正式部署核验 |
 | 测试仓独立入口 | 尚未创建新Issue/Pipeline | 仓库自有Harness、新类型去重、真实整链 |
 
 112 基础设施探针 ID `a2548a85-d279-4b82-93e2-4991d11feaa8`，已删除；报告6事件、SHA256 `671c0e833897ad2882a4f5951b323469652a46a4632465830f93b9bb776cfbe5`。当次 execd 镜像摘要 `6cf7dba2f21f0b536e100563d841ac58a9f31c2b0a081b7ac76796a24d6f47e2`，Python镜像摘要 `a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`。服务目录0700/配置0600已实测。此为基础设施回归，不是产品验收。
@@ -48,7 +48,7 @@ Interfaces: 复用 `RegisteredToolServer/MCPConnection`；抽出 SDK 连接函�
 - [x] 先写真实本地 MCP HTTP 服务回归：参数传递、结构化返回、工具业务失败、取消和不响应清理；运行确认红，再接通官方 SDK。
 - [ ] 引入执行节点配置：code/command/mcp，保存及启动校验；旧 connector 仅兼容。代码支持 Python/TS，命令允许项目自身语言/构建入口，不固定 Go。
 - [ ] 接入现有持久调度、取消、结果与失败线路，保存冻结的连接/工具契约；写入未知结果不重放。
-- [ ] 保存/重载/权限撤销/重启回归通过；实际 MCP 调用日志可见且不泄认证。
+- [x] MCP保存/重载/停用取消/重启回归通过；原始调用回执可见、连接快照不进入公开Run JSON。
 
 ## Task 2：OpenSandbox 与原生执行
 
@@ -96,3 +96,12 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 本轮最终复核：112 唯一基础设施探针 probe-01 exit0，实际创建→Running→DELETE→GET404；未创建产品任务，未执行产品验收。Go 平台全包 race exit0/58.225s，ruff/安装器2测试及 diff检查通过。scripts/verify.sh 已纳入安装器回归，但全套标准脚本仍未执行。
 
 - 标准验证最终结果：按 README 的 `examples/github/install-tooling.sh` 安装依赖后，第二轮 `scripts/verify.sh` exit0；完整日志 116458 bytes/SHA256 `0c4d2203143df31b4e1420879ecc6ad43116ceb400f88caf4aff46256996d187`，位于 ignored `.data/opensandbox-verification/verify-02.log`。包括浏览器4项、安装器2项、SDK9项、GitHub工具96项、local-preview11项、preview控制器60项、workflow模板107项、Go vet/race/build，平台 race57.646s。首轮缺 Playwright 的原失败日志 verify-01.log 保留；未跳检查。新增 MCP 写入丢响应回归实际只收到一次写请求。
+
+### 2026-10-13 — 执行节点 MCP 正式保存、调度与页面路径
+
+- 新建画布展示 Agent／执行／人工确认／结束。旧 Connector 定义及回执保留，不转换冻结 Run；当前执行表单只开放已接通的 MCP，Python／TS／项目命令仍待 OpenSandbox Run 集成。
+- 执行配置随图保存，启动时冻结工具连接和发现的 Schema。参数在保存及运行时校验；服务停用、连接或 Schema 变化明确失败。动作意图在调用前持久化；原始工具业务错误与传输错误分开留存，停止、重启不自动重放。
+- 真实 HTTP 的6条核心回归含保存/重复请求、Schema与连接变化、业务失败线路、停止、防重复、数据库重开后下游原生输入以及在途停用取消；race exit0/7.466s。曾实际复现已保存回执未进入下游输入，已修共同输入来源后同层绿。
+- 第三轮原完整 scripts/verify.sh exit0；116658bytes，SHA256 bba3f080c1375cf65ee432cc190a4fb14f4bbe132a7874bbf45b0cf266c6ba31，ignored .data/opensandbox-verification/verify-03.log。Go平台全包race62.772s；macOS链接器警告保留，未误判为失败。
+- 随后新增的真实 Chromium→平台 API→MCP 页面回归 exit0/4.274s，实际保存/刷新、冻结90秒配置、只调用一次及原始结果展示，390px截图 output/playwright/workflow-execution.png 已检查。首失败是夹具两个节点同坐标遮挡，已诊断修夹具而非 force 点击；截图入场动画采集改为禁用动画。回归已纳入标准 verify 入口，不能把新增检查倒记为 verify-03 当时已执行。
+- 112仍为 OpenSandbox8095基础设施已部署；平台8795、原生沙箱任务及测试仓新Issue/Pipeline尚未交付。此为 Harness 隔离回归，不代表 Model Relay 产品验收。

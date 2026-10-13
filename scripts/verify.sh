@@ -26,6 +26,7 @@ PYTHONPATH=sdk/python:examples/github .data/runner-venv/bin/python -m unittest d
 python3 -m unittest discover -s examples/github/local-preview/tests -p '*_test.py' -v
 python3 -m unittest discover -s examples/github/model-relay-preview/tests -p '*_test.py' -v
 PYTHONPATH=sdk/python python3 -m unittest discover -s examples/platform-workflows -p '*_test.py' -v
+PLATFORM_BROWSER_TEST=1 go test ./internal/platform -run '^TestWorkflowExecutionBrowserRoundTrip$' -count=1 -timeout 40s
 go vet ./...
 go test -race ./... -timeout 120s
 go build -o bin/agent-platform ./cmd/agent-platform

@@ -165,3 +165,8 @@ test('current API serialization does not make an unchanged editor dirty',()=>{
  assert.equal(g.upgradeForEditing([]),false);
  assert.equal(g.value.nodes[0].agent.name,undefined);
 });
+test('API execution definition imports with an omitted default timeout and keeps literal arguments',()=>{
+ const G=model(),g=new G();const node=g.add('execution',20,20);node.execution={mode:'mcp',server_id:'github',tool:'publish',arguments:{body:'literal $(no shell)'}};delete node.execution_timeout_seconds;
+ const imported=G.import(JSON.stringify(g.value));assert.equal(imported.node(node.id).execution.arguments.body,'literal $(no shell)');
+ node.execution_timeout_seconds=-1;assert.throws(()=>G.import(JSON.stringify(g.value)),/超时/);
+});

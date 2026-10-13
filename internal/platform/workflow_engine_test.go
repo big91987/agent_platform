@@ -301,7 +301,7 @@ func TestWorkflowCompletedReturnFeedbackSurvivesFailureAndResume(t *testing.T) {
 			}
 			returned, _ := s.WorkflowRun(c, r.ID)
 			if connectorFailure {
-				if err := engine.finishConnector(returned, returned.Steps[len(returned.Steps)-1], ConnectorReceipt{}, errors.New("temporary connector failure")); err != nil {
+				if err := engine.finishWorkflowAction(returned, returned.Steps[len(returned.Steps)-1], ConnectorReceipt{}, errors.New("temporary connector failure")); err != nil {
 					t.Fatal(err)
 				}
 			} else {

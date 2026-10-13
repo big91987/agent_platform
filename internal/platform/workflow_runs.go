@@ -35,6 +35,8 @@ func (r *NodeResult) UnmarshalJSON(data []byte) error {
 }
 
 type WorkflowStep struct {
+	ExecutionReceipt    *ConnectorReceipt `json:"execution_receipt,omitempty"`
+	ExecutionDispatched bool              `json:"execution_dispatched,omitempty"`
 	WaitKind            string            `json:"wait_kind,omitempty"`
 	WaitReason          string            `json:"wait_reason,omitempty"`
 	Continuations       int               `json:"continuations,omitempty"`
@@ -49,23 +51,33 @@ type WorkflowStep struct {
 	Created             string            `json:"created_at"`
 	Updated             string            `json:"updated_at"`
 }
+
+// actionReceipt reads current execution receipts and preserved legacy wire fields.
+func (s WorkflowStep) actionReceipt() *ConnectorReceipt {
+	if s.ExecutionReceipt != nil {
+		return s.ExecutionReceipt
+	}
+	return s.Receipt
+}
+
 type WorkflowRun struct {
-	Parameters    map[string]string    `json:"parameters,omitempty"`
-	Connectors    map[string]Connector `json:"connectors,omitempty"`
-	ID            string               `json:"id"`
-	WorkflowID    string               `json:"workflow_id"`
-	Owner         string               `json:"owner"`
-	Username      string               `json:"-"`
-	Definition    Workflow             `json:"definition"`
-	Input         string               `json:"input"`
-	WorkspacePath string               `json:"workspace_path"`
-	Status        string               `json:"status"`
-	Seq           int                  `json:"seq"`
-	MaxSteps      int                  `json:"max_steps"`
-	Error         string               `json:"error,omitempty"`
-	Created       string               `json:"created_at"`
-	Updated       string               `json:"updated_at"`
-	Steps         []WorkflowStep       `json:"steps"`
+	ExecutionTools map[string]RegisteredToolServer `json:"-"`
+	Parameters     map[string]string               `json:"parameters,omitempty"`
+	Connectors     map[string]Connector            `json:"connectors,omitempty"`
+	ID             string                          `json:"id"`
+	WorkflowID     string                          `json:"workflow_id"`
+	Owner          string                          `json:"owner"`
+	Username       string                          `json:"-"`
+	Definition     Workflow                        `json:"definition"`
+	Input          string                          `json:"input"`
+	WorkspacePath  string                          `json:"workspace_path"`
+	Status         string                          `json:"status"`
+	Seq            int                             `json:"seq"`
+	MaxSteps       int                             `json:"max_steps"`
+	Error          string                          `json:"error,omitempty"`
+	Created        string                          `json:"created_at"`
+	Updated        string                          `json:"updated_at"`
+	Steps          []WorkflowStep                  `json:"steps"`
 }
 
 const workflowExecutionLimitError = "maximum node executions reached; inspect loop before starting another run"
@@ -116,6 +128,7 @@ func (s *Store) initWorkflowRuns() error {
  run_id TEXT NOT NULL REFERENCES workflow_runs(id),seq INTEGER NOT NULL,node_id TEXT NOT NULL,status TEXT NOT NULL,
  conversation_id TEXT NOT NULL DEFAULT '',token_hash TEXT NOT NULL DEFAULT '',result TEXT NOT NULL DEFAULT '',
  error TEXT NOT NULL DEFAULT '',created TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(run_id,seq));
+ CREATE TABLE IF NOT EXISTS workflow_run_execution_tools(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),definition TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS workflow_run_parameters(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),parameters TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS workflow_run_limits(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),max_steps INTEGER NOT NULL CHECK(max_steps BETWEEN 1 AND 1000));
  CREATE TABLE IF NOT EXISTS workflow_node_controls(run_id TEXT NOT NULL,seq INTEGER NOT NULL,wait_kind TEXT NOT NULL DEFAULT '',wait_reason TEXT NOT NULL DEFAULT '',wait_message_id INTEGER NOT NULL DEFAULT 0,continuations INTEGER NOT NULL DEFAULT 0,last_message_id INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(run_id,seq),FOREIGN KEY(run_id,seq) REFERENCES workflow_steps(run_id,seq));
@@ -142,6 +155,14 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	var parameters string
 	if err := tx.QueryRow(`SELECT parameters FROM workflow_run_parameters WHERE run_id=?`, id).Scan(&parameters); err == nil {
 		if err = json.Unmarshal([]byte(parameters), &r.Parameters); err != nil {
+			return r, err
+		}
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return r, err
+	}
+	var executionTools string
+	if err := tx.QueryRow(`SELECT definition FROM workflow_run_execution_tools WHERE run_id=?`, id).Scan(&executionTools); err == nil {
+		if err = json.Unmarshal([]byte(executionTools), &r.ExecutionTools); err != nil {
 			return r, err
 		}
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -191,6 +212,10 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 			if e = json.Unmarshal([]byte(result), &step.Result); e != nil {
 				return r, e
 			}
+		}
+		if r.Definition.node(step.NodeID).Kind == "execution" {
+			step.ExecutionReceipt, step.Receipt = step.Receipt, nil
+			step.ExecutionDispatched, step.ConnectorDispatched = step.ConnectorDispatched, false
 		}
 		r.Steps = append(r.Steps, step)
 	}
@@ -352,6 +377,10 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if !w.Enabled {
 		return zero, errors.New("workflow is disabled")
 	}
+	executionTools, err := freezeExecutionTools(tx, w)
+	if err != nil {
+		return zero, err
+	}
 	connectors := map[string]Connector{}
 	for _, n := range w.Nodes {
 		if n.Kind == "connector" {
@@ -432,6 +461,15 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		rawParameters, _ := json.Marshal(in.Parameters)
 		if _, e = tx.Exec(`INSERT INTO workflow_run_parameters(run_id,parameters) VALUES(?,?)`, id, string(rawParameters)); e != nil {
 			return zero, e
+		}
+	}
+	if len(executionTools) > 0 {
+		frozen, err := json.Marshal(executionTools)
+		if err != nil {
+			return zero, err
+		}
+		if _, err = tx.Exec(`INSERT INTO workflow_run_execution_tools(run_id,definition) VALUES(?,?)`, id, string(frozen)); err != nil {
+			return zero, err
 		}
 	}
 	for key, v := range connectors {

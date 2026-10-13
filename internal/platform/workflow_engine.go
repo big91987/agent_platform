@@ -200,6 +200,17 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		return fmt.Errorf("workflow authorization changed: %w", err)
 	}
 	node := r.Definition.node(step.NodeID)
+	if node.Kind == "execution" {
+		if _, err = e.executionAccess(r, node); err != nil {
+			return err
+		}
+		if step.Status == "pending" {
+			return e.startExecution(ctx, r, step, node)
+		}
+		if step.Result == nil && e.connectorQuiet(r.ID) {
+			return errors.New("execution stopped without a confirmed result; inspect its receipt and use explicit recovery")
+		}
+	}
 	if node.Kind == "connector" {
 		if _, err = e.connectorAccess(caller, r, node); err != nil {
 			return err
@@ -266,7 +277,13 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 	previous := []map[string]any{}
 	for _, old := range r.Steps {
 		if old.Result != nil || old.Error != "" {
-			previous = append(previous, map[string]any{"node": old.NodeID, "seq": old.Seq, "result": old.Result, "feedback": old.Error, "connector_receipt": old.Receipt})
+			value := map[string]any{"node": old.NodeID, "seq": old.Seq, "result": old.Result, "feedback": old.Error}
+			if old.ExecutionReceipt != nil {
+				value["execution_receipt"] = old.ExecutionReceipt
+			} else {
+				value["connector_receipt"] = old.Receipt
+			}
+			previous = append(previous, value)
 		}
 	}
 	contextData, _ := json.MarshalIndent(map[string]any{"run_id": r.ID, "task": r.Input, "node": node.Name, "instructions": node.Prompt, "routes": r.Definition.routes(node.ID), "outgoing_edges": workflowOutgoing(r.Definition, node.ID), "previous_results": previous}, "", "  ")
@@ -458,7 +475,7 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 		return err
 	}
 	step := r.Steps[len(r.Steps)-1]
-	if r.Definition.node(step.NodeID).Kind == "connector" {
+	if kind := r.Definition.node(step.NodeID).Kind; kind == "connector" || kind == "execution" {
 		if err = e.connectorResumeAllowed(r, step, message); err != nil {
 			return err
 		}

@@ -255,3 +255,21 @@ test('stored workflows open the same current form regardless of their input vers
   assert.equal(vm.runInContext('workflowEditor.dirty',ctx),true);
  }
 });
+
+test('execution tool selection and raw argument draft survive inspector redraw and save',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext("const run=graph.add('execution',0,300);editor.selected=run.id;editor.toolServers=[{id:'github',name:'GitHub',enabled:true,tools:[{name:'create_issue',inputSchema:{type:'object',properties:{title:{type:'string'}}}}]}];renderWorkflowInspector(editor)",ctx);
+ el('#wf-execution-server').value='github';el('#wf-execution-server').onchange();
+ el('#wf-execution-tool').value='create_issue';el('#wf-execution-tool').onchange();
+ el('#wf-execution-arguments').value='{"title":"literal $(test)","count":2}';el('#wf-execution-arguments').oninput();
+ el('#wf-execution-timeout').value='120';el('#wf-execution-timeout').oninput();
+ vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-arguments').value,'{"title":"literal $(test)","count":2}');
+ vm.runInContext('saved=workflowPayload(graph.value,workflowNodeDraft(editor,run),{},[],{},editor.executionDrafts)',ctx);
+ assert.equal(vm.runInContext('saved.nodes.at(-1).execution.arguments.count',ctx),2);
+ assert.equal(vm.runInContext('saved.nodes.at(-1).execution_timeout_seconds',ctx),120);
+ el('#wf-execution-arguments').value='{broken';el('#wf-execution-arguments').oninput();
+ vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-arguments').value,'{broken');
+ assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},editor.executionDrafts)',ctx),/JSON/);
+});

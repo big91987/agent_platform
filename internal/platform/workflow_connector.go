@@ -87,28 +87,7 @@ func (e *WorkflowEngine) startConnector(ctx context.Context, c Caller, r Workflo
 	} else {
 		return err
 	}
-	tx, err := e.store.DB.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	var seq int
-	var status string
-	if err = tx.QueryRow(`SELECT seq,status FROM workflow_runs WHERE id=?`, r.ID).Scan(&seq, &status); err != nil {
-		return err
-	}
-	if seq != step.Seq || (status != "running" && status != "waiting") {
-		return ErrConflict
-	}
-	if !recoverOnly {
-		if _, err = tx.Exec(`INSERT INTO workflow_connector_actions(run_id,seq,request) VALUES(?,?,?)`, r.ID, step.Seq, raw); err != nil {
-			return err
-		}
-	}
-	if _, err = tx.Exec(`UPDATE workflow_steps SET status='running',updated=? WHERE run_id=? AND seq=?`, now(), r.ID, step.Seq); err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
+	if err = e.recordWorkflowAction(r, step, raw, recoverOnly); err != nil {
 		return err
 	}
 	callCtx, cancel := context.WithTimeout(ctx, time.Duration(v.TimeoutSeconds)*time.Second)
@@ -128,13 +107,13 @@ func (e *WorkflowEngine) startConnector(ctx context.Context, c Caller, r Workflo
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		delete(e.connectorJobs, r.ID)
-		if err := e.finishConnector(r, step, receipt, actionErr); err != nil {
+		if err := e.finishWorkflowAction(r, step, receipt, actionErr); err != nil {
 			log.Printf("save connector receipt %s/%d: %v", r.ID, step.Seq, err)
 		}
 	}()
 	return nil
 }
-func (e *WorkflowEngine) finishConnector(r WorkflowRun, step WorkflowStep, receipt ConnectorReceipt, actionErr error) error {
+func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, receipt ConnectorReceipt, actionErr error) error {
 	tx, err := e.store.DB.Begin()
 	if err != nil {
 		return err
@@ -161,6 +140,17 @@ func (e *WorkflowEngine) finishConnector(r WorkflowRun, step WorkflowStep, recei
 			}
 		}
 	}
+	if actionErr == nil && receipt.Kind == "mcp" {
+		summary = "工具调用已完成"
+		if receipt.MCP == nil {
+			actionErr = errors.New("MCP call returned no result")
+		} else if receipt.MCP.IsError {
+			route, summary = "failed", "工具返回失败"
+			if r.Definition.target(step.NodeID, route) == "" {
+				actionErr = errors.New("MCP tool returned an error; inspect its receipt and return explicitly to retry")
+			}
+		}
+	}
 	message := ""
 	if actionErr != nil {
 		message = actionErr.Error()
@@ -182,6 +172,9 @@ func (e *WorkflowEngine) finishConnector(r WorkflowRun, step WorkflowStep, recei
 		}
 	} else {
 		result := NodeResult{Route: route, Summary: summary}
+		if receipt.MCP != nil {
+			result.Inputs = map[string]any{"tool_result": receipt.MCP}
+		}
 		if receipt.URL != "" {
 			result.Artifacts = []string{receipt.URL}
 		}
@@ -203,8 +196,8 @@ func (e *WorkflowEngine) connectorResumeAllowed(r WorkflowRun, step WorkflowStep
 	if err := e.store.DB.QueryRow(`SELECT count(*) FROM workflow_connector_actions WHERE run_id=? AND seq=?`, r.ID, step.Seq).Scan(&n); err != nil {
 		return err
 	}
-	if n > 0 && r.Connectors[r.Definition.node(step.NodeID).ConnectorID].Kind == "command" {
-		return errors.New("this command was dispatched; inspect its receipt, stop and return explicitly to run it again")
+	if n > 0 && (r.Definition.node(step.NodeID).Kind == "execution" || r.Connectors[r.Definition.node(step.NodeID).ConnectorID].Kind == "command") {
+		return errors.New("this action was dispatched; inspect its receipt, stop and return explicitly to run it again")
 	}
 	return nil
 }

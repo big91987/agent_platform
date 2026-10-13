@@ -99,9 +99,12 @@ func (s *Store) ToolServers() ([]RegisteredToolServer, error) {
 	return out, rows.Err()
 }
 func (s *Store) ToolServer(id string) (RegisteredToolServer, error) {
+	return loadToolServer(s.DB, id)
+}
+func loadToolServer(q interface{ QueryRow(string, ...any) *sql.Row }, id string) (RegisteredToolServer, error) {
 	var v RegisteredToolServer
 	var raw string
-	err := s.DB.QueryRow(`SELECT config FROM tool_servers WHERE id=?`, id).Scan(&raw)
+	err := q.QueryRow(`SELECT config FROM tool_servers WHERE id=?`, id).Scan(&raw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return v, ErrNotFound
 	}

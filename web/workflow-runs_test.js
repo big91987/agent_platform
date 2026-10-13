@@ -121,3 +121,15 @@ test('exhausted run exposes inspected bounded return without replaying the compl
  await el('#wf-return-form').onsubmit({preventDefault(){}});
  assert.equal(calls.length,1);assert.equal(calls[0].path,'/api/workflow-runs/run/return');assert.equal(calls[0].body.max_steps,60);assert.equal(calls[0].body.target,'dev');assert.equal(calls[0].body.seq,40);
 });
+
+test('execution shows frozen arguments and original tool result without offering replay',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[],setAttribute(){},focus(){}});return elements.get(id)};
+ const run={id:'r',workflow_id:'wf',status:'failed',seq:1,input:'task',definition:{name:'工具操作',revision:1,nodes:[{id:'call',kind:'execution',name:'写入',execution:{mode:'mcp',server_id:'github',tool:'create_issue',arguments:{title:'指定标题'}}}],edges:[]},steps:[{seq:1,node_id:'call',status:'failed',execution_dispatched:true,execution_receipt:{kind:'mcp',mcp:{isError:true,content:[{type:'text',text:'业务拒绝原文'}],structuredContent:{code:'quota'}}}}]};
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{querySelectorAll:()=>[]},esc:x=>String(x??''),$:el,api:async path=>path.endsWith('/notifications')?[]:run});
+ for(const f of ['workflow-panel.js','workflow-runs.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'r'}",ctx);await vm.runInContext("refreshWorkflowRun('r');",ctx);await vm.runInContext("workflowStepDetails('r',1,'result')",ctx);
+ assert.match(el('#wf-step-details').innerHTML,/业务拒绝原文/);
+ assert.match(el('#wf-step-details').innerHTML,/指定标题/);
+ assert.match(el('#wf-step-details').innerHTML,/quota/);
+ assert.doesNotMatch(el('#wf-run-controls').innerHTML,/id="wf-resume-form"/);
+});
