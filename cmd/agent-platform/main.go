@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ import (
 )
 
 func main() {
+	showVersion := flag.Bool("version", false, "print binary version and source revision without starting the service")
 	address := flag.String("listen", "127.0.0.1:8788", "HTTP listening address")
 	data := flag.String("data", ".data", "persistent platform data directory")
 	base := flag.String("base-url", "", "public URL for conversation links")
@@ -26,6 +28,10 @@ func main() {
 	sandboxImage := flag.String("sandbox-image", "agent-platform-runtime:0.1.0", "fixed image for new OpenSandbox Runs")
 	sandboxTTL := flag.Int("sandbox-ttl", 3600, "OpenSandbox environment lifetime in seconds")
 	flag.Parse()
+	if *showVersion {
+		json.NewEncoder(os.Stdout).Encode(map[string]string{"version": platform.Version, "revision": platform.BuildRevision})
+		return
+	}
 	if *concurrency < 1 || *concurrency > 32 {
 		log.Fatal("concurrency must be between 1 and 32")
 	}

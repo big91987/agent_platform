@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 test -z "$(gofmt -l cmd internal web examples/pipeline-tool)"
-for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-tooling.sh; do
+for script in scripts/*.sh examples/gitlab/prepare.sh examples/github/install-tooling.sh deploy/platform/build.sh deploy/opensandbox/runtime/build.sh; do
   bash -n "$script"
 done
 node --check web/workflow-model.js
@@ -18,8 +18,9 @@ node --check web/markdown.js
 node --check web/transcript.js
 node --test web/request_test.js web/markdown_test.js web/app_test.js web/transcript_test.js
 NODE_PATH=examples/github/tooling/full_harness/browser/node_modules node --test web/live_browser_test.cjs
-ruff check sdk/python examples deploy/opensandbox
-ruff format --check sdk/python examples deploy/opensandbox
+ruff check sdk/python examples deploy
+ruff format --check sdk/python examples deploy
+python3 -m unittest discover -s deploy/platform -p 'test_*.py' -v
 python3 -m unittest discover -s deploy/opensandbox -p 'test_*.py' -v
 PYTHONPATH=sdk/python python3 -m unittest discover -s sdk/python/tests -v
 PYTHONPATH=sdk/python:examples/github .data/runner-venv/bin/python -m unittest discover -s examples/github -p '*_test.py' -v

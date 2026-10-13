@@ -41,7 +41,7 @@ func NewServer(s *Store, sched *Scheduler, x *Codex, password, base string) *Ser
 			http.Error(w, "database unavailable", 503)
 			return
 		}
-		respond(w, 200, map[string]any{"ok": true, "version": "0.1.0"})
+		respond(w, 200, map[string]any{"ok": true, "version": Version, "revision": BuildRevision})
 	})
 	h.mux.HandleFunc("POST /api/login", h.login)
 	h.mux.HandleFunc("GET /api/me", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
