@@ -286,6 +286,7 @@ func TestWorkflowExecutionBrowserRoundTrip(t *testing.T) {
 		calls.Add(1)
 		return nil, map[string]any{"native_response": text}, nil
 	})
+	_, _, creates, _ := sandboxWorkflowFixture(t, s, false, false)
 	server := httptest.NewUnstartedServer(nil)
 	handler := NewServer(s, nil, nil, "password", "http://"+server.Listener.Addr().String())
 	server.Config.Handler = handler
@@ -315,6 +316,9 @@ func TestWorkflowExecutionBrowserRoundTrip(t *testing.T) {
 	}
 	if calls.Load() != 1 {
 		t.Fatal("browser dispatch repeated", calls.Load())
+	}
+	if creates.Load() != 1 {
+		t.Fatal("browser environment creation repeated", creates.Load())
 	}
 	t.Log(string(result))
 }

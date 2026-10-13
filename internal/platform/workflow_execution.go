@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -18,6 +21,9 @@ import (
 // WorkflowExecution invokes an existing capability without a reasoning turn.
 // The graph carries arguments, while credentials remain in the tool registry.
 type WorkflowExecution struct {
+	Language  string          `json:"language,omitempty"`
+	Code      string          `json:"code,omitempty"`
+	Command   string          `json:"command,omitempty"`
 	Mode      string          `json:"mode"`
 	ServerID  string          `json:"server_id,omitempty"`
 	Tool      string          `json:"tool,omitempty"`
@@ -25,17 +31,42 @@ type WorkflowExecution struct {
 }
 
 func validateWorkflowExecution(v *WorkflowExecution) error {
-	if v == nil || v.Mode != "mcp" {
+	if v == nil {
 		return errors.New("select a supported execution mode")
 	}
-	if !toolServerName.MatchString(v.ServerID) || strings.TrimSpace(v.Tool) == "" {
-		return errors.New("select an MCP server and tool")
+	switch v.Mode {
+	case "code", "command":
+		if v.ServerID != "" || v.Tool != "" || len(v.Arguments) > 0 {
+			return errors.New("code and commands cannot contain MCP settings")
+		}
+		text := v.Command
+		if v.Mode == "code" {
+			if (v.Language != "python" && v.Language != "typescript") || v.Command != "" {
+				return errors.New("select Python or TypeScript code; use a project command for other languages")
+			}
+			text = v.Code
+		} else if v.Language != "" || v.Code != "" {
+			return errors.New("project commands cannot contain inline code settings")
+		}
+		if strings.TrimSpace(text) == "" || len(text) > 64000 || strings.ContainsRune(text, 0) {
+			return errors.New("execution content is required (up to 64000 bytes, without NUL)")
+		}
+		return nil
+	case "mcp":
+		if v.Code != "" || v.Command != "" || v.Language != "" {
+			return errors.New("MCP execution cannot contain code or commands")
+		}
+		if !toolServerName.MatchString(v.ServerID) || strings.TrimSpace(v.Tool) == "" {
+			return errors.New("select an MCP server and tool")
+		}
+		var args map[string]json.RawMessage
+		if len(v.Arguments) > 64000 || json.Unmarshal(v.Arguments, &args) != nil || args == nil {
+			return errors.New("tool arguments must be a JSON object up to 64000 bytes")
+		}
+		return nil
+	default:
+		return errors.New("select a supported execution mode")
 	}
-	var args map[string]json.RawMessage
-	if len(v.Arguments) > 64000 || json.Unmarshal(v.Arguments, &args) != nil || args == nil {
-		return errors.New("tool arguments must be a JSON object up to 64000 bytes")
-	}
-	return nil
 }
 
 func executionTool(server RegisteredToolServer, name string) (*mcp.Tool, error) {
@@ -81,6 +112,19 @@ func validateExecutionTool(server RegisteredToolServer, v *WorkflowExecution) er
 }
 
 func (e *WorkflowEngine) executionAccess(r WorkflowRun, node WorkflowNode) (RegisteredToolServer, error) {
+	if err := validateWorkflowExecution(node.Execution); err != nil {
+		return RegisteredToolServer{}, err
+	}
+	if node.Execution.Mode != "mcp" {
+		_, err := e.store.sandboxFor(r)
+		if err != nil {
+			return RegisteredToolServer{}, err
+		}
+		if r.Environment.Status != "ready" {
+			return RegisteredToolServer{}, errors.New("Run environment is not ready")
+		}
+		return RegisteredToolServer{}, nil
+	}
 	frozen, ok := r.ExecutionTools[node.ID]
 	if !ok || node.Execution == nil {
 		return frozen, errors.New("run has no execution tool snapshot")
@@ -143,8 +187,16 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 	go func() {
 		defer e.connectorWG.Done()
 		defer cancel()
-		result, callErr := callMCPTool(callCtx, server.Connection, node.Execution.Tool, node.Execution.Arguments)
-		receipt := ConnectorReceipt{Kind: "mcp", MCP: result, TimeoutSeconds: seconds}
+		var receipt ConnectorReceipt
+		var callErr error
+		if node.Execution.Mode == "mcp" {
+			result, err := callMCPTool(callCtx, server.Connection, node.Execution.Tool, node.Execution.Arguments)
+			receipt = ConnectorReceipt{Kind: "mcp", MCP: result}
+			callErr = err
+		} else {
+			receipt, callErr = e.executeSandboxNode(callCtx, r, step, node)
+		}
+		receipt.TimeoutSeconds = seconds
 		e.mu.Lock()
 		defer e.mu.Unlock()
 		delete(e.connectorJobs, r.ID)
@@ -189,6 +241,9 @@ func freezeExecutionTools(tx *sql.Tx, w Workflow) (map[string]RegisteredToolServ
 		if err := validateWorkflowExecution(node.Execution); err != nil {
 			return nil, err
 		}
+		if node.Execution.Mode != "mcp" {
+			continue
+		}
 		server, err := loadToolServer(tx, node.Execution.ServerID)
 		if err != nil {
 			return nil, err
@@ -199,4 +254,83 @@ func freezeExecutionTools(tx *sql.Tx, w Workflow) (map[string]RegisteredToolServ
 		out[node.ID] = server
 	}
 	return out, nil
+}
+
+// The same Run environment executes scripts and project commands. No host
+// fallback is available; the SDK's actual command ID/status remain the receipt.
+func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, step WorkflowStep, node WorkflowNode) (out ConnectorReceipt, callErr error) {
+	out = ConnectorReceipt{Kind: node.Execution.Mode}
+	service, err := e.store.sandboxFor(r)
+	if err != nil {
+		return out, err
+	}
+	values := map[string]any{"input": r.Input, "parameters": r.Parameters, "previous_results": []any{}}
+	previous := []any{}
+	for _, old := range r.Steps {
+		if old.Seq < step.Seq {
+			previous = append(previous, map[string]any{"node": old.NodeID, "result": old.Result, "execution_receipt": old.actionReceipt(), "error": old.Error})
+		}
+	}
+	values["previous_results"] = previous
+	raw, err := json.Marshal(values)
+	if err != nil {
+		return out, err
+	}
+	if len(raw) > connectorArchiveLimit {
+		return out, errors.New("execution input exceeds 8 MiB; reference large artifacts instead of embedding their contents")
+	}
+	seconds := node.ExecutionTimeoutSeconds
+	if seconds == 0 {
+		seconds = 60
+	}
+	home := filepath.Join(e.store.Dir, "workflow-processes", fmt.Sprintf("%s-%d", r.ID, step.Seq))
+	if err = os.MkdirAll(home, 0700); err != nil {
+		return out, err
+	}
+	archive, err := newConnectorArchive(home)
+	if err != nil {
+		return out, errors.New("cannot retain sandbox execution log before dispatch")
+	}
+	log := newBoundedConnectorLog(Connector{})
+	log.window.archive = archive
+	defer func() {
+		out.Log = log.finishArchive()
+		out.Output = log.String()
+		if out.Log == nil {
+			callErr = errors.Join(callErr, errors.New("sandbox execution log could not be retained; inspect actual effects before explicitly returning"))
+		}
+	}()
+	// Full input and source are private files, not large environment variables or
+	// shell-quoted code. Even legal task inputs can exceed Linux's per-argument
+	// limit. Run/sequence are platform-generated keys, never user paths.
+	inputPath := fmt.Sprintf("/tmp/agent-platform-input-%s-%d.json", r.ID, step.Seq)
+	if err = service.upload(ctx, r.Environment.ID, r.ID, inputPath, raw, 0600); err != nil {
+		return out, err
+	}
+	source, extension, command := node.Execution.Command, "sh", "/bin/sh"
+	if node.Execution.Mode == "code" {
+		source = node.Execution.Code
+		if node.Execution.Language == "python" {
+			extension, command = "py", "python3 -c"
+		} else {
+			extension, command = "ts", "tsx -e"
+		}
+	}
+	sourcePath := fmt.Sprintf("/tmp/agent-platform-code-%s-%d.%s", r.ID, step.Seq, extension)
+	if err = service.upload(ctx, r.Environment.ID, r.ID, sourcePath, []byte(source), 0600); err != nil {
+		return out, err
+	}
+	if node.Execution.Mode == "code" {
+		command += " \"$(cat '" + sourcePath + "')\""
+	} else {
+		command += " '" + sourcePath + "'"
+	}
+	request := opensandbox.RunCommandRequest{Cwd: r.WorkspacePath, Envs: map[string]string{"WORKFLOW_INPUT_FILE": inputPath}, Command: command, Timeout: int64(seconds) * 1000}
+	result, commandErr := service.command(ctx, r.Environment.ID, r.ID, request, func(event opensandbox.StreamEvent) error { return json.NewEncoder(log).Encode(event) })
+	out.Sandbox = &result
+	if result.ExitCode != nil {
+		exit := int(*result.ExitCode)
+		out.ExitCode = &exit
+	}
+	return out, commandErr
 }

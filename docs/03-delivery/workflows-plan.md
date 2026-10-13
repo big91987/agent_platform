@@ -842,3 +842,13 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 环境生命周期/ID/失败原因在同一事务保留历史，服务身份摘要不公开。正式POST /api/workflow-runs/{id}/environment/reconcile和release已接权限边界；启动参数--sandbox-config/--sandbox-image/--sandbox-ttl不属于Agent输入。
 - 六项真实HTTP隔离回归含Run去重与跨Run隔离、创建丢响应重启核对、删除丢响应与历史、创建意图后崩溃、宿主路径/服务变更拒绝及正式HTTP授权。全Go vet/race真实exit0，平台65.004s；日志615bytes/SHA256 439667461d23323bdc60c3a367eeb51f69f5bf3dae6004a1efec317794a27df3。早期释放回归误置在运行中，收紧后发现检查阶段错误；修正夹具在真正释放之后检查，未把该红归因为线上产品故障。
 - 此为Harness环境生命周期实现和隔离回归，尚未在112平台8795通过正式Run应用；沙箱原生Agent仍明确拒绝启动，代码/项目命令、界面环境配置及独立测试仓入口待接通，不宣称整条Pipeline已完成。
+
+
+### 2026-10-13 — 代码/项目命令、环境配置与完整输入回归
+
+- 执行节点保存 code/command/mcp 三种互斥配置：Python/TypeScript直接写代码，其他仓库语言用项目命令（例如 go test、mvn verify），不限制项目为Go。新代码/命令要求OpenSandbox；无宿主回退。每个动作先持久化意图，实际命令ID、退出码、原始事件及私有完整日志进入共同回执/下游输入/日志API，重试必须检查副作用后正式return。
+- 隔离HTTP与实际shell进程验证：前节点写文件，后节点从同一工作区读取；完整60000字节输入及32项参数通过私有0600 JSON文件 WORKFLOW_INPUT_FILE 传递，上游实际执行回执可读，含命令替换/引号的参数不被执行。旧整段环境变量契约回归先红；修复后通过，不截断输入。代码/命令源也经私有文件执行，避免引用扩张越过Linux单参数限制。上下文超过8MiB明确失败并要求引用产物；远端输出超过16MiB在SDK解析前失败，按已知ID中断并核对停止，不把截断EOF当成功；17MiB单事件回归原先误接受红，修后绿。
+- 发现pending环境（尚未发送创建）被错误禁止resume/return，已修正式入口并验证恢复只创建一次、未创建时release零外部请求。新安装的image/TTL默认变化不再使旧Run失效，实际采用旧Run冻结值；服务身份变化仍拒绝。历史创建/删除响应未知、重启、归属/授权回归继续通过。
+- 实际Chromium→平台API保存重载Python、TypeScript和任意项目命令、切换MCP、启动独立Run、仅一次MCP调用、释放环境及390px页面验证已纳入原scripts/verify.sh；生命周期为SDK HTTP夹具，不冒称112真实Run。已释放环境无继续/回退控件，也不再提示可回退。前一轮浏览器红为两个同名应用按钮定位歧义，已限定设置表单；未force点击。
+- 当前完整scripts/verify.sh exit0：verify-06.log 117165bytes/SHA256 da26e7b1d0109946bc8d66dc044487af188d9e60552b9745933a8144bc4bfef1，Go平台全包race64.939s；原全部工程检查、真实浏览器、vet与构建均完成。独立相关race门禁7.841s绿、前端59项绿；日志均在ignored .data/opensandbox-verification。一次构建红为新增输入上限检查放在raw声明前，修正后实际重测；本机受限listener红与原测试失败日志保留。macOS链接器警告仍保留。
+- 112 OpenSandbox8095的此前真实SDK完整probe-04仍是基础设施证据。平台8795尚未部署，原生Codex沙箱会话仍显式拒绝，TypeScript实际执行及测试仓独立新Issue/Pipeline尚未验证。当前不提交产品通过或上线结论；正在准备固定Linux运行镜像，之后接通原生双向会话与正式隔离部署。8788/8793及旧产品任务未改。

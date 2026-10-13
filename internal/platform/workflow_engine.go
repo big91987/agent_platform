@@ -389,7 +389,7 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "completed" && !limitFailure) || strings.TrimSpace(reason) == "" {
 		return ErrConflict
 	}
-	if r.Environment != nil && r.Environment.Status != "ready" {
+	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {
 		return errors.New("Run environment is not ready; reconcile before returning")
 	}
 	newLimit := r.executionLimit()
@@ -484,7 +484,7 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 	if r.Seq != seq || (r.Status != "stopped" && r.Status != "failed") {
 		return ErrConflict
 	}
-	if r.Environment != nil && r.Environment.Status != "ready" {
+	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {
 		return errors.New("Run environment is not ready; reconcile before continuing")
 	}
 	owner, err := e.store.workflowCaller(r)

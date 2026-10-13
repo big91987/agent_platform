@@ -45,16 +45,17 @@ type ConnectorInput struct {
 	IssueNumber    int    `json:"issue_number,omitempty"`
 }
 type ConnectorReceipt struct {
-	MCP            *mcp.CallToolResult `json:"mcp,omitempty"`
-	TimeoutSeconds int                 `json:"timeout_seconds,omitempty"`
-	Log            *ConnectorLogInfo   `json:"log,omitempty"`
-	Kind           string              `json:"kind"`
-	URL            string              `json:"url,omitempty"`
-	Number         int                 `json:"number,omitempty"`
-	HeadSHA        string              `json:"head_sha,omitempty"`
-	ExitCode       *int                `json:"exit_code,omitempty"`
-	Output         string              `json:"output,omitempty"`
-	Recovered      bool                `json:"recovered,omitempty"`
+	Sandbox        *SandboxCommandResult `json:"sandbox,omitempty"`
+	MCP            *mcp.CallToolResult   `json:"mcp,omitempty"`
+	TimeoutSeconds int                   `json:"timeout_seconds,omitempty"`
+	Log            *ConnectorLogInfo     `json:"log,omitempty"`
+	Kind           string                `json:"kind"`
+	URL            string                `json:"url,omitempty"`
+	Number         int                   `json:"number,omitempty"`
+	HeadSHA        string                `json:"head_sha,omitempty"`
+	ExitCode       *int                  `json:"exit_code,omitempty"`
+	Output         string                `json:"output,omitempty"`
+	Recovered      bool                  `json:"recovered,omitempty"`
 }
 
 func (s *Store) initConnectors() error {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -34,6 +35,42 @@ type SandboxCommandResult struct {
 	Stopped  bool   `json:"stopped"`
 }
 
+var errSandboxOutputLimit = errors.New("sandbox command output exceeded 16 MiB; retain large outputs as files")
+
+// The fixed SDK decoder has no event-size bound. Bound the response before it
+// reaches that decoder; exhaustion is an error, not a successful truncated EOF.
+type sandboxCommandTransport struct{ http.RoundTripper }
+
+func (t sandboxCommandTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	response, err := t.RoundTripper.RoundTrip(r)
+	if err == nil && r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/command") && response.StatusCode < 400 {
+		response.Body = &sandboxCommandBody{ReadCloser: response.Body, remaining: 16 * 1024 * 1024}
+	}
+	return response, err
+}
+
+type sandboxCommandBody struct {
+	io.ReadCloser
+	remaining int
+}
+
+func (b *sandboxCommandBody) Read(p []byte) (int, error) {
+	if b.remaining == 0 {
+		var probe [1]byte
+		n, err := b.ReadCloser.Read(probe[:])
+		if n > 0 {
+			return 0, errSandboxOutputLimit
+		}
+		return 0, err
+	}
+	if len(p) > b.remaining {
+		p = p[:b.remaining]
+	}
+	n, err := b.ReadCloser.Read(p)
+	b.remaining -= n
+	return n, err
+}
+
 func newOpenSandbox(endpoint, key, image string, ttl int) (*OpenSandbox, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Scheme != "http" && u.Scheme != "https") {
@@ -48,13 +85,16 @@ func newOpenSandbox(endpoint, key, image string, ttl int) (*OpenSandbox, error) 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
-	client := &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("OpenSandbox redirects are refused") }}
+	client := &http.Client{Transport: sandboxCommandTransport{transport}, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("OpenSandbox redirects are refused") }}
 	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl}, nil
 }
 
 func sandboxError(operation string, err error) error {
 	if err == nil {
 		return nil
+	}
+	if errors.Is(err, errSandboxOutputLimit) {
+		return fmt.Errorf("OpenSandbox %s: %w", operation, errSandboxOutputLimit)
 	}
 	if errors.Is(err, context.Canceled) {
 		return fmt.Errorf("OpenSandbox %s: %w", operation, context.Canceled)

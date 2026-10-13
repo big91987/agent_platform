@@ -111,10 +111,13 @@ func (s *Store) sandboxFor(r WorkflowRun) (*OpenSandbox, error) {
 	if s.sandbox == nil {
 		return nil, errors.New("OpenSandbox service is not configured")
 	}
-	if s.sandbox.connectionHash != r.Environment.ConnectionHash || s.sandbox.image != r.Environment.Image || s.sandbox.ttl != r.Environment.TTL {
+	if s.sandbox.connectionHash != r.Environment.ConnectionHash {
 		return nil, errors.New("OpenSandbox service configuration changed; restore the original connection before continuing")
 	}
-	return s.sandbox, nil
+	// New runtime defaults do not change environments promised to existing Runs.
+	client := *s.sandbox
+	client.image, client.ttl = r.Environment.Image, r.Environment.TTL
+	return &client, nil
 }
 func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
@@ -273,6 +276,12 @@ func (e *WorkflowEngine) ReleaseSandbox(ctx context.Context, c Caller, id string
 	if r.Environment.Status == "released" {
 		e.mu.Unlock()
 		return nil
+	}
+	if r.Environment.Status == "pending" {
+		// No create intent was committed, so there is no external effect to replay.
+		err := e.store.updateRunEnvironment(id, "pending", "", "released", "")
+		e.mu.Unlock()
+		return err
 	}
 	if r.Environment.Status != "ready" {
 		e.mu.Unlock()

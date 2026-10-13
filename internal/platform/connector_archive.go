@@ -82,10 +82,11 @@ func (s *Store) connectorOutput(r WorkflowRun, seq int, offset int64) (Connector
 		return out, ErrNotFound
 	}
 	step := r.Steps[seq-1]
-	if step.Seq != seq || step.Receipt == nil || step.Receipt.Kind != "command" || step.Receipt.Log == nil {
+	receipt := step.actionReceipt()
+	if step.Seq != seq || receipt == nil || (receipt.Kind != "command" && receipt.Kind != "code") || receipt.Log == nil {
 		return out, ErrNotFound
 	}
-	info := step.Receipt.Log
+	info := receipt.Log
 	if offset > info.Bytes || info.Bytes > connectorArchiveLimit {
 		return out, ErrNotFound
 	}

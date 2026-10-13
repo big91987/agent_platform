@@ -112,6 +112,9 @@ func validateWorkflow(w Workflow) error {
 			if err := validateWorkflowExecution(n.Execution); err != nil {
 				return fmt.Errorf("node %s: %w", n.ID, err)
 			}
+			if n.Execution.Mode != "mcp" && w.Environment != "opensandbox" {
+				return errors.New("code and project commands require an OpenSandbox Run environment")
+			}
 		case "agent":
 			if (n.AgentID == "") == (n.Agent == nil) || n.ConnectorID != "" {
 				return fmt.Errorf("node %s requires one agent", n.ID)

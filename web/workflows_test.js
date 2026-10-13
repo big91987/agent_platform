@@ -273,3 +273,24 @@ test('execution tool selection and raw argument draft survive inspector redraw a
  assert.equal(el('#wf-execution-arguments').value,'{broken');
  assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},editor.executionDrafts)',ctx),/JSON/);
 });
+
+test('inline Python code remains editable after closing and reopening its node drawer',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext("a.kind='execution';delete a.agent;delete a.exit_mode;a.execution={mode:'code',language:'python',code:'print(1)'};a.execution_timeout_seconds=60;graph.value.environment='opensandbox';renderWorkflowInspector(editor)",ctx);
+ assert.match(el('#wf-inspector').innerHTML,/wf-execution-code/);
+ el('#wf-execution-code').value="import json\nprint('literal $(no shell)')";
+ el('#wf-execution-code').oninput?.();el('#wf-panel-close').onclick();
+ assert.equal(vm.runInContext('a.execution.code',ctx),"import json\nprint('literal $(no shell)')");
+ vm.runInContext('editor.selected=a.id;renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-code').value,"import json\nprint('literal $(no shell)')");
+ assert.equal(vm.runInContext('graph.value.environment',ctx),'opensandbox');
+});
+
+test('workflow environment setting is retained and project command supports arbitrary repository language',()=>{
+ const {ctx,el}=editorPage();vm.runInContext('editor.users=[];workflowSettings(editor)',ctx);
+ el('#wf-environment').value='opensandbox';el('#wf-settings-form').onsubmit({preventDefault(){}});
+ assert.equal(vm.runInContext('graph.value.environment',ctx),'opensandbox');
+ vm.runInContext("a.kind='execution';delete a.agent;delete a.exit_mode;a.execution={mode:'command',command:'go test ./...'};a.execution_timeout_seconds=60;renderWorkflowInspector(editor)",ctx);
+ el('#wf-execution-command').value='mvn verify';el('#wf-panel-close').onclick();
+ assert.equal(vm.runInContext('a.execution.command',ctx),'mvn verify');
+});

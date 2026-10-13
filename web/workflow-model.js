@@ -106,8 +106,19 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   validateAgent(node) {
     if(node.kind==='execution'){
       const v=node.execution;
-      if(!v||v.mode!=='mcp'||typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
-      if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
+      if(!v||!['code','command','mcp'].includes(v.mode))throw new Error('请选择执行方式');
+      if(v.mode==='mcp'){
+        if(typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
+        if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
+        if(v.code||v.command||v.language)throw new Error('MCP 配置不能混入代码或命令');
+      }else{
+        if(this.value.environment!=='opensandbox')throw new Error('代码和项目命令需要 OpenSandbox 执行环境');
+        if(v.server_id||v.tool||v.arguments!=null)throw new Error('代码和命令不能混入 MCP 配置');
+        if(v.mode==='code'&&(!['python','typescript'].includes(v.language)||v.command))throw new Error('请选择 Python 或 TypeScript；其他语言使用项目命令');
+        if(v.mode==='command'&&(v.language||v.code))throw new Error('项目命令不能混入代码配置');
+        const text=v.mode==='code'?v.code:v.command;
+        if(typeof text!=='string'||!text.trim()||text.length>64000||text.includes('\0'))throw new Error('请填写执行内容，最多 64000 字符');
+      }
       const seconds=node.execution_timeout_seconds??0;
       if(!Number.isInteger(seconds)||seconds<0||seconds>86400)throw new Error('执行超时须为 0–86400 秒；0 使用默认值');
     }
@@ -164,6 +175,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(text.length>512*1024)throw new Error('文件超过 512 KB');
     const value=WorkflowGraph.parseJSON(text);
     if(!value||!Array.isArray(value.nodes)||!Array.isArray(value.edges)||value.nodes.length>128||value.edges.length>512)throw new Error('无效的工作流文件');
+    if(value.environment!=null&&!['','opensandbox'].includes(value.environment))throw new Error('不支持的执行环境');
     const ids=new Set();
     for(const n of value.nodes){
       if(!n||!Object.hasOwn(WorkflowGraph.kinds,n.kind)||!(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/).test(n.id)||ids.has(n.id)||!Number.isFinite(n.x)||!Number.isFinite(n.y))throw new Error('文件包含无效的节点');

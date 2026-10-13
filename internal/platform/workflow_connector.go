@@ -127,7 +127,7 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		return ErrConflict
 	}
 	route, summary := "next", "GitHub 资源已确认："+receipt.URL
-	if actionErr == nil && receipt.Kind == "command" {
+	if actionErr == nil && (receipt.Kind == "command" || receipt.Kind == "code") {
 		if receipt.ExitCode == nil {
 			actionErr = errors.New("command did not return an exit code")
 		} else {

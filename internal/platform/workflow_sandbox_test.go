@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
 	"net/http"
 	"net/http/httptest"
@@ -364,4 +365,64 @@ func TestWorkflowSandboxEnvironmentHTTPPreservesOwnerAuthorization(t *testing.T)
 	if response.Code != 401 {
 		t.Fatal("anonymous release", response.Code)
 	}
+}
+
+func TestWorkflowSandboxStoppedBeforeCreationCanResumeOrReleaseWithoutSideEffects(t *testing.T) {
+	for _, resume := range []bool{true, false} {
+		t.Run(fmt.Sprint(resume), func(t *testing.T) {
+			s := testStore(t)
+			caller, graph, posts, _ := sandboxWorkflowFixture(t, s, false, false)
+			run, err := s.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "stop before environment dispatch"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			engine := NewWorkflowEngine(s, nil, "")
+			if err = engine.Stop(caller, run.ID, 1); err != nil {
+				t.Fatal(err)
+			}
+			waitConnectorRun(t, engine, run.ID, "stopped")
+			if posts.Load() != 0 {
+				t.Fatal("stop dispatched creation")
+			}
+			if resume {
+				if err = engine.Resume(caller, run.ID, 1, "begin preparation"); err != nil {
+					t.Fatal(err)
+				}
+				waitSandboxRun(t, engine, caller, run.ID, "ready")
+				if posts.Load() != 1 {
+					t.Fatal("resume duplicated creation")
+				}
+			}
+			if !resume {
+				if err = engine.ReleaseSandbox(context.Background(), caller, run.ID); err != nil {
+					t.Fatal(err)
+				}
+				current, _ := s.WorkflowRun(caller, run.ID)
+				if current.Environment.Status != "released" || current.Environment.ID != "" || posts.Load() != 0 {
+					t.Fatal("release created a sandbox")
+				}
+			}
+		})
+	}
+}
+
+func TestWorkflowSandboxUpgradeUsesRunFrozenImageAndTTL(t *testing.T) {
+	s := testStore(t)
+	caller, graph, _, _ := sandboxWorkflowFixture(t, s, false, false)
+	run, err := s.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "keep pending environment configuration"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := *s.sandbox
+	next.image = "different-runtime"
+	next.ttl = 3600
+	s.sandbox = &next
+	client, err := s.sandboxFor(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.image != run.Environment.Image || client.ttl != run.Environment.TTL {
+		t.Fatal("frozen environment options changed")
+	}
+	waitSandboxRun(t, NewWorkflowEngine(s, nil, ""), caller, run.ID, "ready")
 }

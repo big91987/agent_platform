@@ -133,3 +133,14 @@ test('execution shows frozen arguments and original tool result without offering
  assert.match(el('#wf-step-details').innerHTML,/quota/);
  assert.doesNotMatch(el('#wf-run-controls').innerHTML,/id="wf-resume-form"/);
 });
+
+test('released Run environment displays its history and offers no resume or return',async()=>{
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',querySelectorAll:()=>[]});return elements.get(id)};
+ const run={id:'run',workflow_id:'workflow',status:'stopped',seq:1,input:'task',environment:{status:'released',id:'env1',image:'fixed-image',updated:'2026-10-13T00:00:00Z',history:[{status:'unconfirmed',error:'creation response lost'},{status:'ready'},{status:'released'}]},definition:{name:'隔离环境',revision:1,max_steps:10,nodes:[{id:'review',name:'人工检查',kind:'approval'}],edges:[]},steps:[{seq:1,node_id:'review',status:'stopped'}]};
+ const ctx=vm.createContext({esc:x=>String(x??''),$:el,document:{querySelectorAll:()=>[]},api:async path=>path.endsWith('/notifications')?[]:run});
+ vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ vm.runInContext("workflowRunPage={id:'run'}",ctx);await vm.runInContext("refreshWorkflowRun('run')",ctx);
+ assert.match(el('#wf-run-controls').innerHTML,/环境已释放/);
+ assert.match(el('#wf-run-controls').innerHTML,/creation response lost/);
+ assert.doesNotMatch(el('#wf-run-controls').innerHTML,/id="wf-resume-form"|id="wf-return-form"/);
+});

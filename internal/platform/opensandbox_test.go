@@ -406,3 +406,42 @@ func TestOpenSandboxFileRoundTripPreservesBinaryAndPrivateMode(t *testing.T) {
 		t.Fatalf("round trip failed: %v %v", err, statErr)
 	}
 }
+
+func TestOpenSandboxOversizedCommandStreamFailsAndInterruptsOnce(t *testing.T) {
+	var base string
+	var calls, interrupts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/sandboxes/owned":
+			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
+		case strings.Contains(r.URL.Path, "/endpoints/"):
+			json.NewEncoder(w).Encode(opensandbox.Endpoint{Endpoint: base})
+		case r.Method == "POST" && r.URL.Path == "/command":
+			calls.Add(1)
+			w.Header().Set("Content-Type", "text/event-stream")
+			io.WriteString(w, "data: {\"type\":\"init\",\"text\":\"large-output\"}\n\n")
+			io.WriteString(w, "data: {\"type\":\"stdout\",\"text\":\"")
+			// A single event cannot force unbounded allocation in the official decoder.
+			io.WriteString(w, strings.Repeat("x", 17*1024*1024))
+			io.WriteString(w, "\"}\n\ndata: {\"type\":\"execution_complete\"}\n\n")
+		case r.Method == "DELETE" && r.URL.Path == "/command":
+			if r.URL.Query().Get("id") != "large-output" {
+				t.Error("wrong execution interrupted")
+			}
+			interrupts.Add(1)
+		case r.URL.Path == "/command/status/large-output":
+			exit := int32(-1)
+			json.NewEncoder(w).Encode(opensandbox.CommandStatusResponse{ID: "large-output", ExitCode: &exit})
+		default:
+			t.Error("unexpected request", r.Method, r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	base = server.URL
+	client, _ := newOpenSandbox(base, "private", "python:3.12-slim", 600)
+	result, err := client.command(context.Background(), "owned", sandboxTestRun, opensandbox.RunCommandRequest{Command: "large output"}, nil)
+	if err == nil || !strings.Contains(err.Error(), "output exceeded") || !result.Stopped || result.ID != "large-output" || calls.Load() != 1 || interrupts.Load() != 1 {
+		t.Fatal("large stream accepted or not stopped", result, err, calls.Load(), interrupts.Load())
+	}
+}
