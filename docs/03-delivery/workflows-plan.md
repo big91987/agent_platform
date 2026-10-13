@@ -963,3 +963,11 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 
 - 本阶段标准scripts/verify.sh原进程明确exit0，verify-13.log118098bytes/SHA66365f0a765dfa767f57d3988246720e51c9c83cec2af641f1b5feabf69c88c6，平台全包race66.261s。部署检查Python lint/format与新浏览器脚本语法检查绿，原全套浏览器/供应链/SDK/权限/恢复/vet/build保持；新原生事件保存失败回归包含在全量。维护源后续提交包含该修复与可复用部署回归工具，8795实际部署仍为489a07e，不把提交完成冒充升级。
 - 后续GitHub正式同身份只读读取已成功：Open Issue37/34/33/32及旧历史任务保持；仓库仅agent-platform-entry.yml/deploy-local.yml。当前旧entry blob5b3b98ae556954edc3ac5017391a564752985296仍以平台checkout路径运行github_entry.py，需新入口复制依赖为仓库自有并互斥路由；本次未修改旧入口或创建新Issue/PR，避免未接通Agent时制造空任务。
+
+
+### 2026-10-13 — 8795标准升级8912141与原Run保留
+
+- 源89121419d2e69bb341371af6a0567fa754b724c8归档4044800bytes/SHA6edf6b34c57a0ebb2dd156ec6cc5c43d057927f7b723f265c20b1b03189ee122传输ACK核对；源码解压后逐文件对原archive验证。原标准build-03 exit0/install-03 exit0，独立原日志均保留，不改宿主工具链/其他端口/命名空间权限。binary18945056bytes/SHA54be78ab72158bd17521b81fcf6d0b3e896928debb7e6381e9d50ee6c59841a8；远端及Mac /api/health HTTP200精确8912141。
+- 操作者临时核验包装脚本02在构建前因http变量遮蔽模块UnboundLocalError中止，已核无build/install派发；03标准构建安装成功后，同名cookiejar引用造成AttributeError，未把该错误归因平台安装失败。原失败与阶段事实独立归档。随后仅读回，不重复构建/安装：原d0988dbd…Run全JSON与升级前正式API原文件逐值相同，completed/released保持、原web源码字节相同、配置值匹配及现有凭据实际登录/logout成功。
+- 原包装脚本未持久化凭据文件的升级前字节，进程退出后该比较无法补造；报告明确exact_credentials_before_after=not_verified_after_operator_wrapper_failure，不以mtime/正常登录冒称文件字节前后相同。标准安装器保持凭据/配置的隔离回归和实际现有凭据登录分别成立。
+- 可查看独立实例http://10.1.20.112:8795与原基础Run。原生启动事件保存失败的维护源修复已纳入本二进制，但公开Agent入口仍保护；原生模型/角色会话/真实新测试仓Pipeline未执行。新增SYS_ADMIN/AppArmor/seccomp诊断权限仍待用户明确选择。目标持续active，本轮实际部署/升级进展不等于整链完成。
