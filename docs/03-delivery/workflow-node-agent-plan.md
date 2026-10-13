@@ -706,3 +706,13 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 原manifest与原install-args正式升级exit0，测试workflow revision5→6/max30→100；独立API对比变化键仅max_steps/revision/updated_at，原10Run、19Connector、全部已安装Agent/spec保持；Run37仍completed33/冻结revision4/max30/runtime33。首次只读核验误猜manifest的workflow前缀键，实际键product-e2e；核原副作用后按真实键比较，没有再次升级或重放动作。当前模板与维护源同版，新任务将取得100；未实测另一个新仓安装或启动产品Run，不能外推整体模板可靠性已验。
 - GitHub核open PR空、Issue37仍open，旧#34/#33未关闭；Release408573627五附件id/bytes/digest不变，不重复发布或评论。5545health200/version0c197c8b3d98346107e65dbf0c41ef5d6b73d437/schema3；本轮供应商请求0、无新增产品代码/PR/部署，旧No-Go和not_attested保持。
 - 证据ignored check-20261010-hourly-0359：runs/workflows/connectors/health/release/open-items、原manifest、标准upgrade.log/exit、两次模板测试日志、workflow-after、upgrade-verification、remote-assets-verification。报告自动上传R07仍待最小通用能力实现，不能把此次人工发布或新默认值当解决。下一轮核实际新变化与受支持交付能力，避免为求产品绿复活完成Run或自动追加上限。
+
+### 2026-10-13 — 执行节点接入基础及沙箱前置
+
+- 已确认四类节点：Agent、执行、人工确认、结束；执行按 code/command/mcp 区分必要配置，代码便捷运行 Python/TS，项目命令不限制语言。新增内部 callMCPTool 复用现有管理连接，尚未暴露不具备运行能力的 UI 配置。
+- SDK 连接清理独立于工具超时：原生关闭会话会脱离调用 ctx，真实 HTTP 回归复现 DELETE 等待 6 秒；新有界清理通过，工具成功结果不因清理失败改写或重放。结构化结果、业务错误、无效参数拒绝和取消到达服务端已测。
+- OpenSandbox 标准安装在 112 8095 healthy，带认证且仅本机可达。仍待 Run 环境关联、持久原生传输、命令/文件/停止恢复和实际画布保存运行集成；不把服务启动当 Agent 已进入沙箱。
+
+- 本轮最终复核：112 唯一基础设施探针 probe-01 exit0，实际创建→Running→DELETE→GET404；未创建产品任务，未执行产品验收。Go 平台全包 race exit0/58.225s，ruff/安装器2测试及 diff检查通过。scripts/verify.sh 已纳入安装器回归，但全套标准脚本仍未执行。
+
+- 标准验证最终结果：按 README 的 `examples/github/install-tooling.sh` 安装依赖后，第二轮 `scripts/verify.sh` exit0；完整日志 116458 bytes/SHA256 `0c4d2203143df31b4e1420879ecc6ad43116ceb400f88caf4aff46256996d187`，位于 ignored `.data/opensandbox-verification/verify-02.log`。包括浏览器4项、安装器2项、SDK9项、GitHub工具96项、local-preview11项、preview控制器60项、workflow模板107项、Go vet/race/build，平台 race57.646s。首轮缺 Playwright 的原失败日志 verify-01.log 保留；未跳检查。新增 MCP 写入丢响应回归实际只收到一次写请求。

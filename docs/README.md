@@ -4,6 +4,7 @@
 
 - [产品需求](01-product/prd.md)
 - [平台内 Workflow 需求](01-product/workflows.md) · [G1 评审](01-product/workflows-review.md)
+- [受控研发流程与软件工厂：现状诊断及提升计划](01-product/software-factory-assessment.md)（2026-10-12 更新：OpenSandbox 优先、项目自有 Harness、轻量改造范围与待决策项）
 - [决策记录](01-product/decision-ledger.md)
 - [本机平台架构](02-architecture/architecture.md)
 - [账号与访问](02-architecture/access.md)

@@ -2455,3 +2455,14 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 原manifest与原install-args正式升级exit0，测试workflow revision5→6/max30→100；独立API对比变化键仅max_steps/revision/updated_at，原10Run、19Connector、全部已安装Agent/spec保持；Run37仍completed33/冻结revision4/max30/runtime33。首次只读核验误猜manifest的workflow前缀键，实际键product-e2e；核原副作用后按真实键比较，没有再次升级或重放动作。当前模板与维护源同版，新任务将取得100；未实测另一个新仓安装或启动产品Run，不能外推整体模板可靠性已验。
 - GitHub核open PR空、Issue37仍open，旧#34/#33未关闭；Release408573627五附件id/bytes/digest不变，不重复发布或评论。5545health200/version0c197c8b3d98346107e65dbf0c41ef5d6b73d437/schema3；本轮供应商请求0、无新增产品代码/PR/部署，旧No-Go和not_attested保持。
 - 证据ignored check-20261010-hourly-0359：runs/workflows/connectors/health/release/open-items、原manifest、标准upgrade.log/exit、两次模板测试日志、workflow-after、upgrade-verification、remote-assets-verification。报告自动上传R07仍待最小通用能力实现，不能把此次人工发布或新默认值当解决。下一轮核实际新变化与受支持交付能力，避免为求产品绿复活完成Run或自动追加上限。
+
+### 2026-10-13 — OpenSandbox 分支首批验证
+
+- MCP 测试先编译红（callMCPTool 不存在）；实现后普通真实 HTTP 调用/发现回归 exit0。第一次受限运行因 loopback bind 权限拒绝，不是产品断言红；随后经正式授权执行真实本机 HTTP。
+- 额外 DELETE 不响应回归先真实失败（6.01s，completed action hung），修后全 MCP/原发现 race exit0（4.117s）；gofmt/go vet 通过。macOS race 链接器保留 LC_DYSYMTAB 警告，不掩盖实际 exit0。平台全包 race 已另行启动，未先记通过。
+- 安装配置保留/权限与符号链接拒绝两项回归通过，ruff 通过并加入 scripts/verify.sh；完整标准脚本尚未执行。112 首轮 pip --report 与 unit WorkingDirectory 错误均已在维护源修复并经同一安装入口应用，未手补运行副本。OpenSandbox 1.1.1 实际 PID58003、health healthy、未认证401；具体 PID仅此采样。
+- 未验：原生 Agent/执行节点/独立新 Issue Pipeline、112 平台8795健康、用户服务登出重启持久性、产品验收。正在执行一次有界基础设施创建/观测/删除探针，结果另补；不能冒充产品实测。
+
+- 本轮最终复核：112 唯一基础设施探针 probe-01 exit0，实际创建→Running→DELETE→GET404；未创建产品任务，未执行产品验收。Go 平台全包 race exit0/58.225s，ruff/安装器2测试及 diff检查通过。scripts/verify.sh 已纳入安装器回归，但全套标准脚本仍未执行。
+
+- 标准验证最终结果：按 README 的 `examples/github/install-tooling.sh` 安装依赖后，第二轮 `scripts/verify.sh` exit0；完整日志 116458 bytes/SHA256 `0c4d2203143df31b4e1420879ecc6ad43116ceb400f88caf4aff46256996d187`，位于 ignored `.data/opensandbox-verification/verify-02.log`。包括浏览器4项、安装器2项、SDK9项、GitHub工具96项、local-preview11项、preview控制器60项、workflow模板107项、Go vet/race/build，平台 race57.646s。首轮缺 Playwright 的原失败日志 verify-01.log 保留；未跳检查。新增 MCP 写入丢响应回归实际只收到一次写请求。

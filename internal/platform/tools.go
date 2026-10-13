@@ -229,19 +229,39 @@ func (t bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	copy.Header.Set("Authorization", "Bearer "+t.token)
 	return t.base.RoundTrip(copy)
 }
-func discoverTools(ctx context.Context, c MCPConnection) ([]*mcp.Tool, error) {
+
+// The SDK detaches session deletion from the caller's context. Bound this
+// cleanup independently, without imposing a short timeout on actual tools.
+type mcpSessionTransport struct{ base http.RoundTripper }
+
+func (t mcpSessionTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Method != http.MethodDelete {
+		return t.base.RoundTrip(r)
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	response, err := t.base.RoundTrip(r.Clone(ctx))
+	if response != nil && response.Body != nil {
+		// SDK Close only uses the status; release the response body here.
+		response.Body.Close()
+		response.Body = http.NoBody
+	}
+	return response, err
+}
+
+func connectMCP(ctx context.Context, c MCPConnection) (*mcp.ClientSession, error) {
 	if err := validateMCPConnection(c); err != nil {
 		return nil, err
 	}
 	var transport mcp.Transport
 	if c.URL != "" {
-		client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		client := &http.Client{Transport: mcpSessionTransport{http.DefaultTransport}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 		if c.BearerTokenEnvVar != "" {
 			token := os.Getenv(c.BearerTokenEnvVar)
 			if token == "" {
 				return nil, errors.New("configured MCP bearer credential is missing from backend environment")
 			}
-			client.Transport = bearerTransport{http.DefaultTransport, token}
+			client.Transport = bearerTransport{client.Transport, token}
 		}
 		transport = &mcp.StreamableClientTransport{Endpoint: c.URL, HTTPClient: client}
 	} else {
@@ -255,10 +275,20 @@ func discoverTools(ctx context.Context, c MCPConnection) ([]*mcp.Tool, error) {
 		}
 		transport = &mcp.CommandTransport{Command: command}
 	}
-	client := mcp.NewClient(&mcp.Implementation{Name: "agent-platform-discovery", Version: "0.1.0"}, nil)
+	client := mcp.NewClient(&mcp.Implementation{Name: "agent-platform", Version: "0.1.0"}, nil)
 	session, err := client.Connect(ctx, transport, nil)
 	if err != nil {
 		return nil, errors.New("MCP connection failed; check address, command and credentials")
+	}
+	return session, nil
+}
+
+func discoverTools(ctx context.Context, c MCPConnection) ([]*mcp.Tool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	session, err := connectMCP(ctx, c)
+	if err != nil {
+		return nil, err
 	}
 	defer session.Close()
 	tools := []*mcp.Tool{}

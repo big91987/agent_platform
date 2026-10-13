@@ -783,3 +783,14 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 原manifest与原install-args正式升级exit0，测试workflow revision5→6/max30→100；独立API对比变化键仅max_steps/revision/updated_at，原10Run、19Connector、全部已安装Agent/spec保持；Run37仍completed33/冻结revision4/max30/runtime33。首次只读核验误猜manifest的workflow前缀键，实际键product-e2e；核原副作用后按真实键比较，没有再次升级或重放动作。当前模板与维护源同版，新任务将取得100；未实测另一个新仓安装或启动产品Run，不能外推整体模板可靠性已验。
 - GitHub核open PR空、Issue37仍open，旧#34/#33未关闭；Release408573627五附件id/bytes/digest不变，不重复发布或评论。5545health200/version0c197c8b3d98346107e65dbf0c41ef5d6b73d437/schema3；本轮供应商请求0、无新增产品代码/PR/部署，旧No-Go和not_attested保持。
 - 证据ignored check-20261010-hourly-0359：runs/workflows/connectors/health/release/open-items、原manifest、标准upgrade.log/exit、两次模板测试日志、workflow-after、upgrade-verification、remote-assets-verification。报告自动上传R07仍待最小通用能力实现，不能把此次人工发布或新默认值当解决。下一轮核实际新变化与受支持交付能力，避免为求产品绿复活完成Run或自动追加上限。
+
+### 2026-10-13 — 独立分支开始四类节点与 OpenSandbox 实施
+
+- 按用户授权在 a78b worktree 分支 `codex/opensandbox-workflow` 实施；完整目标仍含 112 平台部署、独立新 Issue 类型及 Pipeline 实测。详见 opensandbox-workflow-plan.md，不以基础设施探针替代产品 Pipeline。
+- MCP 服务发现与调用共用官方 Go SDK 连接，结构化内容/工具业务错误保持原始结果，未知传输结果不自动重试。新增调用及取消的真实 HTTP 回归通过，远端 DELETE 不响应的挂起已真实复现并加有界清理。
+- 112 独立目录已标准安装 OpenSandbox 1.1.1，8095 仅回环监听；systemd active/running、health healthy、无认证 /sandboxes 401。平台 8795 尚未部署，原生 Codex 和新节点尚未串接，不宣称 Pipeline 完成；旧 8788/8793 未改动。
+- 安装首次因 Ubuntu pip 22.0 缺 --report 失败；标准安装器加入独立 venv 固定 pip 25.3 后通过。systemd WorkingDirectory 引号导致 bad-setting，维护源移除错误引号、官方 verify 通过后启动；历史日志分别保留。真实沙箱创建/删除探针进行中，用户服务登出/重启存活尚未验证。
+
+- 本轮最终复核：112 唯一基础设施探针 probe-01 exit0，实际创建→Running→DELETE→GET404；未创建产品任务，未执行产品验收。Go 平台全包 race exit0/58.225s，ruff/安装器2测试及 diff检查通过。scripts/verify.sh 已纳入安装器回归，但全套标准脚本仍未执行。
+
+- 标准验证最终结果：按 README 的 `examples/github/install-tooling.sh` 安装依赖后，第二轮 `scripts/verify.sh` exit0；完整日志 116458 bytes/SHA256 `0c4d2203143df31b4e1420879ecc6ad43116ceb400f88caf4aff46256996d187`，位于 ignored `.data/opensandbox-verification/verify-02.log`。包括浏览器4项、安装器2项、SDK9项、GitHub工具96项、local-preview11项、preview控制器60项、workflow模板107项、Go vet/race/build，平台 race57.646s。首轮缺 Playwright 的原失败日志 verify-01.log 保留；未跳检查。新增 MCP 写入丢响应回归实际只收到一次写请求。
