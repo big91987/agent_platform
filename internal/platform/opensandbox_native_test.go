@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 )
@@ -196,13 +197,42 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 	var base string
 	var handshakes, launches atomic.Int32
 	var stopped atomic.Bool
+	var filesMu sync.Mutex
+	files := map[string][]byte{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/sandboxes/owned":
 			json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: "owned", Metadata: map[string]string{"agent-platform-run": sandboxTestRun}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
 		case strings.Contains(r.URL.Path, "/endpoints/"):
 			json.NewEncoder(w).Encode(opensandbox.Endpoint{Endpoint: base})
-		case r.Method == "POST" && (r.URL.Path == "/files/upload" || r.URL.Path == "/directories"):
+		case r.URL.Path == "/files/info":
+			w.WriteHeader(404)
+		case r.URL.Path == "/files/download":
+			filesMu.Lock()
+			raw, ok := files[r.URL.Query().Get("path")]
+			filesMu.Unlock()
+			if !ok {
+				w.WriteHeader(404)
+				return
+			}
+			w.Write(raw)
+		case r.Method == "POST" && r.URL.Path == "/files/upload":
+			if err := r.ParseMultipartForm(1 << 20); err != nil {
+				t.Error(err)
+				return
+			}
+			defer r.MultipartForm.RemoveAll()
+			metadata, _ := r.MultipartForm.File["metadata"][0].Open()
+			var info opensandbox.FileMetadata
+			json.NewDecoder(metadata).Decode(&info)
+			metadata.Close()
+			file, _ := r.MultipartForm.File["file"][0].Open()
+			raw, _ := io.ReadAll(file)
+			file.Close()
+			filesMu.Lock()
+			files[info.Path] = raw
+			filesMu.Unlock()
+		case r.Method == "POST" && r.URL.Path == "/directories":
 			w.WriteHeader(200)
 		case r.Method == "POST" && r.URL.Path == "/command":
 			var in opensandbox.RunCommandRequest
@@ -286,6 +316,7 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 	service, _ := newOpenSandbox(base, "private", "fixed-runtime", 600)
 	initialized := false
 	skillChecked := false
+	roleChecked := false
 	err := probeSandboxRuntime(context.Background(), service, "owned", sandboxTestRun, func(event string, _ any) error {
 		if event == "native_initialized" {
 			initialized = true
@@ -293,9 +324,12 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 		if event == "native_skill_scope_confirmed" {
 			skillChecked = true
 		}
+		if event == "native_role_inputs_confirmed" {
+			roleChecked = true
+		}
 		return nil
 	})
-	if err != nil || !initialized || !skillChecked || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
+	if err != nil || !initialized || !skillChecked || !roleChecked || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
 		t.Fatal("native readiness failed or relaunched", err, initialized, handshakes.Load(), launches.Load(), stopped.Load())
 	}
 }

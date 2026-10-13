@@ -1,10 +1,13 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -107,7 +110,58 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err = json.NewEncoder(stream).Encode(map[string]any{"method": "initialized"}); err != nil {
 		return err
 	}
-	return probeSandboxNativeSkillScope(stream, selectedSkill, record)
+	if err = probeSandboxNativeSkillScope(stream, selectedSkill, record); err != nil {
+		return err
+	}
+	return probeSandboxRoleInputs(ctx, service, id, run, record)
+}
+
+// The real SDK exercises role files using an empty authentication object. No
+// platform conversation, credential validity or model result is asserted here.
+func probeSandboxRoleInputs(ctx context.Context, service *OpenSandbox, id, run string, record func(string, any) error) error {
+	root, err := os.MkdirTemp("", "agent-platform-role-probe-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(root)
+	auth, skill := filepath.Join(root, "auth-fixture"), filepath.Join(root, "selected-skill")
+	for _, directory := range []string{auth, skill} {
+		if err = os.Mkdir(directory, 0700); err != nil {
+			return err
+		}
+	}
+	if err = os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{}`), 0600); err != nil {
+		return err
+	}
+	if err = os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: role-input-probe\ndescription: Credential-free role transfer fixture.\n---\nNo model task is sent.\n"), 0600); err != nil {
+		return err
+	}
+	c := Conversation{ID: newID(), Snapshot: Agent{Executor: "codex", Model: "gpt-6.1-sol", Skills: []string{skill}, Instructions: "Credential-free SDK role preparation fixture."}}
+	r := WorkflowRun{ID: run, WorkspacePath: "/workspace", Definition: Workflow{Environment: "opensandbox"}, Environment: &RunEnvironment{ID: id, Status: "ready", ConnectionHash: service.connectionHash}}
+	x := Codex{Root: root, AuthHome: auth}
+	home, cfg, selected, _, err := x.prepareSandboxRole(ctx, service, r, c)
+	if err != nil {
+		return err
+	}
+	if len(selected) != 1 || len(cfg) == 0 {
+		return errors.New("SDK role inputs were not prepared")
+	}
+	if err = os.Remove(filepath.Join(auth, "auth.json")); err != nil {
+		return err
+	}
+	// Resume uses the recorded assets, not mutable host sources or refreshed
+	// credentials. This probe never starts another native app-server.
+	if err = os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("changed host fixture"), 0600); err != nil {
+		return err
+	}
+	home2, cfg2, selected2, _, err := x.prepareSandboxRole(ctx, service, r, c)
+	if err != nil {
+		return err
+	}
+	if home2 != home || !bytes.Equal(cfg, cfg2) || len(selected2) != 1 || selected2[0] != selected[0] {
+		return errors.New("SDK role resume replaced its frozen inputs")
+	}
+	return record("native_role_inputs_confirmed", map[string]any{"home": home, "selected_count": 1, "same_preparation": true, "host_auth_removed": true, "host_skill_changed": true, "credentials": "empty_fixture_only", "platform_conversation": "not_run", "model_turn": "not_run"})
 }
 
 // A diagnostic uses the same schema and scope comparison as native execution,

@@ -2700,3 +2700,11 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 
 - 标准verify18原进程明确exit0，118095bytes/SHA8bb73a11bf41cf0010953075867891fe870abf84f3bd4c6f4eb00a251b3c7c85、平台race66.319s；原真实浏览器/供应链/SDK/部署/权限/停止恢复/vet/build均完成，本次正式Execute和角色准备隔离回归包含在全量。macOS linker warning保留。未因此开放公开Agent门禁或升级112。
 - 已核固定release-1.1.1官方文件协议https://github.com/opensandbox-group/OpenSandbox/blob/release-1.1.1/specs/execd-api.yaml：/files/info缺路径为404，/files/download同样有404；只按404认定新home缺失，其他错误不当缺失重发。此为版本契约核对，不替112实际角色目录准备。下一项先通过无凭据受支持SDK入口实测私有角色准备/标记/接续，再补远端产物接口、真实模型及测试仓自有Harness/新类型互斥路由；新增namespace权限仍待原问题明确答复。
+
+
+### 2026-10-14 — 112无凭据角色准备原层验证
+
+- 可复用运行时探针通过正式SDK调用角色准备，并在删除宿主空auth夹具、修改宿主Skill之后确认接续复用原home/config/selected材料，没有重复上传。探针未发送模型turn，原initialize/Skill范围验证使用之前的app-server home，不能说该app-server消费了这次新角色材料；真实平台角色会话仍待验证。
+- 同源Linux二进制12485594bytes/SHA256 0688f9309763d2cb4de1be3946ae77a72f9cb49f12a3a8b28f95fb7d771598c5；112 native-role-runtime-03实际exit0，49事件/22705bytes/SHA256 bfea78994030f3faa8d82126ae3fc55cf3dad69170303cec02528cc4e9bc388a，原报告和独立只读readback一致。native a129c2a5c656451eb2f9301bbd8c06f1 exit0/stopped，取消命令2aa735ec6bad47f492821ee616bbfd06 exit-1/stopped；环境a6d30e2b-4649-48c7-9f78-daa005c409b6已DELETE/GET404。没有真实凭据、没有更改容器权限。
+- 本轮完整scripts/verify.sh真实exit0：verify-19.log 118090bytes/SHA256 ed85d1c9e577dcca8c2d9c5f315375b57de117976f01ade6a1aa2b234e0c5c97，平台全包race66.941s；目标回归先缺事件红、扩展夹具后绿3.882s。日志与原报告在ignored .data/opensandbox-verification，macOS链接器警告保留。
+- 当前112平台仍fad8ade/8795；b814adf角色准备/正式Execute接线及此次探针源码尚未升级。产物接口仍读取宿主，下一步接通所属沙箱/workspace并验证路径、链接、权限及取消。公共Agent启动门槛保持；真实模型、测试仓新入口/整链尚未完成。此前namespace兼容模式需要的新增权限问题仍待用户答复，继续仅做现权限内独立工作。
