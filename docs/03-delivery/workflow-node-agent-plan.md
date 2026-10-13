@@ -983,3 +983,12 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 
 
 - 仓库自有入站本批提交368feb2321b84747cbc417f63a056de689325b93后，实际通过标准install_github_entry.py在ignored独立Git项目夹具安装legacy和sandbox两入口；每种首次Installed/exit0，原命令重入Unchanged/exit0。真实导出140文件/1113879bytes，SOURCE.json源commit同368feb2且全部文件bytes/SHA重核；两个仓库内入口Python -I --help真实exit0。原回执repository-owned-install-01.json保存，夹具没有平台请求，也未改真实Model Relay仓库。此为标准安装/分发路径验证，不是GitHub部署或原生Pipeline通过；112仍待新版本标准升级。
+
+
+### 2026-10-14 — 112标准升级86add21及正式API基础链路复验
+
+- 当前112隔离平台8795已由标准Linux/CGO build-05及install-05升级到86add21dbe1ea0271be5da577547029c3717dbc5，两者实际exit0，远端及Mac /api/health均200同revision。源码归档4270080bytes/SHA f33b4253acb5101e3e32a191bb682c608e3e2acedb9021b9ee28dda90d204f0d与传输ACK一致；binary19363912bytes/SHA 7c1041e6da5d217f9d8567d0aca7e20f41d4085412ef4532e544fe79a91e1121。副作用前持久化的旧Run、配置及凭据逐字节/逐值不变，现有凭据实际登录成功，旧Run仍completed/released。未改变其他端口或容器权限。
+- 标准deploy/platform/check.py实际exit0：Workflow a4cbc4e1049d5fab4501dc8a199bb361、Run 2d151104936beceb48cfd04a48cbe798，Python→TypeScript→Owner确认→Go项目命令→结束。重复请求同Run、共享文件与完整输入成立；步骤1/2/4日志480/485/691bytes、truncated=false，各实际exit0/stopped。所属环境bd15854f-841d-461c-a529-1de994f1b562由正式release进入released。原报告32359bytes/SHA c52c482c46565f2e0c2d90b7b57ab24dd4406556c8c475fb3fc8e96737c37c9f，独立原文件只读核对一致。查看：http://10.1.20.112:8795/workflow-runs/2d151104936beceb48cfd04a48cbe798 。
+- 已安装API的expected_environment边界实测：向该OpenSandbox流程传local或unknown均400，对应稳定请求键查询404、没有创建Run，原完成Run不变。标准check-03正向请求省略该可选字段，保持旧调用兼容；不将此描述为非空expected_environment正向112验证。源码/SDK的正向字段及冻结去重已在verify-22中验证。
+- 本轮已部署角色准备/正式Execute、沙箱产物与仓库自有入口源码；公开OpenSandbox Agent启动保护仍保留。真实Codex/gpt-6.1-sol模型turn、正式角色会话/交接、新测试仓Issue类型及Pipeline尚未执行，native_agent/product_acceptance明确not_run。原namespace权限扩展仍待明确授权；没有增加SYS_ADMIN或放开AppArmor/seccomp。现有SDK探针启动的app-server也未消费新角色home，此证据缺口仍需原层补验，不能把文件上传成功冒称角色执行通过。
+- 原始回执保存在ignored .data/opensandbox-verification/platform-check-03-readback.json及112私有platform-upgrade-05/platform-check-03/platform-environment-guard-01文件；不另建公共状态源，不改旧回执。完整源码verify-22结果保持原119482bytes/SHA8f5ec520b5d8c2788053f40cc16443f0012b8987081e39b777bf52605b748043；此次仅部署与记录，不称新产品QA通过。
