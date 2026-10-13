@@ -311,6 +311,7 @@ class Client:
         request_id,
         start_node="",
         parameters=None,
+        expected_environment="",
     ):
         """Start once per caller event key. No CI stage scheduling is needed."""
         if not request_id:
@@ -325,6 +326,10 @@ class Client:
             body["start_node"] = start_node
         if parameters:
             body["parameters"] = parameters
+        if expected_environment:
+            if expected_environment not in ("local", "opensandbox"):
+                raise ValueError("expected_environment must be local or opensandbox")
+            body["expected_environment"] = expected_environment
         return self._json("/api/workflow-runs", body)
 
     def workflow_run(self, run_id):

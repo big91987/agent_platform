@@ -87,7 +87,20 @@ def event_input(config, env, event):
         or issue["number"] < 1
     ):
         raise ValueError("A product Issue is required")
-    if kind == "issues" and event.get("action") == "opened":
+    labels = {x["name"] for x in issue.get("labels", [])}
+    selected = config.get("issue_label")
+    if selected:
+        if selected not in labels:
+            return None
+    elif labels.intersection(
+        config.get("excluded_issue_labels", ["harness-opensandbox"])
+    ):
+        return None
+    if kind == "issues" and event.get("action") in ("opened", "labeled"):
+        if event.get("action") == "labeled" and (
+            not selected or event.get("label", {}).get("name") != selected
+        ):
+            return None
         if issue.get("user", {}).get("login") != owner:
             raise ValueError("Issue author is not authorized")
         if platform_output(issue.get("body")):
@@ -269,6 +282,12 @@ def forward(config, client, number, comment_id=0):
     repo = config["repository"]
     owner = repo.split("/")[0]
     issue = github_call(f"repos/{repo}/issues/{number}")
+    if {x["name"] for x in issue.get("labels", [])}.intersection(
+        config.get("excluded_issue_labels", ["harness-opensandbox"])
+    ):
+        raise ValueError(
+            "Issue selects another Pipeline; the legacy entry must not start or forward it"
+        )
     if (
         "pull_request" in issue
         or issue["number"] != number

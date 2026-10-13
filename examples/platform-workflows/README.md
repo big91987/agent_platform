@@ -290,7 +290,9 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
   --project <project-repository> --repository <owner>/<repository>
 ```
 
-将生成的 `.github/workflows/agent-platform-entry.yml` 及 `.github/agent-platform-entry-source.json` 通过项目正常 PR 合入默认分支。后续通过同一命令加 `--upgrade` 更新；手工改动会被漂移保护拒绝覆盖。仓库 Actions variables 设置 `AGENT_PLATFORM_WORKFLOW_ROOT=<platform-source>`、`AGENT_PLATFORM_WORKFLOW_CONFIG=<private-ci-config.json>`。复用能访问平台主机的现有 Runner；分发模板默认标签为 self-hosted/macOS/ARM64/he-full，安装位置必须包含 `.data/runner-venv/bin/python`。现有 Runner 标签不同的部署应在维护源模板中适配并通过安装器分发，不手改项目副本。
+安装器把固定 Git 版本的 Example 与 Python SDK 复制到项目 `.harness/agent-platform/`，同时生成入口 YAML 和来源记录。将这些文件一起通过项目正常 PR 合入默认分支。Actions 使用仓库内脚本和 SDK，无需平台 checkout、AGENT_PLATFORM_WORKFLOW_ROOT 或本机 runner-venv。仓库 variables 保留 `AGENT_PLATFORM_WORKFLOW_CONFIG=<private-ci-config.json>`；私有配置及 Token 在 checkout 外维护，不提交进仓库。默认 Runner 标签是 self-hosted/macOS/ARM64/he-full，示例复制后应按项目的 Runner、网络和流程调整；入口 Runner 必须能访问平台 API。
+
+YAML 的标准升级使用原安装命令加 `--upgrade`；来源记录防止自动覆盖项目改动。已有 `.harness/agent-platform` 不会被安装器重写。工具包升级先用 `export.py --ref <source-commit> --destination <new-empty-directory>` 导出新版本，比较 `SOURCE.json` 和项目已有改动，经项目评审合入 Git；不能把临时维护源码路径重新塞进 Actions。导出只复制 Git 中的 SDK/Example 文件，拒绝链接与已有目的目录，不复制未提交的本机凭据、会话或生成工作区；Go示例的go.mod/go.sum随同复制，构建仍使用锁定依赖。SOURCE.json记录源commit和初始文件摘要，项目后续定制以项目Git提交为准。
 
 当前信任边界与旧方案相同：只接受仓库 Owner 本人创建的 Issue 和评论，Actions 原触发者及重跑者都须为 Owner；不是面向匿名公共仓库的自动执行服务。普通 Issue 评论转发到当前 Agent。平台回写带受识别标记，不触发输入回环。GitHub API 再读取 Issue/评论校验归属，不把 PR 当 Issue，不执行事件文本里的命令。
 
@@ -411,3 +413,30 @@ PR默认标题取所选正文文件第一条非空行的一级标题（`# 实际
 报告Agent准备同Run文档根report-publication.json，含分类标题、固定product_head、body_file/dashboard/whitelist/archive相对路径和1–16附件files（path/bytes/SHA256）。四类入口必须列入附件；ZIP成员严格等于whitelist.files，每项同Run原文件的大小与摘要匹配。路径逐层拒绝软链接、非普通文件、外Run文件、未列附件、已知凭据模式及trace/HAR；白名单检查不证明任意内容绝无秘密，报告Agent仍须脱敏审查。
 
 受信发布状态和0600附件快照位于manifest父目录report-publication，必须在Agent工作区外。每Run绑定不可变输入，写前持久记录意图；固定Run标签及内容marker核对原Release，远端每附件必须uploaded且bytes/摘要相同。原报告结论原样随正文发布；成功回执说明Dashboard是下载附件。相同已完成交付只读核验，不重复创建、覆盖或删除；丢响应后仅核对已尝试操作，已证远端回执可接续尚未尝试附件；远端仍无回执就保留unknown停止，不盲POST。拒绝修改已尝试绑定、外国Release或同名不同摘要附件。关闭/失效权限、外部失败按正式固定节点回执返报告Agent，记录关联Issue卡点并等待明确恢复，不自动扩大访问范围。
+
+
+### 独立 OpenSandbox Issue 入口
+
+从包含沙箱入站的明确源版本安装：
+
+```sh
+python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
+  --project <project-repository> --repository <owner>/<repository> --template sandbox
+```
+
+该模板生成 `agent-platform-sandbox-entry.yml`，使用独立变量 `AGENT_PLATFORM_SANDBOX_CONFIG`。
+私有配置至少为：
+
+```json
+{"base_url":"http://<platform-host>:8795","workflow_id":"<sandbox-workflow-id>",
+ "token_file":"<private-user-token-file>","repository":"<owner>/<repository>",
+ "base":"main","issue_label":"harness-opensandbox"}
+```
+
+在 GitHub 创建 label `harness-opensandbox`；新 Issue 标题用 `【Harness验证】`，正文说明被测平台能力、具体步骤和可观察结果。opened/labeled 和原评论均校验 Owner 与真实 Issue 当前标签；旧入口排除此标签，手动 dispatch 也会经适配器拒绝错路由。更换项目标签时同时调整两个 YAML 与私有配置的 `issue_label` / 旧入口 `excluded_issue_labels`，不能只改页面上的标签名称。
+
+适配器只提交原任务、repository 和固定 repository_commit，不在 Runner 克隆 Agent 工作区，也不删除或重建已有 Run。平台 API 必须支持 `expected_environment=opensandbox`；这是匹配校验，不是权限授予。配置错误或服务未升级会在创建任务前拒绝；不同环境不回退本机。受理未知先用同一 request_id 核对原 Run，原 Issue 编辑不会自动替换已受理输入；补充用新评论，已结束 Run 不复活。
+
+项目准备步骤仍须在平台 Workflow 的同一 Run 环境内完成，按固定 commit 获取项目并准备项目依赖；私有仓库访问由受信配置提供，不能把密钥填进 Issue 或普通参数。平台自动申请环境不代表仓库已经克隆，更不代表依赖、原生 Agent、模型认证或产品验证已经通过。运行中审批、失败和交付继续由平台与 Pipeline 正式回执发布；入站自身拒绝会给原 Issue 写安全摘要，具体命令、响应、私有路径和凭据不公开。
+
+当前该入口已完成源码/SDK/隔离回归，尚未在测试仓创建新 Issue 或启动正式 Agent Pipeline。112 原生隔离权限与真实角色整链未验证，不能用这段安装说明冒称已跑通。

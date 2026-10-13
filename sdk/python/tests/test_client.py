@@ -61,6 +61,7 @@ class ClientTest(unittest.TestCase):
             parameters={"issue_number": "7"},
         )
         self.assertEqual(result["id"], "run")
+        self.assertNotIn("expected_environment", json.loads(self.calls[-1][3]))
         self.assertEqual(self.calls[-1][1], "/api/workflow-runs")
         self.assertEqual(
             json.loads(self.calls[-1][3])["parameters"], {"issue_number": "7"}
@@ -79,6 +80,27 @@ class ClientTest(unittest.TestCase):
             )
         with self.assertRaises(ValueError):
             self.client.workflow_command("run", "delete", seq=1)
+
+    def test_sandbox_entry_asserts_environment_without_selecting_permissions(self):
+        self.respond({"id": "sandbox-run"}, 201)
+        self.client.start_workflow(
+            "graph",
+            "work",
+            workspace_path="",
+            request_id="event",
+            expected_environment="opensandbox",
+        )
+        self.assertEqual(
+            json.loads(self.calls[-1][3])["expected_environment"], "opensandbox"
+        )
+        with self.assertRaises(ValueError):
+            self.client.start_workflow(
+                "graph",
+                "work",
+                workspace_path="",
+                request_id="event",
+                expected_environment="arbitrary",
+            )
 
     def test_workflow_log_pages_preserve_receipt_and_validate_offsets(self):
         page = {"output": "failure", "next_offset": 7, "eof": True, "truncated": False}

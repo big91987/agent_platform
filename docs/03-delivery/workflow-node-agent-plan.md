@@ -969,3 +969,14 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 同源无凭据112探针native-artifact-runtime-04实际exit0，二进制12502068bytes/SHA256 a29e992734f60f1382769db66a75138e681784b436e73bdd7336ea679e39583e（传输ACK最终一致，等待期间未重传/未往接收器发送命令）。原报告50事件/22876bytes/SHA256 f2ed2ccbc0e1d42cdc9e6218227fa7d32919ff3b1e4b83da3fc0f18c3b9aeea8，独立readback复核相同；同一产物读取实现列出两文件、sdk-proof.json42bytes逐字节正确。原native c5b6ec11e0844063b7ed5b20a559167c exit0/stopped，取消84ed320e20e945ceb3573266ab28cf27 exit-1/stopped；环境4cd83f34-193d-4159-b436-ba192b8f3491 DELETE/GET404。无模型turn、无真实认证、权限未改变；probe的platform_conversation仍NotRun，不能替代112正式会话API验收。
 - 原完整scripts/verify.sh verify-20真实exit0，118101bytes/SHA256 9bfd27a10ca5ae16d1af6d6c44648ad5df1524504507b40e17097a4f63b806ef，平台全包race67.818s、vet/build及原浏览器/模板/安装测试通过。未因局部绿省略完整门禁，macOS链接警告保持。
 - 1128795运行版仍fad8ade；本批角色/文件接线尚未标准升级，原完成Run保持。公共OpenSandbox Agent启动门槛未放开；Codex namespace兼容模式涉及新增权限的确认仍待答复。测试仓新Issue类型/仓库自有Harness/Pipeline和独立整链QA尚未完成；下一步维护通用仓库自有入站，待受信原生执行条件可用后从唯一新入口实测，不能复活旧Run或代产品验收。
+
+
+### 2026-10-14 — 仓库自有Harness分发及独立沙箱入站
+
+- 本轮先核正式GitHub：Model Relay旧入站blob仍5b3b98ae556954edc3ac5017391a564752985296，Open Issues37/34/33/32及历史项，无Open PR、无新同类任务。只读原结果在ignored model-relay-github-readonly-02.json；未创建Issue、PR、label或新的Actions，不把源码完成当远端应用完成。
+- 标准export.py从固定Git对象导出SDK/Example及Go依赖文件，记录源commit/各文件bytes和SHA，拒绝链接、不规范路径及已有目录；不读未提交运行态。install_github_entry.py新安装自动附带项目.harness/agent-platform，已有工具包不自动重写；项目按源快照差异评审升级，项目定制由其Git管理。Ruling: 使用项目自有Git文件及固定导出记录，不新增平台模板分发服务/插件包注册表 — 去掉Runner对平台checkout的运行依赖，保留项目可调整的样例 — 若未来需要中央自动更新，应另行设计项目定制合并与版本治理，不能自动覆盖当前项目改动。
+- 新run_entry.py用Python -I从同包SDK启动，两个入口在删除维护Git夹具后仍能--help；真实复制的Go MCP示例在同包go.mod/go.sum下构建成功。首次包漏Go依赖的真实回归红后修导出选择，定向0.669s绿；安装器漂移/重入/中断恢复仍在原门禁，安装器单测隔离export，固定Git对象/独立CLI构建由export回归实测，不能混称真实GitHub应用。
+- sandbox_entry.py只把Owner授权的【Harness验证】Issue、repository与固定repository_commit交给平台，不在Runner克隆Agent工作区。label harness-opensandbox选择独立入口；旧模板和适配器排除此标签（含手动dispatch当前Issue校验）。Issue重投查原Run、未知受理不自动重发、拒绝评论不另起Run，受理不当完成；GitHub入站拒绝通知只发安全摘要。现有Owner信任边界不放宽；新入口模板需复制/按项目Runner调整后正式PR应用。官方actions/checkout v4 SHA经官方GitHub API核验为11d5960a326750d5838078e36cf38b85af677262，两个模板固定到该SHA并关闭持久Git凭据。
+- WorkflowStart/SDK新增可选expected_environment匹配断言，平台先对当前或原Run冻结环境核对，拒绝沙箱请求误进本机；不授予权限或选择镜像。省略时omitempty保留旧请求指纹。编译缺字段红、一次验证误放读入口的编译红均保留，修回StartWorkflow后race2.072s绿；后续正式HTTP拒绝也纳入完整门禁。旧服务器DisallowUnknownFields会拒绝新参数，不能把未升级的112服务当新入口已可用。
+- verify-21完整exit0/119478bytes/SHA256 4a3ef7ac4486b5a7054922259ec16ba1c6557801a2fd34f129ae1d89a0c4d5f4/race67.232s；增加Go包依赖回归及HTTP边界后verify-22完整exit0/119482bytes/SHA256 8f5ec520b5d8c2788053f40cc16443f0012b8987081e39b777bf52605b748043/race67.849s，原浏览器、vet/build、SDK与113模板测试通过。之后仅澄清入站失败提示不代表测试结果，ruff及5项入站定向再次绿，未改变平台执行语义。日志在ignored .data/opensandbox-verification，macOS链接器警告保留。
+- 本批尚未通过112标准升级应用，也未给测试仓安装新label/YAML/私有配置。8795仍fad8ade，旧服务与已完成Run未改；公共Agent启动仍保留门槛，namespace新增权限确认未收到。后续先实际标准导出/安装核验和隔离8795升级，再按已验原生条件配置唯一新Pipeline；不能让协调者代产品实现/QA，也不能把仓库包或脚本测试绿冒称真实流水线验收。

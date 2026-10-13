@@ -157,3 +157,6 @@ run = client.start_workflow(
 ```
 
 SDK只传递参数；支持来源、安全下载、ZIP和manifest校验、输入保留及恢复属于受信模板的prepare工具。客户端不直接上传文件、不把个人机器文件路径或localhost预览地址当远端材料。成功以实际prepare回执为准，不能以start_workflow返回就判断材料已接收。完整契约见 `examples/platform-workflows/README.md` 的“带原型和文档的Issue输入”；旧冻结模板需标准升级后才能获得该能力。
+
+
+Workflow 入站可以在 `start_workflow(..., expected_environment="opensandbox", workspace_path="", ...)` 指定环境预期。平台在创建或返回原 Run 时核对冻结流程环境；不匹配会拒绝，不回退到本机。省略参数保持原调用格式和去重指纹；此字段不配置镜像、权限或新的环境类型。沙箱入站需要支持该字段的平台版本，旧服务器会拒绝未知字段而非忽略要求。

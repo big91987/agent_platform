@@ -1,0 +1,41 @@
+name: OpenSandbox Harness Issue entry
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Original Harness verification Issue number
+        type: string
+        required: true
+      comment_id:
+        description: Optional original comment ID to retry
+        type: string
+        default: ''
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: sandbox-entry-${{ github.repository }}-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+  queue: max
+jobs:
+  forward:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && !github.event.issue.pull_request && (github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'harness-opensandbox'))
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Submit sandbox task through repository-owned SDK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_SANDBOX_CONFIG }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_CONFIG"
+          python3 -I .harness/agent-platform/examples/platform-workflows/run_entry.py sandbox \
+            --config "$AGENT_PLATFORM_CONFIG"

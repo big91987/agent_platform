@@ -15,6 +15,47 @@ import (
 	"time"
 )
 
+func TestWorkflowStartExpectedEnvironmentPreventsHostFallback(t *testing.T) {
+	s := testStore(t)
+	caller, graph, posts, _ := sandboxWorkflowFixture(t, s, false, false)
+	in := WorkflowStart{WorkflowID: graph.ID, Input: "sandbox request", RequestID: "expected-env", ExpectedEnvironment: "local"}
+	if _, err := s.StartWorkflow(caller, in); err == nil || posts.Load() != 0 {
+		t.Fatal("mismatched environment accepted", err, posts.Load())
+	}
+	in.ExpectedEnvironment = "opensandbox"
+	run, err := s.StartWorkflow(caller, in)
+	if err != nil || run.Definition.Environment != "opensandbox" {
+		t.Fatal(run, err)
+	}
+	duplicate, err := s.StartWorkflow(caller, in)
+	if err != nil || duplicate.ID != run.ID {
+		t.Fatal("dedupe changed", duplicate, err)
+	}
+	in.ExpectedEnvironment = "local"
+	if _, err = s.StartWorkflow(caller, in); err == nil {
+		t.Fatal("duplicate accepted conflicting expectation")
+	}
+	graph.Environment = ""
+	graph, err = s.SaveWorkflow(caller, graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in.RequestID = "new-host-fallback"
+	in.ExpectedEnvironment = "opensandbox"
+	if _, err = s.StartWorkflow(caller, in); err == nil || posts.Load() != 0 {
+		t.Fatal("host flow accepted sandbox-only request", err, posts.Load())
+	}
+	token, err := s.UserToken(caller.UserID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := NewServer(s, nil, nil, "password", "http://localhost")
+	response := requestJSON(t, server, "POST", "/api/workflow-runs", token, in)
+	if response.Code != 400 || !strings.Contains(response.Body.String(), "expected environment") || posts.Load() != 0 {
+		t.Fatal("HTTP sandbox expectation was ignored", response.Code, response.Body.String(), posts.Load())
+	}
+}
+
 func sandboxWorkflowFixture(t *testing.T, s *Store, lost, lostRelease bool) (Caller, Workflow, *atomic.Int32, *atomic.Int32) {
 	t.Helper()
 	if err := s.initAuth("password"); err != nil {

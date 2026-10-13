@@ -10,13 +10,23 @@ import (
 )
 
 type WorkflowStart struct {
-	Parameters    map[string]string `json:"parameters,omitempty"`
-	WorkflowID    string            `json:"workflow_id"`
-	StartNode     string            `json:"start_node,omitempty"`
-	Input         string            `json:"input"`
-	WorkspacePath string            `json:"workspace_path"`
-	RequestID     string            `json:"request_id,omitempty"`
+	Parameters          map[string]string `json:"parameters,omitempty"`
+	WorkflowID          string            `json:"workflow_id"`
+	StartNode           string            `json:"start_node,omitempty"`
+	Input               string            `json:"input"`
+	WorkspacePath       string            `json:"workspace_path"`
+	RequestID           string            `json:"request_id,omitempty"`
+	ExpectedEnvironment string            `json:"expected_environment,omitempty"`
 }
+
+func matchesWorkflowEnvironment(w Workflow, expected string) bool {
+	actual := w.Environment
+	if actual == "" {
+		actual = "local"
+	}
+	return expected == "" || actual == expected
+}
+
 type NodeResult struct {
 	Inputs    map[string]any `json:"inputs,omitzero"`
 	Route     string         `json:"route,omitempty"`
@@ -323,6 +333,9 @@ func (s *Store) WorkflowRunsPage(c Caller, workflowID, before string) ([]Workflo
 func (s *Store) workflowCaller(r WorkflowRun) (Caller, error) { return s.userCaller(r.Username) }
 func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	var zero WorkflowRun
+	if in.ExpectedEnvironment != "" && in.ExpectedEnvironment != "local" && in.ExpectedEnvironment != "opensandbox" {
+		return zero, errors.New("invalid expected workflow environment")
+	}
 	if c.UserID == "" || c.Username == "" {
 		return zero, ErrForbidden
 	}
@@ -349,6 +362,9 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 			previous, err := loadWorkflowRun(tx, id)
 			if err != nil {
 				return zero, err
+			}
+			if !matchesWorkflowEnvironment(previous.Definition, in.ExpectedEnvironment) {
+				return zero, ErrConflict
 			}
 			in.WorkspacePath, err = workflowStartupWorkspace(previous.Definition, in.WorkspacePath, s.Dir)
 			if err != nil {
@@ -379,6 +395,9 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	}
 	if !w.Enabled {
 		return zero, errors.New("workflow is disabled")
+	}
+	if !matchesWorkflowEnvironment(w, in.ExpectedEnvironment) {
+		return zero, errors.New("workflow environment does not match the caller's expected environment")
 	}
 	path, e := workflowStartupWorkspace(w, in.WorkspacePath, s.Dir)
 	if e != nil {
