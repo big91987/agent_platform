@@ -14,7 +14,7 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过，任务/前序结果引用源码及浏览器通过，ae4a2e9已标准部署 | 引用112实操、原生Agent及测试仓真实Pipeline |
+| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过，任务/前序结果引用源码及浏览器通过，ae4a2e9已标准部署 | 原生Agent及测试仓真实Pipeline |
 | 112 OpenSandbox | 1.1.1/8095；SDK文件/取消、正式角色home的同进程实际Skill范围/停止/删除404通过；8795标准升级后正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
 | 四类画布与112平台8795 | ae4a2e9标准Linux/CGO升级exit0，Mac/112 health及网页源码同SHA，旧Run/配置/凭据保持；check-04正式五步完成并释放。早期1440画布/390Run截图证据保留 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
 | 测试仓独立入口 | 仓库自有Harness标准导出/安装候选、入站回归已过；测试仓草稿PR38已标准同步bb698c9，head acd96f7与140件源库存一致，当前GitGuardian success；真实新入口尚未启用 | 项目适配/安装、新Issue及真实原生整链 |
@@ -66,7 +66,7 @@ Interfaces: Run 关联实际 sandbox ID；受信环境配置声明服务与镜�
 Files: `web/workflow-model.js`、`web/workflow-panel.js`、`web/workflows.js`、`web/workflow-runs.js`、现有 MCP 管理页及对应测试。
 
 - [x] 新建流程只呈现 Agent/执行/人工确认/结束；执行按 code/command/mcp 显示必要字段。（真实保存/重载与112画布截图已验；后续Agent真实整链另列。）
-- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批已112标准升级；引用112实操及真实新Pipeline仍待验证。）
+- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批已112标准升级且引用正式API实操通过；引用112网页及真实新Pipeline仍待验证。）
 - [ ] Agent 配置基础/高级分组，角色与任务分离；人工确认与权限审批区分；固定测试不能被人审跳过开关跳过。
 - [ ] 浏览器实际保存重载、执行结果、失败/停止恢复及窄屏可用验证。
 
@@ -417,3 +417,12 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - 已提交维护源ae4a2e98be436636ab3d2ca8c9cc0a576fe4b54a。固定Git源码归档4352000bytes/SHA824915fa26d176b1b44bf352227b6efa981a3e7c72610198df7af90ab879d505，112完整传输ACK一致；标准Linux build-06、install-06实际exit0，仅升级8795实例。实际安装binary19383824bytes/SHA8008686bfdaaef8dfd9fdbbb5bf38b63813c5370df5bead336df733d7c73f256；远端独立只读readback及Mac /api/health均同ae4a2e9，旧Run/私有配置/凭据逐字节或逐值保持，原凭据登录成功。Mac实际服务workflows.js（54468bytes/SHA006decb3f2370368b277c55d540807a18b7b1f2be669498fe329e8f1c3cd1107）及workflow-model.js（16300bytes/SHAbeea0711ad691f5bd372104a0dd68320a166165ad19281142784627959ade869）逐字节同已验源码；不把安装成功当新增MCP引用的112执行通过。
 - 标准check.py从新源码、真实平台API启动唯一基础设施Workflow63baf06928b62b97da17e8a5838d870c/Run39d8defcee76a31c1a6dee21644d9650，实际exit0。同环境4260dd97-bdab-4a02-9585-95e5cb361eb0完成Python/TS/Owner确认/Go项目命令共5步，重复入口原Run、最终released。原报告32345bytes/SHAd8753215494466a8d9c950b413d213da3573d5eb332472c43a6a78548dbabf73，独立readback核实际步骤1/2/4 exit0/stopped、日志480/485/691bytes/truncated=false。此轮验证共享输入契约变动后的真实沙箱基础路径；没有原生Agent、MCP引用112实操或产品QA，也没有修改旧Run/账号/模型权限。正式入口：http://10.1.20.112:8795/workflow-runs/39d8defcee76a31c1a6dee21644d9650 。
 - 当前剩余：公共原生Agent门槛仍保留，namespace新增权限诊断待用户选择；模型turn/原生角色会话及恢复、新测试仓Issue/Pipeline、整链独立QA和整个分支最终评审未完成。PR38仍草稿，没有重复Issue/PR或擅自启用新类型。安装/readback/标准运行均为Harness证据，不替Pipeline执行产品验收。
+
+
+### 2026-10-14 — 已部署112上的MCP任务/前序结果引用实操
+
+- 计划Task3的引用112实操已通过。没有修改平台源码、旧服务、原生权限或产品；在112独立验证目录构建受控echo工具，复用维护源固定Go MCP SDK1.4.1及stdio协议，通过正式管理员API注册/发现，工具仅向自己的0600调用日志写入脱敏测试字符串。此为真实进程/SDK/平台API基础设施回归，受控工具服务在平台侧，不能描述为真实供应商或沙箱原生Agent验证。
+- 正向Run3147ac52b0e6f8ba717b53fcedb82bc9实际completed/seq3：第一节点从本任务parameters/message取值，第二节点从第一节点最近回执structuredContent/text取值；原引号/换行/$(not shell)均逐值相同，固定literal兜底未被使用。相同request_id重复POST返回原Run，独立工具原日志确证总调用2次。此次通过真实HTTP启用expected_environment=opensandbox的正向输入，真实创建所属环境，后续正式release状态released。
+- 反向Run6677a90913e8f53873db74c551b54aa8实际failed/seq1，错误为text引用不可用，execution_dispatched=false；工具原日志仍只有2件，即缺输入新增调用0。该Run所属环境也经正式release到released。两个Run原始失败/完成历史均保留；检查后唯一受控工具通过正式API停用，不删除回执或配置，未创建测试仓Issue。
+- 有界原检查进程真实exit0；原report52644bytes/SHA208dbf7b7ccb86b4cf2704fc7a2ed655d55173e35514ae200a82fb4d5b887b33与独立文件readback核对。随后展示包装脚本把已关闭TextIOWrapper当Path调用read_text触发AttributeError；仅影响把日志打印到终端，不是平台/产品失败。原包装脚本和driver log保持，另做只读原文件及正式API核对，未重建工具、重复Run/调用或更改原回执。当前API independently confirms两Run上述状态/环境已释放、字面结果相同、tool.enabled=false、health ae4a2e9。readback位于ignored .data/opensandbox-verification。
+- 完成范围：维护源全量verify25、实际浏览器隔离回归、112标准升级以及新增引用112正式实操。仍缺新增引用112网页编辑实操、原生模型会话/命令/恢复、新测试仓独立Issue/Pipeline和整个分支最终独立评审。公开Agent启动门槛及namespace权限阻塞保持，待用户对新增权限诊断选择；不能以这条受控MCP回归替代目标中的原生研发流水线。
