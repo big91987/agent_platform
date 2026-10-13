@@ -221,7 +221,7 @@ function conversationFileURL(id,path,download=false) {
 function renderConversationFiles(data) {
  const filter=($('#file-filter')?.value||'').trim().toLowerCase();
  const files=data.artifacts.filter(f=>f.path.toLowerCase().includes(filter));
- const html=files.map(f=>`<button class="workspace-file" data-file-path="${esc(f.path)}" type="button"><span aria-hidden="true">${f.image?'▧':'▤'}</span><span>${esc(f.path)}</span><small>${(f.size/1024).toFixed(1)} KB</small></button>`).join('')||'<p class="muted">没有匹配的文件。</p>';
+ const html=data.artifact_error?`<p class="error">工作区文件暂不可用：${esc(data.artifact_error)}</p>`:(files.map(f=>`<button class="workspace-file" data-file-path="${esc(f.path)}" type="button"><span aria-hidden="true">${f.image?'▧':'▤'}</span><span>${esc(f.path)}</span><small>${(f.size/1024).toFixed(1)} KB</small></button>`).join('')||'<p class="muted">没有匹配的文件。</p>');
  if(state.renderedFiles!==html){state.renderedFiles=html;$('#artifacts').innerHTML=html}
 }
 function renderFilePreview() {

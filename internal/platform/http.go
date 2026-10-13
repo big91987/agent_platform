@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -345,10 +346,13 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	artifacts, e := listArtifacts(v.workspace(h.store.Dir))
-	if e != nil {
-		fail(w, e)
-		return
+	artifacts, artifactErr := h.store.conversationArtifacts(r.Context(), v)
+	artifactError := ""
+	if artifactErr != nil {
+		// An expired/unavailable environment must not hide native history or
+		// approvals. File reads still report the actual failure independently.
+		artifacts = []Artifact{}
+		artifactError = artifactErr.Error()
 	}
 	approvals, e := h.store.Approvals(v.ID)
 	if e != nil {
@@ -361,7 +365,7 @@ func (h *Server) conversation(w http.ResponseWriter, r *http.Request, c Caller) 
 		fail(w, e)
 		return
 	}
-	respond(w, 200, map[string]any{"workflow_run_id": workflowRunID, "workflow_input_open": workflowInputOpen, "conversation": v, "messages": messages, "artifacts": artifacts, "approvals": approvals, "execution_permissions": map[string]any{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation, "approvals_reviewer": nativeApprovalReviewer(v.Snapshot)}})
+	respond(w, 200, map[string]any{"workflow_run_id": workflowRunID, "workflow_input_open": workflowInputOpen, "conversation": v, "messages": messages, "artifacts": artifacts, "artifact_error": artifactError, "approvals": approvals, "execution_permissions": map[string]any{"network_access": v.Snapshot.NetworkAccess, "allow_elevation": v.Snapshot.AllowElevation, "approvals_reviewer": nativeApprovalReviewer(v.Snapshot)}})
 }
 func (h *Server) action(w http.ResponseWriter, r *http.Request, c Caller) {
 	v, ok := h.authorize(w, r, c)
@@ -502,7 +506,7 @@ func (h *Server) artifacts(w http.ResponseWriter, r *http.Request, c Caller) {
 	if !ok {
 		return
 	}
-	files, e := listArtifacts(v.workspace(h.store.Dir))
+	files, e := h.store.conversationArtifacts(r.Context(), v)
 	if e != nil {
 		fail(w, e)
 		return
@@ -515,16 +519,37 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 		return
 	}
 	path := r.URL.Query().Get("path")
-	f, e := openArtifact(v.workspace(h.store.Dir), path)
+	if path == "" {
+		fail(w, errors.New("artifact path is required"))
+		return
+	}
+	run, e := h.store.sandboxRunForConversation(v.ID)
 	if e != nil {
 		fail(w, e)
 		return
 	}
-	defer f.Close()
-	st, e := f.Stat()
-	if e != nil {
-		fail(w, e)
-		return
+	var content io.ReadSeeker
+	var modified time.Time
+	if run != nil {
+		_, b, err := h.store.sandboxArtifacts(r.Context(), *run, path)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		content = bytes.NewReader(b)
+	} else {
+		f, err := openArtifact(v.workspace(h.store.Dir), path)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		defer f.Close()
+		st, err := f.Stat()
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		content, modified = f, st.ModTime()
 	}
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
 	if r.URL.Query().Get("preview") == "1" && r.URL.Query().Get("download") != "1" && (strings.EqualFold(filepath.Ext(path), ".html") || strings.EqualFold(filepath.Ext(path), ".htm")) {
@@ -537,7 +562,7 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(path)}))
 	}
-	http.ServeContent(w, r, filepath.Base(path), st.ModTime(), f)
+	http.ServeContent(w, r, filepath.Base(path), modified, content)
 }
 func (h *Server) static(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/")

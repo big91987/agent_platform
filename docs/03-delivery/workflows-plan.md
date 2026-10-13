@@ -1036,3 +1036,14 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 同源Linux二进制12485594bytes/SHA256 0688f9309763d2cb4de1be3946ae77a72f9cb49f12a3a8b28f95fb7d771598c5；112 native-role-runtime-03实际exit0，49事件/22705bytes/SHA256 bfea78994030f3faa8d82126ae3fc55cf3dad69170303cec02528cc4e9bc388a，原报告和独立只读readback一致。native a129c2a5c656451eb2f9301bbd8c06f1 exit0/stopped，取消命令2aa735ec6bad47f492821ee616bbfd06 exit-1/stopped；环境a6d30e2b-4649-48c7-9f78-daa005c409b6已DELETE/GET404。没有真实凭据、没有更改容器权限。
 - 本轮完整scripts/verify.sh真实exit0：verify-19.log 118090bytes/SHA256 ed85d1c9e577dcca8c2d9c5f315375b57de117976f01ade6a1aa2b234e0c5c97，平台全包race66.941s；目标回归先缺事件红、扩展夹具后绿3.882s。日志与原报告在ignored .data/opensandbox-verification，macOS链接器警告保留。
 - 当前112平台仍fad8ade/8795；b814adf角色准备/正式Execute接线及此次探针源码尚未升级。产物接口仍读取宿主，下一步接通所属沙箱/workspace并验证路径、链接、权限及取消。公共Agent启动门槛保持；真实模型、测试仓新入口/整链尚未完成。此前namespace兼容模式需要的新增权限问题仍待用户答复，继续仅做现权限内独立工作。
+
+
+### 2026-10-14 — 沙箱工作区产物API接通，112同源读取通过
+
+用户影响与归因：会话文件接口原只读取宿主路径，沙箱的/workspace既无法正确展示，也不能借宿主同名路径代替。已根据现有step→Run归属连接所属环境，服务身份变化、环境未就绪/释放均明确失败；没有引入第二套工作区标识或产物存储服务。Ruling: 复用现有会话文件API及Run关联，在固定Python运行时用目录描述符读取 — 避免独立metadata检查后下载追随被替换的父链接 — 若后续支持不同运行时镜像，需重新验证或替换这条内部读取实现，不新增当前未用的公开后端配置。
+
+- 正式列表/下载/HTML预览仍先授权；隔离HTTP+真实Python文件回归证明父目录和末端链接、越界/绝对/隐藏路径、不存在文件、超8MiB文件与释放状态拒绝。实际API读取远端报告/CSP保持opaque origin；跨用户及越界请求零远程读取。文件不可用独立返回artifact_error并显示，会话原消息与审批继续可读；不把文件失败变成会话不可查看。初次缺实现编译红及SDK事件类型编译红保留，目标green-03真实race5.587s通过。
+- 固定读取仅在/workspace按fd/O_NOFOLLOW逐层打开，regular文件有界读取并检查读取前后size/mtime；目录5000项/64层/4096byte路径、文件8MiB、stdout12MiB/原SDK16MiB和30秒期限。此为即时查看，不是永久归档；释放/TTL前需要由流水线归档并核发布回执。产物持久交付及真实原生角色整链仍待后续验证，不声称文件永久留存。
+- 同源无凭据112探针native-artifact-runtime-04实际exit0，二进制12502068bytes/SHA256 a29e992734f60f1382769db66a75138e681784b436e73bdd7336ea679e39583e（传输ACK最终一致，等待期间未重传/未往接收器发送命令）。原报告50事件/22876bytes/SHA256 f2ed2ccbc0e1d42cdc9e6218227fa7d32919ff3b1e4b83da3fc0f18c3b9aeea8，独立readback复核相同；同一产物读取实现列出两文件、sdk-proof.json42bytes逐字节正确。原native c5b6ec11e0844063b7ed5b20a559167c exit0/stopped，取消84ed320e20e945ceb3573266ab28cf27 exit-1/stopped；环境4cd83f34-193d-4159-b436-ba192b8f3491 DELETE/GET404。无模型turn、无真实认证、权限未改变；probe的platform_conversation仍NotRun，不能替代112正式会话API验收。
+- 原完整scripts/verify.sh verify-20真实exit0，118101bytes/SHA256 9bfd27a10ca5ae16d1af6d6c44648ad5df1524504507b40e17097a4f63b806ef，平台全包race67.818s、vet/build及原浏览器/模板/安装测试通过。未因局部绿省略完整门禁，macOS链接警告保持。
+- 1128795运行版仍fad8ade；本批角色/文件接线尚未标准升级，原完成Run保持。公共OpenSandbox Agent启动门槛未放开；Codex namespace兼容模式涉及新增权限的确认仍待答复。测试仓新Issue类型/仓库自有Harness/Pipeline和独立整链QA尚未完成；下一步维护通用仓库自有入站，待受信原生执行条件可用后从唯一新入口实测，不能复活旧Run或代产品验收。

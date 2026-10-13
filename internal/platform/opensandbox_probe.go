@@ -188,6 +188,24 @@ func probeOpenSandbox(ctx context.Context, config, image, reportPath string, run
 	if err = record("file_round_trip", map[string]any{"bytes": len(found), "same": true, "mode": "0600", "path": filepath.ToSlash(target)}); err != nil {
 		return err
 	}
+	// Use the conversation API's confined reader, rather than equating a raw
+	// SDK download with safe access to workspace files.
+	store := Store{sandbox: service}
+	artifactRun := WorkflowRun{ID: run, WorkspacePath: "/workspace", Definition: Workflow{Environment: "opensandbox"}, Environment: &RunEnvironment{ID: sandboxID, Status: "ready", ConnectionHash: service.connectionHash}}
+	files, _, artifactErr := store.sandboxArtifacts(ctx, artifactRun, "")
+	if artifactErr != nil {
+		return artifactErr
+	}
+	if len(files) != 2 {
+		return errors.New("confined workspace inventory did not contain the two probe files")
+	}
+	_, found, artifactErr = store.sandboxArtifacts(ctx, artifactRun, "sdk-proof.json")
+	if artifactErr != nil || !bytes.Equal(found, content) {
+		return errors.Join(errors.New("confined workspace file read did not preserve probe content"), artifactErr)
+	}
+	if err = record("artifact_access_confirmed", map[string]any{"file_count": len(files), "bytes": len(found), "exact_content": true, "platform_conversation": "not_run"}); err != nil {
+		return err
+	}
 	bounded, stop := context.WithTimeout(ctx, 2*time.Second)
 	result, commandErr = service.command(bounded, sandboxID, run, opensandbox.RunCommandRequest{Argv: []string{"python3", "-c", "import time; time.sleep(30)"}, Timeout: 30000}, events)
 	stop()
