@@ -139,6 +139,36 @@ class SandboxEntryTest(unittest.TestCase):
                 legacy_forward(old, self.client, 7)
         self.client.workflow_by_request.assert_not_called()
 
+    def test_legacy_configuration_cannot_clear_the_reserved_sandbox_route(self):
+        env = {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "GITHUB_ACTOR": "owner",
+            "GITHUB_TRIGGERING_ACTOR": "owner",
+            "GITHUB_EVENT_NAME": "issues",
+        }
+        event = {
+            "repository": {"full_name": "owner/repo"},
+            "sender": {"login": "owner"},
+            "issue": self.issue,
+            "action": "opened",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            old = {
+                "repository": "owner/repo",
+                "state_root": tmp,
+                "workspace_root": str(Path(tmp) / "workspace"),
+                "excluded_issue_labels": [],
+            }
+            self.assertIsNone(event_input(old, env, event))
+            self.issue["labels"].append({"name": "development"})
+            self.assertIsNone(
+                event_input({**old, "issue_label": "development"}, env, event)
+            )
+            with patch("github_entry.github", side_effect=self.github):
+                with self.assertRaisesRegex(ValueError, "another Pipeline"):
+                    legacy_forward(old, self.client, 7)
+        self.client.workflow_by_request.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

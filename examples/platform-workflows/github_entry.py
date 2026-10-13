@@ -89,6 +89,8 @@ def event_input(config, env, event):
         raise ValueError("A product Issue is required")
     labels = {x["name"] for x in issue.get("labels", [])}
     selected = config.get("issue_label")
+    if selected != "harness-opensandbox" and "harness-opensandbox" in labels:
+        return None
     if selected:
         if selected not in labels:
             return None
@@ -283,7 +285,7 @@ def forward(config, client, number, comment_id=0):
     owner = repo.split("/")[0]
     issue = github_call(f"repos/{repo}/issues/{number}")
     if {x["name"] for x in issue.get("labels", [])}.intersection(
-        config.get("excluded_issue_labels", ["harness-opensandbox"])
+        {"harness-opensandbox"}.union(config.get("excluded_issue_labels", []))
     ):
         raise ValueError(
             "Issue selects another Pipeline; the legacy entry must not start or forward it"

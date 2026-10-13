@@ -433,7 +433,7 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
  "base":"main","issue_label":"harness-opensandbox"}
 ```
 
-在 GitHub 创建 label `harness-opensandbox`；新 Issue 标题用 `【Harness验证】`，正文说明被测平台能力、具体步骤和可观察结果。opened/labeled 和原评论均校验 Owner 与真实 Issue 当前标签；旧入口排除此标签，手动 dispatch 也会经适配器拒绝错路由。更换项目标签时同时调整两个 YAML 与私有配置的 `issue_label` / 旧入口 `excluded_issue_labels`，不能只改页面上的标签名称。
+在 GitHub 创建 label `harness-opensandbox`；新 Issue 标题用 `【Harness验证】`，正文说明被测平台能力、具体步骤和可观察结果。opened/labeled 和原评论均校验 Owner 与真实 Issue 当前标签；旧入口排除此标签，手动 dispatch 也会经适配器拒绝错路由。`harness-opensandbox` 是本 Example 的保留路由，清空旧入口的 `excluded_issue_labels` 或配置其他选中标签都不会取消这一隔离；该字段可额外排除其他标签。采用其他项目标签时同时调整两个 YAML、新配置的 `issue_label` 与旧配置的额外排除项，不能只改页面上的标签名称。
 
 适配器只提交原任务、repository 和固定 repository_commit，不在 Runner 克隆 Agent 工作区，也不删除或重建已有 Run。平台 API 必须支持 `expected_environment=opensandbox`；这是匹配校验，不是权限授予。配置错误或服务未升级会在创建任务前拒绝；不同环境不回退本机。受理未知先用同一 request_id 核对原 Run，原 Issue 编辑不会自动替换已受理输入；补充用新评论，已结束 Run 不复活。
 

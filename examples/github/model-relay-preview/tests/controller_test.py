@@ -122,10 +122,10 @@ class DeploymentControllerTest(unittest.TestCase):
         fake_git = fakebin / "git"
         fake_git.write_text(
             "#!/usr/bin/env python3\n"
-            "import os, sys\n"
+            "import base64, os, sys\n"
             "if 'fetch' in sys.argv:\n"
-            "    if os.environ.get('GIT_CONFIG_VALUE_0') != "
-            "'AUTHORIZATION: basic eC1hY2Nlc3MtdG9rZW46dGVzdC10b2tlbg==':\n"
+            "    expected = 'AUTHORIZATION: basic ' + base64.b64encode(b'x-access-token:test-token').decode()\n"
+            "    if os.environ.get('GIT_CONFIG_VALUE_0') != expected:\n"
             "        sys.exit(23)\n"
             "    if 'MODEL_RELAY_REPO_TOKEN' in os.environ:\n"
             "        sys.exit(24)\n"
