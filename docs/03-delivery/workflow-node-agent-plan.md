@@ -938,3 +938,15 @@ plan10实际处理input36007后，r4-risk1收敛为14链/114步/42受控dispatch
 - 主原生Agent Execute入口尚未接通角色文件准备/产物读取，公开Agent门禁保持；真实Codex/gpt-6.1-sol推理及测试仓独立新Issue/Pipeline尚未执行。当前成果是可复用源码和标准升级/原生无凭据SDK/正式API基础设施证据，不是Model Relay产品验收。容器namespace新增权限一次无凭据诊断仍待用户明确选择；未自动增加SYS_ADMIN/AppArmor/seccomp权限，后续真实角色和测试仓入口继续按计划接通。
 
 - 正式platform-check-02原报告32355bytes/SHA488108d6fbeeaa82277c3a055dafc9355dc0dbf9025e761171eee30f7a0bda35，独立只读核对步骤1/2/4各480/485/691bytes原日志均truncated=false、实际exit0/stopped，共5步completed、同环境最终released。scope明确native_agent/product_acceptance=not_run。该回归不是新产品Issue，不重复旧Run或另建状态源；当前权威计划继续保留未完成原生/测试仓部分。
+
+### 2026-10-14 — 角色准备接续与正式Execute连接（公开Agent门禁保留）
+
+- Ruling: 复用既有conversation/native目录的私有准备日志和远端最终文件标记，而不新增任务ID/公共环境对象或一套角色数据库。准备意图先独占写入/fsync，只有全部受支持SDK上传及最终标记读回相符后记prepared；中断/未知上传只读核对最终标记，不重放上传。缺/不符标记或已有未知home拒绝替换；原thread存在而准备记录缺失时拒绝新建home。代价是缺失最终标记的部分上传需要保留现场后正式处理/释放，不替操作者盲修。
+- Run/实际sandbox/快照及初始资产摘要绑定现有c.ID；Role目录在共享/workspace之外，各角色原生状态独立，所选文件继续受32MiB/512件/64MiB边界。私有日志含配置/所选路径和初始摘要，不公开认证内容。原认证只在首次准备复制；接续不再次读取/覆盖host auth，保留sandbox里的原生认证更新。OAuth过期/多环境刷新及强杀断电仍未真实验证，不承诺自动续期。
+- 独立权限API已有三个可改项NetworkAccess/AllowElevation/ApprovalsReviewer不作为角色资产身份；执行沿原thread/turn权限字段应用，其他角色内容不静默改写。六场景SDK隔离回归：正常复用、asset上传失联、final marker上传失联后只读确认、marker缺失、角色替换、原thread缺prepare记录。原编译红保持；green01 race4.436s exit0，后续读取时已移除宿主认证仍成功，外部写次数不增加。受限SDK文件夹具不是112实际角色/账号证据。
+- 原正式Execute此前尚走宿主prepare；native-execute-route-red-02实际无远端launch/持久原生意图（旧宿主路径在/workspace失败），不冒称模型故障。Codex经启动注入已有Store查询workflow_steps既有归属；属于Run环境即按冻结连接准备角色、进入同源app-server桥接，否则保持既有本机执行。连接/归属/准备失败不回退宿主。
+- execute主路径连同原bridge正常/取消/未知launch-stop、原模型绑定/身份/Skills回归race3.408s exit0；模拟Codex回复与认证仅用于SDK/协议边界。测试数据库连接绑定调整明确是临时隔离fixture，未修改112或产品数据库/检查点/历史。cmd标准入口已注入Store；标准verify18尚在原进程运行，最终结果待核。
+- 112当前实际部署仍fad8ade、正式基础Run96b7f934…completed/released；本批新源码尚未标准升级。公开Agent门禁仍保留，须实际角色准备/模型和产物入口验证后再开放；测试仓新类型/独立Pipeline尚未启动。既有namespace新增权限诊断仍待明确选择，没有新增权限或改旧Run。
+
+- 标准verify18原进程明确exit0，118095bytes/SHA8bb73a11bf41cf0010953075867891fe870abf84f3bd4c6f4eb00a251b3c7c85、平台race66.319s；原真实浏览器/供应链/SDK/部署/权限/停止恢复/vet/build均完成，本次正式Execute和角色准备隔离回归包含在全量。macOS linker warning保留。未因此开放公开Agent门禁或升级112。
+- 已核固定release-1.1.1官方文件协议https://github.com/opensandbox-group/OpenSandbox/blob/release-1.1.1/specs/execd-api.yaml：/files/info缺路径为404，/files/download同样有404；只按404认定新home缺失，其他错误不当缺失重发。此为版本契约核对，不替112实际角色目录准备。下一项先通过无凭据受支持SDK入口实测私有角色准备/标记/接续，再补远端产物接口、真实模型及测试仓自有Harness/新类型互斥路由；新增namespace权限仍待原问题明确答复。

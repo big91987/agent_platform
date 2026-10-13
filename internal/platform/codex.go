@@ -21,6 +21,7 @@ import (
 
 type Codex struct {
 	Root, Binary, AuthHome string
+	Store                  *Store
 	Approve                func(context.Context, Conversation, Message, json.RawMessage) (string, error)
 }
 type CheckResult struct {
@@ -573,6 +574,26 @@ func nativeRecord(home, id string) bool {
 	return found
 }
 func (x *Codex) Execute(ctx context.Context, c Conversation, m Message, onEvent func([]byte) error) error {
+	if x.Store != nil {
+		run, err := x.Store.sandboxRunForConversation(c.ID)
+		if err != nil {
+			return err
+		}
+		if run != nil {
+			if err = x.Store.nativeRunReady(run.ID); err != nil {
+				return err
+			}
+			client, err := x.Store.sandboxFor(*run)
+			if err != nil {
+				return err
+			}
+			home, config, skills, env, err := x.prepareSandboxRole(ctx, client, *run, c)
+			if err != nil {
+				return err
+			}
+			return x.executeSandboxAppServer(ctx, x.Store, client, *run, c, m, home, config, env, skills, onEvent)
+		}
+	}
 	workspace, home := x.paths(c.ID)
 	if c.ThreadID != "" && !nativeRecord(home, c.ThreadID) {
 		return errors.New("native session record is missing; no fresh session was created")

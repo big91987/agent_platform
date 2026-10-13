@@ -7,7 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,11 +22,13 @@ import (
 // The native service is isolated here. This verifies platform ownership and
 // protocol integration, not authentication/model behavior on the actual host.
 func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
-	for _, mode := range []string{"complete", "cancel", "lost launch", "lost stop", "event fail lost stop"} {
+	for _, mode := range []string{"complete", "execute", "cancel", "lost launch", "lost stop", "event fail lost stop"} {
 		t.Run(mode, func(t *testing.T) {
 			store := testStore(t)
 			caller, run, c, m := nativeProcessFixture(t, store)
 			var base, capability string
+			var filesMu sync.Mutex
+			files := map[string][]byte{}
 			var launches, turns, interrupts atomic.Int32
 			turnStarted := make(chan struct{})
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,11 +37,29 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 					json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: run.Environment.ID, Metadata: map[string]string{"agent-platform-run": run.ID}, Status: opensandbox.SandboxStatus{State: opensandbox.StateRunning}})
 				case strings.Contains(r.URL.Path, "/endpoints/"):
 					json.NewEncoder(w).Encode(opensandbox.Endpoint{Endpoint: base})
+				case r.URL.Path == "/files/info":
+					w.WriteHeader(404)
+				case r.URL.Path == "/directories":
+					w.WriteHeader(200)
+				case r.URL.Path == "/files/download":
+					filesMu.Lock()
+					raw, ok := files[r.URL.Query().Get("path")]
+					filesMu.Unlock()
+					if !ok {
+						w.WriteHeader(404)
+						return
+					}
+					w.Write(raw)
 				case r.URL.Path == "/files/upload":
 					if err := r.ParseMultipartForm(1 << 20); err != nil {
 						t.Error(err)
 						return
 					}
+					defer r.MultipartForm.RemoveAll()
+					metadata, _ := r.MultipartForm.File["metadata"][0].Open()
+					var info opensandbox.FileMetadata
+					json.NewDecoder(metadata).Decode(&info)
+					metadata.Close()
 					for _, file := range r.MultipartForm.File["file"] {
 						stream, err := file.Open()
 						if err != nil {
@@ -45,6 +68,9 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 						}
 						raw, _ := io.ReadAll(stream)
 						stream.Close()
+						filesMu.Lock()
+						files[info.Path] = raw
+						filesMu.Unlock()
 						capability = string(raw)
 					}
 					w.WriteHeader(200)
@@ -146,7 +172,19 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 			// This test's owned endpoint is the native service above; real calls
 			// obtain this same frozen connection through Store.sandboxFor.
 			run.Environment.ConnectionHash = client.connectionHash
-			executor := Codex{AuthHome: t.TempDir()}
+			executor := Codex{Root: store.Dir, AuthHome: t.TempDir()}
+			if mode == "execute" {
+				executor.Store = store
+				store.sandbox = client
+				// Fixture-only connection binding, not a production recovery path.
+				if _, err := store.DB.Exec(`UPDATE workflow_run_environments SET connection_hash=? WHERE run_id=?`, client.connectionHash, run.ID); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(executor.AuthHome, "auth.json"), []byte(`{"tokens":{"access_token":"protocol-fixture-only"}}`), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			if mode == "cancel" {
@@ -159,13 +197,18 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 				}()
 			}
 			var events strings.Builder
-			err = executor.executeSandboxAppServer(ctx, store, client, run, c, m, "/var/lib/agent-platform/roles/"+c.ID, []byte("model='gpt-6.1-sol'\n"), map[string]string{}, []string{}, func(raw []byte) error {
+			onEvent := func(raw []byte) error {
 				if mode == "event fail lost stop" && strings.Contains(string(raw), "native.launch_output") {
 					return errors.New("event persistence unavailable")
 				}
 				events.Write(raw)
 				return store.RecordEvent(c.ID, m.ID, raw)
-			})
+			}
+			if mode == "execute" {
+				err = executor.Execute(ctx, c, m, onEvent)
+			} else {
+				err = executor.executeSandboxAppServer(ctx, store, client, run, c, m, "/var/lib/agent-platform/roles/"+c.ID, []byte("model='gpt-6.1-sol'\n"), map[string]string{}, []string{}, onEvent)
+			}
 			actual, readErr := store.WorkflowRun(caller, run.ID)
 			if readErr != nil {
 				t.Fatal(readErr)
@@ -178,7 +221,7 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 				if !errors.Is(err, context.Canceled) || process.Status != "stopped" || interrupts.Load() != 1 || turns.Load() != 1 {
 					t.Fatal("cancellation lost bounded owned cleanup", process, err)
 				}
-			} else if mode == "complete" {
+			} else if mode == "complete" || mode == "execute" {
 				if err != nil || process.Status != "stopped" || process.ID != "native-owned" || turns.Load() != 1 || interrupts.Load() != 1 || !strings.Contains(events.String(), "Native role result") {
 					t.Fatal("owned native transport did not complete", process, err, turns.Load(), interrupts.Load(), events.String())
 				}

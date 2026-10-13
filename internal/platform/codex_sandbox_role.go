@@ -125,13 +125,18 @@ func (x *Codex) sandboxRoleInputs(c Conversation) ([]sandboxRoleFile, []string, 
 	if len(files) > 512 || total > 64*1024*1024 {
 		return nil, nil, nil, errors.New("selected role inputs exceed transfer limits")
 	}
+	env, err := sandboxRoleEnv(a)
+	return files, expected, env, err
+}
+
+func sandboxRoleEnv(a Agent) (map[string]string, error) {
 	env := map[string]string{}
 	for name, value := range a.Env {
 		if value == nil {
-			return nil, nil, nil, errors.New("sandbox role variable removal is not configured; choose explicit values")
+			return nil, errors.New("sandbox role variable removal is not configured; choose explicit values")
 		}
 		if name == "HOME" || strings.HasPrefix(name, "CODEX_") || strings.HasPrefix(name, "AGENT_PLATFORM_") || !envName.MatchString(name) || strings.ContainsRune(*value, 0) || len(*value) > 64000 {
-			return nil, nil, nil, errors.New("sandbox role contains a reserved or invalid variable")
+			return nil, errors.New("sandbox role contains a reserved or invalid variable")
 		}
 		env[name] = *value
 	}
@@ -145,11 +150,11 @@ func (x *Codex) sandboxRoleInputs(c Conversation) ([]sandboxRoleFile, []string, 
 		}
 		value, exists := os.LookupEnv(name)
 		if !exists {
-			return nil, nil, nil, errors.New("selected HTTP MCP credential reference is unavailable")
+			return nil, errors.New("selected HTTP MCP credential reference is unavailable")
 		}
 		env[name] = value
 	}
-	return files, expected, env, nil
+	return env, nil
 }
 
 func (x *Codex) sandboxRoleAuth() ([]byte, error) {
