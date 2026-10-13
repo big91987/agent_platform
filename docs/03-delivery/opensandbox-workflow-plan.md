@@ -14,9 +14,9 @@
 
 | 部分 | 当前证据 | 仍缺什么 |
 |---|---|---|
-| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过，任务/前序结果引用源码及浏览器通过 | 本批112升级、原生Agent及测试仓真实Pipeline |
+| 执行节点 | 112正式API同Run Python/TypeScript/Go项目命令、完整输入/共享文件、去重、人工确认及环境释放已过；MCP隔离HTTP/实际页面回归通过，任务/前序结果引用源码及浏览器通过，ae4a2e9已标准部署 | 引用112实操、原生Agent及测试仓真实Pipeline |
 | 112 OpenSandbox | 1.1.1/8095；SDK文件/取消、正式角色home的同进程实际Skill范围/停止/删除404通过；8795标准升级后正式基础Run五步完成并释放，实际Chromium页面通过 | 原生命令namespace权限待答复、模型角色会话/恢复、服务登出重启 |
-| 四类画布与112平台8795 | 86add21标准Linux/CGO升级exit0，Mac/112 health同SHA，旧Run/配置/凭据保持；check-03正式五步完成并释放。早期1440画布/390Run截图证据保留 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
+| 四类画布与112平台8795 | ae4a2e9标准Linux/CGO升级exit0，Mac/112 health及网页源码同SHA，旧Run/配置/凭据保持；check-04正式五步完成并释放。早期1440画布/390Run截图证据保留 | 原生远程角色会话及模板真实Pipeline；用户服务logout/reboot |
 | 测试仓独立入口 | 仓库自有Harness标准导出/安装候选、入站回归已过；测试仓草稿PR38已标准同步bb698c9，head acd96f7与140件源库存一致，当前GitGuardian success；真实新入口尚未启用 | 项目适配/安装、新Issue及真实原生整链 |
 
 112 基础设施探针 ID `a2548a85-d279-4b82-93e2-4991d11feaa8`，已删除；报告6事件、SHA256 `671c0e833897ad2882a4f5951b323469652a46a4632465830f93b9bb776cfbe5`。当次 execd 镜像摘要 `6cf7dba2f21f0b536e100563d841ac58a9f31c2b0a081b7ac76796a24d6f47e2`，Python镜像摘要 `a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1`。服务目录0700/配置0600已实测。此为基础设施回归，不是产品验收。
@@ -66,7 +66,7 @@ Interfaces: Run 关联实际 sandbox ID；受信环境配置声明服务与镜�
 Files: `web/workflow-model.js`、`web/workflow-panel.js`、`web/workflows.js`、`web/workflow-runs.js`、现有 MCP 管理页及对应测试。
 
 - [x] 新建流程只呈现 Agent/执行/人工确认/结束；执行按 code/command/mcp 显示必要字段。（真实保存/重载与112画布截图已验；后续Agent真实整链另列。）
-- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批112升级及真实新Pipeline仍待验证。）
+- [x] MCP 工具发现和 Schema 输入、上游参数/结果引用；短代码直接编辑，复杂逻辑引用项目脚本。（维护源/官方SDK HTTP/实际浏览器通过；本批已112标准升级；引用112实操及真实新Pipeline仍待验证。）
 - [ ] Agent 配置基础/高级分组，角色与任务分离；人工确认与权限审批区分；固定测试不能被人审跳过开关跳过。
 - [ ] 浏览器实际保存重载、执行结果、失败/停止恢复及窄屏可用验证。
 
@@ -410,3 +410,10 @@ Files: `deploy/opensandbox/`、`examples/platform-workflows/` 入站/安装工�
 - UI回归red-01实际exit1（3982bytes/SHA17a9e04ee2756329e5cebccb53b3ffa3809b2da815668b72f402a70e835328a2），green-01实际exit0（5065bytes/SHAa3aa7a02ef9e58f50a5b31cdf759ee818ec0247459b86ecdd53d022b854e9a0a）。原实际Chromium测试新增引用保存重载→平台API启动→外部MCP收到input→原始回执展示→释放环境；390截图52036bytes/SHA6222d2a060b4be3a6bd459a03385f9c1d75683b48afcc9bdbfa9bda5ccef85a5已查看。此为隔离平台/真实HTTP工具服务回归，OpenSandbox服务为夹具，不是112原生Agent或产品QA。
 - 标准verify25实际exit0：119764bytes/SHA28ff5a6d9e6854d854bea47bb1b92c5a2695b057b03c20375e17f5cb0f9066d5；Go race实际68.656s，原114模板、供应链/SDK/部署/浏览器、go vet及两binary构建通过，macOS linker警告保留。完整日志及截图在ignored存储，未补造历史回执。整个分支最终独立复审尚未进行。
 - 实时核对：112 /api/health200仍86add21；PR38仍draft/head acd96f752fa5dab0e009d597a12babe71d7bb765，当前GitGuardian success/main未改/Actions为空。新参数引用源码尚未112标准升级或真实新Pipeline验证。namespace额外权限诊断仍无明确答复，公共Agent启动门槛保留；真实模型、新Issue/Pipeline及独立整链QA均未完成。下一步标准升级本批源码、112正式接口复验，然后继续原生条件与测试仓独立入口，不重复创建或恢复旧任务。
+
+
+### 2026-10-14 — 参数引用版本112标准升级与正式执行复验
+
+- 已提交维护源ae4a2e98be436636ab3d2ca8c9cc0a576fe4b54a。固定Git源码归档4352000bytes/SHA824915fa26d176b1b44bf352227b6efa981a3e7c72610198df7af90ab879d505，112完整传输ACK一致；标准Linux build-06、install-06实际exit0，仅升级8795实例。实际安装binary19383824bytes/SHA8008686bfdaaef8dfd9fdbbb5bf38b63813c5370df5bead336df733d7c73f256；远端独立只读readback及Mac /api/health均同ae4a2e9，旧Run/私有配置/凭据逐字节或逐值保持，原凭据登录成功。Mac实际服务workflows.js（54468bytes/SHA006decb3f2370368b277c55d540807a18b7b1f2be669498fe329e8f1c3cd1107）及workflow-model.js（16300bytes/SHAbeea0711ad691f5bd372104a0dd68320a166165ad19281142784627959ade869）逐字节同已验源码；不把安装成功当新增MCP引用的112执行通过。
+- 标准check.py从新源码、真实平台API启动唯一基础设施Workflow63baf06928b62b97da17e8a5838d870c/Run39d8defcee76a31c1a6dee21644d9650，实际exit0。同环境4260dd97-bdab-4a02-9585-95e5cb361eb0完成Python/TS/Owner确认/Go项目命令共5步，重复入口原Run、最终released。原报告32345bytes/SHAd8753215494466a8d9c950b413d213da3573d5eb332472c43a6a78548dbabf73，独立readback核实际步骤1/2/4 exit0/stopped、日志480/485/691bytes/truncated=false。此轮验证共享输入契约变动后的真实沙箱基础路径；没有原生Agent、MCP引用112实操或产品QA，也没有修改旧Run/账号/模型权限。正式入口：http://10.1.20.112:8795/workflow-runs/39d8defcee76a31c1a6dee21644d9650 。
+- 当前剩余：公共原生Agent门槛仍保留，namespace新增权限诊断待用户选择；模型turn/原生角色会话及恢复、新测试仓Issue/Pipeline、整链独立QA和整个分支最终评审未完成。PR38仍草稿，没有重复Issue/PR或擅自启用新类型。安装/readback/标准运行均为Harness证据，不替Pipeline执行产品验收。
