@@ -2993,7 +2993,7 @@ Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=
 
 Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断不是Pass。Pipeline原写三个测试设施源码及两份研发说明按manifest原字节转存测试仓独立候选[草稿PR43](https://github.com/big91987/model-relay/pull/43)，head `1d581652736fbac4e8862b70367181c8a9f2f8b2`，6文件远端Git blob逐字节一致。此为未验收的候选接续材料，不合main、不算Pipeline最终PR；两份旧报告引用的私有harness-output未全部公开，接续说明明确限制。
 
-既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6已归因并通过正式输入进入有界累计预算修复，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
+既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7完整门禁执行中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
 
 上次仅回读安装报告的自动审批因stream disconnected未执行；重新提交同一只读动作审批后成功，并非绕过拒绝。自动化配置沿已有状态保持，本轮未重建定时任务。
 
@@ -3013,3 +3013,18 @@ Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断
 development6先提出24分钟改动，但pending User Input 3473使handoff被正式拒绝；随后同会话处理纠正，全部验证器修改撤回、原12分钟与HEAD字节一致，并wait_for_input(blocked)。这是待输入优先及同会话接续的实际证据；旧提案定向绿不算当前候选。最终只读cgroup采样2CPU/8Gi符合标准，memory.events全0；累计节流101.809s没有执行5起点，不能作为该轮差值或唯一原因。完整纠正报告10258bytes/SHA `1e301257b5df1a52d27918fdbbfce08fa6c7abc2af7704907e56cb944ddabef9`保持。
 
 维护者核对后明确替代“先归因、暂不增时”的临时限制：由原Pipeline Agent修项目累计门禁预算一次、上限24分钟，外层1800秒及全部用例/断言/单步期限/冷隔离不改，补真实短预算取消清理回归、实际预算回执及可用资源起止证据；不是改业务性能SLA或盲目增资源。若仍总超时必须blocked，不继续加时/重跑求绿。原resume用于stopped/failed，waiting调用收到409且无状态变化；随后按正确正式messages入口request `issue44:seq6:calibrated-total-budget-once`受理message4070/sameCID4f30dad15a28ad1e5bf1607dabdf5797。受理不等完成；等待新源码/完整固定测试和独立QA。Issue44正文已同步真实卡点、归因、决策与待交付项，M1未完成。
+
+
+16:25 UTC补充只读复审：新资源采样草案无条件依赖/proc/self/cgroup并对不存在报错，会破坏原macOS固定make verify入口。通过同一development6正式User Input request `issue44:seq6:resource-observability-portability`/message4116交Pipeline修兼容性：不支持指标明确unsupported、不编造数据；Linux声明可用但读取/解析失败保留失败，独立QA复核。Builder没有代写或代跑项目。当前仍在研发修订，定向race/vet绿为Agent自报，不能当新全量绿。
+
+工作区全量artifact listing返回“unavailable, changed during reading, or exceeds size limit”；精确文件API可读取上述完整日志。源reader有5000扫描条目上限并拒绝符号链接，当前尚未确定是条目限额还是并发变化，不把猜测当根因。M1须使用具体同版文件并核GitHub远端交付；列表呈现问题列为待诊断平台缺口，不放宽文件访问边界。
+
+
+17:03 UTC续记：development6在待输入保护下再次被拒绝提前handoff，原生同会话自然接续4116；实际确认原deploy-local.yml/macOS ARM64完整make verify要求，修非Linux unsupported/无虚构指标和差值，Linux读取解析失败仍fatal。原生contextCompaction后同工作区核对清单继续，未新建会话。新定向race/vet及Darwin ARM64编译为Agent回执，不冒充Darwin实机或全量。最终5份源码+实施记录经维护者文件API读取并逐SHA与129项清单匹配，清单d8798a76f04c61ff4bb740dbd0981ee98c77d3a5effa22a0356cbb5e9f81be4e；161源码摘要e637c8f9a92859a8766e9c6e23e2c08f53d9b40d96b5c0a247c455e7e19bac9b。先前中途main_test短SHA与归档不同属后续修改，不倒写为同版。
+
+正式handoff已被接受，tests7开始执行原make verify，内部24分钟/外层1800秒；完整结果未出。首轮缺章保留，仍需独立QA实际revise/研发补齐/再次固定测试/QA复核/正式确认/报告/真实草稿PR，M1未完成。Issue44已实际核对bot账号回写三轮提案/撤回/纠正与待输入拒绝，未只停留在平台本地消息。
+
+
+17:10 UTC：当前兼容候选清单129项中，127个正式可读文件已全部经文件API重新读取并逐SHA匹配，共2690893bytes；清单SHA d8798a76…1be4e。`.github/workflows/deploy-local.yml`首个读取返回403，AGENTS.md同属明示不可见策略，后续不绕行，两项标为未由该API核验，不称129项全读。记录保存在ignored evidence receipt，最终Git提交对象仍需另核。tests7仍running，没有completed回执。
+
+后续减法评估保留本轮成本：同一development6经历归因纠正、预算授权、兼容修复输入及原生contextCompaction，归档扩大到129项；必须将实际等待/返工/材料组织成本与隔离及正确交接收益分别评估，M1即使完成也不能据此声称工程效率提升已经证明。先完成实链，不在运行中新增通用编排层。
