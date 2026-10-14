@@ -1,6 +1,6 @@
 # 节点独立配置实施计划
 
-隔离改造当前状态（2026-10-14 19:18 UTC）：112:8795运行afebd27/当前图revision3。旧Issue44已cancelled17/released：完整tests12、独立QA实际返工复核、确认与报告通过，但publish模板误报失败，无Pipeline PR。唯一源bc43314已标准修复且PR46合main6d2552d3。原字节材料草稿PR47/head30b4e13c核163源码991c79…及94远端对象一致，未合并；新Issue48已走正式GitHub入口，Actions38621926669 queued/38621926773 pending，唯一Runner被自动prepare38621212545占用，尚无新Run。不重复派发，M1未完成。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 19:22 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。下文旧状态按历史保留。
 
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
@@ -1367,3 +1367,9 @@ report16已生成90项报告清单并保持235审批清单；publish17真实exit
 ### 2026-10-14 19:18 UTC：标准模板修复接入新Issue48，原生整链待重新验证
 
 PR47是Builder经正式文件API原字节转存的接续材料，不是Pipeline最终PR；94对象已Git tree逐SHA核对，163源码库存991c79ca919b3d0ccf148c066c3b24d993090fcb78ab864c0e4637cfff8040ba全Git blob独立重算，缺章快照/QA10拒绝与原文件匹配。PR43按被47继承关闭未合并；PR47保持草稿。标准save仅将本地Runner及112可信entry base由issue42候选改为codex/issue44-reviewed-candidate，其他配置/凭据保持。新Issue48/id5854043575明确替代44、新文档首轮缺章/本轮重验、角色职责和最多100具体发布文件；旧材料是已提交基线，不要求重复塞进新files但正文覆盖相对main实际变化。44关闭not_planned不标通过。新opened/labeled Actions排队同稳定request，尚无API Run，不代起任务；唯一Runner online/busy，真实占用为main6d2552d3自动prepare38621212545，未人为取消或触碰旧服务。
+
+
+19:22 UTC新入口：原main自动prepare38621212545 completed/success后释放唯一Runner，未人为中断或另开Runner；两个Issue48事件实际success，经by-request github:big91987/model-relay:issue:5854043575只关联Run2b6a366cc7b3d48870e1b887757f229f。环境f7ab…/ready19:20:32Z/原镜像8b6ea…/14400s/8192MiB，新图revision3、max40，三Agent仍codex/gpt-6.1-sol。prepare1尚执行，受理不算准备或整链完成。文档db849ce首次直连push超时128，远端只读仍bc43314，进程已结束后才通过既有代理有界push并读回db849ce成功；未盲重复未知写。
+
+
+Issue48 prepare1实际exit0/2236bytes/SHA7eb647dd67ca15dfdfd6fd4800d4e90e80dd036deb86142b86bd4446e0ec8336，正式output EOF/truncatedfalse，进入development2。维护者尝试正式file API读取.harness/SOURCE.json被403拒绝，未绕过或改权限；因此尚不能声称通过该API读回容器隐藏目录。候选Git对象和准备固定commit已核，Agent正常工作区中的原生核验及固定测试仍待。
