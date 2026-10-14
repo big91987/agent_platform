@@ -70,3 +70,23 @@ python3 deploy/platform/check.py \
 通过stdin传入url/workflow/run和临时password，禁止把该输入写入日志、命令参数或
 截图。输出含原始截图base64，须由受信调用者存入私有文件，只公开检查范围及摘要。
 浏览器检查与命令执行、原生Agent及产品QA分别报告。
+
+
+### 原生 Agent 的出网代理
+
+任务环境需要代理访问模型服务时，在对应 Agent 节点的“高级：原生配置、Hook 与环境”中配置环境 JSON。例如：
+
+```json
+{
+  "http_proxy": "http://<proxy-host>:<port>",
+  "https_proxy": "http://<proxy-host>:<port>",
+  "HTTP_PROXY": "http://<proxy-host>:<port>",
+  "HTTPS_PROXY": "http://<proxy-host>:<port>",
+  "no_proxy": "<platform-host>,127.0.0.1,localhost",
+  "NO_PROXY": "<platform-host>,127.0.0.1,localhost"
+}
+```
+
+使用已有受信代理，内部平台地址应直连，以便原生工作流工具返回平台。该配置只传入所选 Agent 的原生进程及其子命令，不配置所有执行节点或改宿主全局网络。保存后的配置作用于新 Run；已经开始的 Run 保持原定义，不通过改快照补环境。代理带私有认证时使用受信凭据配置，不将密码放在 Issue、任务参数或公开报告。
+
+无凭据 HTTPS 收到响应只能证明连接可达；仍须通过实际模型轮次、工具调用、接续和停止回执核验完整链路。112 的同角色澄清接续验证结果见现有 opensandbox-workflow-plan.md，不能当作任意模型、供应商或产品验收通过。
