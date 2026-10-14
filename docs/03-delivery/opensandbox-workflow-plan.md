@@ -16,7 +16,7 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 112标准部署3261b34、源完整verify35/项目122回归通过；PR38已合003b686，专用caller/Runner配置/标签就绪；Issue39首Run b0dfee…已真实准备/原生研发，但历史回归因浅fetch缺祖先失败；正式停止8且产物归档。通用完整历史修复已红绿/整套通过，待标准升级新图并明确替代验证任务；保留39原失败，不重复旧图 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 112标准部署3261b34、源完整verify35/项目122回归通过；PR38已合003b686，专用caller/Runner配置/标签就绪；Issue39首Run b0dfee…已真实准备/原生研发，但历史回归因浅fetch缺祖先失败；正式停止8且产物归档。通用完整历史修复已红绿/整套通过，完整历史准备已标准升级2db4c4c/图revision2；PR41合main5ff456c，Issue42明确接续原目标，39取消释放/替代关闭并保留失败，42原入站正在排队，不重复请求 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
@@ -578,3 +578,11 @@ Ruling：旧Run的inline准备代码和图已冻结，不能用平台新源码�
 旧39原20件Agent产物通过正式SDK逐一保留2055158bytes；三轮原state均gate_exit2/Source_before=after6e359667…不变，cleanup保持其原“attempted; candidate_removed”措辞，不补写强杀证明。源command logs seq1 2636/SHA08a8eb86…，seq3 665584/8bafdb20…，seq5 665461/26a37053…，seq7 665542/7a41647a…全部EOF/truncated=false；inner runner与outer SSE帧长度另列不混。文件列表API400泛化unavailable/changed/limit，单一声明文件read_file通过，同文档SHA775923a4…与native8一致；此API列表范围/错误分类缺口保留，不能声称目录浏览全部通过。按声明路径精确读取是受支持只读接口，无秘密或临时写入，旧候选与流程状态不变。
 
 完整源full38actual exit0/123506bytes/SHAf546ebfbef8ca84a45727811ff2b5d0ff722b768a1ab3d34b50f085abbb5dbc6，125模板/浏览器/SDK/供应链/部署/vet/build通过，Go不变且race有效缓存。新模板默认固定HEAD加完整祖先历史，同已归属源重入仍不fetch/checkout或覆盖文件；研发SOP补实质修复/新证据才返tests，环境/凭据/冻结步骤缺入口就blocked。待固定提交/项目标准导出/Workflow正式升级；M1尚未通过，无Pipeline生成PR。
+
+### 2026-10-14 — 完整历史准备标准升级与明确替代验证
+
+平台/模板固定源2db4c4c68a05a1bf7b81297ea4111bb059250bac已标准build/install13 exit0，health同revision，binary19419592bytes/SHA96554205d7135ac94b7c63c9ed1a723223c5e34d9a637b2d0a8470f0f16c235f，原账号/配置/私有runtime和CI、三个旧探针Run及已取消释放39逐值保持。当前Workflow83f08f81f7040fcd0c12e6ff4e2acd2d经原Installation清单/在途检查显式upgrade变revision2；首缺upgrade参数的标准拒绝保留、未写Workflow，随后13b正式升级成功。未给在途Run改图。TTL/镜像/权限未改变，资源和环境寿命仍有界。
+
+项目125模板回归通过，标准146源件及4个白名单旧失败证据文件应用PR41/head e761d045871ee632abcc803dc7c244098597e417；10文件范围与全部Git库存原字节核对、GitGuardian success后精确合main5ff456cb6de0ce8d45bb2faac4c964cda9efcbf0。两原AgentMarkdown原样、派生summary明确标注白名单而非改写回执；旧39原固定测试和QA未完成，材料发布不代表旧publish节点通过。
+
+取消替代规则下新Issue42/id5847349237/【Harness验证】完整历史准备后验证工作区共享、QA返工与草稿PR已正式创建，body SHA7fba80cce141389a4b9c7128928e6ed008dbf7a5614a71f58a071bad58fa4a21；明确替代39，同原目标/故障注入，当前图revision2。39补正式替代评论后关闭state_reason=not_planned，不作Done/产品修复；旧Run取消释放8步、原回执和原生历史保留。新的实际Actions/Run以正式API更新；M1仍需新Run真正完整冷make verify、独立QA/返工复核、人工确认及Pipeline生成的同版PR。平台源仅开发分支，不创建源PR/合main。
