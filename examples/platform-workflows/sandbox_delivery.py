@@ -35,7 +35,8 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             "agent": {
                 "executor": "codex",
                 "model": "gpt-6.1-sol",
-                "instructions": instructions,
+                "instructions": instructions
+                + "证据归档须与项目构建输入分开：源码快照使用文本或补丁等不参与编译的形式，保留原文件名映射和字节摘要；不要把可编译源码副本放入会被构建器递归发现的目录。保留原失败证据，修正归档位置或扩展名时记录映射，不修改原源码字节或排除正常测试。交接artifacts和报告files列具体文件，不用目录代替文件清单。",
                 "sandbox": "workspace-write",
                 "network_access": True,
                 "allow_elevation": False,

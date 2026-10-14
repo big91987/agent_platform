@@ -16,7 +16,7 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a/模板2db4c4c/图revision2；4h/8Gi正式基础探针通过；Issue42取消释放，原候选PR43未合并；Issue44唯一Run744c4329… prepare1完成、development2 running。仍待完整固定门禁、QA实际返工复核、确认及Pipeline生成同版PR，M1未通过 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a/模板2db4c4c/图revision2；4h/8Gi正式基础探针通过；Issue42取消释放，原候选PR43未合并；Issue44唯一Run744c4329… prepare1完成、tests3归档副本误入编译失败后development4返工中。仍待完整固定门禁、QA实际返工复核、确认及Pipeline生成同版PR，M1未通过 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
@@ -633,6 +633,8 @@ Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=
 
 Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断不是Pass。Pipeline原写三个测试设施源码及两份研发说明按manifest原字节转存测试仓独立候选[草稿PR43](https://github.com/big91987/model-relay/pull/43)，head `1d581652736fbac4e8862b70367181c8a9f2f8b2`，6文件远端Git blob逐字节一致。此为未验收的候选接续材料，不合main、不算Pipeline最终PR；两份旧报告引用的私有harness-output未全部公开，接续说明明确限制。
 
-既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、development2 running，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
+既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4返工中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
 
 上次仅回读安装报告的自动审批因stream disconnected未执行；重新提交同一只读动作审批后成功，并非绕过拒绝。自动化配置沿已有状态保持，本轮未重建定时任务。
+
+本轮续记15:36 UTC：Issue44 tests3原固定make verify真实exit2，711632bytes/SHA256 `57656ede7f32969ba6e8e62578bbec244989a9b5a507ee1a0da77f1a76fa178f`，正式output分页至EOF/truncated=false。原历史回归已越过；新失败为本轮研发把归档`.go`副本置于docs/first-round/candidate，`go vet ./...`递归扫描成不完整包，报undefined:fixture。源158件a6f4ec9a…前后不变，非产品断言失败。自动failed→development4已读原回执并自行归因修归档；Builder未代改项目。首轮清单11项按文件API逐SHA核对（目录读取400不代表文件丢失）。模板维护源补通用产物约定：证据副本不参与构建、保留原路径/字节摘要、handoff/files列具体文件；现有生成器隔离权限/交接回归exit0，未新增镜像措辞测试。模板项目副本和安装图升级尚待安全阶段，当前Run仍冻结revision2，不冒称已获得新模板指令。
