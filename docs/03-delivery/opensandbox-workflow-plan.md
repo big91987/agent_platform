@@ -16,12 +16,12 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a/模板2db4c4c/图revision2；4h/8Gi正式基础探针通过；Issue42取消释放，原候选PR43未合并；Issue44唯一Run744c4329… prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7完整门禁执行中。仍待完整固定门禁、QA实际返工复核、确认及Pipeline生成同版PR，M1未通过 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a；测试仓main模板15bc98b已合、当前Run冻结旧2db4c4c/图revision2，安装图升级待安全点；4h/8Gi正式基础探针通过；Issue42取消释放，原候选PR43未合并；Issue44唯一Run744c4329… prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7非超时SSE旅程失败，自动development8归因中。仍待完整固定门禁、QA实际返工复核、确认及Pipeline生成同版PR，M1未通过 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
 
-第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台f409c0a，项目模板副本2db4c4c；本次资源配置不改变模板源件，版本分别记录。
+第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台f409c0a；项目main模板已通过PR45更新至15bc98b，但当前Run沿候选分支使用旧2db4c4c/冻结图revision2。标准安装图升级待安全点，不能把项目副本合并冒称在途Run已升级。
 
 ## 早期实施状态快照（2026-10-14，历史保留）
 
@@ -633,7 +633,7 @@ Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=
 
 Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断不是Pass。Pipeline原写三个测试设施源码及两份研发说明按manifest原字节转存测试仓独立候选[草稿PR43](https://github.com/big91987/model-relay/pull/43)，head `1d581652736fbac4e8862b70367181c8a9f2f8b2`，6文件远端Git blob逐字节一致。此为未验收的候选接续材料，不合main、不算Pipeline最终PR；两份旧报告引用的私有harness-output未全部公开，接续说明明确限制。
 
-既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7完整门禁执行中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
+既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7非超时SSE旅程失败，自动development8归因中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
 
 上次仅回读安装报告的自动审批因stream disconnected未执行；重新提交同一只读动作审批后成功，并非绕过拒绝。自动化配置沿已有状态保持，本轮未重建定时任务。
 
@@ -665,6 +665,17 @@ development6先提出24分钟改动，但pending User Input 3473使handoff被正
 正式handoff已被接受，tests7开始执行原make verify，内部24分钟/外层1800秒；完整结果未出。首轮缺章保留，仍需独立QA实际revise/研发补齐/再次固定测试/QA复核/正式确认/报告/真实草稿PR，M1未完成。Issue44已实际核对bot账号回写三轮提案/撤回/纠正与待输入拒绝，未只停留在平台本地消息。
 
 
-17:10 UTC：当前兼容候选清单129项中，127个正式可读文件已全部经文件API重新读取并逐SHA匹配，共2690893bytes；清单SHA d8798a76…1be4e。`.github/workflows/deploy-local.yml`首个读取返回403，AGENTS.md同属明示不可见策略，后续不绕行，两项标为未由该API核验，不称129项全读。记录保存在ignored evidence receipt，最终Git提交对象仍需另核。tests7仍running，没有completed回执。
+17:08 UTC：当前兼容候选清单129项中，127个正式可读文件已全部经文件API重新读取并逐SHA匹配，共2690893bytes；清单SHA d8798a76…1be4e。`.github/workflows/deploy-local.yml`首个读取返回403，AGENTS.md同属明示不可见策略，后续不绕行，两项标为未由该API核验，不称129项全读。记录保存在ignored evidence receipt，最终Git提交对象仍需另核。tests7仍running，没有completed回执。
 
 后续减法评估保留本轮成本：同一development6经历归因纠正、预算授权、兼容修复输入及原生contextCompaction，归档扩大到129项；必须将实际等待/返工/材料组织成本与隔离及正确交接收益分别评估，M1即使完成也不能据此声称工程效率提升已经证明。先完成实链，不在运行中新增通用编排层。
+
+
+### 2026-10-14 17:18 UTC：tests7非超时失败，自动返development8
+
+Issue44/Run744c4329…正式tests7退出2，外层1170997bytes/SHA `0c2dfc2cf2c31c948459bc8e729a4b2ffbc1e50ce92735570c6b13c20c85a9fd`完整分页EOF/truncated=false。唯一主attempt `20261014T170210Z-2990963391`原项目log1146109bytes/SHA `efd55d375788bd9620b35af4e370b5cd498a74325df22427839d648a383f40a9`与state经正式API完整读取匹配；不可混包级回归的嵌套短预算fixture。
+
+实际主gate配置1440000ms、有效1439999ms，执行847083ms/exit2/cancelled=false；总量17:02:10Z–17:16:33Z，预算修改已实证生效，不是新超时或Owner stop。161件e637c8f9…源及副本前后相同；Linux available前后同cgroup/2CPU/8Gi，OOM各项差值0，usage1100252962us/throttled56440223us是共享cgroup采样窗口差值、非单进程/唯一性能归因。gate及各aux自有组absent、candidate removed；不扩称历史/组外进程。
+
+migration15.360s/legacy-ui195.875s/routing224.273s/console31.165s均ok；full-console65.144s失败。1280 J01–07、visual-current-period、management-summary、console-visual十页已过，first-self-hosted在self-hosted-sse/proxy-call处failed/error_kind other/HTTP200，具体原错误尚不明，不能把HTTP200当SSE或用量费用已通过，也不把diagnostic secret_present布尔直接归因为泄漏。完整三视口/最终成功dependency probe/独立QA尚未完成。
+
+正式failed→development8/CID97f586f6e857f16adeb9b00e8ba8bb86已原生承接读失败，不重复Run/恢复或重新增时。Issue44正文已同步非超时失败及最小归因下一步。预算及兼容修复不因此冒称整套验收；M1仍未完成，等待Pipeline实际定位/必要最小修复/固定门禁/QA缺章返工复核/确认/报告PR。
