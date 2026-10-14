@@ -1,6 +1,6 @@
 # 节点独立配置实施计划
 
-隔离改造当前状态（2026-10-14 18:40 UTC）：112:8795运行f409c0a；模板15bc98b已标准应用当前图revision3，Run744c4329冻结revision2不变。Issue44 tests12完整冷门禁exit0，QA10实际缺章拒绝→development11补齐→QA13正式PASS；approval14正式停止/重复停止去重/标准升级/同节点恢复及授权操作者确认已完成，report15running。仍待Pipeline草稿PR及远端同版核验，M1未完成；PR43未合并，未产品部署。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 18:55 UTC）：112:8795已标准部署afebd27；当前图revision3/Run744c4329冻结revision2保持。Issue44 tests12完整冷门禁exit0、QA10缺章拒绝→development11补齐→QA13正式PASS、approval14正式确认均已完成。report15因平台未传确认上下文受阻，唯一源码红绿/全量验证及复审后标准升级，正式return→report16原生输入6522已包含原decision14原文，前14步不变；报告继续执行，Pipeline草稿PR/远端同版核验仍待，M1未完成。下文旧状态按历史保留。
 
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
@@ -1349,3 +1349,8 @@ QA13处理5901后正式approved→approval14，最终原文13628bytes/SHA8212244
 
 
 18:49 UTC修复验证：操作者确认上下文回归已真实红→绿，相关race通过；标准scripts/verify.sh完整exit0，独立源码复审无Critical/Important。当前Run正式stopped15，未发生publish。234份可读审批材料共8244399bytes已按SHA保留（复用此前已验原件加7份新读，非全量重新采样）；AGENTS.md保持API边界未读。待标准运行平台升级和新report真实输入复验，不以源码通过宣布M1完成。
+
+
+### 2026-10-14 18:55 UTC：确认上下文通用修复标准上线，原Run实际复验
+
+平台afebd27经scripts/verify.sh exit0/124865bytes/SHA3ee9ccc9589c897b6d7df7a03b7667fe40c081675ea8bea0aff0bc1f2bf3b975、独立review无Critical/Important；git archive源码2c996660…经既有112会话传输并校验，标准build16/install16均exit0，health实际revision afebd27b016d6dc80a5c4c8004ddf13f5612535e，binary824ad091…。安装前后Run整体逐值相同、私有配置/凭据保持；没有手改运行副本。正式return15→report16，旧报告取消记录保持；新原生输入6522实际包含自动生成的approval14确认块与原summary逐字匹配，前14步不变。GitHub正式compare同步确认main0c1e2203相对候选仅3个.harness标准模板文件变化，以正式return附只读patch给无Git凭据的报告Agent，区分维护者材料和Agent自行取证。没有给Agent新增Git权限、重跑产品或重复审批。实际草稿PR仍待。
