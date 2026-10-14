@@ -1243,7 +1243,7 @@ Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=
 
 Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断不是Pass。Pipeline原写三个测试设施源码及两份研发说明按manifest原字节转存测试仓独立候选[草稿PR43](https://github.com/big91987/model-relay/pull/43)，head `1d581652736fbac4e8862b70367181c8a9f2f8b2`，6文件远端Git blob逐字节一致。此为未验收的候选接续材料，不合main、不算Pipeline最终PR；两份旧报告引用的私有harness-output未全部公开，接续说明明确限制。
 
-既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests7非超时SSE旅程失败，自动development8归因中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
+既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests9完整冷门禁exit0，独立QA10审查中，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
 
 上次仅回读安装报告的自动审批因stream disconnected未执行；重新提交同一只读动作审批后成功，并非绕过拒绝。自动化配置沿已有状态保持，本轮未重建定时任务。
 
@@ -1289,3 +1289,21 @@ Issue44/Run744c4329…正式tests7退出2，外层1170997bytes/SHA `0c2dfc2cf2c3
 migration15.360s/legacy-ui195.875s/routing224.273s/console31.165s均ok；full-console65.144s失败。1280 J01–07、visual-current-period、management-summary、console-visual十页已过，first-self-hosted在self-hosted-sse/proxy-call处failed/error_kind other/HTTP200，具体原错误尚不明，不能把HTTP200当SSE或用量费用已通过，也不把diagnostic secret_present布尔直接归因为泄漏。完整三视口/最终成功dependency probe/独立QA尚未完成。
 
 正式failed→development8/CID97f586f6e857f16adeb9b00e8ba8bb86已原生承接读失败，不重复Run/恢复或重新增时。Issue44正文已同步非超时失败及最小归因下一步。预算及兼容修复不因此冒称整套验收；M1仍未完成，等待Pipeline实际定位/必要最小修复/固定门禁/QA缺章返工复核/确认/报告PR。
+
+
+### 2026-10-14 17:31 UTC：SSE采集原层红绿，固定tests9已开始
+
+原生development8在同一共享工作区完成最小归因：既有Go/UI/用户动作下，SSE response.text因浏览器协议protocol_error/no_data_found退出1；非产品HTTP失败。维护者通过正式文件API核验诊断原stdout4262bytes/SHA883595cc…、修后真实1280旅程stdout245bytes/SHAa9425518…/exit0、缺失DONE反例stdout4173bytes/SHAc132cd9c…/exit1且error_kind=assertion；五项采集单测stdout1042bytes/SHAd800ff14…/exit0。暖定向非完整冷验，原失败不覆盖。
+
+项目最小实现仅journeys.mjs和新增stream-capture.mjs/test：测试页克隆同一次原生fetch Response收集SSE体，原Response交UI、finally恢复，无额外请求/伪造帧/重试；原状态、Request ID、dispatch、UI、data/DONE及账本断言保留。Builder只读审查及证据核对，没有代改/代跑项目。最终163源码摘要991c79ca919b3d0ccf148c066c3b24d993090fcb78ab864c0e4637cfff8040ba；交付清单164项SHA dcab3a6e7f3d6f2c7a991557a1cea0df1df7cbdf043d8ba31fb9393a96591448。正式handoff accepted，tests9于17:30:36.882Z执行原make verify；24分钟内部/1800秒外层不改，当前running无绿回执，仍待独立QA实际缺章返工和全部交付。
+
+新交付清单164项中163项已逐文件正式API读取并逐SHA匹配，共5017211bytes；AGENTS.md按API可见性规则标未读取。它与“163件产品/设施源码摘要”恰好同数但不是同一集合，不混为一次全源码独立核验。最终Git对象与QA报告仍待。
+
+
+### 2026-10-14 17:49 UTC：tests9完整冷绿，独立QA10实际承接
+
+正式tests9 exit0，外层1179303bytes/SHA `fb2a741014592ac9474eb3e8d380b7f995660f3c10d025b4009ed0f95e9cacb1`完整分页EOF/truncated=false。唯一主attempt `20261014T173037Z-3756242626`，原项目verify.log1150513bytes/SHA `6b689697cbd4243c31d122feec3a7ee48fbfbf8e0107060a9538a18b5cc44254`与state独立读回匹配；17:30:37–17:47:01 UTC，主gate971282ms/exit0/cancelled=false，配置1440000ms。
+
+实际冷起点node_modules/npm cache不存在、NODE_PATH unset、无人工预装；163件991c79ca…源/副本前后不变。283Node、原全包race/count1/parallel4（relay103.748s等真实非cached输出）、历史分类器、迁移/路由/console/full-console均过。1280/1440/390各J01–07、management-summary、十页console-visual和首次self-hosted旅程均passed；最终candidate/node_modules Playwright/core1.59.1和Chromium147.0.7727.15探针通过。gate与全部aux自有groups absent/candidate removed。Linux有效前后资源delta为共享cgroup窗口，OOM各项0，不能当单进程占用或Mac实机验证。
+
+自动进入独立QA10/CIDb3243fbf4ecf62c2cb2f26f8bdbb56dc，原生已声明核对同版证据、测试改动及实际缺章；未由维护者代QA放行。Issue44已同步完整冷绿和QA仍待结论；首轮故意缺章仍须实际revise、补齐后再固定测试/QA复核，后续正式确认/报告/草稿PR未完成，M1不提前置为通过。真实供应商/支付/外部身份、Darwin实机仍NotRun。
