@@ -17,11 +17,20 @@ import (
 )
 
 func TestSandboxRolePreparationFreezesAssetsAndNeverReplaysUnknownUpload(t *testing.T) {
-	for _, mode := range []string{"normal", "lost asset", "lost marker", "missing marker", "different role", "missing resumed preparation"} {
+	for _, mode := range []string{"normal", "lost asset", "lost marker", "missing marker", "different role", "rotated workflow capability", "changed user variable", "missing resumed preparation"} {
 		t.Run(mode, func(t *testing.T) {
 			auth, root := t.TempDir(), t.TempDir()
 			os.WriteFile(filepath.Join(auth, "auth.json"), []byte(`{"tokens":{"access_token":"fixture-only"}}`), 0600)
 			c := Conversation{ID: newID(), Snapshot: Agent{Executor: "codex", Model: "gpt-6.1-sol", Instructions: "role", Sandbox: "workspace-write"}}
+			if mode == "rotated workflow capability" {
+				token := "initial-private-fixture-capability"
+				c.Snapshot.Env = map[string]*string{workflowTokenEnv: &token}
+				c.Snapshot.ResolvedTools = map[string]ResolvedToolServer{workflowToolServer: {Connection: MCPConnection{URL: "http://platform.invalid/api/workflow-node/mcp", BearerTokenEnvVar: workflowTokenEnv}}}
+			}
+			if mode == "changed user variable" {
+				value := "initial setting"
+				c.Snapshot.Env = map[string]*string{"USER_SETTING": &value}
+			}
 			run := WorkflowRun{ID: newID(), WorkspacePath: "/workspace", Environment: &RunEnvironment{ID: "owned", Status: "ready"}}
 			var base string
 			var writes atomic.Int32
@@ -124,14 +133,25 @@ func TestSandboxRolePreparationFreezesAssetsAndNeverReplaysUnknownUpload(t *test
 			if mode == "different role" {
 				c.Snapshot.Instructions = "replaced role"
 			}
+			if mode == "rotated workflow capability" {
+				token := "new-turn-private-fixture-capability"
+				c.Snapshot.Env[workflowTokenEnv] = &token
+			}
+			if mode == "changed user variable" {
+				value := "replaced setting"
+				c.Snapshot.Env["USER_SETTING"] = &value
+			}
 			c.Snapshot.NetworkAccess = true
 			c.Snapshot.AllowElevation = true
 			c.Snapshot.ApprovalsReviewer = "auto_review"
-			home2, config2, _, _, err := (&Codex{Root: root, AuthHome: auth}).prepareSandboxRole(context.Background(), client, run, c)
+			home2, config2, _, resumedEnv, err := (&Codex{Root: root, AuthHome: auth}).prepareSandboxRole(context.Background(), client, run, c)
 			if writes.Load() != before {
 				t.Fatal("resume replayed an upload", writes.Load(), before)
 			}
-			if mode == "normal" || mode == "lost marker" {
+			if mode == "rotated workflow capability" && (resumedEnv[workflowTokenEnv] != "new-turn-private-fixture-capability" || *c.Snapshot.Env[workflowTokenEnv] != "new-turn-private-fixture-capability") {
+				t.Fatal("fresh capability missing or conversation snapshot mutated")
+			}
+			if mode == "normal" || mode == "lost marker" || mode == "rotated workflow capability" {
 				if err != nil || home2 == "" || (mode == "normal" && string(config2) != string(config)) {
 					t.Fatal("same role or read-only marker reconciliation failed", err)
 				}

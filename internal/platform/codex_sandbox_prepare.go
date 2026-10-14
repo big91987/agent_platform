@@ -41,6 +41,18 @@ func (x *Codex) prepareSandboxRole(ctx context.Context, service *OpenSandbox, ru
 	// These three fields are the existing formal, between-turn permission API.
 	// Thread and turn requests apply them; they do not replace frozen role assets.
 	a.NetworkAccess, a.AllowElevation, a.ApprovalsReviewer = false, false, ""
+	// Claim rotates this platform-owned MCP capability for each turn. It is
+	// launch input, not a frozen role asset. Keep ordinary user variables in the
+	// identity, and never mutate the persisted conversation's shared Env map.
+	if tool, ok := a.ResolvedTools[workflowToolServer]; ok && tool.Connection.BearerTokenEnvVar == workflowTokenEnv {
+		env := make(map[string]*string, len(a.Env))
+		for name, value := range a.Env {
+			if name != workflowTokenEnv {
+				env[name] = value
+			}
+		}
+		a.Env = env
+	}
 	snapshot, err := json.Marshal(a)
 	if err != nil {
 		return fail(err)
