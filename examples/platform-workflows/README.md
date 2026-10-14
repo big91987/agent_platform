@@ -454,3 +454,5 @@ python3 .harness/agent-platform/examples/platform-workflows/sandbox_delivery.py 
 将受信导出的本目录与SDK复制到项目 `.harness/agent-platform` 后按项目调整，通过平台管理API/画布安装生成的图。`sandbox_prepare.py` 使用执行节点选定的运行时环境认证，固定入站repo/commit及所属Run；不复制宿主checkout，不接管不明工作区或把秘密放进Git remote/图。Git凭据只配置准备/发布节点，Agent和tests不继承。专用Issue标签 `harness-opensandbox` 由项目自有Actions和sandbox_entry.py选择新图，旧入口排除该标签；GitHub Runner只转发，平台申请/运行/释放环境。
 
 `sandbox_publish.py` 只发布同Run分支，核对固定基线以来完整线性提交、当前文件和实际index的范围与秘密，不跟随认证重定向/项目Git Hook/URL改写。合并历史和删除交付文件需项目单独设计，不伪称本示例已支持全部Git流程。QA及报告先保存在可查看的 `harness-output`（Git exclude），人工确认后将原文保留到 `docs/harness/run-*` 并创建同版草稿PR；草稿PR不是合并或部署完成。报告交付前不要释放环境，正式发布以后以GitHub产物为持久入口。
+
+OpenSandbox 图可沿用不读取文件的 GitHub Issue 评论通知 Hook；目标 Issue 可由受信入口的 `issue_parameter` 指定。平台在控制面发送通知，运行中的仓库和命令仍留在所属 OpenSandbox。宿主命令、读取 `body_file` 和传统 Connector 节点继续拒绝。显式 `run.failed` 通知只发布当前失败节点和处理链接，不自动公开原生错误、命令或私有路径；已经恢复而未发送的通知跳过，结果未知仍先核对外部回执。

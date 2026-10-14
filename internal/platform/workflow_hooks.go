@@ -97,7 +97,7 @@ func validateWorkflowHooks(w Workflow) error {
 	}
 	for _, h := range w.Hooks {
 		switch h.Event {
-		case "node.started", "agent.reply.completed", "handoff.after", "run.completed", "approval.requested", "approval.resolved", "run.execution_limit_reached":
+		case "node.started", "agent.reply.completed", "handoff.after", "run.completed", "run.failed", "approval.requested", "approval.resolved", "run.execution_limit_reached":
 		default:
 			return errors.New("unsupported Hook event")
 		}
@@ -174,7 +174,7 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 		for i := range order {
 			order[i] = i
 		}
-		rank := map[string]int{"node.started": 0, "approval.requested": 1, "approval.resolved": 2, "agent.reply.completed": 3, "handoff.after": 4, "run.completed": 5, "run.execution_limit_reached": 6}
+		rank := map[string]int{"node.started": 0, "approval.requested": 1, "approval.resolved": 2, "agent.reply.completed": 3, "handoff.after": 4, "run.completed": 5, "run.execution_limit_reached": 6, "run.failed": 7}
 		sort.SliceStable(order, func(i, j int) bool {
 			return rank[hooks[order[i]].Event] < rank[hooks[order[j]].Event]
 		})
@@ -215,6 +215,13 @@ func (e *WorkflowEngine) collectWorkflowHooks() error {
 					return err
 				}
 				switch h.Event {
+				case "run.failed":
+					if r.Status == "failed" && r.Error != workflowExecutionLimitError && step.Seq == r.Seq {
+						delete(fields, "summary")
+						delete(fields, "target")
+						delete(fields, "artifacts")
+						err = emit("")
+					}
 				case "run.execution_limit_reached":
 					if r.Status == "failed" && r.Error == workflowExecutionLimitError && r.atExecutionLimit() && step.Seq == r.Seq {
 						// Publish trusted lifecycle facts, never the last business
@@ -374,6 +381,12 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			return errors.New("notification rule is unavailable")
 		}
 		h := hooks[p.index]
+		if h.Event == "run.failed" && p.request == "" && (r.Status != "failed" || r.Seq != p.seq || r.Error == workflowExecutionLimitError) {
+			if _, err = e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status='skipped',error='',updated=? WHERE id=? AND status='pending' AND request=''`, now(), p.id); err != nil {
+				return err
+			}
+			continue
+		}
 		if h.Event == "run.execution_limit_reached" && p.request == "" && (r.Status != "failed" || r.Error != workflowExecutionLimitError || r.Seq != p.seq || !r.atExecutionLimit()) {
 			if _, err = e.store.DB.Exec(`UPDATE workflow_hook_deliveries SET status='skipped',error='',updated=? WHERE id=? AND status='pending' AND request=''`, now(), p.id); err != nil {
 				return err
@@ -445,7 +458,18 @@ func (e *WorkflowEngine) dispatchWorkflowHooks(ctx context.Context) error {
 			callCtx, cancel := context.WithTimeout(ctx, time.Duration(v.TimeoutSeconds)*time.Second)
 			defer cancel()
 			var beforeWrite func() error
-			if event == "run.execution_limit_reached" {
+			if event == "run.failed" {
+				beforeWrite = func() error {
+					run, err := e.store.WorkflowRun(Caller{Admin: true}, runID)
+					if err != nil {
+						return err
+					}
+					if run.Status != "failed" || run.Seq != seq || run.Error == workflowExecutionLimitError {
+						return errWorkflowLimitRecovered
+					}
+					return nil
+				}
+			} else if event == "run.execution_limit_reached" {
 				beforeWrite = func() error {
 					r, err := e.store.WorkflowRun(Caller{Admin: true}, runID)
 					if err != nil {

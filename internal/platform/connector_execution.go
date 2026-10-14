@@ -34,11 +34,15 @@ func connectorExpand(text string, r WorkflowRun) string {
 }
 func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (connectorRequest, error) {
 	var out connectorRequest
-	if err := connectorWorkspace(v, r.WorkspacePath); err != nil {
-		return out, err
-	}
 	node := r.Definition.node(step.NodeID)
 	p := node.ConnectorInput
+	if r.Definition.Environment == "opensandbox" {
+		if v.Kind != "github.issue_comment" || p.BodyFile != "" {
+			return out, errors.New("sandbox notifications cannot execute host actions or read host files")
+		}
+	} else if err := connectorWorkspace(v, r.WorkspacePath); err != nil {
+		return out, err
+	}
 	if v.Kind == "command" {
 		previous := []WorkflowStep{}
 		for _, s := range r.Steps {
@@ -81,12 +85,14 @@ func prepareConnectorRequest(v Connector, r WorkflowRun, step WorkflowStep) (con
 		title = string([]rune(title)[:200])
 	}
 	issue := p.IssueNumber
-	if v.Kind == "github.issue" && p.IssueParameter != "" {
+	if (v.Kind == "github.issue" || v.Kind == "github.issue_comment") && p.IssueParameter != "" {
 		if value, ok := r.Parameters[p.IssueParameter]; ok {
 			issue, err = strconv.Atoi(value)
 			if err != nil || issue < 1 {
 				return out, errors.New("issue parameter must be a positive integer")
 			}
+		} else if v.Kind == "github.issue_comment" {
+			return out, errors.New("notification issue parameter is missing")
 		}
 	}
 	if p.IssueNode != "" {

@@ -64,9 +64,6 @@ func validateWorkflow(w Workflow) error {
 		return errors.New("unsupported workflow environment")
 	}
 	if w.Environment == "opensandbox" {
-		if len(w.Hooks) > 0 {
-			return errors.New("sandbox workflows use execution nodes for external actions; host Connector hooks are not supported")
-		}
 		for _, n := range w.Nodes {
 			if n.Kind == "connector" {
 				return errors.New("host Connector nodes cannot run in OpenSandbox")

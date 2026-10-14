@@ -39,6 +39,12 @@ func (e *WorkflowEngine) connectorAccess(c Caller, r WorkflowRun, node WorkflowN
 	if !current.Enabled {
 		return frozen, errors.New("connector is disabled")
 	}
+	if r.Definition.Environment == "opensandbox" {
+		if frozen.Kind != "github.issue_comment" || current.Kind != frozen.Kind || current.Repository != frozen.Repository || current.TokenEnv != frozen.TokenEnv {
+			return frozen, errors.New("notification destination changed; review before starting a new Run")
+		}
+		return frozen, nil
+	}
 	if err = connectorWorkspace(current, r.WorkspacePath); err != nil {
 		return frozen, err
 	}

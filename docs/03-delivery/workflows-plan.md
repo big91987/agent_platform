@@ -1218,3 +1218,12 @@ Linux标准安装增加实例自有可选0600 runtime.env及受管理Environment
 发布检查固定base以来全部线性提交、实际index和有界blob，复用既有秘密扫描；拒绝合并历史另审。认证Git固定HTTPS仓库、禁重定向/Hook/本地URL及凭据覆盖。真实本地Git夹具验证预提交漏文件、历史秘密删除/还原、暂存秘密删除、外部pushurl均在网络前拒绝。自动审批首拒绝复制GitCLI token/App私钥，说明个人权限可能较广；用户明确选择允许这两项复制至112:8795用于本测试流水线后才继续。另一次大操作审批超时未执行，拆分已授权源码写入与需要监听的回归；没有绕过安全拒绝。112私有配置已按一致10240bytes传输回执安装600，App仍Issues-write原范围，临时传输包已删除；值未进图/Agent/日志。运行服务尚需标准新版安装读取该配置。
 
 最终full-verify34 actual exit0，平台race73.526s，浏览器/SDK/模板/供应链/部署/vet/build全过；完整日志121681bytes/SHA792f697395784ab77091308fe7428070b1a3057e48ac042ffa12efee04399c68。full31/33为此前候选绿；full30导入lint、full32本机监听EPERM及其他定向编译/夹具失败保留，不能覆盖。当前112仍a000d1d，PR38仍draft，尚无新Issue/产品Pipeline结果；下一动作固定提交标准升级112，再同步项目自有模板/标签入口并启动唯一新Issue，不停在源码绿。
+
+
+### 2026-10-14 — 实际Workflow安装暴露外部通知门槛缺口
+
+112已标准部署0b482a7（build/install exit0，health同revision，binary19415088bytes/SHA728db1fedb583ace3b3ff34072bee1e85c305b3e2c5e3798db494c6a7153a7e6，配置/凭据/旧Run保持）。正式Installation注册caller model-relay-sandbox-8795/user_id93424060a89a41b464b1653bc2e21664及通知Connector成功，随后POST /api/workflows被400拒绝：sandbox workflows use execution nodes for external actions; host Connector hooks are not supported。未创建Workflow/Run/Issue，原caller/token/manifest保留，不重建。
+
+用户影响：沙箱流水线不能配置GitHub原生消息/审批通知，缺少Issue当前卡点反馈。源码证据validateWorkflow blanket禁止Hook，且Connector校验假定宿主存在工作区；已有Hook实现其实仅支持Github Issue评论且拒绝body_file，不执行任务代码。最小修复为控制面外部通知保留现有授权、冻结repo/凭据引用及消息去重，OpenSandbox仍禁止宿主Connector节点/命令/文件读取。动态Issue编号复用既有issue_parameter扩展至评论；缺值拒绝。新增显式run.failed生命周期事件，只回写节点/运行入口，不公开私有错误、命令、路径或把设施失败解释为产品不通过；已恢复未发送的通知跳过。此缺口先进入唯一维护源及标准升级，再继续同一安装清单；不删Hook绕行或加临时通知脚本。
+
+通知缺口定向真实red（旧Hook禁令）→green05 exit0，覆盖受信Issue参数、无宿主工作区、拒绝BodyFile、目的地修改/禁用、失败去重与正式Stop后跳过未发送通知。green01本机监听EPERM、green02遗漏请求准备路径及green04夹具未使用Connector新revision均保留并纠正；不当产品测试失败。最终full-verify35实际exit0/平台race76.266s，完整日志121675bytes/SHA163e56431f4801fc99c711077298552aaf3168f941ff152bab55a2c7e1062b14，web/浏览器/SDK/模板/供应链/部署/vet/build全过。静态复核控制面评论路径仅保留受信授权/冻结目标，未扩大执行或文件权限。待标准112升级及原清单复验；当前尚无新Issue/Run。

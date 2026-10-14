@@ -474,8 +474,10 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		if !connectorAllowed(c, v) || !v.Enabled {
 			return zero, ErrForbidden
 		}
-		if err = connectorWorkspace(v, path); err != nil {
-			return zero, err
+		if w.Environment != "opensandbox" {
+			if err = connectorWorkspace(v, path); err != nil {
+				return zero, err
+			}
 		}
 		if err = validateHookAction(v, hook, w); err != nil {
 			return zero, err

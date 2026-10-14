@@ -271,7 +271,7 @@ func validateConnectorNode(v Connector, n WorkflowNode, w Workflow) error {
 }
 func validateConnectorInput(v Connector, n WorkflowNode, w Workflow) error {
 	p := n.ConnectorInput
-	if p.IssueParameter != "" && (v.Kind != "github.issue" || !envName.MatchString(p.IssueParameter) || len(p.IssueParameter) > 64 || p.IssueNumber != 0 || p.IssueNode != "") {
+	if p.IssueParameter != "" && ((v.Kind != "github.issue" && v.Kind != "github.issue_comment") || !envName.MatchString(p.IssueParameter) || len(p.IssueParameter) > 64 || p.IssueNumber != 0 || p.IssueNode != "") {
 		return errors.New("issue_parameter needs an input parameter name on a GitHub Issue connector")
 	}
 	if len(p.Title) > 256 || len(p.BodyFile) > 4096 || len(p.Head) > 256 || len(p.Base) > 256 || p.IssueNumber < 0 {
@@ -292,7 +292,7 @@ func validateConnectorInput(v Connector, n WorkflowNode, w Workflow) error {
 			return errors.New("issue_node must reference another connector node")
 		}
 	}
-	if v.Kind == "github.issue_comment" && p.IssueNode == "" && p.IssueNumber == 0 {
+	if v.Kind == "github.issue_comment" && p.IssueNode == "" && p.IssueNumber == 0 && p.IssueParameter == "" {
 		return errors.New("comment needs issue_node or issue_number")
 	}
 	if v.Kind == "github.pull_request" && (p.Head == "" || p.Base == "") {

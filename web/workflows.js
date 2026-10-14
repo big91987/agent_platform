@@ -328,7 +328,7 @@ async function saveWorkflow(editor){
  }catch(e){toast(e.status===409?'智能体编排已被其他页面更新。请导出当前改动，再重新打开合并。':e.message)}finally{button.disabled=false;if(workflowEditor===editor)$('#content').inert=false}
 }
 
-const workflowHookEvents={'node.started':'Agent 节点启动','approval.requested':'等待执行审批','approval.resolved':'执行审批已处理','agent.reply.completed':'Agent 最终回复完成','handoff.after':'交接完成','run.completed':'整次运行完成','run.execution_limit_reached':'达到节点执行次数上限'};
+const workflowHookEvents={'node.started':'Agent 节点启动','approval.requested':'等待执行审批','approval.resolved':'执行审批已处理','agent.reply.completed':'Agent 最终回复完成','handoff.after':'交接完成','run.completed':'整次运行完成','run.failed':'运行失败','run.execution_limit_reached':'达到节点执行次数上限'};
 function workflowHooksDialog(editor){
  const hooks=JSON.parse(JSON.stringify(editor.graph.value.hooks||[]));
  const draw=()=>{

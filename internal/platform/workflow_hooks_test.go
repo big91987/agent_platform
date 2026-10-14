@@ -205,3 +205,95 @@ func TestHookRetryDistinguishesPreflightFromWriteFailure(t *testing.T) {
 		})
 	}
 }
+
+func TestSandboxNotificationsUseTrustedIssueParameterWithoutHostWorkspace(t *testing.T) {
+	s := testStore(t)
+	caller, graph, _, _ := sandboxWorkflowFixture(t, s, false, false)
+	t.Setenv("SANDBOX_NOTICE_TOKEN", "private-fixture")
+	connector, err := s.SaveConnector(caller, Connector{Name: "Sandbox notifications", Kind: "github.issue_comment", Repository: "demo/repo", TokenEnv: "SANDBOX_NOTICE_TOKEN", WorkspaceRoot: "/definitely-not-a-host-workspace", Enabled: true, TimeoutSeconds: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph.Hooks = []WorkflowHook{{Event: "run.failed", ConnectorID: connector.ID, Input: ConnectorInput{IssueParameter: "issue_number"}, Body: "Execution failed: {{node_name}} {{run_url}}"}}
+	graph, err = s.SaveWorkflow(caller, graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := s.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "Harness verification", Parameters: map[string]string{"issue_number": "7"}, RequestID: "sandbox-notices"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewWorkflowEngine(s, nil, "http://platform")
+	frozen, err := engine.connectorAccess(caller, run, WorkflowNode{ConnectorID: connector.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run.Definition.Nodes = append(run.Definition.Nodes, WorkflowNode{ID: "notice", ConnectorInput: graph.Hooks[0].Input})
+	request, err := prepareConnectorRequest(frozen, run, WorkflowStep{NodeID: "notice"})
+	if err != nil || request.Endpoint != "/repos/demo/repo/issues/7/comments" {
+		t.Fatal("wrong destination", request, err)
+	}
+	bad := run
+	bad.Parameters = map[string]string{}
+	if _, err := prepareConnectorRequest(frozen, bad, WorkflowStep{NodeID: "notice"}); err == nil {
+		t.Fatal("missing issue target accepted")
+	}
+	unsafe := graph
+	unsafe.Hooks[0].Input.BodyFile = "report.md"
+	if _, err := s.SaveWorkflow(caller, unsafe); err == nil {
+		t.Fatal("sandbox notification read host file")
+	}
+	engine.fail(run, errors.New("private command detail must stay inside platform"))
+	if err := engine.collectWorkflowHooks(); err != nil {
+		t.Fatal(err)
+	}
+	first, err := s.WorkflowHookDeliveries(caller, run.ID)
+	if err != nil || len(first) != 1 {
+		t.Fatal(first, err)
+	}
+	if err := engine.collectWorkflowHooks(); err != nil {
+		t.Fatal(err)
+	}
+	again, _ := s.WorkflowHookDeliveries(caller, run.ID)
+	if len(again) != 1 {
+		t.Fatal("duplicate lifecycle notification")
+	}
+	var fields string
+	if err := s.DB.QueryRow(`SELECT fields FROM workflow_hook_deliveries WHERE run_id=?`, run.ID).Scan(&fields); err != nil || strings.Contains(fields, "private command") {
+		t.Fatal("private failure leaked", err)
+	}
+	if err := engine.Stop(caller, run.ID, run.Seq); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.dispatchWorkflowHooks(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	recovered, err := s.WorkflowHookDeliveries(caller, run.ID)
+	if err != nil || len(recovered) != 1 || recovered[0].Status != "skipped" {
+		t.Fatal("recovered failure still pending", recovered, err)
+	}
+	connector.Repository = "demo/other"
+	if connector, err = s.SaveConnector(caller, connector); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.connectorAccess(caller, run, WorkflowNode{ConnectorID: connector.ID}); err == nil {
+		t.Fatal("frozen notification redirected")
+	}
+	connector.Repository, connector.Enabled = "demo/repo", false
+	if _, err := s.SaveConnector(caller, connector); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.connectorAccess(caller, run, WorkflowNode{ConnectorID: connector.ID}); err == nil {
+		t.Fatal("disabled notification dispatched")
+	}
+	unsafeRun := run
+	unsafeRun.Definition.Nodes = append([]WorkflowNode{}, run.Definition.Nodes...)
+	for i := range unsafeRun.Definition.Nodes {
+		if unsafeRun.Definition.Nodes[i].ID == "notice" {
+			unsafeRun.Definition.Nodes[i].ConnectorInput.BodyFile = "private.txt"
+		}
+	}
+	if _, err := prepareConnectorRequest(frozen, unsafeRun, WorkflowStep{NodeID: "notice"}); err == nil {
+		t.Fatal("execution path allowed host read")
+	}
+}
