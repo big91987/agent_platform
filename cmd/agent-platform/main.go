@@ -27,6 +27,7 @@ func main() {
 	sandboxConfig := flag.String("sandbox-config", "", "private OpenSandbox service configuration")
 	sandboxImage := flag.String("sandbox-image", "agent-platform-runtime:0.1.0", "fixed image for new OpenSandbox Runs")
 	sandboxTTL := flag.Int("sandbox-ttl", 3600, "OpenSandbox environment lifetime in seconds")
+	sandboxMemory := flag.Int("sandbox-memory-mib", 2048, "memory limit for new OpenSandbox environments in MiB")
 	flag.Parse()
 	if *showVersion {
 		json.NewEncoder(os.Stdout).Encode(map[string]string{"version": platform.Version, "revision": platform.BuildRevision})
@@ -41,7 +42,7 @@ func main() {
 	}
 	defer s.Close()
 	if *sandboxConfig != "" {
-		if e = s.ConfigureSandbox(*sandboxConfig, *sandboxImage, *sandboxTTL); e != nil {
+		if e = s.ConfigureSandbox(*sandboxConfig, *sandboxImage, *sandboxTTL, *sandboxMemory); e != nil {
 			log.Fatal(e)
 		}
 	}

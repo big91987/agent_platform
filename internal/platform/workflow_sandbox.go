@@ -26,19 +26,26 @@ type RunEnvironment struct {
 	Status         string             `json:"status"`
 	Image          string             `json:"image"`
 	TTL            int                `json:"ttl_seconds"`
+	MemoryMiB      int                `json:"memory_mib,omitempty"`
 	Error          string             `json:"error,omitempty"`
 	Updated        string             `json:"updated_at"`
 	ConnectionHash string             `json:"-"`
 }
 
 // ConfigureSandbox is a startup setting, not task input or an Agent permission.
-func (s *Store) ConfigureSandbox(config, image string, ttl int) error {
+func (s *Store) ConfigureSandbox(config, image string, ttl int, memoryMiB ...int) error {
 	if s.sandbox != nil {
 		return errors.New("OpenSandbox is already configured")
 	}
 	client, err := loadOpenSandboxConfig(config, image, ttl)
 	if err != nil {
 		return err
+	}
+	if len(memoryMiB) > 1 || (len(memoryMiB) == 1 && (memoryMiB[0] < 256 || memoryMiB[0] > 65536)) {
+		return errors.New("OpenSandbox memory must be between 256 and 65536 MiB")
+	}
+	if len(memoryMiB) == 1 {
+		client.memoryMiB = memoryMiB[0]
 	}
 	s.sandbox = client
 	return nil
@@ -47,7 +54,7 @@ func (s *Store) ConfigureSandbox(config, image string, ttl int) error {
 func (s *Store) initRunEnvironments() error {
 	_, err := s.DB.Exec(`CREATE TABLE IF NOT EXISTS workflow_run_environments(
  run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),sandbox_id TEXT NOT NULL DEFAULT '',
- status TEXT NOT NULL,image TEXT NOT NULL,ttl INTEGER NOT NULL,connection_hash TEXT NOT NULL,
+ status TEXT NOT NULL,image TEXT NOT NULL,ttl INTEGER NOT NULL,connection_hash TEXT NOT NULL,memory_mib INTEGER NOT NULL DEFAULT 0,
  error TEXT NOT NULL DEFAULT '',updated TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS workflow_environment_events(run_id TEXT NOT NULL REFERENCES workflow_runs(id),status TEXT NOT NULL,sandbox_id TEXT NOT NULL,error TEXT NOT NULL,created TEXT NOT NULL);
  INSERT INTO workflow_environment_events(run_id,status,sandbox_id,error,created) SELECT run_id,'unconfirmed',sandbox_id,'Platform restarted during environment creation; reconcile before continuing.',updated FROM workflow_run_environments WHERE status='creating';
@@ -57,11 +64,20 @@ func (s *Store) initRunEnvironments() error {
 	if err != nil {
 		return err
 	}
+	var memoryColumn int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM pragma_table_info('workflow_run_environments') WHERE name='memory_mib'`).Scan(&memoryColumn); err != nil {
+		return err
+	}
+	if memoryColumn == 0 {
+		if _, err := s.DB.Exec(`ALTER TABLE workflow_run_environments ADD COLUMN memory_mib INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return err
+		}
+	}
 	return s.initSandboxNativeProcesses()
 }
 func loadRunEnvironment(tx *sql.Tx, id string) (*RunEnvironment, error) {
 	var env RunEnvironment
-	err := tx.QueryRow(`SELECT sandbox_id,status,image,ttl,connection_hash,error,updated FROM workflow_run_environments WHERE run_id=?`, id).Scan(&env.ID, &env.Status, &env.Image, &env.TTL, &env.ConnectionHash, &env.Error, &env.Updated)
+	err := tx.QueryRow(`SELECT sandbox_id,status,image,ttl,connection_hash,error,updated,memory_mib FROM workflow_run_environments WHERE run_id=?`, id).Scan(&env.ID, &env.Status, &env.Image, &env.TTL, &env.ConnectionHash, &env.Error, &env.Updated, &env.MemoryMiB)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -130,6 +146,13 @@ func (s *Store) sandboxFor(r WorkflowRun) (*OpenSandbox, error) {
 	// New runtime defaults do not change environments promised to existing Runs.
 	client := *s.sandbox
 	client.image, client.ttl = r.Environment.Image, r.Environment.TTL
+	client.memoryMiB = 2048 // Existing environments were created with the original 2 GiB limit.
+	if r.Environment.MemoryMiB != 0 {
+		if r.Environment.MemoryMiB < 256 || r.Environment.MemoryMiB > 65536 {
+			return nil, errors.New("Run has an invalid OpenSandbox memory limit")
+		}
+		client.memoryMiB = r.Environment.MemoryMiB
+	}
 	return &client, nil
 }
 func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {

@@ -506,7 +506,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		return zero, e
 	}
 	if w.Environment == "opensandbox" {
-		if _, e = tx.Exec(`INSERT INTO workflow_run_environments(run_id,status,image,ttl,connection_hash,updated) VALUES(?,'pending',?,?,?,?)`, id, s.sandbox.image, s.sandbox.ttl, s.sandbox.connectionHash, stamp); e != nil {
+		if _, e = tx.Exec(`INSERT INTO workflow_run_environments(run_id,status,image,ttl,connection_hash,updated,memory_mib) VALUES(?,'pending',?,?,?,?,?)`, id, s.sandbox.image, s.sandbox.ttl, s.sandbox.connectionHash, stamp, s.sandbox.memoryMiB); e != nil {
 			return zero, e
 		}
 		if _, e = tx.Exec(`INSERT INTO workflow_environment_events(run_id,status,sandbox_id,error,created) VALUES(?,'pending','','',?)`, id, stamp); e != nil {

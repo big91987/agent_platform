@@ -27,6 +27,7 @@ type OpenSandbox struct {
 	httpClient     *http.Client
 	image          string
 	ttl            int
+	memoryMiB      int
 }
 
 type SandboxCommandResult struct {
@@ -87,7 +88,7 @@ func newOpenSandbox(endpoint, key, image string, ttl int) (*OpenSandbox, error) 
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
 	client := &http.Client{Transport: sandboxCommandTransport{transport}, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("OpenSandbox redirects are refused") }}
-	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl}, nil
+	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl, memoryMiB: 2048}, nil
 }
 
 func sandboxError(operation string, err error) error {
@@ -121,7 +122,14 @@ func (s *OpenSandbox) create(ctx context.Context, run string) (*opensandbox.Sand
 	}
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	result, err := s.lifecycle.CreateSandbox(ctx, opensandbox.CreateSandboxRequest{Image: &opensandbox.ImageSpec{URI: s.image}, Entrypoint: []string{"tail", "-f", "/dev/null"}, Timeout: &s.ttl, ResourceLimits: opensandbox.ResourceLimits{"cpu": "2", "memory": "2Gi"}, Metadata: map[string]string{"agent-platform-run": run}})
+	memory := "2Gi"
+	if s.memoryMiB != 0 && s.memoryMiB != 2048 {
+		if s.memoryMiB < 256 || s.memoryMiB > 65536 {
+			return nil, errors.New("OpenSandbox memory must be between 256 and 65536 MiB")
+		}
+		memory = strconv.Itoa(s.memoryMiB) + "Mi"
+	}
+	result, err := s.lifecycle.CreateSandbox(ctx, opensandbox.CreateSandboxRequest{Image: &opensandbox.ImageSpec{URI: s.image}, Entrypoint: []string{"tail", "-f", "/dev/null"}, Timeout: &s.ttl, ResourceLimits: opensandbox.ResourceLimits{"cpu": "2", "memory": memory}, Metadata: map[string]string{"agent-platform-run": run}})
 	if err != nil {
 		return nil, sandboxError("creation result is unconfirmed; reconcile before continuing", err)
 	}

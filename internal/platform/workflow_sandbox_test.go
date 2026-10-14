@@ -8,12 +8,79 @@ import (
 	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestConfiguredSandboxMemoryReachesOfficialCreateRequest(t *testing.T) {
+	memory := make(chan string, 1)
+	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var in opensandbox.CreateSandboxRequest
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+			w.WriteHeader(400)
+			return
+		}
+		memory <- in.ResourceLimits["memory"]
+		json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: in.Metadata["agent-platform-run"], Metadata: in.Metadata})
+	}))
+	defer remote.Close()
+	u, _ := url.Parse(remote.URL)
+	path := filepath.Join(t.TempDir(), "sandbox.toml")
+	if err := os.WriteFile(path, []byte(fmt.Sprintf("[server]\nhost=%q\nport=%s\napi_key='private-fixture'\n", u.Hostname(), u.Port())), 0600); err != nil {
+		t.Fatal(err)
+	}
+	store := testStore(t)
+	if err := store.ConfigureSandbox(path, "runtime", 120, 8192); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.sandbox.create(context.Background(), strings.Repeat("a", 32)); err != nil {
+		t.Fatal(err)
+	}
+	if observed := <-memory; observed != "8192Mi" {
+		t.Fatalf("declared 8192 MiB, backend request used %s", observed)
+	}
+	for _, invalid := range []int{-1, 0, 255, 65537} {
+		fresh := testStore(t)
+		if err := fresh.ConfigureSandbox(path, "runtime", 120, invalid); err == nil || fresh.sandbox != nil {
+			t.Fatal("invalid memory configuration became usable", invalid, err)
+		}
+	}
+}
+
+func TestLegacyEnvironmentMigrationKeepsOriginalMemory(t *testing.T) {
+	store := testStore(t)
+	caller, graph, _, _ := sandboxWorkflowFixture(t, store, false, false)
+	run, err := store.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "old environment"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Reconstruct the original schema in this isolated database fixture.
+	if _, err := store.DB.Exec(`ALTER TABLE workflow_run_environments DROP COLUMN memory_mib`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.initRunEnvironments(); err != nil {
+		t.Fatal(err)
+	}
+	store.sandbox.memoryMiB = 8192
+	retained, err := store.WorkflowRun(caller, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := store.sandboxFor(retained)
+	if err != nil || client.memoryMiB != 2048 || retained.Environment.MemoryMiB != 0 {
+		t.Fatal("legacy environment inherited new defaults", err)
+	}
+	if retained.Definition.Revision != run.Definition.Revision || retained.Environment.TTL != run.Environment.TTL {
+		t.Fatal("migration changed the original Run")
+	}
+}
 
 func TestWorkflowStartExpectedEnvironmentPreventsHostFallback(t *testing.T) {
 	s := testStore(t)
@@ -457,6 +524,7 @@ func TestWorkflowSandboxUpgradeUsesRunFrozenImageAndTTL(t *testing.T) {
 	next := *s.sandbox
 	next.image = "different-runtime"
 	next.ttl = 3600
+	next.memoryMiB = 8192
 	s.sandbox = &next
 	client, err := s.sandboxFor(run)
 	if err != nil {
@@ -464,6 +532,17 @@ func TestWorkflowSandboxUpgradeUsesRunFrozenImageAndTTL(t *testing.T) {
 	}
 	if client.image != run.Environment.Image || client.ttl != run.Environment.TTL {
 		t.Fatal("frozen environment options changed")
+	}
+	if client.memoryMiB != 2048 {
+		t.Fatal("existing Run inherited new memory limit", client.memoryMiB)
+	}
+	newRun, err := s.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "use new environment settings"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newClient, err := s.sandboxFor(newRun)
+	if err != nil || newClient.memoryMiB != 8192 {
+		t.Fatal("new Run did not retain declared memory", err)
 	}
 	waitSandboxRun(t, NewWorkflowEngine(s, nil, ""), caller, run.ID, "ready")
 }

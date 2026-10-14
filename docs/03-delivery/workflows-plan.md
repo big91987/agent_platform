@@ -1,5 +1,8 @@
 # 平台内 Workflow 交付计划
 
+隔离改造当前状态（2026-10-14）：用户已授权持续自主推进到一次完整真实Run和Pipeline生成的同版草稿PR。112:8795当前标准源2db4c4c；Issue42/Rune65c964…原1h/2Gi环境经历真实历史解析与HTTP时序设施失败后，正式停止、归档44原件2528387bytes、取消并释放；两项目测试设施修复由Pipeline实现，尚未通过完整原固定门禁和独立QA，不算M1完成。平台有界资源选择/标准显式配置更新正在维护源红绿验证；随后标准升级并从保留候选分支用新任务继续。原8793及下文既有Model Relay产品任务没有由本轮代执行，历史证据保留。当前自动检查状态及审查拒绝记录见本文2026-10-14条目，早期PAUSED说明是当时状态。
+
+
 日期：2026-10-05。分支 `codex/platform-workflows`，基线 `3f3b2c8`，独立 worktree。负责人：平台实施者；用户负责最终体验验收和源仓库合并。
 
 权威输入：[需求](../01-product/workflows.md)、[G1](../01-product/workflows-review.md)、[架构与 G2](../02-architecture/workflows/platform-native.md)。本文件维护任务状态；验收证据写入 [验证记录](workflows-verification.md)。
@@ -1271,3 +1274,41 @@ Ruling：旧Run的inline准备代码和图已冻结，不能用平台新源码�
 项目125模板回归通过，标准146源件及4个白名单旧失败证据文件应用PR41/head e761d045871ee632abcc803dc7c244098597e417；10文件范围与全部Git库存原字节核对、GitGuardian success后精确合main5ff456cb6de0ce8d45bb2faac4c964cda9efcbf0。两原AgentMarkdown原样、派生summary明确标注白名单而非改写回执；旧39原固定测试和QA未完成，材料发布不代表旧publish节点通过。
 
 取消替代规则下新Issue42/id5847349237/【Harness验证】完整历史准备后验证工作区共享、QA返工与草稿PR已正式创建，body SHA7fba80cce141389a4b9c7128928e6ed008dbf7a5614a71f58a071bad58fa4a21；明确替代39，同原目标/故障注入，当前图revision2。39补正式替代评论后关闭state_reason=not_planned，不作Done/产品修复；旧Run取消释放8步、原回执和原生历史保留。新的实际Actions/Run以正式API更新；M1仍需新Run真正完整冷make verify、独立QA/返工复核、人工确认及Pipeline生成的同版PR。平台源仅开发分支，不创建源PR/合main。
+
+Issue42原事件已实际进入唯一Rune65c964ce9faf29e35271270d751cedb/Workflow revision2/source5ff456cb6de0ce8d45bb2faac4c964cda9efcbf0，environment11916390-01f5-4451-8268-a9f92463e46d/ready。新prepare1 actual exit0，完整3036bytes/SHA89bddeca8628396840564f4e82ad59deaec1f0d9985e3360078e310770cdc434/EOF/truncated=false，新完整历史代码已冻结。development2/conversation04b5c850fb1364bc1a4b37b8948544b4正在执行；该受理/准备不冒称历史回归或产品QA通过。当前M1须继续完整固定测试→独立QA/返工→人工确认→报告→真实同版草稿PR，旧39取消/失败证据保持。
+
+定时锚点更新被自动审查拒绝：认为先前停止后缺明确重新开启授权，本次更新未执行，未改接口绕行。实际文件只读仍为本轮此前已成功创建的ACTIVE/本会话绑定；此拒绝与运行阶段许可无关，原Run42和活跃目标正常继续，不能把该审查误写成产品审批或暂停执行。按里程碑结束后再确认定时检查的后续安排，不以此中断当前已授权研发。新Run42/prepare1和development2持续以正式API核验。
+
+
+### 2026-10-14 — 新Run历史解析冷环境故障与正式同节点范围接续
+
+Issue42/Rune65c964ce9faf29e35271270d751cedb原生development2有界传输重连后实际完成并handoff tests3，未新建会话或Owner盲resume。tests3原固定make verify真实exit2，完整667798bytes/SHAbf9b038e40f26a9cbea9ba9e5105c0d1fa1f0eb68e630df7cf9c06b80a5c39e0，正式API读EOF/truncated=false。历史基线现在可执行，失败从旧缺祖先变为historical HTTP unparsed baseline output；158件源6e359667…前后不变。Node/Go全部产品门禁、独立QA尚未完成，不能当新绿。
+
+流水线自动failed→development4/conversation0adbb26f372fb3fc84e5983edff41453，实际最小诊断发现go test -json合并stdout/stderr，冷依赖下载非JSONstderr触发分类器解析拒绝；真实旧HTTP断言按预期失败，诊断不是固定测试通过。Agent主动报告范围外验证器需blocked，无重复全套求绿。Owner通过原workflow_message提交稳定request_id issue42:seq4:historical-json-stream-remediation，补充同任务最小项目验证器修复：Pipeline分离机器解析和完整stderr、覆盖噪声/无效stdout/真实执行故障，保留原断言/历史分类/全部门禁/期限和首轮缺章QA注入。此为项目测试设施修复，由Pipeline实现，不由协调者代写产品。输入已正式受理，尚不等于处理完成或交接。Issue42正文PATCH并远端逐值核对，明确现状/范围/未验，未新建重复任务。后续真实局部红绿→新源完整固定测试→独立QA实际返工/复核→确认→报告/同版PR，M1仍未通过。
+
+正式范围输入此前已入队，研发4调用blocked时返回409 request conflicts with existing state，原生明确未冒称等待成功；随后同conversation自动承接入队输入并开始真实红例/最小修复。此为排队输入优先接续的受支持路径，不是Owner改状态、重新Run或手动恢复。原409与Agent说明保持，仍待修复handoff和完整测试。
+
+研发4已实际完成9个命令边界回归红→绿，并真实历史HTTP重建通过；候选验证器main.go SHAeaa988821fccf011d9fc63795ea5933f3f7acb734ffe22830cbff8f6eafcf355、main_test.go SHAebdd0554efd7f73155324f9d5034e71a72fe1baaced6747c066485f5443a8bfa，Builder正式read_file只读保存，未代跑产品测试或QA。静态核对stdout只JSON解析、stderr完整诊断、非exit1执行失败拒绝、原历史预期断言与额外设施错误分类保持；全部门禁及后续独立QA仍须实际完成。缺章说明原SHAc0ec7667…未提前修复。Issue42实际8条回写含github-actions受理及big91987-agent-platform-bot[bot]节点/原生回复，固定tests3明确退出码2，研发阻塞/范围接续为真实通知，不由协调者模拟机器人。
+
+研发4正式handoff tests5：新158件working_tree_sha256=12d91213e103d69050c427579d36ec20595d5284a9ab6d75926761380784de70；只改项目验证器两文件与实施文档，Makefile/锁/历史基线/产品行为不变。9场景race与旧assessment、定向vet及真实历史HTTP重建实际绿，局部结果不替tests5。正式read_file保留14个声明原件703857bytes，白名单manifest记录逐文件SHA/bytes；不把协调者本机副本当Pipeline正式报告发布。重复原范围输入request_id一次返回duplicate=true/message1599/原conversation，Run无新执行且已自然进入tests5，真实消息去重及同会话接续成立。M1完整原门禁/独立QA/人工确认/PR尚待。
+
+
+### 2026-10-14 — 同Run新完整门禁暴露路由时间窗口
+
+Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=false，outer1010274bytes/SHA60424cbf22527af1423cdd7a79ebcda0ad9f3e638b927b7871df364f43576630（inner项目日志另列，不能混字节）。158件12d91213…源前后不变，历史JSON/原历史HTTP分类已过；实际当前失败仅TestRoutingRealHTTPSelectionFailoverAndRecovery“cooldown did not exclude actual primary”，历史健康断言红是预期基线重建，不混作当前产品缺陷。Node/全包部分执行不代表完整门禁或QA通过，browser尚未执行。
+
+正式自动failed→development6/conversation629b1f4645116065a655c6bc7d4c824a；Agent发现既有15毫秒时钟窗口，尚未证实精确根因或产品缺陷。Owner正式稳定输入issue42:seq6:routing-failure-scope/message2307已受理，要求实际最小归因；仅已证测试fixture可移植性可由同Pipeline最小修，保留真实HTTP/冷却排除/回退/到期恢复断言，优先既有可控时钟与阶段边界、不增sleep或retry/弱assert。产品错行为须独立产品修复目标，不在Harness验证中静默改业务。原缺章/同版回执保留，下一步新源完整tests→独立QA，M1仍未完成。
+
+研发6真实受控回退耗时实验：原deadline2026-10-14T12:46:50.634931478Z，主供应商实际selection_observed12:46:50.650582133Z/reasonselected/primary_delta1，原断言仍报cooldown未排除；同请求后续失败会重设冷却而出现新cooling记录，不把最后decision覆盖首选择事实。该实验支持测试真实15ms窗口到期后误判，未显示产品冷却决策错误。定向修后真实HTTP已绿，隔离候选“忽略冷却/拒绝到期恢复”反证仍执行中；全套及独立QA尚待。Issue42已补当前失败/范围说明并远端逐值核对，两个旧失败保留不升级Pass。
+
+
+### 2026-10-14 — 有界资源声明缺口与正式停止保存
+
+当前环境ready12:08:57Z、冻结TTL3600，实际多轮故障诊断后剩余寿命不足完成两轮完整测试和QA返工/报告。Owner向研发6提交寿命阻塞前先核实时状态，发现已自然进入tests7，因此旧seq6输入未发送；未误投或改图。正式stop7先stopping后stopped，原receipt exit-1/732771bytes/SHA65e34de812773a85c97294a453448dcdc286110c9940d7521412f77bf9752f2a、EOF/truncated=false。5个原生进程均实际stopped。先用正式read_file保留42个声明原件1792904bytes，再保留7内层state/log共735483bytes；共44件2528387bytes。state终12:57:47Z/gate_exit-1/exit1/log731984/SHA59c8ae42…，cleanup只保持原“attempted; candidate_removed”，不扩称全部子进程已清理。随后正式cancel7及环境release，实际Run cancelled/environment released；7步/原图/TTL和回执不改。未QA/未Pipeline PR，不能冒称M1完成。
+
+研发6新源158件a6f4ec9a2a4e9f87f501aee7f48251ccede244d46082fc09b415ea9953a03b3e，仅项目3个测试设施文件加说明/实施记录；真实定向HTTP绿、忽略冷却/永不到期/期限减半3反例各红、vet绿。fixture通过配置1h及精确生成期限建立未到期阶段，无在途请求时锁下调整测试拥有的内存deadline建立到期阶段，保留真实HTTP/40并发SWRR/回退/计量及选择证据，移除sleep、不改业务。旧tests5当时没有选择时间戳，不能倒推唯一原因。扩展HTTP集14.569s signal:killed退出1保留；之后cgroup memory.max2147483648/peak2147495936/oom=1/oom_kill=1，证实环境曾触顶并OOM，但缺前计数不能精确对应某个子进程终止。仍需新完整原门禁与独立QA。
+
+平台缺口：固定2CPU/2Gi及1h默认，对当前工作量没有可声明内存和受支持的已有实例寿命更新。最小修复落源：标准部署增加有界内存选择、显式--update-environment仅更新内存/寿命；省略时保留已有选择，新Run冻结内存、旧库0值保持2Gi及旧API原字节形状。CPU/容器权限不扩，未新增Profile/自动无限续期。安装持锁贯穿准备和激活，拒绝并发及外部unit修改，精确旧unit升级和同参数中断续装有回归。安装CLI缺选项真实2个red、实际SDK请求选8192MiB却仍2Gi red、旧Run误继承8192 red、并发安装覆盖和激活阶段失锁red分别保留；后续green05安装13回归及Go定向3绿，green02缩进错误为源码修复过程失败，未应用运行环境或误当产品结果。完整源门禁与标准112升级尚待。用户已授权普通选择自主推进，沿现有计划正式应用配置4h/8Gi到新任务；原Run不改生命周期参数。
+
+
+源完整full39 actual exit0，日志124855bytes/SHAdfd2bd52d369c7808a014aac7ae184666403846f85a28ba71853412adf80616b，125模板/浏览器/SDK/供应链/部署/vet/build绿，Go race73.023s为本次实际执行而非缓存。唯一既有final_branch_review对新增资源配置整版只读复审C/I=0，冻结兼容/安装并发/激活/中断恢复与实现一致；不等于产品QA或M1。标准112升级及实际新环境资源/替代Pipeline仍待。
