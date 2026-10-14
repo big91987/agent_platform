@@ -451,3 +451,43 @@ func TestWorkflowExecutionBrowserRoundTrip(t *testing.T) {
 	}
 	t.Log(string(result))
 }
+
+func TestExecutionEnvironmentReferencesSurviveAndRejectOverrides(t *testing.T) {
+	var v WorkflowExecution
+	if err := json.Unmarshal([]byte(`{"mode":"command","command":"git fetch","env_refs":{"GITHUB_TOKEN":"PROJECT_GITHUB_TOKEN"}}`), &v); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(v)
+	if !strings.Contains(string(raw), `"env_refs"`) {
+		t.Fatal("trusted references lost on round trip")
+	}
+	for _, name := range []string{"HOME", "PATH", "WORKFLOW_INPUT_FILE", "CODEX_HOME", "AGENT_PLATFORM_PASSWORD", "LD_PRELOAD", "bad-name"} {
+		raw := []byte(`{"mode":"command","command":"git fetch","env_refs":{"` + name + `":"PROJECT_GITHUB_TOKEN"}}`)
+		if err := json.Unmarshal(raw, &v); err != nil {
+			t.Fatal(err)
+		}
+		if validateWorkflowExecution(&v) == nil {
+			t.Errorf("accepted protected key %s", name)
+		}
+	}
+}
+
+func TestExecutionEnvironmentCapturesSelectedValuesAndRedactsSplitWrites(t *testing.T) {
+	t.Setenv("PROJECT_MISSING_TOKEN", "")
+	if _, err := executionEnvironment(map[string]string{"GITHUB_TOKEN": "PROJECT_MISSING_TOKEN"}); err == nil {
+		t.Fatal("missing credential accepted")
+	}
+	// A captured value is immutable for dispatch/redaction even after rotation.
+	t.Setenv("PROJECT_TOKEN", "captured-private")
+	values, err := executionEnvironment(map[string]string{"GITHUB_TOKEN": "PROJECT_TOKEN"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PROJECT_TOKEN", "rotated-private")
+	log := newBoundedConnectorLogValues(values)
+	log.Write([]byte("cap"))
+	log.Write([]byte("tured-private"))
+	if strings.Contains(log.String(), "captured-private") || !strings.Contains(log.String(), "[redacted]") {
+		t.Fatal("split secret was not redacted")
+	}
+}

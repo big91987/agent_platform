@@ -227,6 +227,9 @@ func acceptSandboxCommandID(data string, result *SandboxCommandResult) error {
 }
 
 func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbox.RunCommandRequest, onEvent opensandbox.EventHandler) (SandboxCommandResult, error) {
+	return s.commandWithIntent(ctx, id, run, in, onEvent, nil)
+}
+func (s *OpenSandbox) commandWithIntent(ctx context.Context, id, run string, in opensandbox.RunCommandRequest, onEvent opensandbox.EventHandler, beforeDispatch func() error) (SandboxCommandResult, error) {
 	var result SandboxCommandResult
 	if in.Background {
 		return result, errors.New("workflow commands must report their actual completion")
@@ -263,6 +266,14 @@ func (s *OpenSandbox) command(ctx context.Context, id, run string, in opensandbo
 	execd, err := s.execd(ctx, id, run)
 	if err != nil {
 		return result, err
+	}
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	if beforeDispatch != nil {
+		if err := beforeDispatch(); err != nil {
+			return result, err
+		}
 	}
 	err = execd.RunCommand(ctx, in, func(event opensandbox.StreamEvent) error {
 		// Capture the received identity before a log write can fail. Still retain

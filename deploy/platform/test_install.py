@@ -72,6 +72,35 @@ class InstallationTest(unittest.TestCase):
                 root.resolve() / "releases" / ("b" * 40) / "agent-platform",
             )
 
+    def test_runtime_environment_upgrade_preserves_secrets_and_rejects_public_files(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            self.prepare(parent)
+            root = parent / "instance"
+            unit = root / "agent-platform-8795.service"
+            optional = "EnvironmentFile=-" + str(root.resolve() / "runtime.env") + "\n"
+            # Recognized original unit is the only supported automatic migration.
+            unit.write_text(unit.read_text().replace(optional, ""))
+            runtime = root / "runtime.env"
+            runtime.write_text("PROJECT_GITHUB_TOKEN=private-fixture-only\n")
+            runtime.chmod(0o600)
+            self.prepare(parent, "b" * 40)
+            self.assertIn(optional, unit.read_text())
+            self.assertEqual(
+                runtime.read_text(), "PROJECT_GITHUB_TOKEN=private-fixture-only\n"
+            )
+            before = (root / "agent-platform").resolve()
+            runtime.chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "private"):
+                self.prepare(parent, "c" * 40)
+            self.assertEqual((root / "agent-platform").resolve(), before)
+            runtime.chmod(0o600)
+            runtime.write_text("AGENT_PLATFORM_PASSWORD=override\n")
+            with self.assertRaisesRegex(ValueError, "runtime"):
+                self.prepare(parent, "c" * 40)
+
     def test_mismatched_binary_revision_and_public_sandbox_config_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             parent = Path(directory)

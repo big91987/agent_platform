@@ -163,6 +163,9 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		if !e.stopConnector(r.ID) {
 			return nil
 		}
+		if err := e.store.executionRunReady(r.ID); err != nil {
+			return err
+		}
 		if step.ConversationID != "" {
 			if e.scheduler != nil {
 				conv, err := e.store.Conversation(step.ConversationID)
@@ -194,6 +197,11 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 			return err
 		}
 		return tx.Commit()
+	}
+	if e.connectorQuiet(r.ID) {
+		if err := e.store.executionRunReady(r.ID); err != nil {
+			return err
+		}
 	}
 	caller, err := e.store.workflowCaller(r)
 	if err != nil {
@@ -399,6 +407,9 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 	if err := e.store.nativeRunReady(r.ID); err != nil {
 		return err
 	}
+	if err := e.store.executionRunReady(r.ID); err != nil {
+		return err
+	}
 	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {
 		return errors.New("Run environment is not ready; reconcile before returning")
 	}
@@ -495,6 +506,9 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 		return ErrConflict
 	}
 	if err := e.store.nativeRunReady(r.ID); err != nil {
+		return err
+	}
+	if err := e.store.executionRunReady(r.ID); err != nil {
 		return err
 	}
 	if r.Environment != nil && r.Environment.Status != "ready" && r.Environment.Status != "pending" {

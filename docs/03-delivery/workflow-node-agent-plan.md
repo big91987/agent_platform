@@ -1120,3 +1120,23 @@ Run a97ab0a4a49e6a927a5a65e2164c8a6e已通过所属环境准备、原生进程�
 模型出网旧阻塞已通过用户明确代理配置及真实轮次解决，不继续等代理或SYS_ADMIN答复。实际证明模型执行、澄清接续、共享文件、轮次令牌修复、去重、complete_node与环境释放；没有产品QA/DeepSeek调用，也没有把此设施Run当测试仓正式新Issue/Pipeline。112仍安装a000d1d。
 
 测试仓实时读取首直连TLS超时未做写入；切换用户提供的代理后官方REST读回PR38仍draft/open/headacd96f752fa5dab0e009d597a12babe71d7bb765、146文件、GitGuardian success、main0c197c8b3d98346107e65dbf0c41ef5d6b73d437保持、Actions空。不盲合并或创建重复Issue。112只读凭据可用性核验：backend GH_TOKEN/GITHUB_TOKEN均未配置、gh CLI/标准hosts文件/credential helper均无；没有读取或转移Mac GitHub凭据。后续仍须完成私有仓库材料准备的受信配置与项目自有步骤，独立原生多角色/QA/返工/报告/新Issue触发整链和全分支最终评审，不以更多fixture替代这些尚未完成项。
+
+
+### 2026-10-14 — 私有仓库初始化采用执行节点受信环境引用
+
+真实原生接续09已完成，测试仓新Issue/Pipeline尚未启动，缺口是112执行步骤没有私有仓库认证入口。本轮复用Connector已有env_refs语义用于代码/项目命令：图中只保存运行时变量名→backend配置引用名，任务参数不选择凭据，值在action intent之前解析，缺失即拒绝，归档/展示按本次捕获值脱敏。MCP继续使用已有工具注册配置，不新增凭据Profile或项目专属平台脚本。Agent不继承此凭据。
+
+Linux标准安装增加实例自有可选0600 runtime.env及受管理EnvironmentFile；升级仅接受原标准unit的精确旧格式，配置/账号/data保持，外部编辑仍拒绝。项目初始化脚本复制到测试仓后按项目调整，固定repo/commit、使用进程环境认证克隆到同Run /workspace；准备/验证/QA/发布仍各有真实回执。这是受信运行时安装配置，不把手工注入环境作为临时运行救援。功能定向红绿已记录，完整验证、标准112升级及测试仓实际入口仍待本轮后续证据。
+
+
+### 2026-10-14 — 执行凭据、未知命令恢复与项目自有流水线源码闭合
+
+维护源新增执行节点env_refs与画布保存/重载、选定值的跨SDK输出分片脱敏、缺凭据时零派发；标准Linux安装接入可选0600 runtime.env并仅迁移精确旧unit。新Example包含同Run固定仓库准备、研发/固定make verify/独立QA/人工Gate/报告/同版草稿PR，项目必须复制并调整，不在平台维护每仓脚本。准备与发布获得受信Git引用，Agent/tests不继承Git凭据；模型代理单独配置。QA/report改为非隐藏harness-output，正式发布后保留原文到docs/harness/run-*，草稿PR不代表合并部署。
+
+唯一新鲜整支独立复审发现4项Important：非原生命令停止未知可返工重叠、Git pushurl导向、已提交文件逃逸发布范围、隐藏QA产物无法查看。修复及同一reviewer复核补充准备未派发/只读归属查询失败恢复、历史删除/还原秘密和暂存后工作区删除的边界；全部已在限定源码范围关闭，无剩余Critical/Important，真实Pipeline证据仍须另核。
+
+命令复用原action(run,seq)记录command_id和command_quiet，在只读归属/endpoint查询之后、RunCommand之前持久化可能派发，init保存真实ID；实际stop或独立状态核对/正式环境释放证明quiet，原receipt不改写。已发后未知阻止Stop声明完成、Return/Resume/新工作；明确上传或前置GET失败仍可保留工作区正式返工。SDK endpoint有缓存，定向夹具改为同阶段真实归属GET503，不把原未触发endpoint注入误当功能通过。原red command-stop与undispatched保留；green06 race2.370s/exit0，SDK原接口保留。两次回调签名编译失败及一次夹具旧seq冲突均保留并纠正，不当产品失败。
+
+发布检查固定base以来全部线性提交、实际index和有界blob，复用既有秘密扫描；拒绝合并历史另审。认证Git固定HTTPS仓库、禁重定向/Hook/本地URL及凭据覆盖。真实本地Git夹具验证预提交漏文件、历史秘密删除/还原、暂存秘密删除、外部pushurl均在网络前拒绝。自动审批首拒绝复制GitCLI token/App私钥，说明个人权限可能较广；用户明确选择允许这两项复制至112:8795用于本测试流水线后才继续。另一次大操作审批超时未执行，拆分已授权源码写入与需要监听的回归；没有绕过安全拒绝。112私有配置已按一致10240bytes传输回执安装600，App仍Issues-write原范围，临时传输包已删除；值未进图/Agent/日志。运行服务尚需标准新版安装读取该配置。
+
+最终full-verify34 actual exit0，平台race73.526s，浏览器/SDK/模板/供应链/部署/vet/build全过；完整日志121681bytes/SHA792f697395784ab77091308fe7428070b1a3057e48ac042ffa12efee04399c68。full31/33为此前候选绿；full30导入lint、full32本机监听EPERM及其他定向编译/夹具失败保留，不能覆盖。当前112仍a000d1d，PR38仍draft，尚无新Issue/产品Pipeline结果；下一动作固定提交标准升级112，再同步项目自有模板/标签入口并启动唯一新Issue，不停在源码绿。

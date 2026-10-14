@@ -313,3 +313,14 @@ test('MCP input references survive drawer closure, redraw and export; invalid dr
  el('#wf-execution-bindings').value='{"title":{"node":"absent","path":"/result"}}';el('#wf-execution-bindings').oninput();
  assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},editor.executionDrafts,editor.bindingDrafts)',ctx),/节点/);
 });
+
+test('execution environment references survive drawer reload and invalid JSON blocks save',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext("a.kind='execution';delete a.agent;delete a.exit_mode;a.execution={mode:'command',command:'git fetch'};graph.value.environment='opensandbox';renderWorkflowInspector(editor)",ctx);
+ el('#wf-execution-env').value='{"GITHUB_TOKEN":"PROJECT_GITHUB_TOKEN"}';el('#wf-execution-env').oninput();el('#wf-panel-close').onclick();
+ vm.runInContext('editor.selected=a.id;renderWorkflowInspector(editor)',ctx);
+ assert.equal(JSON.parse(el('#wf-execution-env').value).GITHUB_TOKEN,'PROJECT_GITHUB_TOKEN');
+ el('#wf-execution-env').value='{broken';el('#wf-execution-env').oninput();
+ assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},{},{},editor.executionEnvDrafts)',ctx),/JSON/);
+ vm.runInContext('renderWorkflowInspector(editor)',ctx);assert.equal(el('#wf-execution-env').value,'{broken');
+});

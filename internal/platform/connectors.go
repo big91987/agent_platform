@@ -62,7 +62,10 @@ func (s *Store) initConnectors() error {
 	_, err := s.DB.Exec(`CREATE TABLE IF NOT EXISTS connectors(id TEXT PRIMARY KEY,revision INTEGER NOT NULL,definition TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS workflow_run_connectors(run_id TEXT NOT NULL REFERENCES workflow_runs(id),connector_id TEXT NOT NULL,definition TEXT NOT NULL,PRIMARY KEY(run_id,connector_id));
  CREATE TABLE IF NOT EXISTS workflow_connector_actions(run_id TEXT NOT NULL REFERENCES workflow_runs(id),seq INTEGER NOT NULL,request TEXT NOT NULL,receipt TEXT NOT NULL DEFAULT '',error TEXT NOT NULL DEFAULT '',PRIMARY KEY(run_id,seq));`)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.initExecutionProcesses()
 }
 func connectorAllowed(c Caller, v Connector) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(v.AuthorizedUsers, c.UserID)

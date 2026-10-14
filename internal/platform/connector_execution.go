@@ -411,14 +411,21 @@ type connectorLogWindow struct {
 }
 
 func newBoundedConnectorLog(v Connector) *boundedConnectorLog {
-	b := &boundedConnectorLog{}
 	refs := []string{v.TokenEnv}
 	for _, ref := range v.EnvRefs {
 		refs = append(refs, ref)
 	}
-	seen := map[string]bool{}
+	values := map[string]string{}
 	for _, ref := range refs {
-		if value := os.Getenv(ref); value != "" && !seen[value] {
+		values[ref] = os.Getenv(ref)
+	}
+	return newBoundedConnectorLogValues(values)
+}
+func newBoundedConnectorLogValues(values map[string]string) *boundedConnectorLog {
+	b := &boundedConnectorLog{}
+	seen := map[string]bool{}
+	for _, value := range values {
+		if value != "" && !seen[value] {
 			b.secrets = append(b.secrets, value)
 			b.keep = max(b.keep, len(value)-1)
 			seen[value] = true

@@ -45,6 +45,46 @@ def write_private(path: Path, value: bytes) -> None:
         os.fsync(stream.fileno())
 
 
+def runtime_environment(path: Path) -> None:
+    if not path.exists() and not path.is_symlink():
+        return
+    raw = private_file(path)
+    try:
+        lines = raw.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise ValueError("runtime environment must be UTF-8") from error
+    seen = set()
+    for line in lines:
+        if not line.strip() or line.startswith("#"):
+            continue
+        name, sep, value = line.partition("=")
+        if (
+            not sep
+            or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", name)
+            or name in seen
+            or name
+            in {
+                "HOME",
+                "PATH",
+                "LD_PRELOAD",
+                "LD_LIBRARY_PATH",
+                "NODE_OPTIONS",
+                "PYTHONPATH",
+                "PYTHONHOME",
+                "BASH_ENV",
+                "ENV",
+            }
+            or name.startswith(("AGENT_PLATFORM_", "CODEX_", "WORKFLOW_"))
+            or not value
+            or "\x00" in value
+            or any(c in value for c in "\r\n")
+        ):
+            raise ValueError(
+                "runtime environment contains an invalid or reserved entry"
+            )
+        seen.add(name)
+
+
 def unit_path(path: Path) -> str:
     value = str(path)
     if any(c.isspace() or c in '\x00"%$\\' for c in value):
@@ -113,6 +153,8 @@ def prepare(
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     if root.stat().st_uid != os.getuid() or root.stat().st_mode & 0o077:
         raise ValueError("instance directory must be private and owned")
+    runtime = root / "runtime.env"
+    runtime_environment(runtime)
     configuration = root / "instance.json"
     if configuration.exists() or configuration.is_symlink():
         if json.loads(private_file(configuration)) != settings:
@@ -192,6 +234,7 @@ After=network-online.target
 Type=simple
 WorkingDirectory={root}
 EnvironmentFile={credentials}
+EnvironmentFile=-{runtime}
 ExecStart={" ".join(json.dumps(value) for value in command)}
 Restart=on-failure
 RestartSec=5
@@ -202,8 +245,14 @@ WantedBy=default.target
 """.encode()
     service = root / service_name
     if service.exists() or service.is_symlink():
-        if private_file(service) != unit:
-            raise ValueError("existing service configuration differs")
+        previous = private_file(service)
+        if previous != unit:
+            original = unit.replace(f"EnvironmentFile=-{runtime}\n".encode(), b"")
+            if previous != original:
+                raise ValueError("existing service configuration differs")
+            replacement = root / (".unit-" + uuid.uuid4().hex)
+            write_private(replacement, unit)
+            os.replace(replacement, service)
     else:
         write_private(service, unit)
     active = root / "agent-platform"

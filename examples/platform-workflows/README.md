@@ -440,3 +440,17 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
 项目准备步骤仍须在平台 Workflow 的同一 Run 环境内完成，按固定 commit 获取项目并准备项目依赖；私有仓库访问由受信配置提供，不能把密钥填进 Issue 或普通参数。平台自动申请环境不代表仓库已经克隆，更不代表依赖、原生 Agent、模型认证或产品验证已经通过。运行中审批、失败和交付继续由平台与 Pipeline 正式回执发布；入站自身拒绝会给原 Issue 写安全摘要，具体命令、响应、私有路径和凭据不公开。
 
 当前该入口已完成源码/SDK/隔离回归，尚未在测试仓创建新 Issue 或启动正式 Agent Pipeline。112 原生隔离权限与真实角色整链未验证，不能用这段安装说明冒称已跑通。
+
+## OpenSandbox 研发示例
+
+`sandbox_delivery.py` 生成只使用 Agent、执行、人工确认和结束的图：固定仓库准备→研发→项目 make verify→独立QA→人工确认→报告→草稿PR。失败测试和QA返工回研发，同Run共享 `/workspace`；每次节点执行有独立持久会话，执行中的补充输入/恢复保留原生身份，显式返工进入新step，不宣称跨step复用同thread。模型及联网策略沿用本示例的Codex/gpt-6.1-sol和外层隔离入口。
+
+```sh
+python3 .harness/agent-platform/examples/platform-workflows/sandbox_delivery.py \
+  --repository owner/project --credential-ref PROJECT_GITHUB_TOKEN \
+  --proxy http://proxy:7890 --no-proxy localhost,platform-host > workflow.json
+```
+
+将受信导出的本目录与SDK复制到项目 `.harness/agent-platform` 后按项目调整，通过平台管理API/画布安装生成的图。`sandbox_prepare.py` 使用执行节点选定的运行时环境认证，固定入站repo/commit及所属Run；不复制宿主checkout，不接管不明工作区或把秘密放进Git remote/图。Git凭据只配置准备/发布节点，Agent和tests不继承。专用Issue标签 `harness-opensandbox` 由项目自有Actions和sandbox_entry.py选择新图，旧入口排除该标签；GitHub Runner只转发，平台申请/运行/释放环境。
+
+`sandbox_publish.py` 只发布同Run分支，核对固定基线以来完整线性提交、当前文件和实际index的范围与秘密，不跟随认证重定向/项目Git Hook/URL改写。合并历史和删除交付文件需项目单独设计，不伪称本示例已支持全部Git流程。QA及报告先保存在可查看的 `harness-output`（Git exclude），人工确认后将原文保留到 `docs/harness/run-*` 并创建同版草稿PR；草稿PR不是合并或部署完成。报告交付前不要释放环境，正式发布以后以GitHub产物为持久入口。

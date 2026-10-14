@@ -293,9 +293,6 @@ def check_publish_files(workspace):
         .decode()
         .split("\0")
     )
-    private = re.compile(
-        rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})"
-    )
     for name in set(filter(None, names)):
         file = workspace / name
         if not file.exists():
@@ -306,30 +303,39 @@ def check_publish_files(workspace):
             raise ValueError(
                 "Submodule/directory staging requires separate review: " + name
             )
-        if file.name in (
-            ".env",
-            "auth.json",
-            "credentials.json",
-            "id_rsa",
-            "id_ed25519",
-        ) or any(
-            part
-            in (
-                "node_modules",
-                ".codex",
-                ".aws",
-                ".workflow-evidence",
-                ".workflow-input",
-            )
-            for part in file.parts
-        ):
-            raise ValueError("Refusing local credentials/cache artifact: " + name)
         if file.stat().st_size > 5 * 1024 * 1024:
-            raise ValueError(
-                "Artifact exceeds this example's 5 MiB publication limit: " + name
-            )
-        if private.search(file.read_bytes()):
-            raise ValueError("Potential private credential in " + name)
+            raise ValueError("Artifact exceeds publication limit: " + name)
+        check_publish_blob(name, file.read_bytes())
+
+
+def check_publish_blob(name, raw):
+    private = re.compile(
+        rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})"
+    )
+    if Path(name).name in (
+        ".env",
+        "auth.json",
+        "credentials.json",
+        "id_rsa",
+        "id_ed25519",
+    ) or any(
+        part
+        in (
+            "node_modules",
+            ".codex",
+            ".aws",
+            ".workflow-evidence",
+            ".workflow-input",
+        )
+        for part in Path(name).parts
+    ):
+        raise ValueError("Refusing local credentials/cache artifact: " + name)
+    if len(raw) > 5 * 1024 * 1024:
+        raise ValueError(
+            "Artifact exceeds this example's 5 MiB publication limit: " + name
+        )
+    if private.search(raw):
+        raise ValueError("Potential private credential in " + name)
 
 
 def delivery_artifacts(workspace, run):

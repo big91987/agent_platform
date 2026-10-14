@@ -107,6 +107,9 @@ func (s *Store) updateRunEnvironment(run, oldState, id, state, reason string) er
 		}
 	}
 	if state == "released" {
+		if _, err = tx.Exec(`UPDATE workflow_connector_actions SET command_quiet=1 WHERE run_id=? AND json_extract(request,'$.mode') IN ('code','command')`, run); err != nil {
+			return err
+		}
 		if err = confirmSandboxNativeAbsence(tx, run, stamp); err != nil {
 			return err
 		}
@@ -299,6 +302,9 @@ func (e *WorkflowEngine) ReconcileSandbox(ctx context.Context, c Caller, id stri
 		return err
 	}
 	if err = e.store.reconcileSandboxNativeProcesses(ctx, client, r); err != nil {
+		return err
+	}
+	if err = e.store.reconcileExecutionProcesses(ctx, client, r); err != nil {
 		return err
 	}
 	return e.store.updateRunEnvironment(r.ID, r.Environment.Status, info.ID, "ready", "")

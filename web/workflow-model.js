@@ -110,7 +110,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       if(v.mode==='mcp'){
         if(typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
         if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
-        if(v.code||v.command||v.language)throw new Error('MCP 配置不能混入代码或命令');
+        if(v.code||v.command||v.language||Object.keys(v.env_refs||{}).length)throw new Error('MCP 配置不能混入代码或命令');
         if(v.bindings!=null){
           if(typeof v.bindings!=='object'||Array.isArray(v.bindings)||Object.keys(v.bindings).length>64)throw new Error('参数引用须为最多 64 项的 JSON 对象');
           for(const [name,b] of Object.entries(v.bindings)){
@@ -124,6 +124,11 @@ globalThis.WorkflowGraph = class WorkflowGraph {
         if(v.server_id||v.tool||v.arguments!=null||Object.keys(v.bindings||{}).length)throw new Error('代码和命令不能混入 MCP 配置');
         if(v.mode==='code'&&(!['python','typescript'].includes(v.language)||v.command))throw new Error('请选择 Python 或 TypeScript；其他语言使用项目命令');
         if(v.mode==='command'&&(v.language||v.code))throw new Error('项目命令不能混入代码配置');
+        if(v.env_refs!=null){
+          if(typeof v.env_refs!=='object'||Array.isArray(v.env_refs)||Object.keys(v.env_refs).length>32)throw new Error('环境变量引用须为最多 32 项的 JSON 对象');
+          const valid=name=>typeof name==='string'&&/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)&&! /^(CODEX_|AGENT_PLATFORM_|WORKFLOW_)/.test(name)&&!['HOME','PATH','LD_PRELOAD','LD_LIBRARY_PATH','NODE_OPTIONS','PYTHONPATH','PYTHONHOME','BASH_ENV','ENV'].includes(name);
+          for(const [key,ref]of Object.entries(v.env_refs))if(!valid(key)||!valid(ref))throw new Error('环境变量引用须使用有效、非保留的名称');
+        }
         const text=v.mode==='code'?v.code:v.command;
         if(typeof text!=='string'||!text.trim()||text.length>64000||text.includes('\0'))throw new Error('请填写执行内容，最多 64000 字符');
       }

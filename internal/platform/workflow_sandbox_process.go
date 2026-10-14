@@ -60,6 +60,9 @@ func (s *Store) nativeRunReady(run string) error {
 }
 
 func (s *Store) beginSandboxNative(run WorkflowRun, c Conversation, m Message) error {
+	if err := s.executionRunReady(run.ID); err != nil {
+		return err
+	}
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return err

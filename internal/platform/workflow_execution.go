@@ -29,6 +29,7 @@ type WorkflowExecution struct {
 	Tool      string                      `json:"tool,omitempty"`
 	Arguments json.RawMessage             `json:"arguments,omitempty"`
 	Bindings  map[string]ExecutionBinding `json:"bindings,omitempty"`
+	EnvRefs   map[string]string           `json:"env_refs,omitempty"`
 }
 
 // A binding uses existing task data or a node's latest prior step. It carries
@@ -41,6 +42,9 @@ type ExecutionBinding struct {
 func validateWorkflowExecution(v *WorkflowExecution) error {
 	if v == nil {
 		return errors.New("select a supported execution mode")
+	}
+	if err := validateExecutionEnvRefs(v.EnvRefs); err != nil {
+		return err
 	}
 	switch v.Mode {
 	case "code", "command":
@@ -61,7 +65,7 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 		}
 		return nil
 	case "mcp":
-		if v.Code != "" || v.Command != "" || v.Language != "" {
+		if v.Code != "" || v.Command != "" || v.Language != "" || len(v.EnvRefs) != 0 {
 			return errors.New("MCP execution cannot contain code or commands")
 		}
 		if !toolServerName.MatchString(v.ServerID) || strings.TrimSpace(v.Tool) == "" {
@@ -75,6 +79,49 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 	default:
 		return errors.New("select a supported execution mode")
 	}
+}
+
+// Only administrator-configured references select backend values. Task input
+// cannot introduce environment keys or override platform execution controls.
+func executionEnvName(name string) bool {
+	if !envName.MatchString(name) || len(name) > 128 {
+		return false
+	}
+	for _, prefix := range []string{"CODEX_", "AGENT_PLATFORM_", "WORKFLOW_"} {
+		if strings.HasPrefix(name, prefix) {
+			return false
+		}
+	}
+	switch name {
+	case "HOME", "PATH", "LD_PRELOAD", "LD_LIBRARY_PATH", "NODE_OPTIONS", "PYTHONPATH", "PYTHONHOME", "BASH_ENV", "ENV":
+		return false
+	}
+	return true
+}
+func validateExecutionEnvRefs(refs map[string]string) error {
+	if len(refs) > 32 {
+		return errors.New("execution environment supports up to 32 references")
+	}
+	for name, ref := range refs {
+		if !executionEnvName(name) || !executionEnvName(ref) {
+			return errors.New("execution environment references must use valid, non-reserved names")
+		}
+	}
+	return nil
+}
+func executionEnvironment(refs map[string]string) (map[string]string, error) {
+	if err := validateExecutionEnvRefs(refs); err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(refs)+1)
+	for name, ref := range refs {
+		value := os.Getenv(ref)
+		if value == "" || len(value) > 64000 || strings.ContainsRune(value, 0) {
+			return nil, fmt.Errorf("execution environment reference %s is unavailable or invalid", ref)
+		}
+		out[name] = value
+	}
+	return out, nil
 }
 
 func executionTool(server RegisteredToolServer, name string) (*mcp.Tool, error) {
@@ -173,7 +220,14 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 	if !e.connectorQuiet(r.ID) || len(e.connectorJobs) >= 8 {
 		return nil
 	}
+	if err := e.store.executionRunReady(r.ID); err != nil {
+		return err
+	}
 	server, err := e.executionAccess(r, node)
+	if err != nil {
+		return err
+	}
+	runtimeEnv, err := executionEnvironment(node.Execution.EnvRefs)
 	if err != nil {
 		return err
 	}
@@ -219,7 +273,7 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 			receipt = ConnectorReceipt{Kind: "mcp", MCP: result}
 			callErr = err
 		} else {
-			receipt, callErr = e.executeSandboxNode(callCtx, r, step, node)
+			receipt, callErr = e.executeSandboxNode(callCtx, r, step, node, runtimeEnv)
 		}
 		receipt.TimeoutSeconds = seconds
 		e.mu.Lock()
@@ -247,7 +301,13 @@ func (e *WorkflowEngine) recordWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		return ErrConflict
 	}
 	if !recoverOnly {
-		if _, err = tx.Exec(`INSERT INTO workflow_connector_actions(run_id,seq,request) VALUES(?,?,?)`, r.ID, step.Seq, request); err != nil {
+		var execution WorkflowExecution
+		_ = json.Unmarshal([]byte(request), &execution)
+		quiet := 0
+		if execution.Mode == "code" || execution.Mode == "command" {
+			quiet = 1
+		}
+		if _, err = tx.Exec(`INSERT INTO workflow_connector_actions(run_id,seq,request,command_quiet) VALUES(?,?,?,?)`, r.ID, step.Seq, request, quiet); err != nil {
 			return err
 		}
 	}
@@ -283,7 +343,7 @@ func freezeExecutionTools(tx *sql.Tx, w Workflow) (map[string]RegisteredToolServ
 
 // The same Run environment executes scripts and project commands. No host
 // fallback is available; the SDK's actual command ID/status remain the receipt.
-func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, step WorkflowStep, node WorkflowNode) (out ConnectorReceipt, callErr error) {
+func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, step WorkflowStep, node WorkflowNode, runtimeEnv map[string]string) (out ConnectorReceipt, callErr error) {
 	out = ConnectorReceipt{Kind: node.Execution.Mode}
 	service, err := e.store.sandboxFor(r)
 	if err != nil {
@@ -308,7 +368,7 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	if err != nil {
 		return out, errors.New("cannot retain sandbox execution log before dispatch")
 	}
-	log := newBoundedConnectorLog(Connector{})
+	log := newBoundedConnectorLogValues(runtimeEnv)
 	log.window.archive = archive
 	defer func() {
 		out.Log = log.finishArchive()
@@ -342,8 +402,27 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	} else {
 		command += " '" + sourcePath + "'"
 	}
-	request := opensandbox.RunCommandRequest{Cwd: r.WorkspacePath, Envs: map[string]string{"WORKFLOW_INPUT_FILE": inputPath}, Command: command, Timeout: int64(seconds) * 1000}
-	result, commandErr := service.command(ctx, r.Environment.ID, r.ID, request, func(event opensandbox.StreamEvent) error { return json.NewEncoder(log).Encode(event) })
+	runtimeEnv["WORKFLOW_INPUT_FILE"] = inputPath
+	request := opensandbox.RunCommandRequest{Cwd: r.WorkspacePath, Envs: runtimeEnv, Command: command, Timeout: int64(seconds) * 1000}
+	result, commandErr := service.commandWithIntent(ctx, r.Environment.ID, r.ID, request, func(event opensandbox.StreamEvent) error {
+		var output struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		if json.Unmarshal([]byte(event.Data), &output) == nil && output.Type == "init" {
+			if err := e.store.recordExecutionProcess(r.ID, step.Seq, output.Text, false); err != nil {
+				return err
+			}
+		}
+		if json.Unmarshal([]byte(event.Data), &output) == nil && (output.Type == "stdout" || output.Type == "stderr") {
+			_, err := log.Write([]byte(output.Text))
+			return err
+		}
+		return json.NewEncoder(log).Encode(event)
+	}, func() error { return e.store.recordExecutionDispatch(r.ID, step.Seq) })
+	if result.Stopped && result.ID != "" {
+		commandErr = errors.Join(commandErr, e.store.recordExecutionProcess(r.ID, step.Seq, result.ID, true))
+	}
 	out.Sandbox = &result
 	if result.ExitCode != nil {
 		exit := int(*result.ExitCode)
