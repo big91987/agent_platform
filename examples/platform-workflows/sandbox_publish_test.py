@@ -113,3 +113,101 @@ class PublicationBoundaryTest(unittest.TestCase):
             with patch("sandbox_publish.Path.cwd", return_value=root):
                 with self.assertRaisesRegex(ValueError, "unreviewed staged"):
                     publish("owner/project", report)
+
+    def test_ignored_input_is_rejected_without_staging_or_delivery_writes(self):
+        self.assert_ignored_publication_is_unchanged("harness-output/", True)
+
+    def test_ignored_generated_report_is_rejected_without_staging(self):
+        self.assert_ignored_publication_is_unchanged("docs/harness/", False)
+
+    def assert_ignored_publication_is_unchanged(self, pattern, include_input):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            (root / ".git/info/exclude").write_text(pattern + "\n")
+            (root / "reviewed.txt").write_text("reviewed change")
+            if include_input:
+                value = json.loads(report.read_text())
+                value["files"].append("harness-output/qa.md")
+                report.write_text(json.dumps(value))
+            index_before = (root / ".git/index").read_bytes()
+            head_before = git("rev-parse", "HEAD")
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                with self.assertRaisesRegex(ValueError, "ignored publication path"):
+                    publish("owner/project", report)
+            self.assertEqual(index_before, (root / ".git/index").read_bytes())
+            self.assertEqual(head_before, git("rev-parse", "HEAD"))
+            self.assertFalse((root / "docs/harness").exists())
+
+    def test_existing_fixed_outputs_resume_without_recommit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            delivery = root / ("docs/harness/run-" + "a" * 12)
+            delivery.mkdir(parents=True)
+            (delivery / "qa.md").write_bytes(
+                (root / "harness-output/qa.md").read_bytes()
+            )
+            (delivery / "report.md").write_text(json.loads(report.read_text())["body"])
+            git("add", "docs/harness")
+            (root / "reviewed.txt").write_text("reviewed change")
+            original = subprocess.run
+
+            def stop_before_network(args, **kwargs):
+                if "push" in args:
+                    raise RuntimeError("fixture network boundary")
+                return original(args, **kwargs)
+
+            with (
+                patch("sandbox_publish.Path.cwd", return_value=root),
+                patch(
+                    "sandbox_publish.subprocess.run", side_effect=stop_before_network
+                ),
+            ):
+                for attempt in range(2):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "fixture network boundary"
+                    ):
+                        publish("owner/project", report)
+                    if attempt == 0:
+                        head = git("rev-parse", "HEAD")
+                    else:
+                        self.assertEqual(head, git("rev-parse", "HEAD"))
+            self.assertEqual("", git("diff", "--cached", "--name-only"))
+
+    def test_different_fixed_output_is_not_treated_as_reviewed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            delivery = root / ("docs/harness/run-" + "a" * 12)
+            delivery.mkdir(parents=True)
+            (delivery / "qa.md").write_text("unreviewed different QA")
+            git("add", "docs/harness")
+            index = (root / ".git/index").read_bytes()
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                with self.assertRaisesRegex(ValueError, "delivery artifact differs"):
+                    publish("owner/project", report)
+            self.assertEqual(index, (root / ".git/index").read_bytes())
+
+    def test_reverted_different_fixed_output_remains_rejected_in_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            delivery = root / ("docs/harness/run-" + "a" * 12)
+            delivery.mkdir(parents=True)
+            output = delivery / "qa.md"
+            output.write_text("prior unreviewed QA")
+            git("add", "docs/harness")
+            git("commit", "--quiet", "-m", "prior different QA")
+            output.write_bytes((root / "harness-output/qa.md").read_bytes())
+            git("add", "docs/harness")
+            git("commit", "--quiet", "-m", "restore reviewed QA")
+            index = (root / ".git/index").read_bytes()
+            head = git("rev-parse", "HEAD")
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                with self.assertRaisesRegex(
+                    ValueError, "differs in publication history"
+                ):
+                    publish("owner/project", report)
+            self.assertEqual(index, (root / ".git/index").read_bytes())
+            self.assertEqual(head, git("rev-parse", "HEAD"))

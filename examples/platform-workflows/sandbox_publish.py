@@ -98,8 +98,50 @@ def publish(repository, report):
         raise ValueError(
             "repository contains unsupported authentication or destination overrides"
         )
+    # Validate both selected files and fixed delivery outputs before any write
+    # or index mutation. Respect Git's tracked-file and ignore semantics.
+    delivery = Path("docs/harness") / ("run-" + identity["run_id"][:12])
+    publication_paths = files + [
+        str(delivery / name) for name in ("qa.md", "report.md")
+    ]
+    ignored = subprocess.run(
+        ["git", "check-ignore", "-z", "--stdin"],
+        input=("\0".join(publication_paths) + "\0").encode(),
+        cwd=root,
+        capture_output=True,
+        timeout=10,
+    )
+    if ignored.returncode == 0:
+        raise ValueError(
+            "ignored publication path: select repository artifacts, not runtime inputs; "
+            "QA and report body are copied to docs/harness/run-* automatically"
+        )
+    if ignored.returncode != 1:
+        raise ValueError("cannot verify publication paths against Git ignore rules")
     from repository import check_publish_blob, check_publish_files
 
+    qa = root / "harness-output/qa.md"
+    if not qa.is_file() or qa.is_symlink() or qa.parent.is_symlink():
+        raise ValueError("independent QA report is unavailable")
+    qa_raw = qa.read_bytes()
+    check_publish_blob("qa.md", qa_raw)
+    if delivery.is_symlink() or any(
+        parent.is_symlink() for parent in (root / delivery).parents
+    ):
+        raise ValueError("delivery path is not owned")
+    delivery_files = {
+        str(delivery / "qa.md"): qa_raw,
+        str(delivery / "report.md"): body.encode(),
+    }
+    for name, content in delivery_files.items():
+        destination = root / name
+        if destination.is_symlink() or (
+            destination.exists() and destination.read_bytes() != content
+        ):
+            raise ValueError("delivery artifact differs from prior publication")
+    # A prior attempt may already have staged or committed these exact outputs.
+    # Include them before both history and tracked-change scope validation.
+    files = list(dict.fromkeys([*files, *delivery_files]))
     check_publish_files(root)
     commits = git("rev-list", "--reverse", identity["commit"] + "..HEAD").splitlines()
     if len(commits) > 200:
@@ -144,34 +186,18 @@ def publish(repository, report):
             size = int(git("cat-file", "-s", blob))
             if size > 5 * 1024 * 1024:
                 raise ValueError("publication history blob exceeds size limit")
-            check_publish_blob(
-                name,
-                subprocess.check_output(
-                    ["git", "cat-file", "blob", blob], cwd=root, timeout=10
-                ),
+            raw = subprocess.check_output(
+                ["git", "cat-file", "blob", blob], cwd=root, timeout=10
             )
+            if name in delivery_files and raw != delivery_files[name]:
+                raise ValueError("delivery artifact differs in publication history")
+            check_publish_blob(name, raw)
     changed = set(git("diff", "--name-only", identity["commit"]).splitlines())
     if not changed.issubset(set(files)):
         raise ValueError("unreviewed tracked changes remain")
-    qa = root / "harness-output/qa.md"
-    if not qa.is_file() or qa.is_symlink() or qa.parent.is_symlink():
-        raise ValueError("independent QA report is unavailable")
-    qa_raw = qa.read_bytes()
-    check_publish_blob("qa.md", qa_raw)
-    delivery = Path("docs/harness") / ("run-" + identity["run_id"][:12])
-    if delivery.is_symlink() or any(
-        parent.is_symlink() for parent in (root / delivery).parents
-    ):
-        raise ValueError("delivery path is not owned")
     (root / delivery).mkdir(parents=True, exist_ok=True)
-    for name, content in {"qa.md": qa_raw, "report.md": body.encode()}.items():
-        destination = root / delivery / name
-        if destination.is_symlink() or (
-            destination.exists() and destination.read_bytes() != content
-        ):
-            raise ValueError("delivery artifact differs from prior publication")
-        destination.write_bytes(content)
-        files.append(str(delivery / name))
+    for name, content in delivery_files.items():
+        (root / name).write_bytes(content)
     subprocess.run(["git", "add", "--", *files], cwd=root, check=True, timeout=30)
     staged = (
         subprocess.check_output(

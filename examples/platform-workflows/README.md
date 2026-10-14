@@ -453,7 +453,7 @@ python3 .harness/agent-platform/examples/platform-workflows/sandbox_delivery.py 
 
 将受信导出的本目录与SDK复制到项目 `.harness/agent-platform` 后按项目调整，通过平台管理API/画布安装生成的图。`sandbox_prepare.py` 使用执行节点选定的运行时环境认证，固定入站repo/commit及所属Run；不复制宿主checkout，不接管不明工作区或把秘密放进Git remote/图。Git凭据只配置准备/发布节点，Agent和tests不继承。专用Issue标签 `harness-opensandbox` 由项目自有Actions和sandbox_entry.py选择新图，旧入口排除该标签；GitHub Runner只转发，平台申请/运行/释放环境。
 
-`sandbox_publish.py` 只发布同Run分支，核对固定基线以来完整线性提交、当前文件和实际index的范围与秘密，不跟随认证重定向/项目Git Hook/URL改写。合并历史和删除交付文件需项目单独设计，不伪称本示例已支持全部Git流程。QA及报告先保存在可查看的 `harness-output`（Git exclude），人工确认后将原文保留到 `docs/harness/run-*` 并创建同版草稿PR；草稿PR不是合并或部署完成。报告交付前不要释放环境，正式发布以后以GitHub产物为持久入口。
+`sandbox_publish.py` 只发布同Run分支，核对固定基线以来完整线性提交、当前文件和实际index的范围与秘密，不跟随认证重定向/项目Git Hook/URL改写。合并历史和删除交付文件需项目单独设计，不伪称本示例已支持全部Git流程。QA及报告先保存在可查看的 `harness-output`（Git exclude），人工确认后将原文保留到 `docs/harness/run-*` 并创建同版草稿PR；草稿PR不是合并或部署完成。报告交付前不要释放环境，正式发布以后以GitHub产物为持久入口。 `report.json.files` 只列要提交的仓库文件，不列 `harness-output/qa.md` 或 `harness-output/report.json`；这两项仍作为节点交接 artifacts。发布器在生成交付文件或修改暂存区之前检查所有清单和固定输出的 Git 忽略规则，不强制添加被忽略文件。旧 Run 沿正式回退入口纠正报告清单，保持已确认正文/QA及固定生成文件同版；不得删除已有交付文件来绕过不同内容冲突。新版发布器先逐字节确认固定QA/正文，再将其加入本次范围检查，因此已暂存或已提交的同版固定输出可以接续；不同字节（含提交历史）仍拒绝。旧冻结发布器需要在报告清单显式列入两份已生成的同版交付文件，再由正式入口接续。
 
 证据副本不能成为新的构建输入。归档源码时使用文本、补丁或项目明确不参与构建的材料形式，记录原路径和字节摘要；例如将 Go 文件按原字节保存为 `.go.txt`，避免文档目录中的 `.go` 被 `go vet ./...` 当作包扫描。不要靠修改正常构建入口或减少测试来容纳归档。交接和发布应列具体文件；目录可用于组织，但不能替代可核验文件清单。已有 Run 保留冻结指令，通过正式补充输入处理当前归档问题；从维护源同步项目副本并重新生成、更新工作流后，新 Run 才采用更新后的角色约定。
 
