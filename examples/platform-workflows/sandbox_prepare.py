@@ -73,7 +73,8 @@ def prepare(context, repository, workspace=Path("/workspace")):
 
         git("init", "--quiet")
         git("remote", "add", "origin", "https://github.com/" + repository + ".git")
-        git("fetch", "--quiet", "--depth=1", "origin", commit)
+        # Fixed HEAD still needs reachable history for project regression gates.
+        git("fetch", "--quiet", "origin", commit)
         actual = (
             subprocess.check_output(
                 ["git", "rev-parse", "FETCH_HEAD"], cwd=workspace, env=env, timeout=5

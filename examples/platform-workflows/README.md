@@ -458,3 +458,5 @@ python3 .harness/agent-platform/examples/platform-workflows/sandbox_delivery.py 
 OpenSandbox 图可沿用不读取文件的 GitHub Issue 评论通知 Hook；目标 Issue 可由受信入口的 `issue_parameter` 指定。平台在控制面发送通知，运行中的仓库和命令仍留在所属 OpenSandbox。宿主命令、读取 `body_file` 和传统 Connector 节点继续拒绝。显式 `run.failed` 通知只发布当前失败节点和处理链接，不自动公开原生错误、命令或私有路径；已经恢复而未发送的通知跳过，结果未知仍先核对外部回执。
 
 新沙箱入站也支持私有配置的既有 `git_proxy`：Issue读取、固定commit查询、评论接续及通知都使用同一GitHub子进程代理，不改变平台API客户端或父进程环境。认证代理URL拒绝。Actions记录安全执行阶段及GitHub HTTP/传输类别，不公开底层响应、命令或私有路径；未知受理仍先查询原请求键，网络修复不能当成自动重放许可。
+
+准备脚本保留固定commit的完整可达历史，不把固定HEAD等同于浅克隆；历史回归仍可访问祖先对象。已归属且同源工作区重入只复用，不重播fetch/checkout或覆盖未提交文件。固定测试同版重复失败时先定位；缺环境/凭据或冻结准备步骤的修复入口时应正式blocked，不能循环求绿。模板升级影响新Run，已冻结Run不原地换脚本；必须取消或更换环境时保留原证据并明确替代关系。

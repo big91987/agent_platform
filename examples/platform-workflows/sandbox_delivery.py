@@ -84,7 +84,7 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             agent(
                 "development",
                 "研发实现",
-                "在当前共享工作区完成本任务。先读取项目AGENTS.md和冻结输入；只修改本Issue范围。不读取凭据，不执行push/PR/发布。归档真实文件和实施记录后使用原生handoff交给tests；收到QA返工或用户纠正时核对既有文件再继续，不重建工作区。",
+                "在当前共享工作区完成本任务。先读取项目AGENTS.md和冻结输入；只修改本Issue范围。不读取凭据，不执行push/PR/发布。归档真实文件和实施记录后使用原生handoff交给tests；收到QA返工或用户纠正时核对既有文件再继续，不重建工作区。固定tests失败先读完整回执定位，只有实质修复或新的可复验证据才再次交tests；同版重复失败且需修环境、凭据或冻结准备步骤时，用wait_for_input blocked明确影响、证据和下一步，不循环求绿。",
             ),
             {
                 "id": "tests",

@@ -16,7 +16,7 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 112标准部署3261b34、源完整verify35/项目122回归通过；PR38已合003b686，专用caller/Runner配置/标签就绪；Issue39已创建，原Actions38546350797/38546350712分别执行与排队，尚未受理Run。继续核原事件，不另启动 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 112标准部署3261b34、源完整verify35/项目122回归通过；PR38已合003b686，专用caller/Runner配置/标签就绪；Issue39首Run b0dfee…已真实准备/原生研发，但历史回归因浅fetch缺祖先失败；正式停止8且产物归档。通用完整历史修复已红绿/整套通过，待标准升级新图并明确替代验证任务；保留39原失败，不重复旧图 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
@@ -564,3 +564,17 @@ Linux标准安装增加实例自有可选0600 runtime.env及受管理Environment
 最小只读实证：同机GitHub CLI默认读Issue39为transport_error，用户指定代理读成功。源码sandbox_entry未接既有git_proxy，顶层异常抹掉分类；red13两项明确失败→8项sandbox_entry green12通过，124项模板21.971s全绿。首red12夹具patch错误命名空间导致只读外部调用，已纠正后才取实际红；未写GitHub或平台。修共同Github子调用选择函数供旧/沙箱入口复用，主进程/平台API网络不改变；读取/固定源码/提交阶段安全记录，错误只保留HTTP/传输类别不泄响应/私有路径。专用Runner配置通过原标准save保存既有git_proxy选项，未改全局网络。真实只读预提交链已达submit并明确拒绝POST；此使用OwnerCLI只读而非Actions token，不冒称正式恢复通过。full36因import排序实际失败保留，已修后启动full37；待标准导出项目升级、精确Harness修复PR合并，再正式dispatch同Issue/原请求键，不盲重试或另建Issue。
 
 full37最终actual exit0，完整日志122971bytes/SHAb68c05709cfdaabf1f25f0c4b016b0d981d17c881eb6e8d6a2205dc85e6d20ca，124模板及浏览器/SDK/供应链/部署/vet/build全过；Go源码未变化，race采用有效缓存（最近实际full35平台race76.266s），不伪称重新实跑。准备固定源提交/标准导出并应用项目入口；当前Issue39尚无Run，不以源绿冒称M1。
+
+通用模板修复已提交并推平台开发分支f4ded463db0e401d5ad242b53cc1f3adb3fdab56，未创建平台PR或合源main。标准导出146件，项目副本124回归19.362s及两入口help通过；PR40只6件Harness文件/说明，精确head e5684fbfc189902626bef4efd74535d1ecb29f7b、GitGuardian success，授权ready+合main9e5531b1149e00748013f25e9672bd5dd6041dc4，146Git库存与SOURCE一致。原PR38保留已合历史，本PR40不是Pipeline生成的交付PR。平台Go二进制未变化，仍health3261b34；无需假装重装同代码。已查原请求仍404后正式单次dispatch同Issue39/source main9e5531，等待原回执。新dispatch受理不代表Run/固定测试/独立QA完成，不重试未知结果。
+
+### 2026-10-14 — 真正原生整链首Run暴露浅历史准备缺陷
+
+原恢复dispatch38550547157实际成功并创建唯一Runb0dfee0c70121cc2709e881fb94690e5/workflow revision1/source main9e5531；准备code1真实exit0/2636bytes，工作区归属/固定HEAD成立。研发2独立原生模型完成授权缺章说明及快照，Git凭据存在性false、无产品更改；固定tests3/5/7真实exit2且各有完整未截断回执，全在review-history baseline unavailable exit128，尚未到Node/Go产品回归或独立QA。研发8已主动wait_for_input(blocked)抑制第四次重复，原生4进程独立stopped；Owner正式stop8已读回stopped，未手改DB或图。当前阶段不是通过，也无交付PR。
+
+原因实证：冻结prepare代码git fetch --depth=1，native8只读历史1/缺66f1328ada75ea90e5638fbf2bd58663ac86347e及9b6994ed80de2bdba79ff267419150dccaac1360；GitHub官方compare均behind0、确为固定HEAD祖先。首compare助手误把端点三点分隔当路径穿越，在发请求前拒绝；已只对白名单GET双40位SHA开放，未增加写权限。此为通用Harness准备缺陷，不改产品历史门禁、不给Agent/tests注入凭据。真实本地Git祖先夹具red exit128→移除浅fetch后3准备回归green，固定HEAD不变、同Run重入不重播fetch且未提交文件保持。
+
+Ruling：旧Run的inline准备代码和图已冻结，不能用平台新源码冒充旧Run已应用修复，也不手工补git对象。先白名单归档原Agent产物/失败日志并正式取消释放，标准源/项目模板升级当前Workflow，再建明确替代关系的新验证Issue/Run（沿已认可的取消/新环境入口）；不扩造通用Run迁移模型、不复活旧39。第一M1以新图实际完整Run与PR为门槛，旧失败和关联保留。其代价是新增一次明确替代验证任务，不能拿旧Run改状态伪造恢复。正式源修复/新完整门禁/标准安装应用尚待后续。
+
+旧39原20件Agent产物通过正式SDK逐一保留2055158bytes；三轮原state均gate_exit2/Source_before=after6e359667…不变，cleanup保持其原“attempted; candidate_removed”措辞，不补写强杀证明。源command logs seq1 2636/SHA08a8eb86…，seq3 665584/8bafdb20…，seq5 665461/26a37053…，seq7 665542/7a41647a…全部EOF/truncated=false；inner runner与outer SSE帧长度另列不混。文件列表API400泛化unavailable/changed/limit，单一声明文件read_file通过，同文档SHA775923a4…与native8一致；此API列表范围/错误分类缺口保留，不能声称目录浏览全部通过。按声明路径精确读取是受支持只读接口，无秘密或临时写入，旧候选与流程状态不变。
+
+完整源full38actual exit0/123506bytes/SHAf546ebfbef8ca84a45727811ff2b5d0ff722b768a1ab3d34b50f085abbb5dbc6，125模板/浏览器/SDK/供应链/部署/vet/build通过，Go不变且race有效缓存。新模板默认固定HEAD加完整祖先历史，同已归属源重入仍不fetch/checkout或覆盖文件；研发SOP补实质修复/新证据才返tests，环境/凭据/冻结步骤缺入口就blocked。待固定提交/项目标准导出/Workflow正式升级；M1尚未通过，无Pipeline生成PR。
