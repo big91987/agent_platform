@@ -1432,3 +1432,8 @@ QA13处理5901后正式approved→approval14，最终原文13628bytes/SHA8212244
 ### 2026-10-14 18:55 UTC：确认上下文通用修复标准上线，原Run实际复验
 
 平台afebd27经scripts/verify.sh exit0/124865bytes/SHA3ee9ccc9589c897b6d7df7a03b7667fe40c081675ea8bea0aff0bc1f2bf3b975、独立review无Critical/Important；git archive源码2c996660…经既有112会话传输并校验，标准build16/install16均exit0，health实际revision afebd27b016d6dc80a5c4c8004ddf13f5612535e，binary824ad091…。安装前后Run整体逐值相同、私有配置/凭据保持；没有手改运行副本。正式return15→report16，旧报告取消记录保持；新原生输入6522实际包含自动生成的approval14确认块与原summary逐字匹配，前14步不变。GitHub正式compare同步确认main0c1e2203相对候选仅3个.harness标准模板文件变化，以正式return附只读patch给无Git凭据的报告Agent，区分维护者材料和Agent自行取证。没有给Agent新增Git权限、重跑产品或重复审批。实际草稿PR仍待。
+
+
+### 2026-10-14 19:03 UTC：正式发布被模板测试字符串误报阻断
+
+report16已生成90项报告清单并保持235审批清单；publish17真实exit1/1204bytes/SHA2c4cdb03d2128960819590b982e976b41314ab3573c2099b482310371a6dc5cd，固定check_publish_files在Git提交前拒绝.harness/.../report_publication_test.py。唯一原因是测试源码直接含PRIVATE KEY头部样例；不是泄露了真实私钥。Agent对选定文件扫描通过不能冒充全仓固定发布成功。Builder正式stop17，未重跑发布。通用源最小修复只拆开测试字符串，运行时原样，凭据扫描规则/边界不动；标准export集成回归真实红→绿，实际.env仍被拒绝，独立review无Critical/Important。首次直接跑全模板未设置SDK路径导致2个导入错误，改跑原scripts/verify.sh，不将设施导入错误算产品失败。待标准升级及新入口实际复验；旧Run冻结项目模板不手补，环境TTL前保留报告/证据，M1未完成。

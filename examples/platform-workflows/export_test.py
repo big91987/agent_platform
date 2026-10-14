@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from export import export
+from repository import check_publish_files
 
 
 class ExportTest(unittest.TestCase):
@@ -30,6 +31,8 @@ class ExportTest(unittest.TestCase):
                 "examples/platform-workflows/sandbox_entry.py",
                 "examples/platform-workflows/github_entry.py",
                 "examples/platform-workflows/materials.py",
+                "examples/platform-workflows/report_publication.py",
+                "examples/platform-workflows/report_publication_test.py",
                 "examples/github/requirements.py",
             ]
             for name in paths:
@@ -79,6 +82,16 @@ class ExportTest(unittest.TestCase):
                     hashlib.sha256((dest / name).read_bytes()).hexdigest(),
                     record["sha256"],
                 )
+            # Installing the supplied template must not block the project's own
+            # publication scanner; an actual private artifact still must block it.
+            project = root / "project"
+            subprocess.run(["git", "init", "-q", str(project)], check=True)
+            subprocess.run(["git", "-C", str(project), "add", ".harness"], check=True)
+            check_publish_files(project)
+            (project / ".env").write_text("private fixture")
+            with self.assertRaisesRegex(ValueError, "credentials/cache"):
+                check_publish_files(project)
+            (project / ".env").unlink()
             shutil.rmtree(source)
             env = {
                 k: v

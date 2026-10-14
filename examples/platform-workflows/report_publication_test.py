@@ -256,7 +256,7 @@ class ReportPublicationTest(unittest.TestCase):
             for prefix in [b"", b" ", b"/", b"=", b'"']:
                 self.assertIsNotNone(publication.SECRET.search(prefix + key))
         self.assertIsNotNone(
-            publication.SECRET.search(b"text-----BEGIN PRIVATE KEY-----")
+            publication.SECRET.search(b"text-----BEGIN " + b"PRIVATE KEY-----")
         )
 
     def test_title_credential_is_rejected_before_writes(self):
