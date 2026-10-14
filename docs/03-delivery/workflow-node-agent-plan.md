@@ -1,6 +1,8 @@
 # 节点独立配置实施计划
 
-隔离改造当前状态（2026-10-14 20:58 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已首轮tests3完整绿→独立QA4缺章revise→development5补章→tests6完整绿→QA7正式approved。QA7原完整日志取证阻塞由平台8ad9394标准升级、原节点两次真实导出及独立复核关闭，163源码991c79ca…与历史保持。approval8真实stop/重复stop/同节点resume及材料保持通过，操作者正式decision(next)已保存；错误approved路由400拒绝无副作用保留。report9首次模型容量失败无命令副作用，一次同会话正式resume后实际写入三份报告草稿，再次容量失败；最后校验/交接未完成。新草稿PR/远端同版核验/保存后释放尚待，M1未完成。112:8795运行8ad9394/冻结图revision3；不触碰旧服务。PR47仅材料接续，不计最终PR。 下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 21:30 UTC）：M1真实整链已完成。Issue48→唯一Run2b6a366cc7b3d48870e1b887757f229f（15步completed）→Pipeline自行发布草稿PR49，head a033eb20ea848d3aead77231da367703b1b43fb8。两轮完整冷make verify、独立QA实际缺章拒绝/返工/全量复核、共享工作区、原生gpt-6.1-sol角色交接和正式操作者确认均有原回执。GitHub 163源码991c79ca…、85交付文件、QA/正文/首拒绝及146冻结模板逐字节核验通过；86件最终本地归档4997769bytes。环境正式release请求响应超时后只读核对已released，未重复释放；入口已标准恢复main。草稿PR49未合并/部署，不代表全部产品、真实供应商或全部可靠性场景已通过。通用发布修复源a20c59b已开发分支提交推送，测试仓标准升级PR50精确合main cb2cb1e89b3f765f56a83bbbe5ed3c1b02041f99，原manifest将未来图升revision4，仅报告约定改变、当前冻结Run/私有配置不变；112二进制仍8ad9394。下一阶段M2/M3/M4待用户确认，不再自动启动新任务。 下文旧状态按历史保留。
+
+历史快照（原20:58状态）：隔离改造当前状态（2026-10-14 20:58 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已首轮tests3完整绿→独立QA4缺章revise→development5补章→tests6完整绿→QA7正式approved。QA7原完整日志取证阻塞由平台8ad9394标准升级、原节点两次真实导出及独立复核关闭，163源码991c79ca…与历史保持。approval8真实stop/重复stop/同节点resume及材料保持通过，操作者正式decision(next)已保存；错误approved路由400拒绝无副作用保留。report9首次模型容量失败无命令副作用，一次同会话正式resume后实际写入三份报告草稿，再次容量失败；最后校验/交接未完成。新草稿PR/远端同版核验/保存后释放尚待，M1未完成。112:8795运行8ad9394/冻结图revision3；不触碰旧服务。PR47仅材料接续，不计最终PR。 下文旧状态按历史保留。
 
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
@@ -1446,3 +1448,17 @@ publish12仍exit1/908bytes/SHA909304d1bbe11ce1a6fb6566a3713aafa6090d995169887baa
 
 
 最终模板验证：verify46完整exit0/125790bytes/SHA5c0932f789c99f2ccd34f9a350f05d4a8e8b55a0c315f90b25f1f4d38c9fc902；原Go输入未变，race缓存明确标记，旧实际race43保留。review建议历史不同QA后还原的负例已补且通过；完整suite加载后追加该用例，最终单独10项真实Git发布回归2.723s全绿及ruff检查通过，无实现改动。Issue48 report13明确将两份固定原文纳入85项清单、同版核对后，publish14正式exit0/9719bytes/SHA61c1d4b14a8b5b4aef8ccbe0ad3b1dc3d08b49f6c0b9fc9c80a01627718bf6b4，Pipeline已push a033eb20ea848d3aead77231da367703b1b43fb8并创建草稿PR49；done15 completed。当前正在远端逐字节复核及归档，尚未释放环境，不提前宣布M1验收完成。前publish10/12两次失败回执保留。
+
+
+### 2026-10-14 — M1交付与保存后释放
+
+隔离改造当前状态（2026-10-14 21:30 UTC）：M1真实整链已完成。Issue48→唯一Run2b6a366cc7b3d48870e1b887757f229f（15步completed）→Pipeline自行发布草稿PR49，head a033eb20ea848d3aead77231da367703b1b43fb8。两轮完整冷make verify、独立QA实际缺章拒绝/返工/全量复核、共享工作区、原生gpt-6.1-sol角色交接和正式操作者确认均有原回执。GitHub 163源码991c79ca…、85交付文件、QA/正文/首拒绝及146冻结模板逐字节核验通过；86件最终本地归档4997769bytes。环境正式release请求响应超时后只读核对已released，未重复释放；入口已标准恢复main。草稿PR49未合并/部署，不代表全部产品、真实供应商或全部可靠性场景已通过。通用发布修复源a20c59b已开发分支提交推送，测试仓标准升级PR50精确合main cb2cb1e89b3f765f56a83bbbe5ed3c1b02041f99，原manifest将未来图升revision4，仅报告约定改变、当前冻结Run/私有配置不变；112二进制仍8ad9394。下一阶段M2/M3/M4待用户确认，不再自动启动新任务。
+
+PR49实际发布14 exit0/9719bytes（61c1d4b1…），最终report13 JSON SHA9a1f74bde063d195f587a4eefd61a00c08e87089560dd712a2801c679b60808c。报告9→11→13正文/title保持，仅files移除2运行输入、增加2同版固定输出；前10/12失败和报告节点容量故障保留。首次远端对象只读核验连接断开，单次有界续读仅用校验后的Git对象缓存，最终全部通过，不重放写入。平台release POST响应超时后正式GET confirmed released/原steps及definition保持，不能把响应超时当未执行。
+
+标准修复交付：固定导出146件、包1464320bytes/SHAe9a7f5cf6fa1d54bf824fdd2944910437cb9378b2c009da1f47fa83517ab94c9；导出后10项实际Git回归通过。PR50精确head66b43abfb7cffe525a88b08b53a2334afb808b08、5个Git对象同导出/SOURCE、GitGuardian成功后授权合并。原Installation manifest upgrade回执revision4/frozen_run_unchanged/private_configuration_unchanged=true；只改报告角色指令，运行二进制无需因模板改变重启。新预检的源码与标准导出/仓库升级已验证，但未另起新真实Run来宣称所有新失败恢复场景已过；M1使用冻结旧模板和正式清单返工完成，这个边界保留。
+
+M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日志导出/强杀恢复、未知远端副作用核对；M3再验证第二仓复制升级，M4依据实际配置做减法。当前不启动这些阶段；报告与草稿PR可供用户确认。真实供应商/支付/外部身份、生产隔离/多租户服务及所有旧产品缺陷不由本Harness里程碑替代验收。
+
+
+按用户“跑通后再找我确认”的里程碑边界，model-relay heartbeat已通过automation_update正式PAUSED并读回确认；保持原每小时频率和配置，仅暂停继续推进，不自动开启M2。Issue48里程碑回写只含GitHub报告/QA/PR链接并使用现有agent-platform回写标记防止当新任务输入；PR49保持draft/未合并。材料PR47在核候选→最终PR49 ahead1/behind0后关闭为被替代，材料分支不删除。此为受托Builder确认，不冒称用户本人执行产品QA。
