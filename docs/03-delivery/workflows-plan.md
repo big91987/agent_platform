@@ -1,6 +1,6 @@
 # 平台内 Workflow 交付计划
 
-隔离改造当前状态（2026-10-14 18:55 UTC）：112:8795已标准部署afebd27；当前图revision3/Run744c4329冻结revision2保持。Issue44 tests12完整冷门禁exit0、QA10缺章拒绝→development11补齐→QA13正式PASS、approval14正式确认均已完成。report15因平台未传确认上下文受阻，唯一源码红绿/全量验证及复审后标准升级，正式return→report16原生输入6522已包含原decision14原文，前14步不变；报告继续执行，Pipeline草稿PR/远端同版核验仍待，M1未完成。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 19:18 UTC）：112:8795运行afebd27/当前图revision3。旧Issue44已cancelled17/released：完整tests12、独立QA实际返工复核、确认与报告通过，但publish模板误报失败，无Pipeline PR。唯一源bc43314已标准修复且PR46合main6d2552d3。原字节材料草稿PR47/head30b4e13c核163源码991c79…及94远端对象一致，未合并；新Issue48已走正式GitHub入口，Actions38621926669 queued/38621926773 pending，唯一Runner被自动prepare38621212545占用，尚无新Run。不重复派发，M1未完成。下文旧状态按历史保留。
 
 
 日期：2026-10-05。分支 `codex/platform-workflows`，基线 `3f3b2c8`，独立 worktree。负责人：平台实施者；用户负责最终体验验收和源仓库合并。
@@ -1437,3 +1437,11 @@ QA13处理5901后正式approved→approval14，最终原文13628bytes/SHA8212244
 ### 2026-10-14 19:03 UTC：正式发布被模板测试字符串误报阻断
 
 report16已生成90项报告清单并保持235审批清单；publish17真实exit1/1204bytes/SHA2c4cdb03d2128960819590b982e976b41314ab3573c2099b482310371a6dc5cd，固定check_publish_files在Git提交前拒绝.harness/.../report_publication_test.py。唯一原因是测试源码直接含PRIVATE KEY头部样例；不是泄露了真实私钥。Agent对选定文件扫描通过不能冒充全仓固定发布成功。Builder正式stop17，未重跑发布。通用源最小修复只拆开测试字符串，运行时原样，凭据扫描规则/边界不动；标准export集成回归真实红→绿，实际.env仍被拒绝，独立review无Critical/Important。首次直接跑全模板未设置SDK路径导致2个导入错误，改跑原scripts/verify.sh，不将设施导入错误算产品失败。待标准升级及新入口实际复验；旧Run冻结项目模板不手补，环境TTL前保留报告/证据，M1未完成。
+
+
+19:15 UTC正式交付记录：bc43314模板修复标准full41 exit0/124875bytes/SHAaefc8488a7c4b69c4dd6d3f7d1b22b09d6852b18441fb3b52660a0a83f523368，独立review无Critical/Important；PR46 head eb77336c9fd673d8a75ab69c0d0fec9908b7ef6f三文件远端逐字节核对/GitGuardian success后精确merge main6d2552d331fd7a0ec8d205f5d18ba3bcd34d6995。平台运行二进制仍afebd27，无需因项目模板测试文件变化重装平台。报告90项+QA共91文件6416584bytes已正式API原字节保存，报告JSON SHA7791903253c3118f8b443ed02c8f789ed2d800f877e52cb57899b7e5f2392b8d；与已存234项历史区别记录。Run44 stopped/nativequiet并核GitHub无分支/PR后正式cancel；release响应超时，未盲重发，随后正式GET确认cancelled17/released/nativequiet。旧冻结图/历史保留，M1没有完成。
+
+
+### 2026-10-14 19:18 UTC：标准模板修复接入新Issue48，原生整链待重新验证
+
+PR47是Builder经正式文件API原字节转存的接续材料，不是Pipeline最终PR；94对象已Git tree逐SHA核对，163源码库存991c79ca919b3d0ccf148c066c3b24d993090fcb78ab864c0e4637cfff8040ba全Git blob独立重算，缺章快照/QA10拒绝与原文件匹配。PR43按被47继承关闭未合并；PR47保持草稿。标准save仅将本地Runner及112可信entry base由issue42候选改为codex/issue44-reviewed-candidate，其他配置/凭据保持。新Issue48/id5854043575明确替代44、新文档首轮缺章/本轮重验、角色职责和最多100具体发布文件；旧材料是已提交基线，不要求重复塞进新files但正文覆盖相对main实际变化。44关闭not_planned不标通过。新opened/labeled Actions排队同稳定request，尚无API Run，不代起任务；唯一Runner online/busy，真实占用为main6d2552d3自动prepare38621212545，未人为取消或触碰旧服务。
