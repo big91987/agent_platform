@@ -1,6 +1,6 @@
 # 节点独立配置实施计划
 
-隔离改造当前状态（2026-10-14 19:22 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2已正式handoff、tests3running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 20:00 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已完成首轮tests3完整exit0/EOF，独立QA4因缺章正式revise，development5仅补章并保留原件，tests6正在执行原make verify；固定候选30b4e13c及163源码991c79ca…不变。QA04-E01旧外层日志中间页仍待QA实际补审，未以维护者读完替代。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。返工后完整测试/最终QA复核/确认/Pipeline PR仍待。下文旧状态按历史保留。
 
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
@@ -1384,3 +1384,9 @@ Issue48原生development2命令事件18765真实exit0：existing_publish_scan PA
 ### 2026-10-14 19:47 UTC：Issue48首轮完整固定门禁通过，独立QA4开始
 
 本轮tests3真实make verify exit0，正式output 1174629bytes/SHA754f5242f9a567dd52b2f40b10667b34c18819099b6094d28940e48f661d310e分页EOF/truncated=false。唯一主attempt20261014T192852Z-1089328441，原层log1144558bytes/SHAafdbb354a9181d8fd950d2d16159283c9379d56552269eadbe4cd3f283ed101a与正式API读回state匹配；19:28:52.320–19:45:49.177Z，gate1000606ms/exit0/cancelledfalse。163源码991c79ca…前后及副本不变，冷node_modules/npm cache不存在、NODE_PATHunset、无预装；gate与10个辅助命令exit0/自有group absent，candidate removed，候选Playwright/core1.59.1及Chrome147实探针通过。审计摘要最初读取不存在的auxiliary键为null，已依据原state的auxiliary_commands纠正，无改原始回执。自动进入QA4/ddf4232ef699679b0d450019ff9018d1；缺章返工、第二轮固定测试、新独立QA、正式确认、报告和Pipeline草稿PR仍待，不能把首轮绿等同M1。
+
+
+19:54 UTC：QA4正式revise已交development5，缺章QA04-D01真实复现且首轮35e5eb5a…快照不变；另保留QA04-E01：独立QA只读取seq3外层首32768bytes/eof=false，不能声称已完整审查外层。内层完整原log/state已独立归档、与维护者正式API原件逐字节相同。维护者另保存15份不可变QA材料1180548bytes，拒绝报告9606bytes/SHA1d25ef3827de7846b4af52493832a1dba74ba2e3fb295ef118903d1c45f0f1f4；不将维护者已读外层EOF替成QA已读。研发5当前自报补章并归档，正式handoff/修订后完整固定复测/最终独立QA待完成。没有重复Run或手改状态。
+
+
+19:58 UTC：development5正式交接tests6，修订文档12999bytes/SHAd1a7112600467ae85d9af9000e3349f78ee9590e0317fc935cd4e1560d5f4209；维护者正式API保存17产物1221185bytes，独立确认新文档以首轮六章原字节为前缀、QA04拒绝原件不变。QA04-E01继续Open：研发仅补读外层尾页，不能据首尾EOF倒推中间已读，后续QA必须实际完整补审。共享工作区有上轮test-results及Go缓存，研发如实记录；本轮固定入口自身须再次证明隔离候选冷起点，不要求或手动清空共享工作区。tests6原make verify运行中，源码、模板及门禁未改，M1尚未完成。
