@@ -1,6 +1,6 @@
 # 平台内 Workflow 验证记录
 
-隔离改造当前状态（2026-10-14）：用户已授权持续自主推进到一次完整真实Run和Pipeline生成的同版草稿PR。112:8795当前标准源2db4c4c；Issue42/Rune65c964…原1h/2Gi环境经历真实历史解析与HTTP时序设施失败后，正式停止、归档44原件2528387bytes、取消并释放；两项目测试设施修复由Pipeline实现，尚未通过完整原固定门禁和独立QA，不算M1完成。平台有界资源选择/标准显式配置更新正在维护源红绿验证；随后标准升级并从保留候选分支用新任务继续。原8793及下文既有Model Relay产品任务没有由本轮代执行，历史证据保留。当前自动检查状态及审查拒绝记录见本文2026-10-14条目，早期PAUSED说明是当时状态。
+隔离改造当前状态（2026-10-14 15:22 UTC）：112:8795已标准部署f409c0a，真实新环境4h/8Gi及去重/共享文件/释放通过基础探针；Issue42正式取消释放，原Pipeline候选保存为未合并草稿PR43。唯一替代Issue44/Run744c4329facce31be37c97e7caa2fea3经项目GitHub入口进入prepare完成、development2 running；候选固定1d581652。完整make verify、独立QA缺章返工复核、确认、报告及Pipeline生成PR仍待，本轮不代产品验收。下文旧状态按历史保留。
 
 
 基线：2026-10-05，分支 codex/platform-workflows，起点 3f3b2c8。
@@ -2984,3 +2984,15 @@ Issue42 tests5原固定make verify actualexit2，正式31页读至EOF/truncated=
 
 
 源完整full39 actual exit0，日志124855bytes/SHAdfd2bd52d369c7808a014aac7ae184666403846f85a28ba71853412adf80616b，125模板/浏览器/SDK/供应链/部署/vet/build绿，Go race73.023s为本次实际执行而非缓存。唯一既有final_branch_review对新增资源配置整版只读复审C/I=0，冻结兼容/安装并发/激活/中断恢复与实现一致；不等于产品QA或M1。标准112升级及实际新环境资源/替代Pipeline仍待。
+
+## 2026-10-14 15:22 UTC：资源配置已正式应用，Issue44接续候选
+
+112:8795标准升级到 `f409c0a6f4e3208100291b8a88459a937ea6d4ca`，build/install均exit0；binary19414688bytes/SHA256 `45104bcad8da5332dcd490059e7f00c4d5f206e1c04873a9b270ac2c7526b9ca`，health同revision。显式标准更新仅改变新任务TTL14400与memory8192MiB，CPU仍2；旧Run、原生会话记录、私有runtime/CI/App凭据逐字节保持。源完整full39为exit0/124855bytes/`dfd2bd52d369c7808a014aac7ae184666403846f85a28ba71853412adf80616b`，125模板测试及实际Go race73.023s，独立源码复审C/I=0；不是产品QA。
+
+正式基础探针Run `2ed0baa2cc460bd7abb8852f9576dae5`通过Python/TypeScript/Go共享工作区、同请求去重、操作者确认、结束与释放；真实cgroup memory.max=8589934592，初始oom/oom_kill=0，Run冻结ttl14400/memory8192。原报告32768bytes/SHA `5eb56d0c87db330b93a34c36764d72ad7785abfcd147d7536faee8aee4ae90d1`；该探针不含原生角色或产品验收。
+
+Issue42已closed/not_planned，原7步及cancelled/released保持，最后中断不是Pass。Pipeline原写三个测试设施源码及两份研发说明按manifest原字节转存测试仓独立候选[草稿PR43](https://github.com/big91987/model-relay/pull/43)，head `1d581652736fbac4e8862b70367181c8a9f2f8b2`，6文件远端Git blob逐字节一致。此为未验收的候选接续材料，不合main、不算Pipeline最终PR；两份旧报告引用的私有harness-output未全部公开，接续说明明确限制。
+
+既有可信入站配置通过标准save仅将base从main改为`codex/issue42-test-fixture-candidate`，本地Runner与112记录一致，其他字段/Token引用不变。唯一替代[Issue44](https://github.com/big91987/model-relay/issues/44)明确候选来源、原失败、4h/8Gi、首轮缺章→独立QA拒绝/返工→原固定测试→复核→人工确认→报告及主分支目标草稿PR。opened/labeled Actions `38588363589`/`38588364193`均success，正式request `github:big91987/model-relay:issue:5850470252`只关联Run `744c4329facce31be37c97e7caa2fea3`；prepare1完成、development2 running，环境 `afedacfd-e324-41c2-83f3-29c5239c9840`实际ready，冻结TTL14400/8Gi。下一步等待原生自然handoff及完整make verify，不代产品、不重跑未知副作用；M1仍未通过，无Pipeline生成PR、QA或新部署。
+
+上次仅回读安装报告的自动审批因stream disconnected未执行；重新提交同一只读动作审批后成功，并非绕过拒绝。自动化配置沿已有状态保持，本轮未重建定时任务。
