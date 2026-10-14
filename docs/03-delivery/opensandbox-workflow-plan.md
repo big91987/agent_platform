@@ -16,12 +16,12 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2已正式handoff、tests3running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
 
-第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台afebd27；项目main模板已通过PR45更新至15bc98b，但当前Run沿候选分支使用旧2db4c4c/冻结图revision2。标准安装图已在approval14安全停顿点升级revision3，旧Run冻结revision2不变；不能把当前图升级冒称在途Run指令已改变。
+第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台afebd27；项目main模板已通过PR46更新至bc43314，新Issue48沿候选30b4e13c使用该项目自有模板/冻结图revision3。旧Issue44的revision2冻结历史保留且已取消释放；不能把新Run或模板升级冒称旧Run发布成功。
 
 ## 早期实施状态快照（2026-10-14，历史保留）
 
@@ -763,3 +763,9 @@ PR47是Builder经正式文件API原字节转存的接续材料，不是Pipeline�
 
 
 Issue48 prepare1实际exit0/2236bytes/SHA7eb647dd67ca15dfdfd6fd4800d4e90e80dd036deb86142b86bd4446e0ec8336，正式output EOF/truncatedfalse，进入development2。维护者尝试正式file API读取.harness/SOURCE.json被403拒绝，未绕过或改权限；因此尚不能声称通过该API读回容器隐藏目录。候选Git对象和准备固定commit已核，Agent正常工作区中的原生核验及固定测试仍待。
+
+
+Issue48原生development2命令事件18765真实exit0：existing_publish_scan PASS（offline、未发布）；项目模板SOURCE bc43314、146项manifest mismatches空；declared_main_ancestor PASS，源码163项991c79…；冷起点node_modules/.cache/npm/.cache/go-build/bin/test-results均不存在。此前维护者隐藏目录file API403仍保留，不把Agent原生执行输出说成维护者独立读隐藏文件；标准模板在新Run的原故障预检已通过，固定发布全链尚未验证。
+
+
+19:30 UTC：Issue48 development2正式route tests→tests3原make verify执行中。首轮新增12个具体文件，既有跟踪源码/测试/模板及旧文档不变；文档35e5eb5af37a83c81344cbad95cb89b866193179605ba5b9c772dc2dc1562be9故意缺停止恢复章节，首轮快照保留，交接清单自身536ec78e5374f23d752a4f9be66e3d6c52a56a04752e60a9606b2a24ea8f09f4。原生归档前后offline全仓扫描及byte_integrity退出0，未预装/未代跑make verify，独立QA尚未开始。GitHub入站回写github-actions[bot]，准备/研发节点回写big91987-agent-platform-bot[bot]真实评论及链接已核。

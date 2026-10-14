@@ -1,6 +1,6 @@
 # 平台内 Workflow 交付计划
 
-隔离改造当前状态（2026-10-14 19:22 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 19:22 UTC）：当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已从项目GitHub入口启动，prepare1completed/exit0、development2已正式handoff、tests3running，固定候选30b4e13c。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。新完整测试/QA返工/确认/Pipeline PR仍待。下文旧状态按历史保留。
 
 
 日期：2026-10-05。分支 `codex/platform-workflows`，基线 `3f3b2c8`，独立 worktree。负责人：平台实施者；用户负责最终体验验收和源仓库合并。
@@ -1451,3 +1451,9 @@ PR47是Builder经正式文件API原字节转存的接续材料，不是Pipeline�
 
 
 Issue48 prepare1实际exit0/2236bytes/SHA7eb647dd67ca15dfdfd6fd4800d4e90e80dd036deb86142b86bd4446e0ec8336，正式output EOF/truncatedfalse，进入development2。维护者尝试正式file API读取.harness/SOURCE.json被403拒绝，未绕过或改权限；因此尚不能声称通过该API读回容器隐藏目录。候选Git对象和准备固定commit已核，Agent正常工作区中的原生核验及固定测试仍待。
+
+
+Issue48原生development2命令事件18765真实exit0：existing_publish_scan PASS（offline、未发布）；项目模板SOURCE bc43314、146项manifest mismatches空；declared_main_ancestor PASS，源码163项991c79…；冷起点node_modules/.cache/npm/.cache/go-build/bin/test-results均不存在。此前维护者隐藏目录file API403仍保留，不把Agent原生执行输出说成维护者独立读隐藏文件；标准模板在新Run的原故障预检已通过，固定发布全链尚未验证。
+
+
+19:30 UTC：Issue48 development2正式route tests→tests3原make verify执行中。首轮新增12个具体文件，既有跟踪源码/测试/模板及旧文档不变；文档35e5eb5af37a83c81344cbad95cb89b866193179605ba5b9c772dc2dc1562be9故意缺停止恢复章节，首轮快照保留，交接清单自身536ec78e5374f23d752a4f9be66e3d6c52a56a04752e60a9606b2a24ea8f09f4。原生归档前后offline全仓扫描及byte_integrity退出0，未预装/未代跑make verify，独立QA尚未开始。GitHub入站回写github-actions[bot]，准备/研发节点回写big91987-agent-platform-bot[bot]真实评论及链接已核。
