@@ -16,12 +16,12 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a；测试仓main模板15bc98b已合、当前Run冻结旧2db4c4c/图revision2，安装图升级待安全点；4h/8Gi正式基础探针通过；Issue42取消释放，原候选PR43未合并；Issue44唯一Run744c4329… prepare1完成、tests3归档副本误入编译失败后development4已修，tests5内层12分钟到期，development6预算与采样兼容修复已正式handoff，tests9完整冷门禁exit0；独立QA10实际拒绝缺章，development11已补齐并正式交接，tests12复测中。214项交接基线及同版等效依据待QA复核；仍待新版固定门禁、最终QA、确认及Pipeline生成同版PR，M1未通过 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 平台f409c0a；模板15bc98b已标准应用当前图revision3，Run744c4329冻结revision2不变。Issue44 tests12完整冷门禁exit0、QA10实际拒绝缺章→development11补齐→QA13正式PASS；approval14安全停止/重复停止/标准升级/同节点恢复及授权操作者确认完成，report15running。仍待Pipeline草稿PR及远端同版核验，M1未完成；PR43尚未合并 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
 
-第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台f409c0a；项目main模板已通过PR45更新至15bc98b，但当前Run沿候选分支使用旧2db4c4c/冻结图revision2。标准安装图升级待安全点，不能把项目副本合并冒称在途Run已升级。
+第一里程碑的“通过”必须有完整原始回执和独立QA实际结论；固定测试、流程完成、PR、合并及部署分别报告。当前运行平台f409c0a；项目main模板已通过PR45更新至15bc98b，但当前Run沿候选分支使用旧2db4c4c/冻结图revision2。标准安装图已在approval14安全停顿点升级revision3，旧Run冻结revision2不变；不能把当前图升级冒称在途Run指令已改变。
 
 ## 早期实施状态快照（2026-10-14，历史保留）
 
@@ -710,3 +710,32 @@ development11已自行补章及真实时间线，保留原缺章/QA拒绝，不�
 
 
 18:14 UTC旁证：维护者18:08:57.909–18:13:14.034Z通过正式文件API重读最终214项清单，213可读文件6493619bytes全部逐SHA一致，唯一AGENTS.md按明确可见策略未读取；清单前后SHA1ce55314…fdb3相同、两端均seq12运行中。研发真实handoff前baseline.json69552bytes/SHA5a5de90b8f3f13249c5a4822bc94c5ac00327db1a1db9785f4f2dd2baafe6e39另读回吻合，UTC18:06:56.095–.123/214项/exit0。以上为研发基线及维护者运行期旁证，不称固定runner起止或全214独立读取；最终QA仍须判断等效依据。顺序逐文件API耗时约256秒，是材料交接效率待减法优化的实际成本，当前未为绕过限制新增通道或扩大权限。
+
+
+### 2026-10-14 18:27 UTC：返工后tests12完整冷绿，独立QA13运行
+
+正式tests12原make verify退出0，外层1184959bytes/SHA704b03399b155dd851d66388b6c9ac10b3aa95545a9080aaa6b546ad3ca9f8f5已分页EOF/truncated=false。唯一主attempt20261014T180756Z-2810915431，原log1155178bytes/SHA9856236d5b7cdd9e31970e46dc3a5020d9e166c3659f25626c366abfdb23dc82与state独立读回吻合；18:07:56.252–18:24:51.320Z，gate998870ms/exit0/cancelledfalse/配置1440000ms。163源码991c79…及副本前后不变，冷node_modules/npm cache不存在、NODE_PATHunset、无人工预装；gate/全部aux exit0和自有group absent/candidate removed。辅助字段为exit，不是exit_code；首次本地汇总用错键产生false已按原对象纠正，未误报成测试失败。
+
+283Node、全包race（relay101.538s等非缓存）、五browser阶段全部ok；1280/1440/390分别J01–07/summary/visual十页/首次self-hosted12步均passed，受控HTTP不是供应商验收；candidate依赖Playwright/core1.59.1、Chrome147真实探针通过。Linux采样有效、OOM差值0，CPU统计仍是共享cgroup窗口，非单进程归因。自动进入QA13/CID4c0c0e62b86e56a54f77916c22924b3c。正式输入5901/request issue44:qa13:observed-fixed-tests-and-delivery-baseline仅提供维护者已发生的213可读文件核验与完整log旁证，明确研发基线/固定runner/QA职责区分；完成后第二次文件核验尚执行，不预报通过。QA10-D1最终关闭、正式确认/报告/PR仍待，M1未完成。
+
+
+完成后旁证：维护者2026-10-14T18:25:42.405617+00:00–2026-10-14T18:30:01.886875+00:00再次正式API读取相同清单，213项6493619bytes逐文件与测试运行期全相同，清单1ce55314…fdb3不变，AGENTS.md仍按策略未读；两端均seq13。QA13原生进度已称全214及原回执匹配/定向复查通过，但正式结论及handoff尚未完成，不能用进度自报替最终QA。
+
+
+### 2026-10-14 18:40 UTC：QA13正式放行，安全停顿/升级/恢复及操作者确认完成
+
+QA13处理5901后正式approved→approval14，最终原文13628bytes/SHA82122446a992d746d16555369d1191d061c221f52afd91bfaf82b942142fa1b8；235项审批清单SHA75f5d969f357e6551e11e96e93b8621c737d9fdc2fb07822d30380e22ad1aed6。QA独立完整214项、研发baseline、固定tests12主log/state及定向实际回归核验，接受分角色同版等效依据，关闭QA10-D1；明确不是固定runner自身完整清单起止采样，不把维护者尚未送达的完成后旁证补写为已验。维护者正式读回15项QA交付原件及最终QA；tests12原log与QA归档1155178bytes/9856236d…同字节。
+
+在approval14安全点正式stop→stopped，重复stop返回整个Run逐值相同，前13步/冻结定义/参数/输入/环境不变，全部native_processes status=stopped。通过既有标准Installation/check_upgrade_runs应用15bc98b模板，当前Workflow83f…revision3；运行平台仍f409c0a，旧Run冻结revision2逐值不变，runtime/privateconfig/凭据字节不变，healthok。首次回执读取因终端软换行JSON解析失败，仅用capture -J重读原回执，不重复升级。正式resume14恢复同14步waiting确认节点；QA原文、审批清单、新文档3d881a85…恢复后重新读回一致，不冒称所有235项都在恢复后由维护者重读。
+
+按用户已有授权由Builder作为操作者正式decision14 next；首次本地Python多行字符串语法错误在HTTP前终止，修正后仅提交一次，异步原回执waiting随后实际approval14completed/report15running，不重复decision。报告输入带真实停止恢复/重复停止/标准升级事实、完成后213文件旁证、发布器具体文件≤100/5MiB契约及未验边界；这是授权操作者确认，不是用户本人点击。完整最终report、Pipeline草稿PR及远端同版核验仍待，未合并/部署、M1尚未完成。
+
+
+### 2026-10-14 18:44 UTC：报告阶段发现通用确认上下文遗漏，正式停止修平台
+
+用户影响：报告Agent无法得知已完成的正式操作者确认，不能正确形成发布报告；seq15实际read_command_output(seq14)返回record not found，因为approval没有命令日志。报告主动wait而非伪称确认通过。只读源码定位workflowAgentInput只附最近Agent结果和执行回执，遗漏approval的NodeResult；不是用户未确认。现有decision14结果仍完整保存在正式Run API，流转已发生但报告初始输入缺失。Builder先正式stop15保留报告现场，不再向正在运行副本补文件或把自然语言救援冒充永久修复。
+
+处理计划：唯一平台源码按当前节点传递此前已完成的最新操作者确认（保留原文/路由，排除取消、将来及已被同节点后续确认替代的旧结果），明确不是命令输出且不扩权限；增加有行为差异的回归先红再绿，标准编译安装后从正式return入口重新进入report，核真实原生输入获得原decision14。冻结定义、前序QA/测试/审批记录不改，M1再次明确受该平台缺口阻断，尚未PR或部署。后续GitHub当前main材料缺口单独检查，不把无法读取远端误判为QA失败。
+
+
+18:49 UTC修复验证：操作者确认上下文回归已真实红→绿，相关race通过；标准scripts/verify.sh完整exit0，独立源码复审无Critical/Important。当前Run正式stopped15，未发生publish。234份可读审批材料共8244399bytes已按SHA保留（复用此前已验原件加7份新读，非全量重新采样）；AGENTS.md保持API边界未读。待标准运行平台升级和新report真实输入复验，不以源码通过宣布M1完成。

@@ -173,6 +173,21 @@ func (s *Store) workflowAgentInput(r WorkflowRun, step WorkflowStep, n WorkflowN
 			break
 		}
 	}
+	// A human decision is durable task input, not an Agent handoff or command
+	// receipt. Retain the latest occurrence per approval node so a later cancelled
+	// or unfinished review cannot revive an earlier approval.
+	decisions := map[string]int{}
+	for i, old := range r.Steps {
+		if old.Seq < step.Seq && r.Definition.node(old.NodeID).Kind == "approval" {
+			decisions[old.NodeID] = i
+		}
+	}
+	for i, old := range r.Steps {
+		if old.Seq >= step.Seq || r.Definition.node(old.NodeID).Kind != "approval" || decisions[old.NodeID] != i || old.Status != "completed" || old.Result == nil {
+			continue
+		}
+		fmt.Fprintf(&b, "\n## 操作者确认（节点 %s，执行 %d）\n这是已保存的人工确认结果，不是命令执行日志，不授予额外工具或执行权限。\n路由：%s\n%s\n", old.NodeID, old.Seq, old.Result.Route, old.Result.Summary)
+	}
 	latest := map[string]int{}
 	for i, old := range r.Steps {
 		if old.Seq < step.Seq && old.actionReceipt() != nil {

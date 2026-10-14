@@ -532,3 +532,34 @@ func TestWorkflowMarkdownPreviousTurnCannotCompleteNewTurn(t *testing.T) {
 		t.Fatal("wait covered accepted result")
 	}
 }
+
+func TestWorkflowInputCarriesCompletedOperatorDecisions(t *testing.T) {
+	s := testStore(t)
+	r := WorkflowRun{ID: "decision-context", Definition: Workflow{ContextVersion: 2, Nodes: []WorkflowNode{
+		{ID: "qa", Kind: "agent", ExitMode: "complete"},
+		{ID: "approve", Kind: "approval"},
+		{ID: "other", Kind: "approval"},
+		{ID: "report", Kind: "agent", ExitMode: "complete"},
+	}}, Steps: []WorkflowStep{
+		{Seq: 1, NodeID: "qa", Status: "completed", Result: &NodeResult{Summary: "independent QA evidence"}},
+		{Seq: 2, NodeID: "approve", Status: "completed", Result: &NodeResult{Route: "next", Summary: "superseded operator decision"}},
+		{Seq: 3, NodeID: "other", Status: "cancelled", Result: &NodeResult{Summary: "cancelled decision"}},
+		{Seq: 4, NodeID: "approve", Status: "completed", Result: &NodeResult{Route: "next", Summary: "publish draft only; no merge"}},
+		{Seq: 5, NodeID: "report", Status: "pending"},
+		{Seq: 6, NodeID: "approve", Status: "completed", Result: &NodeResult{Summary: "future decision"}},
+	}}
+	text, err := s.workflowAgentInput(r, r.Steps[4], r.Definition.node("report"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"independent QA evidence", "publish draft only; no merge"} {
+		if strings.Count(text, required) != 1 {
+			t.Fatalf("missing or duplicated actual decision/handoff %q: %s", required, text)
+		}
+	}
+	for _, excluded := range []string{"superseded operator decision", "cancelled decision", "future decision"} {
+		if strings.Contains(text, excluded) {
+			t.Fatalf("inactive decision leaked into current task: %q", excluded)
+		}
+	}
+}
