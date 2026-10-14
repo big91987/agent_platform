@@ -1,6 +1,6 @@
 # 节点独立配置实施计划
 
-隔离改造当前状态（2026-10-14 15:22 UTC）：112:8795已标准部署f409c0a，真实新环境4h/8Gi及去重/共享文件/释放通过基础探针；Issue42正式取消释放，原Pipeline候选保存为未合并草稿PR43。唯一替代Issue44/Run744c4329facce31be37c97e7caa2fea3经项目GitHub入口进入prepare完成、development2 running；候选固定1d581652。完整make verify、独立QA缺章返工复核、确认、报告及Pipeline生成PR仍待，本轮不代产品验收。下文旧状态按历史保留。
+隔离改造当前状态（2026-10-14 18:10 UTC）：112:8795运行f409c0a，4h/8Gi基础探针通过；测试仓main模板15bc98b已标准合并，当前Run冻结revision2，安装图升级待安全点。唯一Issue44/Run744c4329facce31be37c97e7caa2fea3的tests9完整冷make verify退出0；独立QA10实际拒绝首轮缺章，development11已补齐并正式交接，tests12重新执行原固定门禁中。214项完整交接基线已由研发实际核验，等效同版证据待独立QA复核。原候选PR43仍草稿未合并；最终QA、操作者确认、报告及Pipeline生成同版PR未完成，M1未通过。下文旧状态按历史保留。
 
 
 目标：按用户已批准的节点独立配置方案执行，普通实现选择自主完成。
@@ -1307,3 +1307,16 @@ migration15.360s/legacy-ui195.875s/routing224.273s/console31.165s均ok；full-co
 实际冷起点node_modules/npm cache不存在、NODE_PATH unset、无人工预装；163件991c79ca…源/副本前后不变。283Node、原全包race/count1/parallel4（relay103.748s等真实非cached输出）、历史分类器、迁移/路由/console/full-console均过。1280/1440/390各J01–07、management-summary、十页console-visual和首次self-hosted旅程均passed；最终candidate/node_modules Playwright/core1.59.1和Chromium147.0.7727.15探针通过。gate与全部aux自有groups absent/candidate removed。Linux有效前后资源delta为共享cgroup窗口，OOM各项0，不能当单进程占用或Mac实机验证。
 
 自动进入独立QA10/CIDb3243fbf4ecf62c2cb2f26f8bdbb56dc，原生已声明核对同版证据、测试改动及实际缺章；未由维护者代QA放行。Issue44已同步完整冷绿和QA仍待结论；首轮故意缺章仍须实际revise、补齐后再固定测试/QA复核，后续正式确认/报告/草稿PR未完成，M1不提前置为通过。真实供应商/支付/外部身份、Darwin实机仍NotRun。
+
+
+### 2026-10-14 18:03 UTC：独立QA实际拒绝，development11正式返工
+
+QA10正式route=revise已接受，Run744c4329…自动进入development11/CID2bd1349ec948f46d152843663017d2b5。QA10-D1确证首轮文档缺“停止、恢复与环境释放”，当前文档仍与首轮7792bfa…原快照一致；拒绝原文10074bytes/SHA bca2159b81a59ead2f8056cab5d64dedd33853106d9faabe95bfabcbd9a831c6，归档及harness-output副本同字节。QA独立定向race/HTTP/Node与材料复核通过不覆盖缺章阻断，也不冒充独立全量浏览器实操。tests9完整绿保留，尚无最终QA/确认/报告/新PR。
+
+development11已自行补章及真实时间线，保留原缺章/QA拒绝，不改产品或测试源码。发现交接草案要求固定tests额外sha256sum，但冻结执行节点只运行make verify，不解释文字建议。维护者正式User Input5363/request issue44:seq11:fixed-tests-handoff-evidence-boundary纠正：QA10允许可审计等效依据，采用研发实际handoff前完整清单基线、平台顺序执行记录及后续独立QA逐项重核，维护者正式只读API旁证；不得称runner自身起止采样，不修改冻结命令或把本Run材料要求硬编码到项目验证器。最终是否充分仍由独立QA判断；若不足明确平台能力缺口，不能补造或靠未接入脚本。正在处理输入，不把受理当修复完成。
+
+
+18:10 UTC续记：development11正式接续5363后采用QA允许的等效审计边界；旧未接入命令建议撤回，纠正前记录另存。最终handoff18:07:55Z accepted，tests12原make verify已running。新版214项清单位于development-11-correction/SHA256SUMS，SHA1ce553146e21a910a47454d9c4cf6efa83a8527e19711c41ca7bc46e3801fdb3；研发18:06:56.095–.123Z实际逐项核验exit0，新文档3d881a85…，163源码991c79…不变。此为研发交接前基线，未来QA须独立判断，不能改称固定runner采样。维护者首次读错旧development-11清单导致当前文档摘要不符，未归因为运行时篡改；读取正式handoff后纠正为214项清单开始正式API旁证，原错误保留。tests12完整结果/QA复核仍待。
+
+
+18:14 UTC旁证：维护者18:08:57.909–18:13:14.034Z通过正式文件API重读最终214项清单，213可读文件6493619bytes全部逐SHA一致，唯一AGENTS.md按明确可见策略未读取；清单前后SHA1ce55314…fdb3相同、两端均seq12运行中。研发真实handoff前baseline.json69552bytes/SHA5a5de90b8f3f13249c5a4822bc94c5ac00327db1a1db9785f4f2dd2baafe6e39另读回吻合，UTC18:06:56.095–.123/214项/exit0。以上为研发基线及维护者运行期旁证，不称固定runner起止或全214独立读取；最终QA仍须判断等效依据。顺序逐文件API耗时约256秒，是材料交接效率待减法优化的实际成本，当前未为绕过限制新增通道或扩大权限。
