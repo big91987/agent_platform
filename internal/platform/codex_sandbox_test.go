@@ -26,6 +26,7 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			store := testStore(t)
 			caller, run, c, m := nativeProcessFixture(t, store)
+			c.Snapshot.NetworkAccess = true
 			var base, capability string
 			var filesMu sync.Mutex
 			files := map[string][]byte{}
@@ -149,6 +150,13 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 							}
 							send(map[string]any{"id": packet.ID, "result": map[string]any{"model": packet.Params["model"], "thread": map[string]any{"id": "stable-role-thread"}}})
 						case "turn/start":
+							policy, _ := packet.Params["sandboxPolicy"].(map[string]any)
+							if policy["type"] != "externalSandbox" || policy["networkAccess"] != "enabled" {
+								t.Error("owned container turn still requests inner isolation", packet.Params["sandboxPolicy"])
+							}
+							if packet.Params["approvalPolicy"] == nil || packet.Params["approvalsReviewer"] != "user" {
+								t.Error("external isolation discarded approval settings")
+							}
 							turns.Add(1)
 							if mode == "cancel" {
 								close(turnStarted)
@@ -243,5 +251,35 @@ func TestSandboxNativeTransportOwnsLaunchTurnAndStop(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestExternalSandboxRefusesUnenforcedNodeRestrictionsBeforePreparation(t *testing.T) {
+	for _, readonly := range []bool{false, true} {
+		store := testStore(t)
+		_, run, c, m := nativeProcessFixture(t, store)
+		c.Snapshot.NetworkAccess = true
+		if readonly {
+			c.Snapshot.Sandbox = "read-only"
+		} else {
+			c.Snapshot.NetworkAccess = false
+		}
+		var contacted atomic.Int32
+		remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { contacted.Add(1); w.WriteHeader(500) }))
+		service, _ := newOpenSandbox(remote.URL, "private", "runtime", 600)
+		run.Environment.ConnectionHash = service.connectionHash
+		x := Codex{Root: store.Dir, AuthHome: t.TempDir()}
+		err := x.executeSandboxAppServer(context.Background(), store, service, run, c, m, "/var/lib/agent-platform/roles/"+c.ID, []byte("model='gpt-6.1-sol'\n"), map[string]string{}, []string{}, func([]byte) error { return nil })
+		remote.Close()
+		if err == nil || contacted.Load() != 0 {
+			t.Fatalf("unenforced restriction reached external environment: %v, contacts=%d", err, contacted.Load())
+		}
+		var count int
+		if err = store.DB.QueryRow(`SELECT count(*) FROM workflow_native_processes WHERE message_id=?`, m.ID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatal("unsupported policy recorded a native launch intent")
+		}
 	}
 }

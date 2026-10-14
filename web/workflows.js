@@ -159,7 +159,7 @@ function workflowAgentConfig(n,agents=state.agents){
 }
 function workflowAgentFields(editor,n){
  if(editor.readOnly)return '<p class="hint">节点执行配置由管理员管理。</p>';
- try{return agentConfigFields(workflowAgentConfig(n),editor.toolServers||[],'wf-agent',editor.agentEnvDrafts?.[n.id],true)}
+ try{return agentConfigFields(workflowAgentConfig(n),editor.toolServers||[],'wf-agent',editor.agentEnvDrafts?.[n.id],true,editor.graph.value.environment)}
  catch(error){return '<p class="callout">'+esc(error.message)+'</p>'}
 }
 function readWorkflowAgent(editor,n,validate){

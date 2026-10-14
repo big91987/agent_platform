@@ -110,6 +110,9 @@ func probeSandboxRuntime(ctx context.Context, service *OpenSandbox, id, run stri
 	if err = probeSandboxNativeSkillScope(stream, selectedSkill, record); err != nil {
 		return err
 	}
+	if err = probeSandboxExternalCommand(stream, record); err != nil {
+		return err
+	}
 	return record("native_role_process_confirmed", map[string]any{"home": home, "selected": selectedSkill, "same_process": process.ID, "credentials": "empty_fixture_only", "platform_conversation": "not_run", "model_turn": "not_run"})
 }
 
@@ -232,4 +235,48 @@ func probeSandboxNativeSkillScope(stream io.ReadWriter, selected string, record 
 		return err
 	}
 	return record("native_skill_scope_confirmed", map[string]any{"selected": selected, "enabled_count": 1, "native_login": "not_run", "model_turn": "not_run"})
+}
+
+// The actual native command runs in the already-owned container with no model
+// authentication and no nested namespace. This is a capability check, not a
+// platform conversation or product acceptance.
+func probeSandboxExternalCommand(stream io.ReadWriter, record func(string, any) error) error {
+	params := map[string]any{
+		"command": []string{"python3", "-c", `from pathlib import Path; p=Path("/workspace/external-command-proof.json"); p.write_text('"literal $(no shell)"'); assert p.read_text()=='"literal $(no shell)"'; assert not Path("/var/run/docker.sock").exists(); print("EXTERNAL_SANDBOX_COMMAND_PASS")`},
+		"cwd":     "/workspace", "timeoutMs": 10000,
+		"sandboxPolicy": map[string]any{"type": "externalSandbox", "networkAccess": "enabled"},
+	}
+	if err := json.NewEncoder(stream).Encode(map[string]any{"id": 13, "method": "command/exec", "params": params}); err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(stream)
+	for count := 0; count < 32; count++ {
+		var reply struct {
+			ID     int             `json:"id"`
+			Result json.RawMessage `json:"result"`
+			Error  json.RawMessage `json:"error"`
+		}
+		if err := decoder.Decode(&reply); err != nil {
+			return err
+		}
+		if reply.ID != 13 {
+			continue
+		}
+		if err := record("native_external_command_reply", reply); err != nil {
+			return err
+		}
+		if len(reply.Error) > 0 {
+			return errors.New("native external-sandbox command was rejected; original reply retained")
+		}
+		var result struct {
+			Exit   *int   `json:"exitCode"`
+			Stdout string `json:"stdout"`
+			Stderr string `json:"stderr"`
+		}
+		if json.Unmarshal(reply.Result, &result) != nil || result.Exit == nil || *result.Exit != 0 || !strings.Contains(result.Stdout, "EXTERNAL_SANDBOX_COMMAND_PASS") || result.Stderr != "" {
+			return errors.New("native external-sandbox command did not prove successful execution")
+		}
+		return record("native_external_command_confirmed", map[string]any{"policy": "externalSandbox", "native_exit": *result.Exit, "workspace_write_read": true, "docker_socket_absent": true, "credentials": "empty_fixture_only", "model_turn": "not_run", "platform_conversation": "not_run"})
+	}
+	return errors.New("native external command response exceeded the diagnostic bound")
 }

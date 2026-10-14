@@ -16,6 +16,10 @@ import (
 // an external conversation path. Public sandbox Agent entry stays gated until
 // role preparation, credentials, Skills and native execution are verified.
 func (x *Codex) executeSandboxAppServer(ctx context.Context, store *Store, client *OpenSandbox, run WorkflowRun, c Conversation, m Message, home string, configRaw []byte, env map[string]string, selectedSkills []string, onEvent func([]byte) error) (executeErr error) {
+	policy, err := externalSandboxPolicy(c)
+	if err != nil {
+		return err
+	}
 	if selectedSkills == nil {
 		return errors.New("sandbox native Skill scope must be explicitly checked")
 	}
@@ -120,5 +124,29 @@ func (x *Codex) executeSandboxAppServer(ctx context.Context, store *Store, clien
 		return err
 	}
 	defer stream.Close()
-	return x.executeAppServerTransport(ctx, c, m, "/workspace", configRaw, stream, stream, func() string { return "Native diagnostics are retained with the owned execution receipt." }, onEvent, selectedSkills)
+	return x.executeAppServerTransport(ctx, c, m, "/workspace", configRaw, stream, stream, func() string { return "Native diagnostics are retained with the owned execution receipt." }, onEvent, selectedSkills, policy)
+}
+
+// The runtime boundary is established by the owned Run, not a task parameter.
+// Until per-role outer restrictions are available, do not silently weaken
+// existing read-only or disabled-network settings inside the shared container.
+func externalSandboxPolicy(c Conversation) (map[string]any, error) {
+	if c.ReadOnly || c.Snapshot.Sandbox == "read-only" {
+		return nil, errors.New("OpenSandbox external isolation does not enforce per-node read-only access; this configuration cannot start")
+	}
+	if !c.Snapshot.NetworkAccess {
+		return nil, errors.New("OpenSandbox external isolation does not enforce per-node disabled networking; this configuration cannot start")
+	}
+	return map[string]any{"type": "externalSandbox", "networkAccess": "enabled"}, nil
+}
+
+func validateSandboxAgent(a Agent) error {
+	if a.Executor != "codex" {
+		return errors.New("OpenSandbox native execution requires Codex")
+	}
+	if _, err := externalSandboxPolicy(Conversation{Snapshot: a}); err != nil {
+		return err
+	}
+	_, err := sandboxRoleEnv(a)
+	return err
 }

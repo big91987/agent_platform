@@ -69,7 +69,7 @@ func TestCodexTransportResumesIdentityAndKeepsInteractiveApproval(t *testing.T) 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			var events strings.Builder
-			err := executor.executeAppServerTransport(ctx, Conversation{ID: "role-session", ThreadID: "original-thread", Snapshot: Agent{Executor: "codex"}}, Message{Content: "task input"}, "/workspace", []byte(""), platformInput, platformOutput, func() string { return "" }, func(raw []byte) error { events.Write(raw); return nil }, nil)
+			err := executor.executeAppServerTransport(ctx, Conversation{ID: "role-session", ThreadID: "original-thread", Snapshot: Agent{Executor: "codex"}}, Message{Content: "task input"}, "/workspace", []byte(""), platformInput, platformOutput, func() string { return "" }, func(raw []byte) error { events.Write(raw); return nil }, nil, nil)
 			if changed {
 				if err == nil || !strings.Contains(err.Error(), "identity changed") || approved {
 					t.Fatal("changed native identity accepted", err)
@@ -140,7 +140,7 @@ func TestNativeTransportUsesRequestedModelAndRefusesFallbackBeforeTurn(t *testin
 						persistedThread = event.ThreadID
 					}
 					return nil
-				}, nil)
+				}, nil, nil)
 				if persistedThread != "new-stable-thread" {
 					t.Fatal("created native identity not retained", persistedThread, err)
 				}

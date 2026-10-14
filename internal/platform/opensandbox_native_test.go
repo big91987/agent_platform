@@ -297,6 +297,12 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 				case "skills/config/write":
 					unselected = false
 					result = map[string]any{"effectiveEnabled": false}
+				case "command/exec":
+					policy, _ := req.Params["sandboxPolicy"].(map[string]any)
+					if policy["type"] != "externalSandbox" || policy["networkAccess"] != "enabled" {
+						t.Error("probe requested nested sandbox", req.Params)
+					}
+					result = map[string]any{"exitCode": 0, "stdout": "EXTERNAL_SANDBOX_COMMAND_PASS\n", "stderr": ""}
 				default:
 					t.Error("unexpected probe request", req.Method)
 					return
@@ -317,6 +323,7 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 	initialized := false
 	skillChecked := false
 	roleChecked := false
+	externalChecked := false
 	err := probeSandboxRuntime(context.Background(), service, "owned", sandboxTestRun, func(event string, _ any) error {
 		if event == "native_initialized" {
 			initialized = true
@@ -327,9 +334,12 @@ func TestRuntimeProbeWaitsForNativeListenerWithoutRelaunch(t *testing.T) {
 		if event == "native_role_inputs_confirmed" {
 			roleChecked = true
 		}
+		if event == "native_external_command_confirmed" {
+			externalChecked = true
+		}
 		return nil
 	})
-	if err != nil || !initialized || !skillChecked || !roleChecked || !roleLaunched.Load() || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
+	if err != nil || !initialized || !skillChecked || !roleChecked || !externalChecked || !roleLaunched.Load() || handshakes.Load() != 2 || launches.Load() != 1 || !stopped.Load() {
 		t.Fatal("native readiness failed, role inputs unused or relaunched", err, initialized, roleLaunched.Load(), handshakes.Load(), launches.Load(), stopped.Load())
 	}
 }

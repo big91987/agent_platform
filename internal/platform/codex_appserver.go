@@ -100,14 +100,17 @@ func (x *Codex) executeAppServer(ctx context.Context, c Conversation, m Message,
 		return err
 	}
 	diagnostics := func() string { stderrMu.Lock(); defer stderrMu.Unlock(); return stderrText.String() }
-	return x.executeAppServerTransport(runCtx, c, m, workspace, configRaw, input, output, diagnostics, onEvent, nil)
+	return x.executeAppServerTransport(runCtx, c, m, workspace, configRaw, input, output, diagnostics, onEvent, nil, nil)
 }
 
 // Local stdio and sandbox WebSocket transports share native identity, steering,
 // approvals and presentation. Only process ownership differs between executors.
-func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m Message, workspace string, configRaw []byte, input io.Writer, output io.Reader, diagnostics func() string, onEvent func([]byte) error, selectedSkills []string) (err error) {
+func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m Message, workspace string, configRaw []byte, input io.Writer, output io.Reader, diagnostics func() string, onEvent func([]byte) error, selectedSkills []string, sandboxPolicy map[string]any) (err error) {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	if sandboxPolicy == nil {
+		sandboxPolicy = turnSandbox(c)
+	}
 	send := func(v any) error { return json.NewEncoder(input).Encode(v) }
 	request := func(id int, method string, params any) error {
 		return send(map[string]any{"id": id, "method": method, "params": params})
@@ -369,7 +372,7 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 					if c.Snapshot.Model != "" && result.Model != c.Snapshot.Model {
 						return errors.New("native effective model differs from the selected model; the original thread was retained and no model turn was sent")
 					}
-					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeConversationApprovalPolicy(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot), "sandboxPolicy": turnSandbox(c), "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
+					if err = request(3, "turn/start", map[string]any{"threadId": thread, "approvalPolicy": nativeConversationApprovalPolicy(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot), "sandboxPolicy": sandboxPolicy, "input": []any{map[string]any{"type": "text", "text": m.Content}}}); err != nil {
 						return err
 					}
 				}

@@ -119,7 +119,7 @@ Python目录描述符完成，拒绝链接、隐藏路径和越界路径；单�
 `artifact_access_confirmed`；运行时模式另验证无凭据角色材料准备、接续复用及同一原生进程实际读取所选Skill。
 这些探针没有启动正式平台角色会话，也没有发送模型任务。
 
-### 当前原生命令隔离限制与待授权方案
+### 早期双重隔离失败与提权诊断提案（历史，当前不采用）
 
 固定运行镜像在112的SDK创建、Python/TypeScript、文件、取消，以及
 Codex认证WebSocket initialize/停止/释放已实际通过。原生模型turn尚未执行。
@@ -142,3 +142,22 @@ sysctl，不用privileged/hostnetwork，不挂载宿主目录，不提供模型�
 AppArmor/seccomp策略。未经新增权限授权，保持原策略；不切成无限权限原生Agent
 或复用旧Run来绕过限制。未来正式配置必须由运维入口选择、在新Run中冻结并展示，
 保持旧Run的原权限，不依赖Agent解释Issue正文自行授权。
+
+
+### 外部任务隔离与Codex原生执行（2026-10-14确认）
+
+当前方向为每Run使用OpenSandbox环境，Codex通过官方App Server的
+`externalSandbox`执行策略使用已有外部隔离，不再默认叠加其namespace沙箱。
+上节SYS_ADMIN/AppArmor/seccomp放宽方案保留为历史诊断提案，当前不采用。
+官方协议说明：https://learn.chatgpt.com/docs/app-server#command-execution 。
+
+外部策略仅由平台已核验的Run归属和OpenSandbox原生执行入口选择，不能在
+Issue输入或Agent原生TOML里自行开启；宿主执行仍使用原workspaceWrite/readOnly。
+平台的工具授权、原生审批、执行身份、回执、停止及失败恢复继续保留。
+外部模式可写范围是所属容器环境；部署不得挂载宿主工作目录、暴露Docker socket或增加额外容器能力。
+共享环境尚不支持节点级只读和禁联网：配置这些限制时在副作用前明确拒绝。
+角色配置需显式允许联网；这不是把网络开关忽略或把只读降为可写。
+
+112默认容器的同源无凭据probe07已实际证明externalSandbox command/exec读写、
+原生Skill范围、进程停止与环境删除404，不涉及模型登录/turn、正式平台角色会话
+或产品验收。真实Pipeline进度仍以交付计划及正式运行回执为准。

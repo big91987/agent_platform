@@ -89,7 +89,7 @@ func TestSandboxNativeChecksSkillScopeBeforeThread(t *testing.T) {
 			}()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			err := (&Codex{AuthHome: t.TempDir()}).executeAppServerTransport(ctx, Conversation{Snapshot: Agent{Executor: "codex"}}, Message{Content: "private task"}, "/workspace", nil, toNative, fromNative, func() string { return "" }, func([]byte) error { return nil }, selected)
+			err := (&Codex{AuthHome: t.TempDir()}).executeAppServerTransport(ctx, Conversation{Snapshot: Agent{Executor: "codex"}}, Message{Content: "private task"}, "/workspace", nil, toNative, fromNative, func() string { return "" }, func([]byte) error { return nil }, selected, nil)
 			if mode == "selected" || mode == "none" {
 				if err != nil || threads.Load() != 1 {
 					t.Fatal("valid Skill scope rejected", err, threads.Load())

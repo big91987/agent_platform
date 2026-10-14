@@ -467,3 +467,48 @@ func TestWorkflowSandboxUpgradeUsesRunFrozenImageAndTTL(t *testing.T) {
 	}
 	waitSandboxRun(t, NewWorkflowEngine(s, nil, ""), caller, run.ID, "ready")
 }
+
+func TestOpenSandboxAgentStartupAcceptsOuterIsolationAndRejectsUnenforcedRestrictions(t *testing.T) {
+	for _, scenario := range []struct {
+		name    string
+		network bool
+		sandbox string
+		want    bool
+	}{{"shared writable environment", true, "workspace-write", true}, {"per-node network denial", false, "workspace-write", false}, {"per-node read-only", true, "read-only", false}} {
+		t.Run(scenario.name, func(t *testing.T) {
+			store := testStore(t)
+			caller, graph, posts, _ := sandboxWorkflowFixture(t, store, false, false)
+			graph.Nodes[0] = WorkflowNode{ID: "review", Name: "Native role", Kind: "agent", ExitMode: "complete", Agent: &Agent{Executor: "codex", Model: "gpt-6.1-sol", Sandbox: scenario.sandbox, NetworkAccess: scenario.network, Instructions: "Use this task's shared environment."}}
+			graph.Edges[0].Mode = "automatic"
+			var err error
+			graph, err = store.SaveWorkflow(caller, graph)
+			if err != nil {
+				t.Fatal(err)
+			}
+			start := WorkflowStart{WorkflowID: graph.ID, Input: "native outer-isolation startup check", ExpectedEnvironment: "opensandbox", RequestID: "native-policy-case"}
+			run, err := store.StartWorkflow(caller, start)
+			if scenario.want {
+				if err != nil {
+					t.Fatalf("supported native Run was rejected: %v", err)
+				}
+				duplicate, e := store.StartWorkflow(caller, start)
+				if e != nil || duplicate.ID != run.ID {
+					t.Fatal("supported Run lost deduplication", e)
+				}
+				if run.WorkspacePath != "/workspace" || run.Environment == nil || run.Environment.Status != "pending" {
+					t.Fatal("startup escaped owned environment", run)
+				}
+			} else {
+				if err == nil {
+					t.Fatal("unsupported restriction silently accepted")
+				}
+				if _, e := store.WorkflowRunByRequest(caller, start.RequestID); e == nil {
+					t.Fatal("rejected policy left a Run")
+				}
+			}
+			if posts.Load() != 0 {
+				t.Fatal("startup validation dispatched environment creation")
+			}
+		})
+	}
+}

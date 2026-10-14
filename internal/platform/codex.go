@@ -580,6 +580,9 @@ func (x *Codex) Execute(ctx context.Context, c Conversation, m Message, onEvent 
 			return err
 		}
 		if run != nil {
+			if _, err = externalSandboxPolicy(c); err != nil {
+				return err
+			}
 			if err = x.Store.nativeRunReady(run.ID); err != nil {
 				return err
 			}

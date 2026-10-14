@@ -409,11 +409,6 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		if s.sandbox == nil {
 			return zero, errors.New("OpenSandbox service is not configured")
 		}
-		for _, node := range w.Nodes {
-			if node.Kind == "agent" {
-				return zero, errors.New("sandbox native executor integration is not yet configured")
-			}
-		}
 	}
 
 	executionTools, err := freezeExecutionTools(tx, w)
@@ -443,6 +438,11 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 		}
 		if n.Kind == "agent" {
 			if n.Agent != nil {
+				if w.Environment == "opensandbox" {
+					if e = validateSandboxAgent(*n.Agent); e != nil {
+						return zero, fmt.Errorf("node %s: %w", n.ID, e)
+					}
+				}
 				continue
 			}
 			var cfg string
@@ -458,6 +458,11 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 			}
 			if !a.Enabled {
 				return zero, fmt.Errorf("Agent at node %s is disabled", n.ID)
+			}
+			if w.Environment == "opensandbox" {
+				if e = validateSandboxAgent(a); e != nil {
+					return zero, fmt.Errorf("node %s: %w", n.ID, e)
+				}
 			}
 		}
 	}
