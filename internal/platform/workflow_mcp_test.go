@@ -2,7 +2,9 @@ package platform
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"net/http"
 	"net/http/httptest"
@@ -76,7 +78,7 @@ func TestWorkflowMCPReadsOnlyPriorLogsWhileCurrent(t *testing.T) {
 	if err := os.MkdirAll(home, 0700); err != nil {
 		t.Fatal(err)
 	}
-	output := "actual middle failure\n"
+	output := "actual middle failure\n" + strings.Repeat("中x", 20000)
 	if err := os.WriteFile(filepath.Join(home, "output.log"), []byte(output), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +110,66 @@ func TestWorkflowMCPReadsOnlyPriorLogsWhileCurrent(t *testing.T) {
 	if !strings.Contains(string(raw), "actual middle failure") {
 		t.Fatal("missing prior log")
 	}
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 2}})
+	// Export is a write capability even when the source is a read-only log.
+	for _, column := range []string{"read_only", "snapshot"} {
+		var original string
+		if err := s.DB.QueryRow("SELECT "+column+" FROM conversations WHERE id=?", conv.ID).Scan(&original); err != nil {
+			t.Fatal(err)
+		}
+		value := "1"
+		if column == "snapshot" {
+			frozen := conv.Snapshot
+			frozen.Sandbox = "read-only"
+			b, _ := json.Marshal(frozen)
+			value = string(b)
+		}
+		if _, err := s.DB.Exec("UPDATE conversations SET "+column+"=? WHERE id=?", value, conv.ID); err != nil {
+			t.Fatal(err)
+		}
+		denied, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1, "save_to_workspace": true}})
+		if err == nil && !denied.IsError {
+			t.Fatal("read-only conversation exported workspace file", column)
+		}
+		read, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1}})
+		if err != nil || read.IsError {
+			t.Fatal("read-only conversation lost paging", err)
+		}
+		s.DB.Exec("UPDATE conversations SET "+column+"=? WHERE id=?", original, conv.ID)
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1, "save_to_workspace": true}})
+	if err != nil || result.IsError {
+		t.Fatal("complete retained log could not be exported", result, err)
+	}
+	invalid, invalidErr := session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1, "offset": 1, "save_to_workspace": true}})
+	if invalidErr == nil && !invalid.IsError {
+		t.Fatal("partial offset accepted for complete export")
+	}
+	var exported struct {
+		Path      string `json:"path"`
+		Bytes     int64  `json:"bytes"`
+		SHA256    string `json:"sha256"`
+		Truncated bool   `json:"truncated"`
+	}
+	b, _ := json.Marshal(result.StructuredContent)
+	if err = json.Unmarshal(b, &exported); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(filepath.Join(conv.WorkspacePath, exported.Path))
+	if err != nil || string(got) != output || exported.Bytes != int64(len(output)) || exported.Truncated || exported.SHA256 != fmt.Sprintf("%x", sha256.Sum256([]byte(output))) {
+		t.Fatal("export lost retained bytes or provenance", exported, err)
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1, "save_to_workspace": true}})
+	if err != nil || result.IsError {
+		t.Fatal("identical export could not be reconciled", result, err)
+	}
+	if err = os.WriteFile(filepath.Join(conv.WorkspacePath, exported.Path), []byte("conflict"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 1, "save_to_workspace": true}})
+	if err == nil && !result.IsError {
+		t.Fatal("changed export silently overwritten")
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "read_command_output", Arguments: map[string]any{"seq": 2, "save_to_workspace": true}})
 	if err == nil && !result.IsError {
 		t.Fatal("read current/future execution")
 	}

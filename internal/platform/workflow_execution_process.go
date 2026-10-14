@@ -79,6 +79,9 @@ func (s *Store) recordExecutionProcess(run string, seq int, id string, stopped b
 	return nil
 }
 func (s *Store) executionRunReady(run string) error {
+	if err := s.logExportReady(run); err != nil {
+		return err
+	}
 	var count int
 	if err := s.DB.QueryRow(`SELECT count(*) FROM workflow_connector_actions WHERE run_id=? AND command_quiet=0 AND json_extract(request,'$.mode') IN ('code','command')`, run).Scan(&count); err != nil {
 		return err

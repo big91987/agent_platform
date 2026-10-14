@@ -16,7 +16,7 @@
 
 | 里程碑 | 可验收结果 | 当前状态 / 下一步 |
 |---|---|---|
-| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | 当前Issue48/唯一Run2b6a366cc7b3d48870e1b887757f229f已完成首轮tests3完整exit0/EOF，独立QA4因缺章正式revise，development5仅补章并保留原件，tests6正在执行原make verify；固定候选30b4e13c及163源码991c79ca…不变。QA04-E01旧外层日志中间页仍待QA实际补审，未以维护者读完替代。112:8795运行afebd27/冻结图revision3；OpenSandbox环境f7ab716c-f9ab-4f40-93b0-501ab77ef73f于19:20:32Z ready/14400秒/8192MiB。两个opened/labeled Actions38621926669/38621926773均success，指向同稳定request。旧Issue44取消释放、发布失败历史保留；PR46模板修复已合，PR47只是材料草稿，不计M1。返工后完整测试/最终QA复核/确认/Pipeline PR仍待。 |
+| M1 与旧版等价或更好的完整交付 | GitHub Issue→唯一OpenSandbox Run→固定源码准备→独立原生研发/测试/QA返工与复核→人工确认→报告→真实同版草稿PR，用户可核证据 | Issue48/Run2b6a366cc7b3d48870e1b887757f229f已实际tests3绿→QA4缺章revise→development5补章→tests6完整绿；QA7独立补审因日志原件导出能力缺口blocked，现正式stopped7等待维护源修复标准升级。163源码991c79ca…及原结果保持；112运行afebd27/冻结revision3。最终QA/确认/报告/Pipeline PR尚待，PR47仅材料草稿，不计M1。 |
 | M2 恢复与失败处理可靠 | 相同输入去重、停止后所属进程确实安静、原会话/共享文件接续、外部失败和未知结果有界核对、同版材料保存及在途升级 | 基础隔离回归和native09已有部分证据；项目整链对应场景随M1检验，系统覆盖在M1确认后推进，不把基础绿替项目证明 |
 | M3 可复用接入与升级 | 另一仓按项目复制定制、自有Actions/脚本和标准安装升级获得同样行为，无平台checkout路径依赖或协调者救援 | Model Relay应用为第一仓；第二仓待M1确认后确定，不提前造重复模板或任务 |
 | M4 易用性与抽象减法 | 团队能用四类节点设置必要参数；基于真实使用证据消除重复配置和一次性衔接 | Agent基础/高级及画布衔接仍待评估；保留可信扩展点，不新增环境Profile/多层对象框架 |
@@ -780,3 +780,24 @@ Issue48原生development2命令事件18765真实exit0：existing_publish_scan PA
 
 
 19:58 UTC：development5正式交接tests6，修订文档12999bytes/SHAd1a7112600467ae85d9af9000e3349f78ee9590e0317fc935cd4e1560d5f4209；维护者正式API保存17产物1221185bytes，独立确认新文档以首轮六章原字节为前缀、QA04拒绝原件不变。QA04-E01继续Open：研发仅补读外层尾页，不能据首尾EOF倒推中间已读，后续QA必须实际完整补审。共享工作区有上轮test-results及Go缓存，研发如实记录；本轮固定入口自身须再次证明隔离候选冷起点，不要求或手动清空共享工作区。tests6原make verify运行中，源码、模板及门禁未改，M1尚未完成。
+
+
+### 2026-10-14 20:14 UTC：Issue48返工后tests6完整绿，独立QA7复核
+
+正式原make verify exit0，外层1177433bytes/SHAec2540257de3d6a6c0717f165a045ceee8712b30380bb1cba4c56691e4bf6caf分页EOF/truncatedfalse。唯一主attempt20261014T195523Z-3543396171，内层1147466bytes/SHA61dadc32700ffe860c9a03800b30e13b6c406f2a56dd43bedc1d71c14c3ba797与state原字节核对；19:55:23.562–20:12:24.157Z，gate1004725ms/exit0，10辅助均exit0/自有group absent，candidate removed。163源码991c79ca…与候选副本前后一致，隔离候选node_modules/npm cache为空、NODE_PATHunset/无预装；候选依赖Playwright/core1.59.1及Chrome147实际探针。283Node、五browser阶段全部ok，三视口各7连续旅程及12步首次self-hosted全部passed；受控HTTP不冒称真实供应商。自动进入独立QA7，QA04-D01与E01最终闭合待正式结论，尚未确认/发布。
+
+
+### 2026-10-14 20:26 UTC：QA7发现完整外层日志无法可靠交付给Agent的通用缺口
+
+QA7关闭缺章实质问题并独立核内层日志、9项限定回归，但正式wait blocked，未交approval。维护者完整seq3/6分页EOF及摘要通过正式User Input7697补充后，QA仍如实区分旁证和独立读取；追加seq3 32768→65536后确认工具呈现省略且无原字节文件引用/导出，不能拼接省略文本冒充原件。此前revise因pending user input被拒绝并正常接续，未产生重复研发节点。具体用户影响：固定验证已成功但QA无法完整独立取证归档，交付停在证据链。原因是平台read_command_output仅分页文本面向模型，不提供共享工作区中的完整保留原档；不是产品回归失败，不重跑同版tests。
+
+修复设计：既有工具新增显式save_to_workspace选项，不增加节点/权限变量或新日志对象。仅当前有效Agent读取本Run已结束步骤；平台固定导出路径，原始已脱敏日志<=8MiB，返回seq/path/bytes/SHA/truncated。本机和OpenSandbox均安全写入、目录/文件链接拒绝、已存在内容相同可复用、冲突不覆盖，失败不得声称完整。先真实回归红绿及独立review，再标准二进制升级；旧冻结图/测试/QA历史保持，通过同QA正式恢复取证，不由协调者复制材料或修改产品。
+
+
+### 2026-10-14：QA7完整日志取证阻塞及平台导出修复
+
+当前Issue48/Run2b6a366cc7b3d48870e1b887757f229f通过Owner正式stop停在seq7，所有原生进程已确认stopped，原固定tests3/6、QA4拒绝和development5补章历史保持。QA7没有判通过：capability-blocker.md为3417bytes/SHA8bc5084acfdeb87271c4fe05e9200bcfc21465b30fe1d35347b91c151d95fc39，指出分页工具的模型呈现省略不能变成完整原件。维护者未复制日志进工作区、未代QA关闭证据缺口。
+
+通用源码在既有read_command_output增加save_to_workspace；固定本Run/原步骤路径、原始脱敏字节及SHA/bytes/truncated，前缀一致才恢复分块，冲突和链接拒绝覆盖。独立review发现三项Important：沙箱helper不受Stop/未知执行门禁约束、Python从项目目录加载模块可能伪造成功、只读会话仍可写。均进入维护源修复：复用connectorJobs取消和已有Run恢复/释放入口，持久记录最后helper已派发身份/quiet，未知结果不续派不放行；python3 -I -S；读取当前有效工作区权限。追加发现迟到reconciliation可覆盖新空ID intent，改严格匹配已查询命令ID的CAS。隔离HTTP回归覆盖Stop、丢launch/status、重启保留、只读、Python污染及迟到核对；不冒充产品验收。平台完整verify42 exit0/124870bytes/SHA5f85406cfe90db1aa58a39e47c109efd9f317f7ba6736facd80d20bd8302618f是前轮源码证据，不能替最后生命周期修复的完整检查。待最终完整检查/复审及标准部署后，由同QA7正式恢复调用导出并独立核档，不重跑已绿产品测试，不修改冻结图或凭据。
+
+最终维护源标准verify44 exit0/124864bytes/SHAfc1bee1b6a70fd8986071dbfecccc339a005448b3b50e9a5e1b5d2f76de2949b，八件代码/测试源码前后一致；定向race实际3.493s绿，verify43全平台race实际73.513s绿，44复用同Go输入缓存明确保留。最后独立review确认严格CAS及原三项Important关闭，无新增Critical/Important。标准升级及原QA实际导出仍待，不将源码验证替真实Run证据。

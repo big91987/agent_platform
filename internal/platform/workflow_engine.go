@@ -250,6 +250,9 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		return e.startAgent(caller, r, step, node)
 	}
 	if step.ConversationID != "" {
+		if !e.connectorQuiet(r.ID) {
+			return nil
+		}
 		conv, err := e.store.Conversation(step.ConversationID)
 		if err != nil {
 			return err

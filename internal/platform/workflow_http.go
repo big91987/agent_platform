@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -311,9 +312,10 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			return nil, map[string]any{"accepted": true, "message": "Wait recorded. Explain the question/blocker and end this turn. New user input resumes the same conversation."}, nil
 		})
 	}
-	mcp.AddTool(service, &mcp.Tool{Name: "read_command_output", Description: "Read a retained redacted command log from an earlier step of this Run. Use next_offset until eof. Truncated means output exceeded the archive cap. Old executions without a retained log return not found; never infer success from missing output."}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
-		Seq    int   `json:"seq"`
-		Offset int64 `json:"offset,omitempty"`
+	mcp.AddTool(service, &mcp.Tool{Name: "read_command_output", Description: "Read a retained redacted command log from an earlier step of this Run. Use next_offset until eof, or save_to_workspace=true (offset must be zero) to save all retained bytes to a fixed file and return path, bytes, sha256 and truncated for independent inspection. Existing conflicting files are not overwritten. Truncated means output exceeded the archive cap; exporting does not recover missing bytes. Old executions without a retained log return not found."}, func(ctx context.Context, req *mcp.CallToolRequest, in struct {
+		Seq             int   `json:"seq"`
+		Offset          int64 `json:"offset,omitempty"`
+		SaveToWorkspace bool  `json:"save_to_workspace,omitempty"`
 	}) (*mcp.CallToolResult, any, error) {
 		current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 		if e != nil {
@@ -336,6 +338,13 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 		}
 		if !nodeAgentAllowed(owner, node) {
 			return nil, nil, ErrForbidden
+		}
+		if in.SaveToWorkspace {
+			if in.Offset != 0 {
+				return nil, nil, errors.New("workspace export requires offset zero")
+			}
+			output, e := h.workflows.exportCommandOutput(ctx, current.ID, seq, in.Seq)
+			return nil, output, e
 		}
 		page, e := h.store.connectorOutput(current, in.Seq, in.Offset)
 		return nil, page, e
