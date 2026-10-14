@@ -273,14 +273,17 @@ def notify(repo, number, key, body, *, github_call=None):
     call(f"repos/{repo}/issues/{number}/comments", {"body": body + "\n\n" + marker})
 
 
-def forward(config, client, number, comment_id=0):
+def configured_github_call(config, call=None):
     validate_proxy(config)
-    github_call = github
+    call = call or github
     if config.get("git_proxy"):
-        # Scope the configured GitHub transport to child calls, not platform API.
-        github_call = partial(
-            github, env={**os.environ, "HTTPS_PROXY": config["git_proxy"]}
-        )
+        # Scope GitHub transport to child calls; platform API and parent stay unchanged.
+        return partial(call, env={**os.environ, "HTTPS_PROXY": config["git_proxy"]})
+    return call
+
+
+def forward(config, client, number, comment_id=0):
+    github_call = configured_github_call(config)
     repo = config["repository"]
     owner = repo.split("/")[0]
     issue = github_call(f"repos/{repo}/issues/{number}")

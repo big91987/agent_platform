@@ -1,6 +1,10 @@
 """Entry boundaries; these are not native Agent or GitHub acceptance tests."""
 
 import copy
+import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,6 +66,72 @@ class SandboxEntryTest(unittest.TestCase):
                 "body": "check the retained result",
             }
         raise AssertionError(path)
+
+    def test_configured_proxy_scopes_all_github_calls_without_changing_parent(self):
+        self.config["git_proxy"] = "http://proxy.example:7890"
+        calls = []
+
+        def request(path, body=None, **kwargs):
+            calls.append(kwargs.get("env", {}))
+            return self.github(path, body, **kwargs)
+
+        parent = dict(os.environ)
+        with patch("sandbox_entry.github", side_effect=request):
+            forward(self.config, self.client, 7)
+        self.assertGreaterEqual(len(calls), 4)
+        self.assertTrue(
+            all(x.get("HTTPS_PROXY") == self.config["git_proxy"] for x in calls)
+        )
+        self.assertEqual(dict(os.environ), parent)
+        self.client.start_workflow.assert_called_once()
+
+    def test_entry_cli_reports_safe_transport_classification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            token = root / "caller.token"
+            token.write_text("fixture-caller-value")
+            config = {**self.config, "token_file": str(token)}
+            (root / "config.json").write_text(json.dumps(config))
+            event = {
+                "repository": {"full_name": "owner/repo"},
+                "sender": {"login": "owner"},
+                "issue": self.issue,
+                "action": "opened",
+            }
+            (root / "event.json").write_text(json.dumps(event))
+            fake = root / "gh"
+            fake.write_text(
+                "#!"
+                + sys.executable
+                + "\nimport sys\nsys.stderr.write('gh: private-response (HTTP 403)\\n')\nsys.exit(1)\n"
+            )
+            fake.chmod(0o700)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    str(Path(__file__).with_name("run_entry.py")),
+                    "sandbox",
+                    "--config",
+                    str(root / "config.json"),
+                ],
+                env={
+                    **os.environ,
+                    "PATH": str(root) + os.pathsep + os.environ.get("PATH", ""),
+                    "GITHUB_EVENT_PATH": str(root / "event.json"),
+                    "GITHUB_EVENT_NAME": "issues",
+                    "GITHUB_REPOSITORY": "owner/repo",
+                    "GITHUB_ACTOR": "owner",
+                    "GITHUB_TRIGGERING_ACTOR": "owner",
+                },
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("GitHub API failed: HTTP 403", result.stderr)
+            self.assertNotIn("private-response", result.stderr)
+            self.assertNotIn(str(root), result.stderr)
 
     def test_new_entry_freezes_commit_and_never_prepares_host_workspace(self):
         with patch(
