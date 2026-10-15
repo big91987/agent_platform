@@ -53,16 +53,79 @@ const {chromium}=require('playwright');
   };
   await chooseZoom(125);
   assert.equal(await page.locator('#wf-actual').textContent(),'125%');
+  // A trackpad can deliver many small deltas before the next paint. Measure
+  // browser layout work and cursor drift instead of timing-dependent FPS.
+  await chooseZoom(50);
+  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
+  const metrics=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
+  const metricsBefore=await metrics();
+  const burst=await page.evaluate(async point=>{
+   const view=document.querySelector('#wf-viewport'),node=document.querySelector('[data-node="call"]');
+   const before=node.getBoundingClientRect();
+   const local={x:(point.x-before.x)/before.width,y:(point.y-before.y)/before.height};
+   const start=performance.now();
+   for(let i=0;i<120;i++)view.dispatchEvent(new WheelEvent('wheel',{deltaY:-.5,ctrlKey:true,clientX:point.x,clientY:point.y,bubbles:true,cancelable:true}));
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const after=node.getBoundingClientRect();
+   return {elapsed:performance.now()-start,scale:after.width/before.width,anchorError:Math.max(Math.abs(after.x+local.x*after.width-point.x),Math.abs(after.y+local.y*after.height-point.y))};
+  },{x:(await page.locator('#wf-viewport').boundingBox()).x+250,y:(await page.locator('#wf-viewport').boundingBox()).y+250});
+  const metricsAfter=await metrics();
+  const pinchEvidence={...burst,layouts:metricsAfter.LayoutCount-metricsBefore.LayoutCount,layoutSeconds:metricsAfter.LayoutDuration-metricsBefore.LayoutDuration};
+  console.log('PINCH_BURST '+JSON.stringify(pinchEvidence));
+  assert.ok(Math.abs(burst.scale-Math.exp(.6))<.01,'small pinch deltas retain the full gesture scale');
+  assert.ok(burst.anchorError<2,'continuous pinch keeps its original world anchor');
+  assert.ok(pinchEvidence.layouts<12,'a burst is laid out once per paint, not once per event');
+  await cdp.detach();
+  await chooseZoom(50);
+  const continuous=await page.evaluate(async()=>{
+   const view=document.querySelector('#wf-viewport'),node=document.querySelector('[data-node="call"]');
+   const rect=view.getBoundingClientRect(),point={x:rect.x+250,y:rect.y+250},before=node.getBoundingClientRect();
+   const local={x:(point.x-before.x)/before.width,y:(point.y-before.y)/before.height};
+   const paint=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+   let maxError=0;
+   for(const deltaY of [-.5,.5])for(let frame=0;frame<20;frame++){
+    for(let i=0;i<6;i++)view.dispatchEvent(new WheelEvent('wheel',{deltaY,ctrlKey:true,clientX:point.x,clientY:point.y,bubbles:true,cancelable:true}));
+    await paint();const r=node.getBoundingClientRect();
+    maxError=Math.max(maxError,Math.abs(r.x+local.x*r.width-point.x),Math.abs(r.y+local.y*r.height-point.y));
+   }
+   const after=node.getBoundingClientRect();
+   let movedAnchorError=0;
+   for(let i=0;i<6;i++){
+    view.scrollBy(5,7);
+    const p={x:point.x+i*10,y:point.y-i*6},r=node.getBoundingClientRect(),local={x:(p.x-r.x)/r.width,y:(p.y-r.y)/r.height};
+    view.dispatchEvent(new WheelEvent('wheel',{deltaY:-2,ctrlKey:true,clientX:p.x,clientY:p.y,bubbles:true,cancelable:true}));
+    await paint();const end=node.getBoundingClientRect();
+    movedAnchorError=Math.max(movedAnchorError,Math.abs(end.x+local.x*end.width-p.x),Math.abs(end.y+local.y*end.height-p.y));
+   }
+   // A new navigation action must win over a queued pinch frame.
+   const wheel=()=>view.dispatchEvent(new WheelEvent('wheel',{deltaY:-20,ctrlKey:true,clientX:point.x,clientY:point.y,bubbles:true,cancelable:true}));
+   const current=()=>document.querySelector('[data-node="call"]').getBoundingClientRect();
+   wheel();document.querySelector('#wf-fit').click();const fitted=current();await paint();
+   const fitUnchanged=current().width===fitted.width;
+   wheel();window.dispatchEvent(new Event('blur'));await paint();
+   const blurUnchanged=current().width===fitted.width;
+   const gesture=(type,scale)=>{const e=new Event(type,{bubbles:true,cancelable:true});Object.assign(e,{scale,clientX:point.x,clientY:point.y});view.dispatchEvent(e);};
+   gesture('gesturestart',1);gesture('gesturechange',1.1);gesture('gesturechange',1.2);gesture('gestureend',1.2);await paint();
+   return {maxError,movedAnchorError,returnScale:after.width/before.width,fitUnchanged,blurUnchanged,safariScale:current().width/fitted.width};
+  });
+  console.log('PINCH_CONTINUOUS '+JSON.stringify(continuous));
+  assert.ok(continuous.maxError<2&&Math.abs(continuous.returnScale-1)<.001,'cross-frame zoom reverses without accumulated drift');
+  assert.ok(continuous.movedAnchorError<2,'scrolling and a moved pointer establish the new zoom anchor');
+  assert.ok(continuous.fitUnchanged&&continuous.blurUnchanged,'fit and blur cancel pending zoom');
+  assert.ok(Math.abs(continuous.safariScale-1.2)<.01,'Safari absolute gesture scale is coalesced, not multiplied');
+  await chooseZoom(125);await page.locator('#wf-fit').click();await chooseZoom(125);
   const beforeZoom=await page.locator('[data-node="call"]').boundingBox();
   const viewport=await page.locator('#wf-viewport').boundingBox();
   const pointer={x:viewport.x+viewport.width*.35,y:viewport.y+viewport.height*.4};
   const relative={x:(pointer.x-beforeZoom.x)/beforeZoom.width,y:(pointer.y-beforeZoom.y)/beforeZoom.height};
-  const zoomEvent={deltaY:-100,clientX:pointer.x,clientY:pointer.y,ctrlKey:true,bubbles:true,cancelable:true};
+  const zoomEvent={deltaY:-20,clientX:pointer.x,clientY:pointer.y,ctrlKey:true,bubbles:true,cancelable:true};
   await page.locator('#wf-viewport').dispatchEvent('wheel',zoomEvent);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
   const afterZoom=await page.locator('[data-node="call"]').boundingBox();
   assert.ok(afterZoom.width>beforeZoom.width,'modified wheel zooms the canvas');
   assert.ok(Math.abs(afterZoom.x+relative.x*afterZoom.width-pointer.x)<2&&Math.abs(afterZoom.y+relative.y*afterZoom.height-pointer.y)<2,'zoom keeps the pointer world position');
-  await page.locator('#wf-viewport').dispatchEvent('wheel',{...zoomEvent,deltaY:100});
+  await page.locator('#wf-viewport').dispatchEvent('wheel',{...zoomEvent,deltaY:20});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
   const reverseZoom=await page.locator('[data-node="call"]').boundingBox();
   assert.ok(Math.abs(reverseZoom.x-beforeZoom.x)<2&&Math.abs(reverseZoom.y-beforeZoom.y)<2,'zoom out restores the same anchor');
   const zoomText=await page.locator('#wf-actual').textContent();
@@ -100,8 +163,10 @@ const {chromium}=require('playwright');
   assert.equal(await page.locator('#wf-actual').textContent(),formZoom,'form wheel does not zoom the canvas');
   await page.locator('#wf-panel-close').click();
   await chooseZoom(200);await page.locator('#wf-viewport').dispatchEvent('wheel',zoomEvent);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
   assert.equal(await page.locator('#wf-actual').textContent(),'200%','upper limit is stable');
-  await chooseZoom(2.5);await page.locator('#wf-viewport').dispatchEvent('wheel',{...zoomEvent,deltaY:100});
+  await chooseZoom(2.5);await page.locator('#wf-viewport').dispatchEvent('wheel',{...zoomEvent,deltaY:20});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
   assert.equal(await page.locator('#wf-actual').textContent(),'2.5%','lower limit is stable');
 
   await page.locator('#wf-actual').click();await page.getByLabel('缩放比例（%）',{exact:true}).fill('201');

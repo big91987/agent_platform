@@ -1,6 +1,6 @@
 'use strict';
 let workflowEditor = null;
-function leaveWorkflowEditor(){workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
+function leaveWorkflowEditor(){workflowEditor?.cancelZoom?.();workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
 window.addEventListener('beforeunload',event=>{if(workflowEditor?.dirty){event.preventDefault();event.returnValue='';}});
 
 async function workflowsView(){
@@ -35,7 +35,7 @@ async function workflowView(id){
 async function openWorkflowEditor(graph){
  // Import can be opened from the list without writing any server state.
  if(!$('#wf-stage')){shell('workflows','智能体编排');}
- workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();
+ workflowEditor?.cancelZoom?.();workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();
  const upgraded=graph.upgradeForEditing(state.agents);
  const users=state.me.admin?await api('/api/users'):[];
  const [connectors,toolServers]=await Promise.all([api('/api/connectors'),state.me.admin?api('/api/tool-servers'):Promise.resolve([])]);
@@ -118,10 +118,13 @@ function moveWorkflowView(editor,left,top){
  sizeWorkflowStage(editor);view.scrollTo(left,top);
 }
 function setWorkflowZoom(editor,zoom,anchor){
+ editor.cancelZoom?.();applyWorkflowZoom(editor,zoom,anchor);
+}
+function applyWorkflowZoom(editor,zoom,anchor,world){
  if(editor.canvasGesture||!Number.isFinite(zoom))return;
  const view=$('#wf-viewport'),old=editor.zoom||1,p=workflowCanvasOffset(editor);
  anchor||={x:view.clientWidth/2,y:view.clientHeight/2};
- const world={x:(view.scrollLeft+anchor.x)/old-p.x,y:(view.scrollTop+anchor.y)/old-p.y};
+ world||={x:(view.scrollLeft+anchor.x)/old-p.x,y:(view.scrollTop+anchor.y)/old-p.y};
  editor.zoom=Math.max(.025,Math.min(2,zoom));$('#wf-stage').style.zoom=editor.zoom;
  moveWorkflowView(editor,(world.x+p.x)*editor.zoom-anchor.x,(world.y+p.y)*editor.zoom-anchor.y);
  $('#wf-actual').textContent=Math.round(editor.zoom*1000)/10+'%';
@@ -134,19 +137,38 @@ function workflowZoomDialog(editor){
 }
 function bindWorkflowNavigation(editor){
  const view=$('#wf-viewport');
- const anchor=e=>{const r=view.getBoundingClientRect();return {x:e.clientX-r.left-view.clientLeft,y:e.clientY-r.top-view.clientTop}};
+ // Keep fractional world coordinates across paints: scrollLeft/Top are rounded
+ // by the browser, so deriving the anchor again on every delta accumulates drift.
+ let pending=null,frame=0;
+ editor.cancelZoom=()=>{if(frame)cancelAnimationFrame(frame);frame=0;pending=null;editor.pinch=null;};
+ const queueZoom=(e,scale,absolute=false)=>{
+  const r=view.getBoundingClientRect(),anchor={x:e.clientX-r.left-view.clientLeft,y:e.clientY-r.top-view.clientTop};
+  if(!pending||anchor.x!==pending.anchor.x||anchor.y!==pending.anchor.y||view.scrollLeft!==pending.left||view.scrollTop!==pending.top){
+   const p=workflowCanvasOffset(editor);
+   pending={zoom:pending?.zoom||editor.zoom,anchor,world:{x:(view.scrollLeft+anchor.x)/editor.zoom-p.x,y:(view.scrollTop+anchor.y)/editor.zoom-p.y},left:view.scrollLeft,top:view.scrollTop};
+  }
+  pending.zoom=Math.max(.025,Math.min(2,absolute?scale:pending.zoom*scale));
+  editor.fit=false;
+  if(!frame)frame=requestAnimationFrame(()=>{
+   frame=0;if(workflowEditor!==editor||editor.canvasGesture)return;
+   applyWorkflowZoom(editor,pending.zoom,pending.anchor,pending.world);
+   pending.left=view.scrollLeft;pending.top=view.scrollTop;
+  });
+ };
  view.addEventListener('wheel',e=>{
-  if(!e.ctrlKey&&!e.metaKey)return;
+  if(!e.ctrlKey&&!e.metaKey){editor.cancelZoom();return;}
   e.preventDefault();if(editor.canvasGesture||editor.pinch)return;
   const pixels=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?view.clientHeight:1);
-  editor.fit=false;setWorkflowZoom(editor,editor.zoom*Math.exp(-Math.max(-500,Math.min(500,pixels))*.002),anchor(e));
+  // Pixel deltas from trackpad pinch need a direct response; the old .002
+  // coefficient required five times the gesture distance for the same scale.
+  queueZoom(e,Math.exp(-Math.max(-500,Math.min(500,pixels))*.01));
  },{passive:false});
  // Chromium/Firefox trackpad pinch arrives as Ctrl+wheel; Safari uses gestures.
- view.addEventListener('gesturestart',e=>{e.preventDefault();if(!editor.canvasGesture)editor.pinch={zoom:editor.zoom};},{passive:false});
- view.addEventListener('gesturechange',e=>{e.preventDefault();if(editor.pinch){editor.fit=false;setWorkflowZoom(editor,editor.pinch.zoom*e.scale,anchor(e));}},{passive:false});
+ view.addEventListener('gesturestart',e=>{e.preventDefault();editor.cancelZoom();if(!editor.canvasGesture)editor.pinch={zoom:editor.zoom};},{passive:false});
+ view.addEventListener('gesturechange',e=>{e.preventDefault();if(editor.pinch&&Number.isFinite(e.scale)&&e.scale>0)queueZoom(e,editor.pinch.zoom*e.scale,true);},{passive:false});
  view.addEventListener('gestureend',e=>{e.preventDefault();editor.pinch=null;},{passive:false});
  view.addEventListener('pointerdown',e=>{
-  editor.panClick=false;
+  editor.cancelZoom();editor.panClick=false;
   if(e.button!==0||!editor.spacePan||editor.canvasGesture)return;
   e.preventDefault();e.stopImmediatePropagation();view.focus({preventScroll:true});
   const saved={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop,offset:{...workflowCanvasOffset(editor)},extent:editor.viewExtent,fit:editor.fit};
@@ -172,8 +194,9 @@ window.addEventListener('keydown',event=>{
 },true);
 function releaseWorkflowPan(){if(workflowEditor){workflowEditor.spacePan=false;workflowEditor.pinch=null;$('#wf-viewport')?.classList.remove('wf-pan-ready');}}
 window.addEventListener('keyup',event=>{if(event.code==='Space')releaseWorkflowPan();});
-window.addEventListener('blur',()=>{workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();releaseWorkflowPan();});
+window.addEventListener('blur',()=>{workflowEditor?.cancelZoom?.();workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();releaseWorkflowPan();});
 function fitWorkflowCanvas(editor){
+ editor.cancelZoom?.();
  const b=workflowCanvasBounds(editor),v=$('#wf-viewport'),width=b.right-b.left,height=b.bottom-b.top;
  const zoom=Math.max(.025,Math.min(1,(v.clientWidth-16)/width,(v.clientHeight-16)/height));
  editor.fit=true;editor.canvasOffset={x:(v.clientWidth/zoom-width)/2-b.left,y:(v.clientHeight/zoom-height)/2-b.top};

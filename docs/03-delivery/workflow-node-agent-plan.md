@@ -1519,3 +1519,12 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 
 
 正式升级和页面验证：源码78bd46f6a8eec6ef34076d294c52b27f29900db9已标准build.sh/install.py部署112:8795（exit0），health同版本，binary SHA256 a31fd9ee114e56becdf9dbf1908d055001197183185cbdaa99bf9d563a3895ae。当前waiting Run、历史completed Run、两个工作流及私有配置凭据保持。正式8节点研发图真实浏览器125%预设、87.5%自定义、Control+鼠标滚轮及Space鼠标拖动通过，锚点误差0.349px以内、平移误差0；390px选择器无横向溢出。完整工作流API前后逐值一致，revision4/已保存保持，没有保存图或启动Run。源码、安装、页面版本一致；Safari真实触控板和物理设备捏合未实测，不扩大Chromium事件验证结论。截图output/playwright/canvas-zoom-deployed.png和canvas-zoom-selector-390.png；完整回执在忽略目录.data/opensandbox-verification/canvas-zoom。原SSH归档接收尚未完成时第一次摘要检查停止，待收到正确摘要后只提交一次构建/安装，没有盲重传。仅开发分支推送，无Platform PR/main合并，8793/8788及暂停自动化不变。
+
+
+### 2026-10-16 — Chrome 触控板捏合响应
+
+用户明确反馈 Mac Chrome 双指捏合需要较大幅度（不是卡顿）。原像素滚轮指数系数0.002改为0.01，相同缩放比例所需累计手势量降为原来的1/5；这不是帧率提升5倍。每帧累积输入并应用一次，跨帧保留浮点世界坐标锚点，避免滚动位置取整累积漂移。显示全图、手动比例、拖拽开始、失焦和离开编辑器取消待执行帧；普通滚动和表单、节点拖拽及2.5%–200%范围保持。复用现有画布实现，没有增加配置或后端协议。
+
+独立Go/Chromium回归：50%起点120个-0.5像素事件，修改前scale1.12738/layout480/锚点误差31.892px并在响应断言真实失败；修改后scale1.82201/layout4/误差0.540px以内。40帧来回捏合恢复原比例，最大误差0.533px；全图与blur取消通过；合成Safari绝对scale1.2未被误累乘。最终定向8.67s、32编辑器测试通过。实际物理Mac手势体验仍待用户复验，合成事件不代表设备实测；完整工程验证、独立复审及标准112:8795升级回执随后补充。证据位于忽略目录.data/opensandbox-verification/pinch-smooth，定时任务保持暂停，产品Run未推进。
+
+完整scripts/verify.sh exit0（vet/race/build及模板/浏览器全部通过），日志129058bytes/SHA256 eaff28a190ebf81ae2453dacdfa5c40b55bdc0760f6329030ad4a77b631c6aab。独立只读复审无Critical/Important；补齐复审建议的RAF后上下限断言和移动鼠标/滚动后锚点回归，最终定向8.50s绿（移动锚点误差0.355px以内）。本轮实际标准部署回执待补。
