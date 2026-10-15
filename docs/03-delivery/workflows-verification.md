@@ -3253,3 +3253,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 用户要求明确角色指令与任务输入的关系，并能在节点上查看。Agent 节点详情标题旁新增问号，解释角色配置（Codex developerInstructions）、首次进入节点的规则→任务→已处理修正/回退→最近交接→各确认/执行节点最新回执、同会话后续消息、跨节点新会话与共享工作区，以及预览不包含全部原生上下文。旧式输入按其实际分支说明。此前“首轮 User Input 示例”改为工作流提示词；没有改变提示词拼接、权限或运行状态。
 
 浏览器回归先因缺问号真实失败，新增后验证 Enter 打开、Esc 关闭/焦点返回、窄屏无溢出、帮助不改草稿，以及原画布和执行流程；删除临时测试节点前漏切交接页签的夹具操作已纠正，最终真实回归7.073s通过。32项编辑器测试通过，完整scripts/verify.sh exit0（race77.985s，vet/build及模板回归通过），日志129050bytes/SHA256 299f42855a2a6548ecdb6c864ad4ec603fb52aa21c9e08690cd9b4e923c6bf2e。独立复审无Critical/Important，正文与实际代码核对一致。待通过标准build/install升级112:8795并核实际页面；定时任务仍暂停，不推进产品Run。
+
+
+正式交付：源码ff540bf3f16db6a46b2de59ce7508550e9e8e1e9已通过标准build.sh/install.py部署112:8795，health同版本，binary SHA256 be72336dc4672d818c8b4464edb575dd7d5b41fac145d0450629b7ee3aaa39cc。两个工作流、当前waiting Run、历史completed Run及私有配置/凭据保持。真实管理页面刷新后，研发Agent节点问号可打开完整说明、Esc关闭，输入预览使用“工作流提示词（Prompt）”并包含任务占位；原版本4保持已保存，无运行或保存动作。浏览器最初在升级前加载旧JS，未刷新时找不到新按钮；刷新后通过，未把该现象当作新版本故障。截图output/playwright/context-help-deployed.png；安装回执和完整验证日志在忽略目录.data/opensandbox-verification/context-help。只推开发分支，未建Platform PR或合main，旧环境及暂停的自动化保持。
