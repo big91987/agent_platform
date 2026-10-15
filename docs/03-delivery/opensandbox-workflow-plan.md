@@ -910,3 +910,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 真实浏览器回归7.173s通过：1440/1024/390两节点居中、面板开关几何不变、overlay相交/无空右栏；十节点三列多行及7000起始坐标全图可见、回到入口与原图坐标保持；原缩放拖动取消/保存重载及实际MCP执行/环境释放仍通过。32项编辑器单测通过。完整scripts/verify.sh exit0、race78.789s、vet/build及模板门禁通过，日志129058bytes/SHA256 51b8e61c2766cea884bf63b0a8179bc380e04dbfde30fa9df81b9ac9d2ec2cd5，已知macOS链接器警告保持。首次受限环境无法listen属于测试环境限制，提升到隔离宿主测试后才得到真实布局红；不把listen失败算UI故障。独立复审无Critical/Important。
 
 待标准升级112:8795并复验实际多节点流程，旧8793/8788不改，定时任务继续暂停。
+
+
+正式升级及实际多节点复验：4e4a962e5759fb05bb701dea5be6a78adf0e976c已由标准build.sh/install.py部署112:8795（exit0），health同revision，binary SHA256 cd1fb80083fcdf74c4361b0cd0b8e47c6252dab40d9b6bd31528bb3adcbd2d7b。两个工作流、当前waiting研发Run、旧completed Run和私有配置/凭据均保持。正式8节点研发流程83f08f81f7040fcd0c12e6ff4e2acd2d/revision4在1440/1024/390下节点全部可见，画布右侧预留间隙0，节点包围框与视口中心偏差均低于0.04px；详情覆盖且开/关前后画布和节点几何不变。前后API全工作流逐值相同，无自动保存或产品任务推进。真实截图output/playwright/canvas-panel-{closed,open}-{1440,1024,390}.png，安装和浏览器回执在忽略目录.data/opensandbox-verification/canvas-panel。全图保持原节点布局；长横排仍需缩放查看细节，未自行改排用户持久坐标。定时任务保持暂停，未更新旧8793/8788。
