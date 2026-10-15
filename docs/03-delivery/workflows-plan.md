@@ -1594,3 +1594,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 
 
 完整scripts/verify.sh exit0，日志129051bytes/SHA256 4d21b7e84fe4e18afb6993738d708f9e8b4766c652971feaef93c9e6423552ae，平台race76.731s、vet/build及模板回归通过。复审整改后最终浏览器回归7.970s、32编辑器测试重新通过；包括真实点击空白画布获得焦点后Space拖动，不抢按钮或表单Space语义。无剩余Critical/Important。下一步标准构建安装112:8795并实际页面核对，不将本地测试冒充已部署。
+
+
+正式升级和页面验证：源码78bd46f6a8eec6ef34076d294c52b27f29900db9已标准build.sh/install.py部署112:8795（exit0），health同版本，binary SHA256 a31fd9ee114e56becdf9dbf1908d055001197183185cbdaa99bf9d563a3895ae。当前waiting Run、历史completed Run、两个工作流及私有配置凭据保持。正式8节点研发图真实浏览器125%预设、87.5%自定义、Control+鼠标滚轮及Space鼠标拖动通过，锚点误差0.349px以内、平移误差0；390px选择器无横向溢出。完整工作流API前后逐值一致，revision4/已保存保持，没有保存图或启动Run。源码、安装、页面版本一致；Safari真实触控板和物理设备捏合未实测，不扩大Chromium事件验证结论。截图output/playwright/canvas-zoom-deployed.png和canvas-zoom-selector-390.png；完整回执在忽略目录.data/opensandbox-verification/canvas-zoom。原SSH归档接收尚未完成时第一次摘要检查停止，待收到正确摘要后只提交一次构建/安装，没有盲重传。仅开发分支推送，无Platform PR/main合并，8793/8788及暂停自动化不变。
