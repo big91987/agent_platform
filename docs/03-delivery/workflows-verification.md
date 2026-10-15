@@ -3231,3 +3231,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 原层浏览器回归先红（unplaced nodes must not cover each other），修复后1440/1024/390全节点可见、保存按钮可达；64%缩放拖动40px后保存重载坐标63、pointercancel恢复位置和未保存标记、整理保存重载通过。最终真实Go-backed浏览器门禁5.563s、32项编辑器单测通过；完整scripts/verify.sh exit0、平台race77.489s、vet/build及模板门禁通过，完整日志129056bytes/SHA256 9836f19068389bc1ede40e5ab6254a9a55fa80c5fa06ae52349ca72d52705c93。最终小调整另重跑编辑器单测和真实浏览器；独立最终复审无Critical/Important。已有macOS链接器LC_DYSYMTAB警告保留。
 
 源码8fef116；当前待标准build/install升级112:8795与实际页面复验；不在服务器手改坐标、不迁移冻结Run。Issue51已自然等待设计确认，定时任务保持暂停，本次不接续产品研发。
+
+
+部署与原页面复验：源码1a8013524be52e0d96645ba84879df3521a758c3经112标准build.sh/install.py均exit0，8795 health返回同revision，二进制SHA256 fbe5ee6964c3220a40c9ff44fe656594b272c15dcc8f5ce461d6383d7dbbcb2f。当前waiting Run6f3f26f6207ab1b6bfbc5ccd246797de、历史completed Run、实例配置与私有凭据逐值保持；未恢复产品任务。原问题流程135f114b8228759aaefd7574bdda7151真实浏览器1440/1024/390下3节点均在画布可视区域、保存按钮可达、document.scrollWidth等于视口宽；原工作流revision2及三个(0,0)持久坐标在查看前后相同。实际截图output/playwright/canvas-after-{1440,1024,390}.png，安装回执与页面几何结果保存在忽略目录.data/opensandbox-verification/canvas-ui。仅独立开发分支提交推送，无Platform PR/main合并；8788/8793未改，定时任务保持暂停。
