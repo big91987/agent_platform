@@ -28,3 +28,32 @@
 @media(max-width:800px){.wf-layout{grid-template-columns:minmax(0,1fr);height:620px}.wf-palette{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;min-height:0}.wf-palette>button{width:auto;margin:0;padding:8px}.wf-palette>.hint,.wf-palette>.eyebrow,.wf-palette>.wf-legend{display:none}.wf-workarea{height:auto;min-height:480px}.wf-inspector.wf-detail-panel{position:fixed;right:12px;left:auto;top:82px;bottom:12px;width:min(460px,calc(100vw - 24px))}.wf-step-details{right:12px;top:82px;bottom:12px;width:calc(100vw - 24px)}.wf-heading{align-items:flex-start;flex-direction:column}.wf-panel-head{padding:18px}.wf-panel-tabs{padding:0 18px}.wf-panel-body{padding:18px}}
 @media(prefers-reduced-motion:reduce){.wf-detail-panel{animation:none}}
 .wf-exit-modes{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.wf-exit-modes button{flex:1;min-width:160px}.wf-exit-modes button[aria-pressed=true]{background:#4267df;color:#fff;border-color:#4267df}#wf-completion-schema{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}
+
+/* Keep editing controls within the page; only the canvas itself scrolls. */
+.wf-content{width:100%;min-width:0;display:flex;flex-direction:column;height:calc(100dvh - 66px);min-height:620px}
+.wf-heading{flex:none;flex-wrap:wrap;align-items:flex-start;min-width:0}
+.wf-heading>div:first-child{flex:1 1 320px;min-width:0}
+.wf-heading h1{overflow-wrap:anywhere}
+.wf-heading .wf-actions{flex:0 1 auto;max-width:100%;align-items:center;justify-content:flex-end}
+.wf-heading .wf-actions>*{flex:none;white-space:nowrap}
+.wf-layout{flex:1;min-height:360px;height:auto;grid-template-rows:minmax(0,1fr);min-width:0}
+.wf-workarea{min-width:0;min-height:0;height:auto}
+.wf-palette{min-height:0}
+.wf-canvas-tools{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--line);flex:none}
+.wf-canvas-tools>div{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.wf-canvas-tools button{padding:6px 10px;font-size:12px;white-space:nowrap}
+#wf-actual{min-width:58px;font-variant-numeric:tabular-nums}
+#wf-viewport{min-width:0;overscroll-behavior:contain;scrollbar-gutter:stable}
+#wf-nodes{position:absolute;left:80px;top:80px}
+.wf-canvas-footer{flex-wrap:wrap;flex:none}
+.wf-canvas-footer span{margin-left:auto}
+@media(max-width:800px){
+ .wf-content{height:auto;min-height:0;padding:12px!important}
+ .wf-heading>div:first-child{flex:auto;width:100%}
+ .wf-heading .wf-actions{justify-content:flex-start}
+ .wf-layout{height:640px;min-height:640px;flex:none;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+ .wf-palette{overflow:visible}
+ .wf-workarea{min-height:0}
+ .wf-canvas-tools{padding:8px}
+ .wf-canvas-tools button{padding:6px 8px}
+}
