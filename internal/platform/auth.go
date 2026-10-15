@@ -222,8 +222,8 @@ func (s *Store) SaveUser(u User) (User, error) {
 		return u, errors.New("user_id already belongs to another account")
 	}
 	if u.Password != "" {
-		if (len(u.Password) < 12 && !(u.Username == "admin" && u.Password == "admin")) || len(u.Password) > 256 {
-			return u, errors.New("password must contain 12 to 256 characters")
+		if (len(u.Password) < 8 && !(u.Username == "admin" && u.Password == "admin")) || len(u.Password) > 256 {
+			return u, errors.New("password must contain 8 to 256 characters")
 		}
 		salt = newID()
 		hash = passwordHash(u.Password, salt)

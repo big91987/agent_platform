@@ -122,6 +122,35 @@ func TestUserTokenAndAccountResumeSameConversation(t *testing.T) {
 		t.Fatal("temporary link route remains", w.Code)
 	}
 }
+func TestPasswordEightCharacterMinimum(t *testing.T) {
+	s := testStore(t)
+	h := NewServer(s, nil, nil, "administrator-password", "http://localhost")
+	w := cookieRequest(t, h, nil, "POST", "/api/login", map[string]string{"username": "admin", "password": "administrator-password"})
+	if w.Code != 200 {
+		t.Fatal(w.Code)
+	}
+	admin := w.Result().Cookies()[0]
+	for _, name := range []string{"reader", "admin"} {
+		role := "caller"
+		if name == "admin" {
+			role = "admin"
+		}
+		for _, password := range []string{"1234567", "12345678"} {
+			w = cookieRequest(t, h, admin, "POST", "/api/users", User{Username: name, Role: role, Enabled: true, Password: password})
+			want := 400
+			if len(password) == 8 {
+				want = 200
+			}
+			if w.Code != want {
+				t.Fatalf("%s password length %d: status %d, want %d", name, len(password), w.Code, want)
+			}
+		}
+		if w = cookieRequest(t, h, nil, "POST", "/api/login", map[string]string{"username": name, "password": "12345678"}); w.Code != 200 {
+			t.Fatalf("%s cannot log in with saved eight-character password: %d", name, w.Code)
+		}
+	}
+}
+
 func TestAccountDisableAndAdminConfiguration(t *testing.T) {
 	s := testStore(t)
 	h := NewServer(s, nil, nil, "administrator-password", "http://localhost")

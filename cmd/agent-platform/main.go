@@ -50,8 +50,8 @@ func main() {
 	if password == "" {
 		password = "admin"
 	}
-	if password != "admin" && len(password) < 12 {
-		log.Fatal("custom administrator password must contain at least 12 characters")
+	if password != "admin" && len(password) < 8 {
+		log.Fatal("custom administrator password must contain at least 8 characters")
 	}
 	agents, e := s.Agents()
 	if e != nil {

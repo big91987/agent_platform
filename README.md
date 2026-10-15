@@ -30,7 +30,7 @@ go build -o bin/agent-platform ./cmd/agent-platform
 ./bin/agent-platform -listen 127.0.0.1:8788 -data .data -concurrency 2
 ```
 
-首次初始化可用 `AGENT_PLATFORM_PASSWORD` 设置自定义管理员密码（至少 12 字符）；已有账号通过用户管理修改，启动配置不覆盖它。
+首次初始化可用 `AGENT_PLATFORM_PASSWORD` 设置自定义管理员密码（至少 8 字符）；已有账号通过用户管理修改，启动配置不覆盖它。
 
 可选参数：`-base-url`、`-codex`、`-auth-home`。默认只监听本机。外部系统此版同样位于本机；无需开放公网端口。
 

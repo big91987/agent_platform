@@ -881,3 +881,8 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 再次by-request404确认无产品副作用后，00:49:00Z对原Issue51从新main正式workflow_dispatch一次，HTTP204已受理。待真实Run与原生承接确认；不把dispatch受理冒称入口已通过。
 
 修复后的真实入口待执行：原Issue51 workflow_dispatch38662167083 queued/forward未分配runner；同标签[self-hosted,macOS,ARM64,he-full]的push prepare38662139638在model-relay-local执行“Verify and prepare exact main commit”。此为现有共享Runner池下的排队观察，不能当产品或Agent失败，不取消既有prepare/创建第二个入口。源与测试仓标准修复已完成，仍待Run受理/原生研发计划才证明本次真实路径通过。小时自动化锚点已更新，继续跟踪到真实功能草稿PR与效果/瓶颈报告。
+
+
+### 2026-10-15 — 管理员密码最低长度调整
+
+按用户明确要求，将账号管理 API 与服务启动配置的自定义密码下限从 12 改为 8，保留既有默认管理员兼容和上限。真实 API 边界回归先红后绿：普通账号/管理员 7 位拒绝、8 位保存后可登录；临时独立真实进程验证 7 位启动拒绝、8 位启动和登录成功。标准 scripts/verify.sh exit0（129058 bytes / SHA256 838b5a500e3e1ad5f2f0c84d4ff33389cb74956b811460d499e32373cc235463），平台 race78.421s、vet/build及原模板/浏览器门禁通过；保留已有 macOS LC_DYSYMTAB 链接警告。独立复审无 Critical/Important。当前待标准升级112:8795并用正式账号API修改密码；不修改数据库或其他实例。
