@@ -1,6 +1,6 @@
 'use strict';
 let workflowEditor = null;
-function leaveWorkflowEditor(){workflowEditor?.resizeObserver?.disconnect();workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
+function leaveWorkflowEditor(){workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
 window.addEventListener('beforeunload',event=>{if(workflowEditor?.dirty){event.preventDefault();event.returnValue='';}});
 
 async function workflowsView(){
@@ -35,7 +35,7 @@ async function workflowView(id){
 async function openWorkflowEditor(graph){
  // Import can be opened from the list without writing any server state.
  if(!$('#wf-stage')){shell('workflows','智能体编排');}
- workflowEditor?.resizeObserver?.disconnect();
+ workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();
  const upgraded=graph.upgradeForEditing(state.agents);
  const users=state.me.admin?await api('/api/users'):[];
  const [connectors,toolServers]=await Promise.all([api('/api/connectors'),state.me.admin?api('/api/tool-servers'):Promise.resolve([])]);
@@ -45,7 +45,7 @@ async function openWorkflowEditor(graph){
  $('#content').classList.add('wf-content');
  $('#content').innerHTML=`<div class="wf-heading"><div><a href="/workflows" data-nav class="muted small">← 智能体编排</a><h1 id="wf-title">${esc(w.name)}</h1><span class="muted small" id="wf-save-state"></span></div><div class="wf-actions">${w.id?`<a class="wf-link" data-nav href="/workflows/${esc(w.id)}/runs">运行记录 →</a>`:''}<button id="wf-start" class="primary">运行</button><button id="wf-export">导出</button><button id="wf-hooks">通知 Hook</button>${editor.readOnly?'':'<button id="wf-import">导入副本</button><button id="wf-settings">流程设置</button><button id="wf-save" class="primary">保存</button>'}</div></div>
  <div class="wf-layout"><aside class="wf-palette"><span class="eyebrow">添加节点</span>${['agent','execution','approval','end'].map(kind=>`<button draggable="${!editor.readOnly}" data-kind="${kind}" ${editor.readOnly?'disabled':''}><span>${{agent:'◇',execution:'↗',approval:'◎',end:'◉'}[kind]}</span>${WorkflowGraph.kinds[kind]}</button>`).join('')}<p class="hint">拖到画布，或点击添加。<br>从节点右侧圆点拖向目标左侧圆点连线。</p></aside>
- <div class="wf-workarea"><div class="wf-canvas-tools" aria-label="画布工具"><div><button id="wf-overview">回到入口</button><button id="wf-fit">显示全图</button>${editor.readOnly?'':'<button id="wf-arrange">整理布局</button>'}<button id="wf-show-edges" aria-pressed="false">全部连线</button></div><div><button id="wf-zoom-out" aria-label="缩小画布">−</button><button id="wf-actual" title="恢复原尺寸">100%</button><button id="wf-zoom-in" aria-label="放大画布">＋</button></div></div><div id="wf-hint" class="wf-hint" role="status">选择节点查看交接目标 · 点击连线配置决策方式</div><div id="wf-viewport" tabindex="0" aria-label="智能体编排画布"><div id="wf-stage"><svg id="wf-lines" aria-label="节点连接"><defs><marker id="wf-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#8293b1"/></marker></defs><g id="wf-edge-group" transform="translate(80 80)"></g><path id="wf-draft-line" transform="translate(80 80)"/></svg><div id="wf-nodes"></div></div></div><div class="wf-canvas-footer">虚线：Agent 决策 · 实线：固定规则（◎ 人工选择） <span id="wf-count"></span></div></div>
+ <div class="wf-workarea"><div class="wf-canvas-tools" aria-label="画布工具"><div><button id="wf-overview">回到入口</button><button id="wf-fit">显示全图</button>${editor.readOnly?'':'<button id="wf-arrange">整理布局</button>'}<button id="wf-show-edges" aria-pressed="false">全部连线</button></div><div><button id="wf-zoom-out" aria-label="缩小画布">−</button><button id="wf-actual" aria-label="选择缩放比例" aria-haspopup="dialog" title="选择缩放比例">100%</button><button id="wf-zoom-in" aria-label="放大画布">＋</button></div></div><div id="wf-hint" class="wf-hint" role="status">Ctrl/Cmd＋滚轮缩放 · 点击画布后，空格＋拖动平移</div><div id="wf-viewport" tabindex="0" aria-label="智能体编排画布"><div id="wf-stage"><svg id="wf-lines" aria-label="节点连接"><defs><marker id="wf-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#8293b1"/></marker></defs><g id="wf-edge-group" transform="translate(80 80)"></g><path id="wf-draft-line" transform="translate(80 80)"/></svg><div id="wf-nodes"></div></div></div><div class="wf-canvas-footer">虚线：Agent 决策 · 实线：固定规则（◎ 人工选择） <span id="wf-count"></span></div></div>
  <aside id="wf-inspector" class="wf-inspector wf-detail-panel" aria-label="节点详情" hidden></aside></div>`;
  $('#wf-start').onclick=()=>{if(editor.dirty){toast('请先保存编排改动');return}startWorkflowDialog(editor.graph.value).catch(e=>toast(e.message))};
  $('#wf-hooks').onclick=()=>workflowHooksDialog(editor);
@@ -57,7 +57,7 @@ async function openWorkflowEditor(graph){
  }
  $('#wf-show-edges').onclick=()=>{editor.showAllEdges=!editor.showAllEdges;$('#wf-show-edges').textContent=editor.showAllEdges?'仅相关连线':'全部连线';$('#wf-show-edges').setAttribute('aria-pressed',String(editor.showAllEdges));renderWorkflowEdges(editor)};
  $('#wf-fit').onclick=()=>{closeWorkflowInspector(editor);fitWorkflowCanvas(editor)};
- $('#wf-actual').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,1)};
+ $('#wf-actual').onclick=()=>workflowZoomDialog(editor);
  $('#wf-zoom-out').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom/1.25)};
  $('#wf-zoom-in').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom*1.25)};
  if(!editor.readOnly)$('#wf-arrange').onclick=()=>{rememberWorkflowNodeDraft(editor);editor.positions=arrangedWorkflowPositions(graph);materializeWorkflowPositions(editor);workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);fitWorkflowCanvas(editor)};
@@ -66,6 +66,7 @@ async function openWorkflowEditor(graph){
   button.onclick=()=>{const p=workflowCanvasOffset(editor);addWorkflowNode(editor,button.dataset.kind,Math.max(0,80+$('#wf-viewport').scrollLeft/editor.zoom-p.x),Math.max(0,80+$('#wf-viewport').scrollTop/editor.zoom-p.y))};
   button.ondragstart=e=>e.dataTransfer.setData('application/x-platform-node',button.dataset.kind);
  });
+ bindWorkflowNavigation(editor);
  const stage=$('#wf-stage');stage.ondragover=e=>{if(!editor.readOnly)e.preventDefault()};
  stage.ondrop=e=>{if(editor.readOnly)return;e.preventDefault();const kind=e.dataTransfer.getData('application/x-platform-node');if(!Object.hasOwn(WorkflowGraph.kinds,kind))return;const p=workflowPoint(e);addWorkflowNode(editor,kind,p.x,p.y)};
  stage.onpointerdown=e=>workflowPointerDown(e,editor);
@@ -104,20 +105,79 @@ function workflowCanvasBounds(editor){
 function workflowCanvasOffset(editor){return editor.canvasOffset||{x:80,y:80};}
 function sizeWorkflowStage(editor){
  const b=workflowCanvasBounds(editor),v=$('#wf-viewport'),p=workflowCanvasOffset(editor);
- $('#wf-stage').style.width=Math.max(b.right+p.x,v.clientWidth/editor.zoom)+'px';$('#wf-stage').style.height=Math.max(b.bottom+p.y,v.clientHeight/editor.zoom)+'px';
+ $('#wf-stage').style.width=Math.max(b.right+p.x,v.clientWidth/editor.zoom,(editor.viewExtent?.width||0)/editor.zoom)+'px';$('#wf-stage').style.height=Math.max(b.bottom+p.y,v.clientHeight/editor.zoom,(editor.viewExtent?.height||0)/editor.zoom)+'px';
  $('#wf-nodes').style.left=p.x+'px';$('#wf-nodes').style.top=p.y+'px';
  for(const selector of ['#wf-edge-group','#wf-draft-line'])$(selector).setAttribute('transform',`translate(${p.x} ${p.y})`);
 }
-function setWorkflowZoom(editor,zoom){
- const view=$('#wf-viewport'),old=editor.zoom||1,center={x:(view.scrollLeft+view.clientWidth/2)/old,y:(view.scrollTop+view.clientHeight/2)/old};
- editor.zoom=Math.max(.025,Math.min(2,zoom));$('#wf-stage').style.zoom=editor.zoom;sizeWorkflowStage(editor);
- view.scrollTo(Math.max(0,center.x*editor.zoom-view.clientWidth/2),Math.max(0,center.y*editor.zoom-view.clientHeight/2));$('#wf-actual').textContent=Math.round(editor.zoom*100)+'%';
+// Scroll extents and padding are view state only. Expand them at an edge so
+// cursor-anchored zoom and panning work even when the whole graph fits on screen.
+function moveWorkflowView(editor,left,top){
+ const view=$('#wf-viewport'),p={...workflowCanvasOffset(editor)};
+ if(left<0){p.x-=left/editor.zoom;left=0}if(top<0){p.y-=top/editor.zoom;top=0}
+ editor.canvasOffset=p;editor.viewExtent={width:left+view.clientWidth,height:top+view.clientHeight};
+ sizeWorkflowStage(editor);view.scrollTo(left,top);
 }
+function setWorkflowZoom(editor,zoom,anchor){
+ if(editor.canvasGesture||!Number.isFinite(zoom))return;
+ const view=$('#wf-viewport'),old=editor.zoom||1,p=workflowCanvasOffset(editor);
+ anchor||={x:view.clientWidth/2,y:view.clientHeight/2};
+ const world={x:(view.scrollLeft+anchor.x)/old-p.x,y:(view.scrollTop+anchor.y)/old-p.y};
+ editor.zoom=Math.max(.025,Math.min(2,zoom));$('#wf-stage').style.zoom=editor.zoom;
+ moveWorkflowView(editor,(world.x+p.x)*editor.zoom-anchor.x,(world.y+p.y)*editor.zoom-anchor.y);
+ $('#wf-actual').textContent=Math.round(editor.zoom*1000)/10+'%';
+}
+function workflowZoomDialog(editor){
+ dialog(`<form id="wf-zoom-form"><div class="dialog-head"><h2>缩放画布</h2><button type="button" data-close aria-label="关闭缩放设置">关闭</button></div><div class="dialog-body"><div class="wf-zoom-presets">${[25,50,75,100,125,150,200].map(value=>`<button type="button" data-zoom="${value}">${value}%</button>`).join('')}</div><div class="field"><label for="wf-zoom-value">缩放比例（%）</label><input id="wf-zoom-value" type="number" min="2.5" max="200" step="0.1" required value="${Math.round(editor.zoom*1000)/10}"><p class="hint">2.5%–200%。100% 恢复原尺寸。</p></div></div><div class="dialog-footer"><button class="primary">应用</button></div></form>`);
+ const apply=value=>{if(workflowEditor!==editor)return;editor.fit=false;setWorkflowZoom(editor,value/100);$('#dialog').close();};
+ $('#wf-zoom-form').onsubmit=e=>{e.preventDefault();if($('#wf-zoom-form').reportValidity())apply(Number($('#wf-zoom-value').value));};
+ $('#dialog').querySelectorAll('[data-zoom]').forEach(button=>button.onclick=()=>apply(Number(button.dataset.zoom)));
+}
+function bindWorkflowNavigation(editor){
+ const view=$('#wf-viewport');
+ const anchor=e=>{const r=view.getBoundingClientRect();return {x:e.clientX-r.left-view.clientLeft,y:e.clientY-r.top-view.clientTop}};
+ view.addEventListener('wheel',e=>{
+  if(!e.ctrlKey&&!e.metaKey)return;
+  e.preventDefault();if(editor.canvasGesture||editor.pinch)return;
+  const pixels=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?view.clientHeight:1);
+  editor.fit=false;setWorkflowZoom(editor,editor.zoom*Math.exp(-Math.max(-500,Math.min(500,pixels))*.002),anchor(e));
+ },{passive:false});
+ // Chromium/Firefox trackpad pinch arrives as Ctrl+wheel; Safari uses gestures.
+ view.addEventListener('gesturestart',e=>{e.preventDefault();if(!editor.canvasGesture)editor.pinch={zoom:editor.zoom};},{passive:false});
+ view.addEventListener('gesturechange',e=>{e.preventDefault();if(editor.pinch){editor.fit=false;setWorkflowZoom(editor,editor.pinch.zoom*e.scale,anchor(e));}},{passive:false});
+ view.addEventListener('gestureend',e=>{e.preventDefault();editor.pinch=null;},{passive:false});
+ view.addEventListener('pointerdown',e=>{
+  editor.panClick=false;
+  if(e.button!==0||!editor.spacePan||editor.canvasGesture)return;
+  e.preventDefault();e.stopImmediatePropagation();view.focus({preventScroll:true});
+  const saved={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop,offset:{...workflowCanvasOffset(editor)},extent:editor.viewExtent,fit:editor.fit};
+  editor.canvasGesture=true;editor.panClick=true;view.classList.add('wf-panning');
+  const move=event=>{if(event.pointerId!==e.pointerId)return;editor.fit=false;editor.canvasOffset={...saved.offset};moveWorkflowView(editor,saved.left-(event.clientX-saved.x),saved.top-(event.clientY-saved.y));};
+  const finish=event=>{
+   if(event&&event.pointerId!==e.pointerId)return;
+   view.removeEventListener('pointermove',move);view.removeEventListener('pointerup',finish);view.removeEventListener('pointercancel',cancel);view.removeEventListener('lostpointercapture',cancel);
+   editor.canvasGesture=false;editor.cancelPan=null;view.classList.remove('wf-panning');
+   if(view.hasPointerCapture(e.pointerId))view.releasePointerCapture(e.pointerId);
+  };
+  const cancel=event=>{if(event&&event.pointerId!==e.pointerId)return;editor.canvasOffset=saved.offset;editor.viewExtent=saved.extent;editor.fit=saved.fit;sizeWorkflowStage(editor);view.scrollTo(saved.left,saved.top);finish(event);};
+  editor.cancelPan=cancel;
+  view.setPointerCapture(e.pointerId);view.addEventListener('pointermove',move);view.addEventListener('pointerup',finish);view.addEventListener('pointercancel',cancel);view.addEventListener('lostpointercapture',cancel);
+ },true);
+ view.addEventListener('click',e=>{if(editor.panClick){e.preventDefault();e.stopImmediatePropagation();editor.panClick=false;}},true);
+}
+window.addEventListener('keydown',event=>{
+ const editor=workflowEditor,view=$('#wf-viewport');
+ if(event.code!=='Space'||!editor||!view||$('#dialog')?.open||event.target.closest('input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"]),[role="button"]'))return;
+ if(!view.contains(event.target)&&!view.matches(':hover'))return;
+ event.preventDefault();editor.spacePan=true;view.classList.add('wf-pan-ready');
+},true);
+function releaseWorkflowPan(){if(workflowEditor){workflowEditor.spacePan=false;workflowEditor.pinch=null;$('#wf-viewport')?.classList.remove('wf-pan-ready');}}
+window.addEventListener('keyup',event=>{if(event.code==='Space')releaseWorkflowPan();});
+window.addEventListener('blur',()=>{workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();releaseWorkflowPan();});
 function fitWorkflowCanvas(editor){
  const b=workflowCanvasBounds(editor),v=$('#wf-viewport'),width=b.right-b.left,height=b.bottom-b.top;
  const zoom=Math.max(.025,Math.min(1,(v.clientWidth-16)/width,(v.clientHeight-16)/height));
  editor.fit=true;editor.canvasOffset={x:(v.clientWidth/zoom-width)/2-b.left,y:(v.clientHeight/zoom-height)/2-b.top};
- setWorkflowZoom(editor,zoom);v.scrollTo(0,0);
+ editor.zoom=zoom;editor.viewExtent=null;$('#wf-stage').style.zoom=zoom;sizeWorkflowStage(editor);v.scrollTo(0,0);$('#wf-actual').textContent=Math.round(zoom*1000)/10+'%';
 }
 function workflowPoint(event){const rect=$('#wf-stage').getBoundingClientRect(),scale=workflowEditor?.zoom||1,p=workflowCanvasOffset(workflowEditor||{});return {x:(event.clientX-rect.left)/scale-p.x,y:(event.clientY-rect.top)/scale-p.y};}
 function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
@@ -156,11 +216,12 @@ function workflowEdgeDialog(editor,index){
 }
 function workflowPointerDown(e,editor){
  if(e.button!==0)return;
- const nodeEl=e.target.closest('[data-node]');if(!nodeEl){if(!e.target.closest('[data-edge]'))closeWorkflowInspector(editor);return;}
+ const nodeEl=e.target.closest('[data-node]');if(!nodeEl){if(!e.target.closest('[data-edge]')){closeWorkflowInspector(editor);$('#wf-viewport').focus({preventScroll:true})}return;}
  const id=nodeEl.dataset.node,n=editor.graph.node(id),port=e.target.closest('[data-port]');
  if(port?.dataset.port==='in')return;
  if(editor.selected!==id)rememberWorkflowNodeDraft(editor);
  if(editor.readOnly){editor.panelTab='config';editor.selected=id;renderWorkflowInspector(editor);renderWorkflowNodes(editor);return;}
+ editor.canvasGesture=true;
  const stage=$('#wf-stage'),initial=workflowPoint(e),origin={...workflowNodePosition(editor,n)},previousPositions=editor.positions,previousCoordinates=editor.graph.value.nodes.map(n=>({id:n.id,x:n.x,y:n.y}));let moved=false;
  if(editor.selected!==id){editor.panelTab='config';editor.previewRequest=null;}editor.selected=id;
  const move=event=>{
@@ -170,14 +231,16 @@ function workflowPointerDown(e,editor){
   editor.graph.move(id,origin.x+p.x-initial.x,origin.y+p.y-initial.y);nodeEl.style.left=n.x+'px';nodeEl.style.top=n.y+'px';renderWorkflowEdges(editor);
  };
  const finish=event=>{
-  stage.removeEventListener('pointermove',move);stage.removeEventListener('pointerup',finish);stage.removeEventListener('pointercancel',cancel);$('#wf-draft-line').setAttribute('d','');
+  editor.canvasGesture=false;editor.cancelNodeDrag=null;
+  stage.removeEventListener('pointermove',move);stage.removeEventListener('pointerup',finish);stage.removeEventListener('pointercancel',cancel);stage.removeEventListener('lostpointercapture',cancel);$('#wf-draft-line').setAttribute('d','');
   if(stage.hasPointerCapture(e.pointerId))stage.releasePointerCapture(e.pointerId);
-  if(event.type==='pointercancel'){renderWorkflowNodes(editor);return}
+  if(event.type==='pointercancel'||event.type==='lostpointercapture'){renderWorkflowNodes(editor);return}
   if(port){if(!moved){editor.connectSource=id;$('#wf-hint').textContent='选择目标节点左侧圆点完成连线'}else{const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-node]');if(target){editor.connectSource=null;workflowConnectDialog(editor,id,target.dataset.node)}}}
   else{if(moved)workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor)}
  };
  const cancel=event=>{if(!port){for(const p of previousCoordinates)Object.assign(editor.graph.node(p.id),p);editor.positions=previousPositions}finish(event)};
- stage.setPointerCapture(e.pointerId);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',finish);stage.addEventListener('pointercancel',cancel);
+ editor.cancelNodeDrag=()=>cancel({type:'pointercancel'});
+ stage.setPointerCapture(e.pointerId);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',finish);stage.addEventListener('pointercancel',cancel);stage.addEventListener('lostpointercapture',cancel);
 }
 function workflowConnectDialog(editor,source,target,index=null){
  if(workflowEditor!==editor)return;
