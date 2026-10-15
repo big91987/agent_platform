@@ -263,6 +263,17 @@ function closeWorkflowInspector(editor){
 window.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&!$('#dialog')?.open&&workflowEditor?.selected){event.preventDefault();closeWorkflowInspector(workflowEditor)}
 });
+function workflowContextHelp(editor){
+ const legacy=(editor.graph.value.context_version||0)===0;
+ dialog(`<div class="dialog-head"><h2 id="wf-context-help-title">上下文如何组装</h2><button type="button" data-close aria-label="关闭上下文说明">关闭</button></div><div class="dialog-body wf-context-explanation">
+ <h3>角色指令：规定职责</h3><p>节点中配置的角色指令与任务正文分开传递。使用 Codex 时，角色指令与原生配置中已有的开发者指令合并，通过 <code>developerInstructions</code> 传入；平台还会补充回复方式等执行约束。它不是这里展示的工作流提示词，也不是模型的系统提示词。</p>
+ <h3>首次进入节点：组装任务消息</h3>${legacy?'<p>此工作流使用旧式输入：第一条用户消息是运行任务；节点说明、流转规则和前序结果随角色指令传递。请在运行记录中核对该节点实际保存的角色指令和任务输入。</p>':`<p>平台按以下顺序拼成一条用户消息；不存在的材料不追加：</p><ol><li>当前节点的工作流规则：交接目标、完成条件、等待方式，以及本次执行来源。</li><li>启动运行时提交的原始任务。</li><li>本次运行中已处理的用户补充和修正，按消息顺序排列；随后是人工回退及当前恢复反馈。</li><li>最近一次 Agent 交接的结论、输入和产物引用。</li><li>各人工确认节点最近一次有效确认，以及各执行节点最近一次回执。完整日志和产物正文按需读取，不在此处全部展开。</li></ol>`}
+ <h3>后续补充：继续原会话</h3><p>给当前节点追加的用户输入，作为新消息送入同一原生会话，按运行状态引导当前回合或排队接续；不会每次重新拼接上述整段消息。原生执行器负责维护会话历史。</p>
+ <h3>交接：创建下一节点的会话</h3><p>下一节点使用自己的角色配置和重新组装的任务消息。同一个 Run 共享工作区，交接传递结论和产物引用，不复制上一个 Agent 的完整聊天记录。</p>
+ <h3>预览能看到什么</h3><p>这里预览的是当前草稿生成的工作流提示词和任务占位说明，不是完整任务消息或模型的全部上下文。实际保存的输入可在运行记录的节点详情中查看。项目 <code>AGENTS.md</code>、Skills、工具结果及历史上下文由原生执行器加载和管理；工具与执行权限通过独立配置生效，任务文字不授予权限。</p></div>`);
+ $('#dialog').setAttribute('aria-labelledby','wf-context-help-title');
+ $('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
+}
 async function previewWorkflowNode(editor,n){
  const request={};editor.previewRequest=request;
  try{
@@ -289,9 +300,9 @@ function renderWorkflowInspector(editor){
  const tabs=[{key:'config',label:'配置',body:content.slice(0,split)},{key:'handoff',label:'交接',body:content.slice(split)}];
  if(n.kind==='agent')tabs.push({key:'preview',label:'输入预览',body:'<div id="wf-preview-content"><p class="hint">查看当前节点的工作流提示词，包含交接、完成和等待规则。</p><button id="wf-load-preview" class="primary">生成输入预览</button></div>'});
  const active=tabs.some(t=>t.key===editor.panelTab)?editor.panelTab:'config';editor.panelTab=active;
- $('#wf-inspector').innerHTML=workflowPanelMarkup('wf',n.name,n.kind==='agent'?agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id)):WorkflowGraph.kinds[n.kind],tabs,active);
+ $('#wf-inspector').innerHTML=workflowPanelMarkup('wf',n.name,n.kind==='agent'?agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id)):WorkflowGraph.kinds[n.kind],tabs,active,n.kind==='agent');
  bindWorkflowPanel('wf',tabs,active,key=>{editor.panelTab=key;if(key==='preview')previewWorkflowNode(editor,n)},()=>closeWorkflowInspector(editor));
- if(n.kind==='agent')bindWorkflowExit(editor,n);
+ if(n.kind==='agent'){bindWorkflowExit(editor,n);$('#wf-context-help').onclick=()=>workflowContextHelp(editor);}
  if(n.kind==='agent')$('#wf-load-preview').onclick=()=>previewWorkflowNode(editor,n);
  document.querySelectorAll('[data-edit-edge]').forEach(el=>{el.onclick=()=>workflowEdgeDialog(editor,Number(el.dataset.editEdge));el.onkeydown=e=>{if(e.key==='Enter')el.onclick()}});
  $('#wf-node-form').onsubmit=e=>{e.preventDefault();if(editor.readOnly)return;try{applyWorkflowNode(editor,n)}catch(error){toast(error.message)}};

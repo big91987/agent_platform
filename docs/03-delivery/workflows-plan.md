@@ -1574,3 +1574,10 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 
 
 正式升级及实际多节点复验：4e4a962e5759fb05bb701dea5be6a78adf0e976c已由标准build.sh/install.py部署112:8795（exit0），health同revision，binary SHA256 cd1fb80083fcdf74c4361b0cd0b8e47c6252dab40d9b6bd31528bb3adcbd2d7b。两个工作流、当前waiting研发Run、旧completed Run和私有配置/凭据均保持。正式8节点研发流程83f08f81f7040fcd0c12e6ff4e2acd2d/revision4在1440/1024/390下节点全部可见，画布右侧预留间隙0，节点包围框与视口中心偏差均低于0.04px；详情覆盖且开/关前后画布和节点几何不变。前后API全工作流逐值相同，无自动保存或产品任务推进。真实截图output/playwright/canvas-panel-{closed,open}-{1440,1024,390}.png，安装和浏览器回执在忽略目录.data/opensandbox-verification/canvas-panel。全图保持原节点布局；长横排仍需缩放查看细节，未自行改排用户持久坐标。定时任务保持暂停，未更新旧8793/8788。
+
+
+### 2026-10-15 — Agent 节点上下文组装说明
+
+用户要求明确角色指令与任务输入的关系，并能在节点上查看。Agent 节点详情标题旁新增问号，解释角色配置（Codex developerInstructions）、首次进入节点的规则→任务→已处理修正/回退→最近交接→各确认/执行节点最新回执、同会话后续消息、跨节点新会话与共享工作区，以及预览不包含全部原生上下文。旧式输入按其实际分支说明。此前“首轮 User Input 示例”改为工作流提示词；没有改变提示词拼接、权限或运行状态。
+
+浏览器回归先因缺问号真实失败，新增后验证 Enter 打开、Esc 关闭/焦点返回、窄屏无溢出、帮助不改草稿，以及原画布和执行流程；删除临时测试节点前漏切交接页签的夹具操作已纠正，最终真实回归7.073s通过。32项编辑器测试通过，完整scripts/verify.sh exit0（race77.985s，vet/build及模板回归通过），日志129050bytes/SHA256 299f42855a2a6548ecdb6c864ad4ec603fb52aa21c9e08690cd9b4e923c6bf2e。独立复审无Critical/Important，正文与实际代码核对一致。待通过标准build/install升级112:8795并核实际页面；定时任务仍暂停，不推进产品Run。

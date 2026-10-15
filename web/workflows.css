@@ -57,3 +57,5 @@
  .wf-canvas-tools{padding:8px}
  .wf-canvas-tools button{padding:6px 8px}
 }
+
+.wf-panel-actions{display:flex;gap:8px;flex-shrink:0}.wf-context-help{width:30px;height:30px;padding:0;border-radius:50%;color:#526888;background:#f3f5f9}.wf-context-explanation{overflow-wrap:anywhere}.wf-context-explanation h3{margin:18px 0 6px;font-size:15px}.wf-context-explanation h3:first-child{margin-top:0}.wf-context-explanation p{margin:0 0 12px}.wf-context-explanation ol{padding-left:24px}.wf-context-explanation li+li{margin-top:6px}
