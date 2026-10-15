@@ -61,9 +61,9 @@ async function openWorkflowEditor(graph){
  $('#wf-zoom-out').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom/1.25)};
  $('#wf-zoom-in').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom*1.25)};
  if(!editor.readOnly)$('#wf-arrange').onclick=()=>{rememberWorkflowNodeDraft(editor);editor.positions=arrangedWorkflowPositions(graph);materializeWorkflowPositions(editor);workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);fitWorkflowCanvas(editor)};
- $('#wf-overview').onclick=()=>{const n=graph.node(graph.value.entry);if(n){editor.fit=false;setWorkflowZoom(editor,1);const p=workflowNodePosition(editor,n);$('#wf-viewport').scrollTo({left:Math.max(0,p.x),top:Math.max(0,p.y),behavior:'smooth'})}};
+ $('#wf-overview').onclick=()=>{const n=graph.node(graph.value.entry);if(n){editor.fit=false;editor.canvasOffset={x:80,y:80};setWorkflowZoom(editor,1);const p=workflowNodePosition(editor,n);$('#wf-viewport').scrollTo({left:Math.max(0,p.x),top:Math.max(0,p.y),behavior:'smooth'})}};
  document.querySelectorAll('[data-kind]').forEach(button=>{
-  button.onclick=()=>addWorkflowNode(editor,button.dataset.kind,40+$('#wf-viewport').scrollLeft/editor.zoom,60+$('#wf-viewport').scrollTop/editor.zoom);
+  button.onclick=()=>{const p=workflowCanvasOffset(editor);addWorkflowNode(editor,button.dataset.kind,Math.max(0,80+$('#wf-viewport').scrollLeft/editor.zoom-p.x),Math.max(0,80+$('#wf-viewport').scrollTop/editor.zoom-p.y))};
   button.ondragstart=e=>e.dataTransfer.setData('application/x-platform-node',button.dataset.kind);
  });
  const stage=$('#wf-stage');stage.ondragover=e=>{if(!editor.readOnly)e.preventDefault()};
@@ -99,16 +99,27 @@ function workflowNodePosition(editor,node){return editor.positions?.[node.id]||{
 function materializeWorkflowPositions(editor){if(!editor.positions)return;for(const n of editor.graph.value.nodes)Object.assign(n,workflowNodePosition(editor,n));editor.positions=null;}
 function workflowCanvasBounds(editor){
  const points=editor.graph.value.nodes.map(n=>workflowNodePosition(editor,n));
- return points.length?{left:Math.min(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),right:Math.max(...points.map(p=>p.x+264)),bottom:Math.max(...points.map(p=>p.y+210))}:{left:0,top:0,right:240,bottom:160};
+ return points.length?{left:Math.min(...points.map(p=>p.x))-80,top:Math.min(...points.map(p=>p.y))-100,right:Math.max(...points.map(p=>p.x+264)),bottom:Math.max(...points.map(p=>p.y+196))}:{left:0,top:0,right:240,bottom:160};
 }
-function sizeWorkflowStage(editor){const b=workflowCanvasBounds(editor),v=$('#wf-viewport');$('#wf-stage').style.width=Math.max(b.right+80,v.clientWidth/editor.zoom)+'px';$('#wf-stage').style.height=Math.max(b.bottom+80,v.clientHeight/editor.zoom)+'px';}
+function workflowCanvasOffset(editor){return editor.canvasOffset||{x:80,y:80};}
+function sizeWorkflowStage(editor){
+ const b=workflowCanvasBounds(editor),v=$('#wf-viewport'),p=workflowCanvasOffset(editor);
+ $('#wf-stage').style.width=Math.max(b.right+p.x,v.clientWidth/editor.zoom)+'px';$('#wf-stage').style.height=Math.max(b.bottom+p.y,v.clientHeight/editor.zoom)+'px';
+ $('#wf-nodes').style.left=p.x+'px';$('#wf-nodes').style.top=p.y+'px';
+ for(const selector of ['#wf-edge-group','#wf-draft-line'])$(selector).setAttribute('transform',`translate(${p.x} ${p.y})`);
+}
 function setWorkflowZoom(editor,zoom){
  const view=$('#wf-viewport'),old=editor.zoom||1,center={x:(view.scrollLeft+view.clientWidth/2)/old,y:(view.scrollTop+view.clientHeight/2)/old};
  editor.zoom=Math.max(.025,Math.min(2,zoom));$('#wf-stage').style.zoom=editor.zoom;sizeWorkflowStage(editor);
  view.scrollTo(Math.max(0,center.x*editor.zoom-view.clientWidth/2),Math.max(0,center.y*editor.zoom-view.clientHeight/2));$('#wf-actual').textContent=Math.round(editor.zoom*100)+'%';
 }
-function fitWorkflowCanvas(editor){const b=workflowCanvasBounds(editor),v=$('#wf-viewport');editor.fit=true;setWorkflowZoom(editor,Math.min(1,(v.clientWidth-16)/(b.right-b.left+80),(v.clientHeight-16)/(b.bottom-b.top+80)));v.scrollTo(b.left*editor.zoom,b.top*editor.zoom);}
-function workflowPoint(event){const rect=$('#wf-stage').getBoundingClientRect(),scale=workflowEditor?.zoom||1;return {x:(event.clientX-rect.left)/scale-80,y:(event.clientY-rect.top)/scale-80};}
+function fitWorkflowCanvas(editor){
+ const b=workflowCanvasBounds(editor),v=$('#wf-viewport'),width=b.right-b.left,height=b.bottom-b.top;
+ const zoom=Math.max(.025,Math.min(1,(v.clientWidth-16)/width,(v.clientHeight-16)/height));
+ editor.fit=true;editor.canvasOffset={x:(v.clientWidth/zoom-width)/2-b.left,y:(v.clientHeight/zoom-height)/2-b.top};
+ setWorkflowZoom(editor,zoom);v.scrollTo(0,0);
+}
+function workflowPoint(event){const rect=$('#wf-stage').getBoundingClientRect(),scale=workflowEditor?.zoom||1,p=workflowCanvasOffset(workflowEditor||{});return {x:(event.clientX-rect.left)/scale-p.x,y:(event.clientY-rect.top)/scale-p.y};}
 function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
 function renderWorkflowNodes(editor){
  if(workflowEditor!==editor)return;

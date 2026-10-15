@@ -28,6 +28,20 @@ const {chromium}=require('playwright');
    const visible=await page.locator('#wf-viewport').evaluate(view=>{const r=view.getBoundingClientRect();return [...view.querySelectorAll('.wf-node')].every(n=>{const b=n.getBoundingClientRect();return b.left>=r.left&&b.top>=r.top&&b.right<=r.right&&b.bottom<=r.bottom})});
    assert.ok(visible,'fit must show all nodes at '+width);
    const button=await page.locator('#wf-save').boundingBox();assert.ok(button.x>=0&&button.x+button.width<=width,'save remains reachable');
+   const canvasGeometry=()=>page.evaluate(()=>{
+    const v=document.querySelector('#wf-viewport'),r=v.getBoundingClientRect(),area=document.querySelector('.wf-workarea').getBoundingClientRect(),layout=document.querySelector('.wf-layout').getBoundingClientRect();
+    const nodes=[...document.querySelectorAll('.wf-node')].map(n=>n.getBoundingClientRect().toJSON());
+    return {viewport:r.toJSON(),nodes,rightGap:layout.right-area.right,centerX:r.left+v.clientWidth/2,centerY:r.top+v.clientHeight/2};
+   });
+   const closed=await canvasGeometry();assert.ok(closed.rightGap<=1,'closed inspector must reserve no right column');
+   await page.locator('[data-node="call"] .wf-node-body').click();await page.locator('#wf-inspector').waitFor({state:'visible'});
+   const opened=await canvasGeometry();assert.deepEqual(opened,closed,'opening inspector must not shrink canvas or move nodes');
+   const panel=await page.locator('#wf-inspector').boundingBox();assert.ok(panel.x<opened.viewport.right&&panel.x+panel.width>opened.viewport.x,'inspector overlays canvas');
+   await page.screenshot({path:fixture.screenshot.replace('.png','-panel-'+width+'.png'),fullPage:true,animations:'disabled'});
+   await page.locator('#wf-panel-close').click();assert.deepEqual(await canvasGeometry(),closed,'closing inspector must leave the same full canvas');
+   const graphCenterX=(Math.min(...closed.nodes.map(n=>n.left))+Math.max(...closed.nodes.map(n=>n.right)))/2;
+   const graphCenterY=(Math.min(...closed.nodes.map(n=>n.top))+Math.max(...closed.nodes.map(n=>n.bottom)))/2;
+   assert.ok(Math.abs(graphCenterX-closed.centerX)<2&&Math.abs(graphCenterY-closed.centerY)<2,'fit centers the graph in the available canvas at '+width);
    await page.screenshot({path:fixture.screenshot.replace('.png','-canvas-'+width+'.png'),fullPage:true});
   }
   await page.setViewportSize({width:1440,height:900});
@@ -47,6 +61,22 @@ const {chromium}=require('playwright');
   await page.locator('#wf-arrange').click();const layoutSaved=page.waitForResponse(r=>r.url().endsWith('/api/workflows/'+fixture.workflow)&&r.request().method()==='PUT');await page.locator('#wf-save').click();assert.equal((await layoutSaved).status(),200);await page.reload();await page.locator('#wf-stage').waitFor();
   const arranged=await page.evaluate(async id=>(await fetch('/api/workflows/'+id)).json(),fixture.workflow);
   assert.notEqual(arranged.nodes[0].x,arranged.nodes[1].x,'explicit arrangement persists');
+  // A multi-row graph with large saved coordinates must use the same complete canvas.
+  const large={...arranged,entry:'stage0',nodes:Array.from({length:10},(_,i)=>({...original.nodes[i===9?1:0],id:'stage'+i,name:'阶段 '+(i+1),x:7000+(i%3)*300,y:7000+Math.floor(i/3)*180})),edges:Array.from({length:9},(_,i)=>({...original.edges[0],source:'stage'+i,target:'stage'+(i+1)}))};
+  await page.evaluate(async w=>{const r=await fetch('/api/workflows/'+w.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:JSON.stringify(w)});if(!r.ok)throw Error('large fixture failed')},large);
+  await page.reload();await page.locator('#wf-stage').waitFor();
+  for(const width of [1440,1024,390]){
+   await page.setViewportSize({width,height:900});await page.locator('#wf-fit').click();
+   assert.ok(await page.locator('#wf-viewport').evaluate(v=>{const r=v.getBoundingClientRect();return [...v.querySelectorAll('.wf-node')].every(n=>{const b=n.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right&&b.top>=r.top&&b.bottom<=r.bottom})}),'multi-row graph fits '+width);
+   const before=await page.locator('#wf-viewport').boundingBox();
+   await page.locator('[data-node="stage0"] .wf-node-body').click();assert.deepEqual(await page.locator('#wf-viewport').boundingBox(),before,'multi-row inspector overlays');
+   await page.locator('#wf-panel-close').click();
+   await page.screenshot({path:fixture.screenshot.replace('.png','-multi-row-'+width+'.png'),fullPage:true,animations:'disabled'});
+  }
+  await page.setViewportSize({width:1440,height:900});await page.emulateMedia({reducedMotion:'reduce'});
+  await page.locator('#wf-overview').click();
+  await page.waitForFunction(()=>{const n=document.querySelector('[data-node="stage0"]').getBoundingClientRect(),v=document.querySelector('#wf-viewport').getBoundingClientRect();return n.left>=v.left&&n.right<=v.right&&n.top>=v.top&&n.bottom<=v.bottom});
+  const unchanged=await page.evaluate(async id=>(await fetch('/api/workflows/'+id)).json(),fixture.workflow);assert.deepEqual(unchanged.nodes,large.nodes,'view operations do not rewrite stored coordinates');
   await page.evaluate(async w=>{const current=await (await fetch('/api/workflows/'+w.id)).json();await fetch('/api/workflows/'+w.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:JSON.stringify({...w,revision:current.revision})})},original);
   await page.reload();
   console.log('phase: editor');await page.locator('[data-node="call"] .wf-node-body').click();
