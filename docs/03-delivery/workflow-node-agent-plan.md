@@ -1469,3 +1469,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 ### 2026-10-15 — 管理员密码最低长度调整
 
 按用户明确要求，将账号管理 API 与服务启动配置的自定义密码下限从 12 改为 8，保留既有默认管理员兼容和上限。真实 API 边界回归先红后绿：普通账号/管理员 7 位拒绝、8 位保存后可登录；临时独立真实进程验证 7 位启动拒绝、8 位启动和登录成功。标准 scripts/verify.sh exit0（129058 bytes / SHA256 838b5a500e3e1ad5f2f0c84d4ff33389cb74956b811460d499e32373cc235463），平台 race78.421s、vet/build及原模板/浏览器门禁通过；保留已有 macOS LC_DYSYMTAB 链接警告。独立复审无 Critical/Important。当前待标准升级112:8795并用正式账号API修改密码；不修改数据库或其他实例。
+
+
+部署复验：38ff741b91d1983946cbd30db3e7116de2f8adb7 已通过112标准build.sh/install.py升级8795（两者exit0），正式health同revision。管理员密码经/api/users修改为用户指定值，新会话/api/login与/api/me成功，私有0600凭据引用同步，不在文档记录值；配置、私有运行/CI/App资料、历史已完成Run与当前已停止Run逐值保持。升级前通过Owner stop将Issue51 Run6f3f26f6207ab1b6bfbc5ccd246797de/seq2正式停止并确认原生进程stopped；升级后Owner resume受理，仍seq2及原conversation4fc456bceb7debd872d395a3bbf5a9b2/冻结definition，状态running，非新Run或产品完成。源码直连GitHub首次push网络失败，使用用户既有10.1.20.20:7890代理后push成功；无Platform PR/main合并、无旧8793/8788改动。
