@@ -149,6 +149,62 @@ class SandboxEntryTest(unittest.TestCase):
         self.client.start_workflow.assert_called_once()
         self.assertEqual(len(self.comments), 1)
 
+    def test_classified_product_task_preserves_input_and_reuses_same_run(self):
+        for category in (
+            "产品功能",
+            "产品修复",
+            "产品测试",
+            "Harness验证",
+            "Harness修复",
+            "交付维护",
+        ):
+            with self.subTest(category=category):
+                self.setUp()
+                self.issue["title"] = f"【{category}】支持同模型上游低延迟优先路由"
+                first = forward(self.config, self.client, 7, github_call=self.github)
+                args = self.client.start_workflow.call_args
+                self.assertEqual(
+                    args.args[1], self.issue["title"] + "\n\n" + self.issue["body"]
+                )
+                self.assertEqual(
+                    args.kwargs["request_id"], "github:owner/repo:issue:123"
+                )
+                self.client.workflow_by_request.side_effect = None
+                self.client.workflow_by_request.return_value = first
+                forward(self.config, self.client, 7, github_call=self.github)
+                self.client.start_workflow.assert_called_once()
+
+    def test_invalid_title_or_author_never_resolves_or_starts_task(self):
+        for title, owner in (
+            ("没有类别的任务", "owner"),
+            ("【未知】实现路由", "owner"),
+            ("【产品功能】", "owner"),
+            ("【产品功能】   ", "owner"),
+            ("【产品功能】实现路由", "other"),
+        ):
+            with self.subTest(title=title, owner=owner):
+                self.setUp()
+                self.issue.update(title=title, user={"login": owner})
+                with self.assertRaises(ValueError):
+                    forward(self.config, self.client, 7, github_call=self.github)
+                self.client.workflow_by_request.assert_not_called()
+                self.client.start_workflow.assert_not_called()
+
+    def test_existing_spaced_harness_title_keeps_comment_continuity(self):
+        self.issue["title"] = "【Harness验证】 验证交接" + "与恢复" * 65
+        self.client.workflow_by_request.side_effect = None
+        self.client.workflow_by_request.return_value = self.run
+        self.client.workflow_message.return_value = {
+            "conversation_url": "http://platform/conversations/retained"
+        }
+        forward(self.config, self.client, 7, 44, github_call=self.github)
+        self.client.start_workflow.assert_not_called()
+        self.client.workflow_message.assert_called_once_with(
+            "run",
+            "check the retained result",
+            request_id="github:owner/repo:issue:123:comment:44",
+        )
+
     def test_unrelated_labels_and_other_pipeline_runs_do_not_start(self):
         self.issue["labels"] = []
         with self.assertRaises(ValueError):

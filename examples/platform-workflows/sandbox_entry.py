@@ -41,10 +41,12 @@ def forward(config, client, number, comment_id=0, *, github_call=None):
         raise ValueError("Expected an owner-authored Issue")
     if label not in [x["name"] for x in issue.get("labels", [])]:
         raise ValueError("Issue does not select this sandbox Pipeline")
-    if not issue["title"].startswith("【Harness验证】") or platform_output(
-        issue.get("body")
-    ):
-        raise ValueError("Use a new Harness verification Issue with a concrete goal")
+    title = re.fullmatch(
+        r"【(?:产品功能|产品修复|产品测试|Harness验证|Harness修复|交付维护)】([^\r\n]+)",
+        issue["title"],
+    )
+    if not title or not title[1].strip() or platform_output(issue.get("body")):
+        raise ValueError("Use a classified Issue with a concrete goal")
     key = f"github:{repo}:issue:{issue['id']}"
     print("Sandbox entry: resolve original platform Run", flush=True)
     run = accepted_run(client, key)
