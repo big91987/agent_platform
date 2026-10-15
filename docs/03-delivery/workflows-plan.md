@@ -1550,3 +1550,12 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 
 
 部署复验：38ff741b91d1983946cbd30db3e7116de2f8adb7 已通过112标准build.sh/install.py升级8795（两者exit0），正式health同revision。管理员密码经/api/users修改为用户指定值，新会话/api/login与/api/me成功，私有0600凭据引用同步，不在文档记录值；配置、私有运行/CI/App资料、历史已完成Run与当前已停止Run逐值保持。升级前通过Owner stop将Issue51 Run6f3f26f6207ab1b6bfbc5ccd246797de/seq2正式停止并确认原生进程stopped；升级后Owner resume受理，仍seq2及原conversation4fc456bceb7debd872d395a3bbf5a9b2/冻结definition，状态running，非新Run或产品完成。源码直连GitHub首次push网络失败，使用用户既有10.1.20.20:7890代理后push成功；无Platform PR/main合并、无旧8793/8788改动。
+
+
+### 2026-10-15 — 工作流画布完整呈现
+
+用户截图对应 OpenSandbox 原生会话接续验证08，正式API确认3节点坐标均为(0,0)，真实浏览器证实相互覆盖，只显示最后的结束节点。修复唯一平台Web源码：未布置节点按入口/连线次序作视图布局，打开页面不改服务端图；显式整理、拖动或坐标编辑才写入可保存布局。增加显示全图、整理布局和缩放工具，节点/连线/指针统一留白坐标；按两维边界适配窗口，标题与操作区换行，窄屏无根页面横向溢出。
+
+原层浏览器回归先红（unplaced nodes must not cover each other），修复后1440/1024/390全节点可见、保存按钮可达；64%缩放拖动40px后保存重载坐标63、pointercancel恢复位置和未保存标记、整理保存重载通过。最终真实Go-backed浏览器门禁5.563s、32项编辑器单测通过；完整scripts/verify.sh exit0、平台race77.489s、vet/build及模板门禁通过，完整日志129056bytes/SHA256 9836f19068389bc1ede40e5ab6254a9a55fa80c5fa06ae52349ca72d52705c93。最终小调整另重跑编辑器单测和真实浏览器；独立最终复审无Critical/Important。已有macOS链接器LC_DYSYMTAB警告保留。
+
+源码8fef116；当前待标准build/install升级112:8795与实际页面复验；不在服务器手改坐标、不迁移冻结Run。Issue51已自然等待设计确认，定时任务保持暂停，本次不接续产品研发。
