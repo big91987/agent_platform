@@ -1550,3 +1550,6 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 
 
 最终完整scripts/verify.sh exit0，日志129148bytes/SHA256 c5c60549934ecea290c5cbbd7b9266419709785ca8c20e0d0e569528de207206，Go race80.031s、vet/build及真实浏览器/模板检查通过。独立复审原两项Important及stopped行政收尾兼容性回归均关闭，无剩余C/I；最终实现已在完整Go检查前完成。下一步标准升级112并执行精确8项清理。
+
+
+正式升级与清理完成：d42c018fb6fed6a6eefb4b3d8878483f40136013经标准build/install部署112:8795，health同版、binary SHA256 b0701298bc934cca7bf3df21b0b265652a5e70fd0eee75351321243c4d2bfabe，升级前后配置/凭据及原Run保持。随后以名称+ID+revision白名单，通过正式DELETE API逐项清理8个临时定义（基础执行01–04、MCP check05正/缺输入、内存14、原生接续08），没有数据库或检查点手改。当前GET /api/workflows只余正式研发83f08f81…/revision4，14个Run详情逐值不变，8组历史入口保留。真实浏览器主列表只显示正式流程，历史默认折叠且原7289bb…Run链接可打开，waiting Run6f3f26…保持；截图output/playwright/workflows-cleaned.png已查看。未删除产物/会话、未释放环境、未恢复任务；自动化保持暂停。源码和最终维护记录仅开发分支推送，无平台PR/main合并。归档传输第一次核验仍在接收时已停止构建提交，确认摘要后只构建一次，无盲重传。后续临时验证结束应通过正式入口清理定义并保留历史；后续安装核对以当前正式列表为准，不再假设135f114…临时定义仍存在。
