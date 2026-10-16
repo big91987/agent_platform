@@ -1537,3 +1537,6 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 按用户确认的交互方向，正常范围继续使用Chromium手势比例反变换exp(-deltaY/100)，不添加速度加速或正常范围缓动；仅在2.5%–200%边界外提供对数空间有界阻尼（最多约8%视觉超伸），反向输入立即生效，无累计超伸债务。Chrome以140ms输入停顿判结束，160ms短回弹可被新手势打断；Safari使用gestureend，系统减少动态效果时直接限制在有效范围。比例输入/按钮、显示全图、普通滚动、拖动和失焦取消弹性，视图不保存到工作流。此为参考Apple交互原则的自定义实现，不声称复刻Apple私有曲线。
 
 原边界浏览器断言先红，最终定向9.74s通过；事件拆分等价、上下界阻尼/反向、回弹中wheel及Safari手势接续、fit和blur取消、按钮有效比例、减少动态效果均覆盖，原锚点/平移/节点拖动/保存重载和执行回归保留。33项编辑器测试及完整scripts/verify.sh exit0，完整日志129156bytes/SHA256 9eaad972c069c1ffe5f2b64a94966a3f1d4bfd891c2dd21b70b61e2b94d3ed89，浏览器10.448s、Go race78.065s、vet/build及模板回归绿。独立复审Minor（±误用临时超伸比例）已修并补回归。实际标准112:8795部署及页面核对待补；合成Chromium事件不代替物理Mac触控板或Safari设备实测。证据在忽略目录.data/opensandbox-verification/zoom-elastic，自动化保持暂停，产品Run未推进。
+
+
+正式交付：独立复审最终无Critical/Important，源码13cbfa8af3121921051cbb81781c791312e30354已标准build.sh/install.py升级112:8795，health同版、binary SHA256 43f581035622104bed611a3f1d7c6d007d9a211a87f97b5759fca892299a0a63；waiting/旧completed Run、两个工作流及配置凭据保持。真实部署页上界2.15239→反向2.10977→回弹中2.10397→新输入2.11766→最终2，下界0.02323→0.025；减少动态效果直接钳位。正常120事件scale1.82201/锚点误差0.066px、真实Control+mousewheel误差0.293px以内，平移/预设/自定义/390px选择器通过。完整工作流API前后逐值不变，revision4及已保存保持，未运行或保存工作流。截图output/playwright/zoom-elastic-deployed.png已查看；回执在.data/opensandbox-verification/zoom-elastic。实际物理Mac捏合及Safari设备未实测，不能将合成手势回归当作设备体验结论。仅独立开发分支推送，未创建平台PR/合main，定时任务保持暂停。
