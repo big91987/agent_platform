@@ -1618,3 +1618,13 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 
 
 正式交付：独立复审最终无Critical/Important，源码13cbfa8af3121921051cbb81781c791312e30354已标准build.sh/install.py升级112:8795，health同版、binary SHA256 43f581035622104bed611a3f1d7c6d007d9a211a87f97b5759fca892299a0a63；waiting/旧completed Run、两个工作流及配置凭据保持。真实部署页上界2.15239→反向2.10977→回弹中2.10397→新输入2.11766→最终2，下界0.02323→0.025；减少动态效果直接钳位。正常120事件scale1.82201/锚点误差0.066px、真实Control+mousewheel误差0.293px以内，平移/预设/自定义/390px选择器通过。完整工作流API前后逐值不变，revision4及已保存保持，未运行或保存工作流。截图output/playwright/zoom-elastic-deployed.png已查看；回执在.data/opensandbox-verification/zoom-elastic。实际物理Mac捏合及Safari设备未实测，不能将合成手势回归当作设备体验结论。仅独立开发分支推送，未创建平台PR/合main，定时任务保持暂停。
+
+
+### 2026-10-16 — 清理临时验证工作流并补正式删除入口
+
+用户指出临时工作流未清理。正式API只读核112:8795共9定义，8个临时基础执行/MCP引用/内存/原生接续验证流程，其Run为completed/stopped/failed；正式研发83f08f81f7040fcd0c12e6ff4e2acd2d/revision4及waiting Run6f3f26f6207ab1b6bfbc5ccd246797de保持。平台原无DELETE入口，不能用手改数据库删除。维护源补管理员DELETE+revision，事务内拒绝有活动/等待运行或过期版本；列表提供明确确认，历史默认折叠。定义逻辑删除保留最后授权用于原生历史读取，普通Owner和撤销授权边界不放宽；新建/旧编辑/Resume/Return均不能复活删除对象。Resume与Return写事务再次核定义，未删除流程原stopped行政收尾能力保持。删除不删除Run/日志/产物/环境，不触发供应商或产品任务。
+
+API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出硬删除损坏Owner历史和恢复竞态，两项均增加红→绿，补旧库迁移/重启、跨用户与撤销、终态写入拒绝、已删除stopped/complete恢复不变。首轮完整检查因只读列表夹具无querySelectorAll失败，已将删除绑定限定管理员；修复后的完整检查通过，后续复审修正纳入最终完整检查。旧stopped管理员收尾回归已保持，最终针对性集1.828s通过。标准升级及8个真实删除尚待最终完整门禁，不将源码绿冒充已清理；证据在.data/opensandbox-verification/workflow-cleanup，定时任务继续暂停。
+
+
+最终完整scripts/verify.sh exit0，日志129148bytes/SHA256 c5c60549934ecea290c5cbbd7b9266419709785ca8c20e0d0e569528de207206，Go race80.031s、vet/build及真实浏览器/模板检查通过。独立复审原两项Important及stopped行政收尾兼容性回归均关闭，无剩余C/I；最终实现已在完整Go检查前完成。下一步标准升级112并执行精确8项清理。

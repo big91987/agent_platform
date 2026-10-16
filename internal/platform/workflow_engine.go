@@ -326,7 +326,7 @@ func (e *WorkflowEngine) startAgent(c Caller, r WorkflowRun, step WorkflowStep, 
 	}
 	_, err := e.store.submitConfigured(c, in, func(tx *sql.Tx, a *Agent, conversationID string) error {
 		var definition string
-		if err := tx.QueryRow(`SELECT definition FROM workflows WHERE id=?`, r.WorkflowID).Scan(&definition); err != nil {
+		if err := tx.QueryRow(`SELECT definition FROM workflows WHERE id=? AND deleted=0`, r.WorkflowID).Scan(&definition); err != nil {
 			return err
 		}
 		var current Workflow
@@ -426,8 +426,10 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 		}
 		newLimit = limits[0]
 	}
-	if r.Status == "completed" || limitFailure || newLimit != r.executionLimit() {
-		owner, err := e.store.workflowCaller(r)
+	requireCurrentGrant := r.Status == "completed" || limitFailure || newLimit != r.executionLimit()
+	var owner Caller
+	if requireCurrentGrant {
+		owner, err = e.store.workflowCaller(r)
 		if err != nil {
 			return err
 		}
@@ -446,6 +448,20 @@ func (e *WorkflowEngine) Return(c Caller, id string, seq int, target, reason str
 		return err
 	}
 	defer tx.Rollback()
+	// A stopped Run keeps its existing administrative cleanup semantics, but
+	// deletion always blocks revival. Completed work also rechecks owner grants.
+	var deleted bool
+	if err = tx.QueryRow(`SELECT deleted FROM workflows WHERE id=?`, r.WorkflowID).Scan(&deleted); err != nil {
+		return err
+	}
+	if deleted {
+		return ErrNotFound
+	}
+	if requireCurrentGrant {
+		if _, err = editableWorkflow(tx, owner, r.WorkflowID); err != nil {
+			return err
+		}
+	}
 	current, err := loadWorkflowRun(tx, id)
 	if err != nil {
 		return err
@@ -562,6 +578,9 @@ func (e *WorkflowEngine) Resume(c Caller, id string, seq int, message string) er
 		return err
 	}
 	defer tx.Rollback()
+	if _, err = editableWorkflow(tx, owner, r.WorkflowID); err != nil {
+		return err
+	}
 	_, err = tx.Exec(`UPDATE workflow_runs SET status=?,error='',updated=? WHERE id=? AND seq=?; UPDATE workflow_steps SET status=?,updated=? WHERE run_id=? AND seq=?`, runStatus, now(), id, seq, nodeStatus, now(), id, seq)
 	if err != nil {
 		return err

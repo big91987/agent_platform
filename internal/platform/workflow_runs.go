@@ -382,7 +382,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	}
 	var raw string
 	var w Workflow
-	if e = tx.QueryRow(`SELECT definition FROM workflows WHERE id=?`, in.WorkflowID).Scan(&raw); errors.Is(e, sql.ErrNoRows) {
+	if e = tx.QueryRow(`SELECT definition FROM workflows WHERE id=? AND deleted=0`, in.WorkflowID).Scan(&raw); errors.Is(e, sql.ErrNoRows) {
 		return zero, ErrNotFound
 	} else if e != nil {
 		return zero, e

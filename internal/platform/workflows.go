@@ -245,6 +245,16 @@ func (s *Store) initWorkflows() error {
 	if e != nil {
 		return e
 	}
+	// Keep deleted definitions solely for existing conversation authorization.
+	var deletedColumn int
+	if e = s.DB.QueryRow(`SELECT count(*) FROM pragma_table_info('workflows') WHERE name='deleted'`).Scan(&deletedColumn); e != nil {
+		return e
+	}
+	if deletedColumn == 0 {
+		if _, e = s.DB.Exec(`ALTER TABLE workflows ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0`); e != nil {
+			return e
+		}
+	}
 	if e = s.initWorkflowRuns(); e != nil {
 		return e
 	}
@@ -259,10 +269,14 @@ func (s *Store) initWorkflows() error {
 func workflowAllowed(c Caller, w Workflow) bool {
 	return c.Admin || c.UserID != "" && slices.Contains(w.AuthorizedUsers, c.UserID)
 }
-func (s *Store) Workflow(c Caller, id string) (Workflow, error) {
+func (s *Store) Workflow(c Caller, id string) (Workflow, error) { return editableWorkflow(s.DB, c, id) }
+
+// Shared by reads and transactional recovery checks; deleted workflows cannot
+// start or resume work, while their stored grants still protect native history.
+func editableWorkflow(q rowQuerier, c Caller, id string) (Workflow, error) {
 	var w Workflow
 	var raw string
-	e := s.DB.QueryRow(`SELECT definition FROM workflows WHERE id=?`, id).Scan(&raw)
+	e := q.QueryRow(`SELECT definition FROM workflows WHERE id=? AND deleted=0`, id).Scan(&raw)
 	if errors.Is(e, sql.ErrNoRows) {
 		return w, ErrNotFound
 	}
@@ -278,7 +292,7 @@ func (s *Store) Workflow(c Caller, id string) (Workflow, error) {
 	return w, nil
 }
 func (s *Store) Workflows(c Caller) ([]Workflow, error) {
-	rows, e := s.DB.Query(`SELECT definition FROM workflows ORDER BY id`)
+	rows, e := s.DB.Query(`SELECT definition FROM workflows WHERE deleted=0 ORDER BY id`)
 	if e != nil {
 		return nil, e
 	}
@@ -381,7 +395,7 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 		_, e = tx.Exec(`INSERT INTO workflows(id,revision,definition) VALUES(?,?,?)`, w.ID, w.Revision, string(raw))
 	} else {
 		var result sql.Result
-		result, e = tx.Exec(`UPDATE workflows SET revision=?,definition=? WHERE id=? AND revision=?`, w.Revision, string(raw), w.ID, previous)
+		result, e = tx.Exec(`UPDATE workflows SET revision=?,definition=? WHERE id=? AND revision=? AND deleted=0`, w.Revision, string(raw), w.ID, previous)
 		if e == nil {
 			var count int64
 			count, e = result.RowsAffected()
@@ -395,6 +409,43 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 	}
 	return w, tx.Commit()
 }
+
+// DeleteWorkflow removes only the editable definition. Runs retain their frozen
+// definitions and evidence. Revision checking protects a concurrently edited graph.
+func (s *Store) DeleteWorkflow(c Caller, id string, revision int64) error {
+	if !c.Admin {
+		return ErrForbidden
+	}
+	if revision < 1 {
+		return errors.New("workflow revision is required")
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var current int64
+	if err = tx.QueryRow(`SELECT revision FROM workflows WHERE id=? AND deleted=0`, id).Scan(&current); errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	} else if err != nil {
+		return err
+	}
+	if current != revision {
+		return fmt.Errorf("%w: 工作流已更新，请刷新后再删除", ErrConflict)
+	}
+	var active int
+	if err = tx.QueryRow(`SELECT count(*) FROM workflow_runs WHERE workflow_id=? AND status NOT IN ('completed','cancelled','failed','stopped')`, id).Scan(&active); err != nil {
+		return err
+	}
+	if active != 0 {
+		return fmt.Errorf("%w: 工作流有进行中或等待中的运行，请先停止运行", ErrConflict)
+	}
+	if _, err = tx.Exec(`UPDATE workflows SET deleted=1 WHERE id=? AND revision=?`, id, revision); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (h *Server) workflowRoutes() {
 	h.mux.HandleFunc("GET /api/workflows", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.Workflows(c)
@@ -441,6 +492,20 @@ func (h *Server) workflowRoutes() {
 		}
 		respond(w, code, workflowHTTPValue(c, v))
 	})
+	h.mux.HandleFunc("DELETE /api/workflows/{id}", h.protect(true, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		var in struct {
+			Revision int64 `json:"revision"`
+		}
+		if err := decode(w, r, &in); err != nil {
+			fail(w, err)
+			return
+		}
+		if err := h.store.DeleteWorkflow(c, r.PathValue("id"), in.Revision); err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, map[string]bool{"deleted": true})
+	}))
 	h.mux.HandleFunc("POST /api/workflows", save)
 	h.mux.HandleFunc("PUT /api/workflows/{id}", save)
 }
