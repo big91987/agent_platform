@@ -58,8 +58,8 @@ async function openWorkflowEditor(graph){
  $('#wf-show-edges').onclick=()=>{editor.showAllEdges=!editor.showAllEdges;$('#wf-show-edges').textContent=editor.showAllEdges?'仅相关连线':'全部连线';$('#wf-show-edges').setAttribute('aria-pressed',String(editor.showAllEdges));renderWorkflowEdges(editor)};
  $('#wf-fit').onclick=()=>{closeWorkflowInspector(editor);fitWorkflowCanvas(editor)};
  $('#wf-actual').onclick=()=>workflowZoomDialog(editor);
- $('#wf-zoom-out').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom/1.25)};
- $('#wf-zoom-in').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,editor.zoom*1.25)};
+ $('#wf-zoom-out').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,workflowZoomLimit(editor.zoom)/1.25)};
+ $('#wf-zoom-in').onclick=()=>{editor.fit=false;setWorkflowZoom(editor,workflowZoomLimit(editor.zoom)*1.25)};
  if(!editor.readOnly)$('#wf-arrange').onclick=()=>{rememberWorkflowNodeDraft(editor);editor.positions=arrangedWorkflowPositions(graph);materializeWorkflowPositions(editor);workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);fitWorkflowCanvas(editor)};
  $('#wf-overview').onclick=()=>{const n=graph.node(graph.value.entry);if(n){editor.fit=false;editor.canvasOffset={x:80,y:80};setWorkflowZoom(editor,1);const p=workflowNodePosition(editor,n);$('#wf-viewport').scrollTo({left:Math.max(0,p.x),top:Math.max(0,p.y),behavior:'smooth'})}};
  document.querySelectorAll('[data-kind]').forEach(button=>{
@@ -117,19 +117,31 @@ function moveWorkflowView(editor,left,top){
  editor.canvasOffset=p;editor.viewExtent={width:left+view.clientWidth,height:top+view.clientHeight};
  sizeWorkflowStage(editor);view.scrollTo(left,top);
 }
+function workflowZoomLimit(zoom){return Math.max(.025,Math.min(2,zoom));}
+// Dampen only outward movement beyond a limit, in logarithmic scale. The
+// bounded response composes across input events; reversing has no stored debt.
+function workflowGestureZoom(zoom,factor){
+ const from=Math.log(zoom),delta=Math.log(factor),to=from+delta,low=Math.log(.025),high=Math.log(2);
+ if(to>=low&&to<=high)return Math.exp(to);
+ const direction=to>high?1:-1,bound=direction>0?high:low;
+ if(delta*direction<=0)return Math.exp(to);
+ const limit=.08,previous=Math.max(0,(from-bound)*direction),distance=(to-bound)*direction-previous;
+ return Math.exp(bound+direction*(limit-(limit-previous)*Math.exp(-distance/limit)));
+}
 function setWorkflowZoom(editor,zoom,anchor){
  editor.cancelZoom?.();applyWorkflowZoom(editor,zoom,anchor);
 }
-function applyWorkflowZoom(editor,zoom,anchor,world){
+function applyWorkflowZoom(editor,zoom,anchor,world,elastic=false){
  if(editor.canvasGesture||!Number.isFinite(zoom))return;
  const view=$('#wf-viewport'),old=editor.zoom||1,p=workflowCanvasOffset(editor);
  anchor||={x:view.clientWidth/2,y:view.clientHeight/2};
  world||={x:(view.scrollLeft+anchor.x)/old-p.x,y:(view.scrollTop+anchor.y)/old-p.y};
- editor.zoom=Math.max(.025,Math.min(2,zoom));$('#wf-stage').style.zoom=editor.zoom;
+ editor.zoom=elastic?Math.max(.025*Math.exp(-.08),Math.min(2*Math.exp(.08),zoom)):workflowZoomLimit(zoom);$('#wf-stage').style.zoom=editor.zoom;
  moveWorkflowView(editor,(world.x+p.x)*editor.zoom-anchor.x,(world.y+p.y)*editor.zoom-anchor.y);
- $('#wf-actual').textContent=Math.round(editor.zoom*1000)/10+'%';
+ $('#wf-actual').textContent=Math.round(workflowZoomLimit(editor.zoom)*1000)/10+'%';
 }
 function workflowZoomDialog(editor){
+ editor.cancelZoom?.();
  dialog(`<form id="wf-zoom-form"><div class="dialog-head"><h2>缩放画布</h2><button type="button" data-close aria-label="关闭缩放设置">关闭</button></div><div class="dialog-body"><div class="wf-zoom-presets">${[25,50,75,100,125,150,200].map(value=>`<button type="button" data-zoom="${value}">${value}%</button>`).join('')}</div><div class="field"><label for="wf-zoom-value">缩放比例（%）</label><input id="wf-zoom-value" type="number" min="2.5" max="200" step="0.1" required value="${Math.round(editor.zoom*1000)/10}"><p class="hint">2.5%–200%。100% 恢复原尺寸。</p></div></div><div class="dialog-footer"><button class="primary">应用</button></div></form>`);
  const apply=value=>{if(workflowEditor!==editor)return;editor.fit=false;setWorkflowZoom(editor,value/100);$('#dialog').close();};
  $('#wf-zoom-form').onsubmit=e=>{e.preventDefault();if($('#wf-zoom-form').reportValidity())apply(Number($('#wf-zoom-value').value));};
@@ -139,34 +151,61 @@ function bindWorkflowNavigation(editor){
  const view=$('#wf-viewport');
  // Keep fractional world coordinates across paints: scrollLeft/Top are rounded
  // by the browser, so deriving the anchor again on every delta accumulates drift.
- let pending=null,frame=0;
- editor.cancelZoom=()=>{if(frame)cancelAnimationFrame(frame);frame=0;pending=null;editor.pinch=null;};
- const queueZoom=(e,scale,absolute=false)=>{
+ let pending=null,frame=0,endTimer=0,settling=false;
+ const reducedMotion=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const renderPending=()=>{
+  applyWorkflowZoom(editor,pending.zoom,pending.anchor,pending.world,true);
+  pending.left=view.scrollLeft;pending.top=view.scrollTop;
+ };
+ editor.cancelZoom=()=>{
+  clearTimeout(endTimer);if(frame)cancelAnimationFrame(frame);frame=0;settling=false;
+  const last=pending;pending=null;editor.pinch=null;
+  if(editor.zoom!==workflowZoomLimit(editor.zoom))applyWorkflowZoom(editor,workflowZoomLimit(editor.zoom),last?.anchor,last?.world);
+ };
+ const finishZoom=()=>{
+  clearTimeout(endTimer);if(frame)cancelAnimationFrame(frame);frame=0;
+  if(!pending||workflowEditor!==editor)return;
+  renderPending();const from=pending.zoom,target=workflowZoomLimit(from);
+  if(from===target||reducedMotion()){applyWorkflowZoom(editor,target,pending.anchor,pending.world);pending=null;return;}
+  settling=true;const start=performance.now();
+  const settle=now=>{
+   frame=0;if(!pending||workflowEditor!==editor)return;
+   const t=Math.min(1,(now-start)/160),remaining=(1-t)**3;
+   pending.zoom=t===1?target:Math.exp(Math.log(target)+(Math.log(from)-Math.log(target))*remaining);
+   renderPending();
+   if(t<1)frame=requestAnimationFrame(settle);else{pending=null;settling=false;}
+  };
+  frame=requestAnimationFrame(settle);
+ };
+ const queueZoom=(e,factor)=>{
+  if(!Number.isFinite(factor)||factor<=0)return;
+  clearTimeout(endTimer);
+  if(settling){if(frame)cancelAnimationFrame(frame);frame=0;settling=false;}
   const r=view.getBoundingClientRect(),anchor={x:e.clientX-r.left-view.clientLeft,y:e.clientY-r.top-view.clientTop};
   if(!pending||anchor.x!==pending.anchor.x||anchor.y!==pending.anchor.y||view.scrollLeft!==pending.left||view.scrollTop!==pending.top){
    const p=workflowCanvasOffset(editor);
    pending={zoom:pending?.zoom||editor.zoom,anchor,world:{x:(view.scrollLeft+anchor.x)/editor.zoom-p.x,y:(view.scrollTop+anchor.y)/editor.zoom-p.y},left:view.scrollLeft,top:view.scrollTop};
   }
-  pending.zoom=Math.max(.025,Math.min(2,absolute?scale:pending.zoom*scale));
+  pending.zoom=reducedMotion()?workflowZoomLimit(pending.zoom*factor):workflowGestureZoom(pending.zoom,factor);
   editor.fit=false;
   if(!frame)frame=requestAnimationFrame(()=>{
-   frame=0;if(workflowEditor!==editor||editor.canvasGesture)return;
-   applyWorkflowZoom(editor,pending.zoom,pending.anchor,pending.world);
-   pending.left=view.scrollLeft;pending.top=view.scrollTop;
+   frame=0;if(!pending||workflowEditor!==editor||editor.canvasGesture)return;
+   renderPending();
   });
+  // WheelEvent has no pinch-end phase. A short idle period ends Chrome's
+  // gesture; Safari provides an explicit gestureend. Normal zoom never eases.
+  if(!editor.pinch)endTimer=setTimeout(finishZoom,140);
  };
  view.addEventListener('wheel',e=>{
   if(!e.ctrlKey&&!e.metaKey){editor.cancelZoom();return;}
   e.preventDefault();if(editor.canvasGesture||editor.pinch)return;
   const pixels=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?view.clientHeight:1);
-  // Pixel deltas from trackpad pinch need a direct response; the old .002
-  // coefficient required five times the gesture distance for the same scale.
+  // Chromium encodes pinch scale as -100 * log(scale) in DOM wheel deltaY.
   queueZoom(e,Math.exp(-Math.max(-500,Math.min(500,pixels))*.01));
  },{passive:false});
- // Chromium/Firefox trackpad pinch arrives as Ctrl+wheel; Safari uses gestures.
- view.addEventListener('gesturestart',e=>{e.preventDefault();editor.cancelZoom();if(!editor.canvasGesture)editor.pinch={zoom:editor.zoom};},{passive:false});
- view.addEventListener('gesturechange',e=>{e.preventDefault();if(editor.pinch&&Number.isFinite(e.scale)&&e.scale>0)queueZoom(e,editor.pinch.zoom*e.scale,true);},{passive:false});
- view.addEventListener('gestureend',e=>{e.preventDefault();editor.pinch=null;},{passive:false});
+ view.addEventListener('gesturestart',e=>{e.preventDefault();clearTimeout(endTimer);if(frame)cancelAnimationFrame(frame);frame=0;settling=false;if(!editor.canvasGesture)editor.pinch={scale:1};},{passive:false});
+ view.addEventListener('gesturechange',e=>{e.preventDefault();if(editor.pinch&&Number.isFinite(e.scale)&&e.scale>0){const factor=e.scale/editor.pinch.scale;editor.pinch.scale=e.scale;queueZoom(e,factor);}},{passive:false});
+ view.addEventListener('gestureend',e=>{e.preventDefault();editor.pinch=null;finishZoom();},{passive:false});
  view.addEventListener('pointerdown',e=>{
   editor.cancelZoom();editor.panClick=false;
   if(e.button!==0||!editor.spacePan||editor.canvasGesture)return;

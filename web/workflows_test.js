@@ -5,7 +5,7 @@ const vm=require('node:vm');
 function editorPage(){
  const elements=new Map();
  const el=id=>{if(!elements.has(id))elements.set(id,{style:{},clientWidth:900,clientHeight:600,scrollLeft:0,scrollTop:0,scrollTo(){},addEventListener(){},removeEventListener(){},value:'',textContent:'',disabled:false,querySelectorAll:()=>[],checkValidity:()=>true,classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){},set innerHTML(html){this.html=html;for(const match of html.matchAll(/<(textarea|select)\b([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)(?=<\/(?:textarea|select)>|$)/g)){const [,tag,attrs,key,tail]=match,target=el('#'+key);target.value=tag==='input'?(attrs.match(/\bvalue="([^"]*)"/)?.[1]||''):tag==='textarea'?tail:(tail.match(/<option[^>]*value="([^"]*)"[^>]*selected/)?.[1]||tail.match(/<option[^>]*value="([^"]*)"/)?.[1]||'');target.checked=/\bchecked\b/.test(attrs);}for(const match of html.matchAll(/<input\b([^>]*\bid="([^"]+)"[^>]*)>/g)){const target=el('#'+match[2]);target.value=match[1].match(/\bvalue="([^"]*)"/)?.[1]||'';target.checked=/\bchecked\b/.test(match[1]);}},get innerHTML(){return this.html||''}});return elements.get(id)};
- const ctx=vm.createContext({ResizeObserver:class {observe(){} disconnect(){}},window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,state:{agents:[],me:{admin:true}},esc:x=>String(x??''),connectorKinds:{},dialog:html=>{el('#dialog').innerHTML=html;el('#dialog').close=()=>{}},toast:message=>{el('#toast').textContent=message}});
+ const ctx=vm.createContext({clearTimeout,ResizeObserver:class {observe(){} disconnect(){}},window:{addEventListener(){}},document:{querySelectorAll:()=>[]},$:el,state:{agents:[],me:{admin:true}},esc:x=>String(x??''),connectorKinds:{},dialog:html=>{el('#dialog').innerHTML=html;el('#dialog').close=()=>{}},toast:message=>{el('#toast').textContent=message}});
  for(const file of ['workflow-model.js','agent-config.js','workflow-panel.js','workflows.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+file,'utf8'),ctx);
  vm.runInContext("const graph=new WorkflowGraph();graph.value.context_version=2;const a=graph.add('agent',0,0),b=graph.add('end',300,0),c=graph.add('end',300,180);graph.connect(a.id,'done',b.id,'handoff','完成后');const editor=workflowEditor={graph,selected:a.id,readOnly:false,dirty:false,connectors:[]};renderWorkflowNodes=()=>{};workflowSaveStatus=()=>{};",ctx);
  return {ctx,el};
@@ -323,4 +323,14 @@ test('execution environment references survive drawer reload and invalid JSON bl
  el('#wf-execution-env').value='{broken';el('#wf-execution-env').oninput();
  assert.throws(()=>vm.runInContext('workflowPayload(graph.value,null,{},[],{},{},{},editor.executionEnvDrafts)',ctx),/JSON/);
  vm.runInContext('renderWorkflowInspector(editor)',ctx);assert.equal(el('#wf-execution-env').value,'{broken');
+});
+
+// Input packet frequency must not change how far a continuous gesture moves.
+test('elastic zoom is independent of event subdivision and reverses without hidden overshoot',()=>{
+ const {ctx}=editorPage();
+ const zoom=(start,delta,parts)=>vm.runInContext(`(()=>{let z=${start};for(let i=0;i<${parts};i++)z=workflowGestureZoom(z,Math.exp(${delta}/${parts}));return z})()`,ctx);
+ for(const [start,delta]of [[.5,.4],[1.9,.3],[.03,-.4]])assert.ok(Math.abs(zoom(start,delta,1)-zoom(start,delta,100))<1e-10);
+ const upper=zoom(2,100,100);
+ assert.ok(upper<2.18);
+ assert.ok(zoom(upper,-.1,1)<2);
 });

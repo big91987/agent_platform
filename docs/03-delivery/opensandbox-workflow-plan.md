@@ -947,3 +947,10 @@ M2优先：脱离协调者的发布错误解释及恢复指引、8MiB完整日�
 完整scripts/verify.sh exit0（vet/race/build及模板/浏览器全部通过），日志129058bytes/SHA256 eaff28a190ebf81ae2453dacdfa5c40b55bdc0760f6329030ad4a77b631c6aab。独立只读复审无Critical/Important；补齐复审建议的RAF后上下限断言和移动鼠标/滚动后锚点回归，最终定向8.50s绿（移动锚点误差0.355px以内）。本轮实际标准部署回执待补。
 
 正式交付：e0136ca8830a357eb1d7e822c3bb03c9d3971ed8已标准build.sh/install.py部署112:8795（exit0），health同版，binary SHA256 a45cfcd3ab5e4e73c7d1d6c571d1e578162cf8464eb980b8091a6ea45f8c3180。当前waiting Run、旧completed Run、两个工作流及配置/凭据保持。刷新后的真实8节点研发页面：120个小事件scale1.82201、锚点误差0.066px；实际Control+mousewheel误差0.293px以内，平移误差0，比例预设/自定义及390px选择器通过；完整工作流API前后逐值不变、revision4/已保存保持。截图output/playwright/pinch-smooth-deployed.png已查看，完整回执在忽略目录.data/opensandbox-verification/pinch-smooth。这里只证明浏览器输入路径与部署，物理Mac触控板主观手感待用户体验；无Platform PR/main合并，不改变旧环境和暂停自动化。
+
+
+### 2026-10-16 — 画布捏合边界阻尼与回弹
+
+按用户确认的交互方向，正常范围继续使用Chromium手势比例反变换exp(-deltaY/100)，不添加速度加速或正常范围缓动；仅在2.5%–200%边界外提供对数空间有界阻尼（最多约8%视觉超伸），反向输入立即生效，无累计超伸债务。Chrome以140ms输入停顿判结束，160ms短回弹可被新手势打断；Safari使用gestureend，系统减少动态效果时直接限制在有效范围。比例输入/按钮、显示全图、普通滚动、拖动和失焦取消弹性，视图不保存到工作流。此为参考Apple交互原则的自定义实现，不声称复刻Apple私有曲线。
+
+原边界浏览器断言先红，最终定向9.74s通过；事件拆分等价、上下界阻尼/反向、回弹中wheel及Safari手势接续、fit和blur取消、按钮有效比例、减少动态效果均覆盖，原锚点/平移/节点拖动/保存重载和执行回归保留。33项编辑器测试及完整scripts/verify.sh exit0，完整日志129156bytes/SHA256 9eaad972c069c1ffe5f2b64a94966a3f1d4bfd891c2dd21b70b61e2b94d3ed89，浏览器10.448s、Go race78.065s、vet/build及模板回归绿。独立复审Minor（±误用临时超伸比例）已修并补回归。实际标准112:8795部署及页面核对待补；合成Chromium事件不代替物理Mac触控板或Safari设备实测。证据在忽略目录.data/opensandbox-verification/zoom-elastic，自动化保持暂停，产品Run未推进。
