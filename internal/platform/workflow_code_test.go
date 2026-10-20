@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -133,7 +134,11 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 				}
 				command.Env = append(command.Env, key+"="+value)
 			}
-			output, err := command.CombinedOutput()
+			var stdout, stderr bytes.Buffer
+			command.Stdout = &stdout
+			command.Stderr = &stderr
+			err := command.Run()
+			output := stdout.Bytes()
 			exit := int32(0)
 			if err != nil {
 				var failure *exec.ExitError
@@ -147,7 +152,7 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 			exits[id] = exit
 			mu.Unlock()
 			w.Header().Set("Content-Type", "text/event-stream")
-			for _, event := range []any{map[string]any{"type": "init", "text": id}, map[string]any{"type": "stdout", "text": string(output[:min(3, len(output))])}, map[string]any{"type": "stdout", "text": string(output[min(3, len(output)):])}, map[string]any{"type": "execution_complete"}} {
+			for _, event := range []any{map[string]any{"type": "init", "text": id}, map[string]any{"type": "stdout", "text": string(output[:min(3, len(output))])}, map[string]any{"type": "stdout", "text": string(output[min(3, len(output)):])}, map[string]any{"type": "stderr", "text": stderr.String()}, map[string]any{"type": "execution_complete"}} {
 				raw, _ := json.Marshal(event)
 				fmt.Fprintf(w, "%s\n\n", raw)
 			}
@@ -340,6 +345,59 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 			}
 		})
 	}
+	for _, c := range []struct{ name, source, command, schema, condition, want string }{
+		{"make-pass", "exit_code", "printf 'verify:\n\t@printf pass\n' > Makefile; make verify", "", "$ == 0", "done"},
+		{"make-fail", "exit_code", "printf 'verify:\n\t@exit 1\n' > Makefile; make verify", "", "$ == 0", "other"},
+		{"stdout", "stdout", `printf 'PASS'; printf 'ERROR' >&2`, "", `$ == "PASS"`, "done"},
+		{"stderr", "stderr", `printf 'IGNORE'; printf 'DIAGNOSTIC' >&2`, "", `$ == "DIAGNOSTIC"`, "done"},
+		{"file-text", "file", `printf 'PASS' > selected.txt`, "", `$ == "PASS"`, "done"},
+		{"json", "stdout", `printf '{"passed":true}'`, `{"type":"object","properties":{"passed":{"type":"boolean"}},"required":["passed"]}`, "$.passed == true", "done"},
+		{"bad-json", "stderr", `printf 'not-json' >&2`, `{"type":"integer"}`, "$ == 0", "parse"},
+		{"bad-schema", "file", `printf '"wrong"' > selected.txt`, `{"type":"integer"}`, "$ == 0", "invalid"},
+		{"missing-file", "file", `rm -f selected.txt`, "", `$ == "PASS"`, "read"},
+	} {
+		t.Run("selected-"+c.name, func(t *testing.T) {
+			n := valueRuleNode(t, c.source, c.schema, c.condition)
+			n.Execution.Command = c.command
+			if c.source == "file" {
+				n.Execution.Output.Path = "selected.txt"
+			}
+			g := valueRuleWorkflow(n)
+			g.Name = "Selected data"
+			g.Enabled = true
+			g.Environment = "opensandbox"
+			g.ContextVersion = 2
+			g.Entry = "call"
+			g.MaxSteps = 10
+			g, err := s.SaveWorkflow(caller, g)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input := WorkflowStart{WorkflowID: g.ID, Input: "selected data", RequestID: "selected-" + c.name}
+			r, err := s.StartWorkflow(caller, input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Persisted source selection and rules belong to this run even after edits.
+			g.Nodes[0].RuleHandoff.Rules[0].When = "!(" + c.condition + ")"
+			if _, err = s.SaveWorkflow(caller, g); err != nil {
+				t.Fatal(err)
+			}
+			r = waitConnectorRun(t, engine, r.ID, "completed")
+			if len(r.Steps) != 2 || r.Steps[1].NodeID != c.want {
+				t.Fatalf("route wrong: %+v", r.Steps)
+			}
+			if c.name == "make-fail" && *r.Steps[0].ExecutionReceipt.ExitCode == 0 {
+				t.Fatal("make failure not captured")
+			}
+			count := calls.Load()
+			again, err := s.StartWorkflow(caller, input)
+			if err != nil || again.ID != r.ID || calls.Load() != count {
+				t.Fatal("duplicate replay", err)
+			}
+		})
+	}
+
 	if err := engine.Return(caller, unknown.ID, unknown.Seq, "call", "confirmed original stopped"); err != nil {
 		t.Fatal(err)
 	}

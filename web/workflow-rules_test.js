@@ -13,14 +13,19 @@ test('rules project targets into solid edges and deleting a target exposes missi
  assert.equal(run('graph.value.edges')[0].mode,'automatic');assert.equal(run('graph.value.edges')[0].title,'完成');
  vm.runInContext('graph.remove(end.id)',ctx);assert.equal(run('n.rule_handoff.rules')[0].target,'');assert.equal(run('graph.value.edges').length,0);
 });
-test('malformed schema draft blocks saving instead of reusing previous schema',()=>{ctx.drafts={node_1:'{"type":'};assert.throws(()=>vm.runInContext('applyRuleSchemaDrafts(graph,drafts)',ctx),/JSON Schema/)});
-test('new handoff schema declares the same root fields offered by expressions',()=>{
+test('malformed schema draft blocks saving instead of reusing previous schema',()=>{ctx.drafts={node_1:'{"type":'};vm.runInContext('n.rule_handoff.schema=workflowSelectedExample()',ctx);assert.throws(()=>vm.runInContext('applyRuleSchemaDrafts(graph,drafts)',ctx),/JSON Schema/)});
+test('command handoff starts from an exit code without JSON schema or an envelope',()=>{
  const p=run('workflowRulePolicy("command")');ctx.newPolicy=p;
- const vars=run('workflowRuleVariables({execution:{mode:"command"},rule_handoff:newPolicy})');
- assert.equal(p.schema.properties.output.properties.exit_code.type,'integer');
- assert.ok(vars.some(v=>v.path==='output.exit_code'));
- assert.ok(vars.some(v=>v.path==='output.result.passed'));
- const m=run('workflowRulePolicy("mcp")');assert.equal(m.schema.properties.output.properties.is_error.type,'boolean');
+ assert.equal(p.schema,undefined);
+ const vars=run('workflowRuleVariables({execution:{mode:"command",output:{source:"exit_code"}},rule_handoff:newPolicy})');
+ assert.deepEqual(vars.map(v=>[v.path,v.type]),[['$','integer']]);
+});
+test('selected JSON autocomplete follows the original object or scalar',()=>{
+ ctx.raw={execution:{mode:'command',output:{source:'stdout'}},rule_handoff:{schema_scope:'value',schema:{type:'object',properties:{passed:{type:'boolean'},status:{type:'integer',enum:[0,1]}}}}};
+ assert.deepEqual(run('workflowRuleSuggestions(raw,"$.passed == ").values').map(v=>v.text),['true','false']);
+ assert.deepEqual(run('workflowRuleSuggestions(raw,"$.status == ").values').map(v=>v.text),['0','1']);
+ vm.runInContext('delete raw.rule_handoff.schema',ctx);
+ assert.deepEqual(run('workflowRuleVariables(raw)').map(v=>[v.path,v.type]),[['$','string']]);
 });
 
 test('output-scope autocomplete offers only schema-declared fields',()=>{

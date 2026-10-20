@@ -95,7 +95,29 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                 "execution": {
                     "mode": "command",
                     "command": "make verify",
+                    "output": {"source": "exit_code"},
                     "env_refs": {k: v for k, v in refs.items() if k != "GITHUB_TOKEN"},
+                },
+                "rule_handoff": {
+                    "schema_scope": "value",
+                    "rules": [
+                        {
+                            "when": "$ == 0",
+                            "title": "测试通过",
+                            "content": "命令退出码为 0，交给独立 QA 复核。",
+                            "target": "qa",
+                        },
+                        {
+                            "when": "$ != 0",
+                            "title": "测试失败",
+                            "content": "命令返回非零退出码，交给研发检查完整回执。",
+                            "target": "development",
+                        },
+                    ],
+                    "on_read": {"action": "stop"},
+                    "on_parse": {"action": "stop"},
+                    "on_invalid": {"action": "stop"},
+                    "on_expression": {"action": "stop"},
                 },
             },
             agent(
@@ -134,8 +156,6 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             for a, route, b, mode in [
                 ("prepare", "next", "development", "automatic"),
                 ("development", "tests", "tests", "handoff"),
-                ("tests", "next", "qa", "automatic"),
-                ("tests", "failed", "development", "automatic"),
                 ("qa", "revise", "development", "handoff"),
                 ("qa", "approved", "approval", "handoff"),
                 ("approval", "next", "report", "automatic"),
@@ -144,6 +164,18 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             ]
         ],
     }
+    for node in graph["nodes"]:
+        for index, rule in enumerate(node.get("rule_handoff", {}).get("rules", [])):
+            graph["edges"].append(
+                {
+                    "source": node["id"],
+                    "route": f"rule_{index + 1}",
+                    "target": rule["target"],
+                    "mode": "automatic",
+                    "title": rule["title"],
+                    "description": rule["content"],
+                }
+            )
     for index, node in enumerate(graph["nodes"]):
         node.update(x=60 + index * 320, y=100)
     return graph

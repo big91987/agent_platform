@@ -17,11 +17,13 @@ import (
 // and the existing scheduler; a line never owns an independent condition.
 type WorkflowRules struct {
 	// Empty scope preserves persisted result-only schemas and frozen runs.
-	SchemaScope  string              `json:"schema_scope,omitempty"`
-	Schema       json.RawMessage     `json:"schema"`
-	Rules        []WorkflowRule      `json:"rules"`
-	OnInvalid    WorkflowRuleFailure `json:"on_invalid"`
-	OnExpression WorkflowRuleFailure `json:"on_expression"`
+	SchemaScope  string               `json:"schema_scope,omitempty"`
+	Schema       json.RawMessage      `json:"schema,omitempty"`
+	OnRead       *WorkflowRuleFailure `json:"on_read,omitempty"`
+	OnParse      *WorkflowRuleFailure `json:"on_parse,omitempty"`
+	Rules        []WorkflowRule       `json:"rules"`
+	OnInvalid    WorkflowRuleFailure  `json:"on_invalid"`
+	OnExpression WorkflowRuleFailure  `json:"on_expression"`
 }
 type WorkflowRule struct {
 	When    string `json:"when,omitempty"`
@@ -37,6 +39,49 @@ type WorkflowRuleFailure struct {
 	Content string `json:"content,omitempty"`
 }
 
+func failureOrStop(f *WorkflowRuleFailure) WorkflowRuleFailure {
+	if f == nil {
+		return WorkflowRuleFailure{Action: "stop"}
+	}
+	return *f
+}
+func ruleFailures(p *WorkflowRules) []struct {
+	key string
+	f   WorkflowRuleFailure
+} {
+	out := []struct {
+		key string
+		f   WorkflowRuleFailure
+	}{{"invalid", p.OnInvalid}, {"expression", p.OnExpression}}
+	if p.SchemaScope == "value" {
+		out = append(out, struct {
+			key string
+			f   WorkflowRuleFailure
+		}{"read", failureOrStop(p.OnRead)}, struct {
+			key string
+			f   WorkflowRuleFailure
+		}{"parse", failureOrStop(p.OnParse)})
+	}
+	return out
+}
+func ruleFailure(key string, f WorkflowRuleFailure, err error) (string, string, error) {
+	if f.Action == "route" {
+		return "rule_" + key, err.Error(), nil
+	}
+	return "", "", err
+}
+func selectedRuleTypes(n WorkflowNode) (map[string]string, error) {
+	p := n.RuleHandoff
+	if p.SchemaScope == "value" && len(p.Schema) == 0 {
+		kind := "string"
+		if n.Execution.Output != nil && n.Execution.Output.Source == "exit_code" {
+			kind = "number"
+		}
+		return map[string]string{"$": kind}, nil
+	}
+	return ruleTypes(p, n.Execution.Mode)
+}
+
 func ruleRoute(i int) string { return fmt.Sprintf("rule_%d", i+1) }
 func ruleEdges(n WorkflowNode) []WorkflowEdge {
 	if n.RuleHandoff == nil {
@@ -46,10 +91,7 @@ func ruleEdges(n WorkflowNode) []WorkflowEdge {
 	for i, r := range n.RuleHandoff.Rules {
 		edges = append(edges, WorkflowEdge{Source: n.ID, Route: ruleRoute(i), Target: r.Target, Mode: "automatic", Description: r.Content, Title: r.Title})
 	}
-	for _, v := range []struct {
-		key string
-		f   WorkflowRuleFailure
-	}{{"invalid", n.RuleHandoff.OnInvalid}, {"expression", n.RuleHandoff.OnExpression}} {
+	for _, v := range ruleFailures(n.RuleHandoff) {
 		if v.f.Action == "route" {
 			edges = append(edges, WorkflowEdge{Source: n.ID, Route: "rule_" + v.key, Target: v.f.Target, Mode: "automatic", Title: v.f.Title, Description: v.f.Content})
 		}
@@ -88,9 +130,9 @@ func ruleSchema(raw json.RawMessage) (*jsonschema.Resolved, error) {
 }
 func ruleTypes(p *WorkflowRules, mode string) (map[string]string, error) {
 	out := map[string]string{}
-	if p.SchemaScope != "input" && mode == "mcp" {
+	if p.SchemaScope == "" && mode == "mcp" {
 		out["output.is_error"] = "boolean"
-	} else if p.SchemaScope != "input" {
+	} else if p.SchemaScope == "" {
 		out["output.exit_code"] = "number"
 	}
 	var schema map[string]any
@@ -117,7 +159,9 @@ func ruleTypes(p *WorkflowRules, mode string) (map[string]string, error) {
 			}
 		}
 	}
-	if p.SchemaScope == "input" {
+	if p.SchemaScope == "value" {
+		walk(schema, "$")
+	} else if p.SchemaScope == "input" {
 		walk(schema, "")
 	} else {
 		walk(schema, "output.result")
@@ -132,16 +176,32 @@ func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 	if n.Kind != "execution" || n.Execution == nil {
 		return errors.New("rule handoff requires an execution node")
 	}
-	if p.SchemaScope != "" && p.SchemaScope != "input" {
+	if p.SchemaScope != "" && p.SchemaScope != "input" && p.SchemaScope != "value" {
 		return errors.New("unsupported handoff schema scope")
 	}
-	if _, err := ruleSchema(p.Schema); err != nil {
-		return fmt.Errorf("handoff schema: %w", err)
+	if p.SchemaScope == "value" {
+		if n.Execution.Output == nil {
+			return errors.New("select a data source")
+		}
+		if err := validateWorkflowExecution(n.Execution); err != nil {
+			return err
+		}
+		if n.Execution.Output.Source == "none" {
+			return errors.New("select exit code or output data")
+		}
+		if n.Execution.Output.Source == "exit_code" && len(p.Schema) > 0 {
+			return errors.New("exit code is an integer; JSON parsing is not applicable")
+		}
+	}
+	if p.SchemaScope != "value" || len(p.Schema) > 0 {
+		if _, err := ruleSchema(p.Schema); err != nil {
+			return fmt.Errorf("handoff schema: %w", err)
+		}
 	}
 	if len(p.Rules) > 64 {
 		return errors.New("at most 64 handoff rules")
 	}
-	types, err := ruleTypes(p, n.Execution.Mode)
+	types, err := selectedRuleTypes(n)
 	if err != nil {
 		return err
 	}
@@ -158,7 +218,8 @@ func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 			return fmt.Errorf("rule %d: %w", i+1, err)
 		}
 	}
-	for _, f := range []WorkflowRuleFailure{p.OnInvalid, p.OnExpression} {
+	for _, item := range ruleFailures(p) {
+		f := item.f
 		if f.Action != "stop" && f.Action != "route" {
 			return errors.New("choose stop or route for rule errors")
 		}
@@ -177,11 +238,49 @@ func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 
 // A deliberately bounded expression language: scalar literals, field paths,
 // comparisons, boolean operations and parentheses. No calls or code execution.
+// Translate the root reference only outside string literals. A quoted "$" stays text.
+func normalizeRuleRoot(text string) (string, error) {
+	var b strings.Builder
+	quoted, escaped := false, false
+	for i := 0; i < len(text); i++ {
+		c := text[i]
+		if quoted {
+			b.WriteByte(c)
+			if escaped {
+				escaped = false
+			} else if c == '\\' {
+				escaped = true
+			} else if c == '"' {
+				quoted = false
+			}
+			continue
+		}
+		if c == '"' {
+			quoted = true
+			b.WriteByte(c)
+			continue
+		}
+		if strings.HasPrefix(text[i:], "_handoff_value") {
+			return "", errors.New("reserved expression identifier")
+		}
+		if c == '$' {
+			b.WriteString("_handoff_value")
+		} else {
+			b.WriteByte(c)
+		}
+	}
+	return b.String(), nil
+}
+
 func parseRule(text string, types map[string]string) (ast.Expr, error) {
 	if strings.TrimSpace(text) == "" || len(text) > 4000 {
 		return nil, errors.New("condition is required (up to 4000 bytes)")
 	}
-	x, err := parser.ParseExpr(text)
+	normalized, err := normalizeRuleRoot(text)
+	if err != nil {
+		return nil, err
+	}
+	x, err := parser.ParseExpr(normalized)
 	if err != nil {
 		return nil, errors.New("invalid condition syntax")
 	}
@@ -197,6 +296,9 @@ func parseRule(text string, types map[string]string) (ast.Expr, error) {
 func rulePath(x ast.Expr) string {
 	switch v := x.(type) {
 	case *ast.Ident:
+		if v.Name == "_handoff_value" {
+			return "$"
+		}
 		return v.Name
 	case *ast.SelectorExpr:
 		base := rulePath(v.X)
@@ -390,6 +492,9 @@ func evalRule(x ast.Expr, values map[string]any) (any, error) {
 // business else. Missing/invalid data and condition errors have separate exits.
 func routeExecutionRules(n WorkflowNode, receipt ConnectorReceipt) (string, string, error) {
 	p := n.RuleHandoff
+	if p.SchemaScope == "value" {
+		return routeSelectedReceipt(n, receipt)
+	}
 	fail := func(key string, f WorkflowRuleFailure, err error) (string, string, error) {
 		if f.Action == "route" {
 			return "rule_" + key, err.Error(), nil
@@ -431,22 +536,30 @@ func routeRuleInput(n WorkflowNode, input any) (string, string, error) {
 		}
 		return "", "", err
 	}
-	schema, err := ruleSchema(p.Schema)
-	if err != nil {
-		return "", "", err
+	var schema *jsonschema.Resolved
+	var err error
+	if p.SchemaScope != "value" || len(p.Schema) > 0 {
+		schema, err = ruleSchema(p.Schema)
+		if err != nil {
+			return "", "", err
+		}
 	}
 	values, _ := input.(map[string]any)
 	var value any = input
 	name := "handoff input"
-	if p.SchemaScope != "input" {
+	if p.SchemaScope == "value" {
+		values = map[string]any{"$": input}
+	} else if p.SchemaScope != "input" {
 		output, _ := values["output"].(map[string]any)
 		value = output["result"]
 		name = "output.result"
 	}
-	if err = schema.Validate(value); err != nil {
-		return fail("invalid", p.OnInvalid, fmt.Errorf("%s does not match JSON Schema: %w", name, err))
+	if schema != nil {
+		if err = schema.Validate(value); err != nil {
+			return fail("invalid", p.OnInvalid, fmt.Errorf("%s does not match JSON Schema: %w", name, err))
+		}
 	}
-	types, err := ruleTypes(p, n.Execution.Mode)
+	types, err := selectedRuleTypes(n)
 	if err != nil {
 		return "", "", err
 	}
@@ -467,4 +580,49 @@ func routeRuleInput(n WorkflowNode, input any) (string, string, error) {
 		}
 	}
 	return "", "", errors.New("no handoff condition matched and no else is configured; inspect the receipt before continuing")
+}
+
+// A selected result is the data itself; execution metadata stays in the receipt.
+func routeSelectedReceipt(n WorkflowNode, r ConnectorReceipt) (string, string, error) {
+	p := n.RuleHandoff
+	if r.ResultError != "" {
+		return ruleFailure("read", failureOrStop(p.OnRead), errors.New(r.ResultError))
+	}
+	if n.Execution.Output.Source == "exit_code" {
+		if r.ExitCode == nil {
+			return ruleFailure("read", failureOrStop(p.OnRead), errors.New("exit code unavailable"))
+		}
+		return routeSelectedValue(n, float64(*r.ExitCode))
+	}
+	if len(r.Result) == 0 {
+		return ruleFailure("read", failureOrStop(p.OnRead), errors.New("selected data unavailable"))
+	}
+	value, err := completionJSONValue(r.Result)
+	if err != nil {
+		return ruleFailure("read", failureOrStop(p.OnRead), errors.New("selected data receipt is invalid"))
+	}
+	return routeSelectedValue(n, value)
+}
+func routeSelectedValue(n WorkflowNode, value any) (string, string, error) {
+	p := n.RuleHandoff
+	source := n.Execution.Output.Source
+	if source == "exit_code" {
+		v, ok := value.(float64)
+		if !ok || v != float64(int(v)) {
+			return ruleFailure("read", failureOrStop(p.OnRead), errors.New("exit code must be an integer"))
+		}
+	} else if source != "tool" {
+		text, ok := value.(string)
+		if !ok {
+			return ruleFailure("read", failureOrStop(p.OnRead), errors.New("selected stdout, stderr or file data must be text"))
+		}
+		if len(p.Schema) > 0 {
+			parsed, err := completionJSONValue([]byte(text))
+			if err != nil {
+				return ruleFailure("parse", failureOrStop(p.OnParse), errors.New("selected data is not valid JSON with lossless numbers"))
+			}
+			value = parsed
+		}
+	}
+	return routeRuleInput(n, value)
 }

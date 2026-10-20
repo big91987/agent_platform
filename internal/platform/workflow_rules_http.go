@@ -36,7 +36,7 @@ func (h *Server) workflowRuleRoutes() {
 			respond(w, 200, map[string]any{"valid": true})
 			return
 		}
-		if n.RuleHandoff.SchemaScope == "input" {
+		if n.RuleHandoff.SchemaScope == "input" || n.RuleHandoff.SchemaScope == "value" {
 			if len(in.Input) == 0 {
 				fail(w, errors.New("provide the complete handoff input"))
 				return
@@ -46,7 +46,12 @@ func (h *Server) workflowRuleRoutes() {
 				fail(w, err)
 				return
 			}
-			route, summary, err := routeRuleInput(n, value)
+			var route, summary string
+			if n.RuleHandoff.SchemaScope == "value" {
+				route, summary, err = routeSelectedValue(n, value)
+			} else {
+				route, summary, err = routeRuleInput(n, value)
+			}
 			if err != nil {
 				respond(w, 200, map[string]any{"valid": true, "error": err.Error(), "action": "stop"})
 				return

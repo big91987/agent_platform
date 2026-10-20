@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
 	"github.com/google/jsonschema-go/jsonschema"
@@ -61,7 +62,7 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 			if v.Mode == "mcp" || o.Path == "" || path.IsAbs(o.Path) || path.Clean(o.Path) != o.Path || o.Path == ".." || strings.HasPrefix(o.Path, "../") || hiddenArtifact(o.Path) || strings.ContainsRune(o.Path, 0) {
 				return errors.New("result file must be a visible workspace-relative file")
 			}
-		case "stdout":
+		case "stdout", "stderr", "exit_code":
 			if v.Mode == "mcp" || o.Path != "" {
 				return errors.New("stdout result requires code or command")
 			}
@@ -458,7 +459,7 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 				return err
 			}
 		}
-		if json.Unmarshal([]byte(event.Data), &output) == nil && output.Type == "stdout" && node.Execution.Output != nil && node.Execution.Output.Source == "stdout" {
+		if json.Unmarshal([]byte(event.Data), &output) == nil && node.Execution.Output != nil && (node.Execution.Output.Source == "stdout" || node.Execution.Output.Source == "stderr") && output.Type == node.Execution.Output.Source {
 			if stdout.Len()+len(output.Text) > 1<<20 {
 				stdoutOverflow = true
 			} else if !stdoutOverflow {
@@ -481,18 +482,18 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	}
 	if commandErr == nil && result.Stopped && out.ExitCode != nil && node.Execution.Output != nil {
 		switch node.Execution.Output.Source {
-		case "stdout":
+		case "stdout", "stderr":
 			if stdoutOverflow {
-				out.ResultError = "structured stdout exceeds 1 MiB"
+				out.ResultError = "selected stream exceeds 1 MiB"
 			} else {
-				setExecutionResult(&out, stdout.Bytes(), runtimeEnv)
+				setSelectedExecutionResult(node, &out, stdout.Bytes(), runtimeEnv)
 			}
 		case "file":
 			_, raw, err := e.store.sandboxArtifacts(ctx, r, node.Execution.Output.Path)
 			if err != nil {
-				out.ResultError = "cannot read structured result file: " + err.Error()
+				out.ResultError = "cannot read result file: " + err.Error()
 			} else {
-				setExecutionResult(&out, raw, runtimeEnv)
+				setSelectedExecutionResult(node, &out, raw, runtimeEnv)
 			}
 		}
 	}
@@ -536,4 +537,18 @@ func setExecutionResult(out *ConnectorReceipt, raw []byte, env map[string]string
 		return v
 	}
 	out.Result, _ = json.Marshal(redact(value))
+}
+
+func setSelectedExecutionResult(n WorkflowNode, out *ConnectorReceipt, raw []byte, env map[string]string) {
+	if n.RuleHandoff != nil && n.RuleHandoff.SchemaScope == "value" {
+		if len(raw) > 1<<20 || !utf8.Valid(raw) {
+			out.ResultError = "selected data must be UTF-8 text up to 1 MiB"
+			return
+		}
+		// JSON encoding here persists the original string, without interpreting its contents.
+		encoded, _ := json.Marshal(string(raw))
+		setExecutionResult(out, encoded, env)
+		return
+	}
+	setExecutionResult(out, raw, env)
 }

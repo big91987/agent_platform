@@ -45,7 +45,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     this.value.edges=this.value.edges.filter(e=>!this.node(e.source)?.rule_handoff);
     for(const n of this.value.nodes){const p=n.rule_handoff;if(!p)continue;
       p.rules.forEach((r,i)=>{if(r.target)this.value.edges.push({source:n.id,route:'rule_'+(i+1),target:r.target,mode:'automatic',title:r.title,description:r.content||''})});
-      for(const [key,f]of [['invalid',p.on_invalid],['expression',p.on_expression]])if(f?.action==='route'&&f.target)this.value.edges.push({source:n.id,route:'rule_'+key,target:f.target,mode:'automatic',title:f.title,description:f.content||''});
+      for(const [key,f]of [['invalid',p.on_invalid],['expression',p.on_expression],['read',p.on_read],['parse',p.on_parse]])if(f?.action==='route'&&f.target)this.value.edges.push({source:n.id,route:'rule_'+key,target:f.target,mode:'automatic',title:f.title,description:f.content||''});
     }
   }
 
@@ -69,7 +69,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   }
   remove(id) {
     this.value.nodes=this.value.nodes.filter(n=>n.id!==id);
-    for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression])if(f.target===id)f.target='';}
+    for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression,n.rule_handoff.on_read,n.rule_handoff.on_parse])if(f?.target===id)f.target='';}
     this.value.edges=this.value.edges.filter(e=>e.source!==id&&e.target!==id);
     this.value.start_nodes=this.value.start_nodes.filter(n=>n!==id);
     this.syncRuleEdges();
@@ -115,9 +115,9 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   }
   validateAgent(node) {
     if(node.rule_handoff){
-      const p=node.rule_handoff;if(node.kind!=='execution'||!p.schema||typeof p.schema!=='object'||!Array.isArray(p.rules)||p.rules.length>64)throw new Error('规则交接配置无效');
+      const p=node.rule_handoff;if(node.kind!=='execution'||(p.schema_scope!=='value'&&!p.schema)||(p.schema&&typeof p.schema!=='object')||!Array.isArray(p.rules)||p.rules.length>64)throw new Error('规则交接配置无效');
       for(const [i,r]of p.rules.entries()){if(!r.title?.trim()||!this.node(r.target)||r.target===node.id)throw new Error('请填写规则标题并选择目标');if(r.else?(i!==p.rules.length-1||r.when):!r.when?.trim())throw new Error('条件不能为空，else 仅能位于最后');}
-      for(const f of [p.on_invalid,p.on_expression])if(!f||!['stop','route'].includes(f.action)||f.action==='route'&&(!this.node(f.target)||f.target===node.id||!f.title?.trim()))throw new Error('请配置异常处理方式及目标');
+      for(const f of [p.on_invalid,p.on_expression,...(p.schema_scope==='value'?[p.on_read||{action:'stop'},p.on_parse||{action:'stop'}]:[])])if(!f||!['stop','route'].includes(f.action)||f.action==='route'&&(!this.node(f.target)||f.target===node.id||!f.title?.trim()))throw new Error('请配置异常处理方式及目标');
     }
     if(node.kind==='execution'){
       const v=node.execution;

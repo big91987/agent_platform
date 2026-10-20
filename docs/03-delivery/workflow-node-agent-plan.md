@@ -1577,3 +1577,8 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 
 
 2026-10-20 完整交接输入 Schema 已正式部署112:8795，版本5bd218fcebeac1c83e50e398b314b22c615efa75。经标准build/install激活exit0，二进制SHA256 31785e4fe0fa5438bc959ab99bf01f6b14b3cfdb013df81b54a48adc4c06cffb；等待Run、历史completed Run、原工作流与私有配置凭据前后保持。真实部署页面验证完整output根Schema、exit_code表达式、布尔与0/1枚举联想、成功→独立QA、else→研发、类型错误停止及缺少output根输入拒绝全部通过；规则实线及条件tooltip、390窄屏无横向溢出通过。首次浏览器脚本对缺根错误要求出现output字样，实际服务端已按额外根属性正确拒绝；修正该文案断言后完整复验exit0，原日志保留。正式工作流API前后逐值相同，未保存验证草稿、未创建新工作流或产品Run；独立验证浏览器已关闭。安装回执与浏览器证据位于忽略目录.data/opensandbox-verification/rule-handoff-complete，截图output/playwright/rule-handoff-complete-default.png及rule-handoff-deployed*.png。用户通过执行节点的「交接策略（基于规则）」→「配置规则交接」查看和配置；既有定义不自动改写。本机平台服务和定时任务不恢复。本轮证明平台规则功能及部署页面，不冒充新产品Pipeline验收。
+
+
+2026-10-20 按用户确认的执行数据交接设计整改：命令/代码节点直接选择退出码、STDOUT、STDERR或工作区文件；退出码为整数，其他来源默认原始UTF-8文本，保留换行。可选JSON Schema校验同时启用解析，规则用$引用原始值，不再注入output包装；读取/解析/Schema/条件计算分别配置停止或目标，else仅用于正常未命中。旧空scope与input scope冻结定义保持原语义，本轮不拆分既有MCP节点。新增行为用例先红（旧来源/范围不支持、默认仍包装、原模板隐式分支），实现后定向真实进程/HTTP回归及Chromium15.228s通过；含真实make通过/失败、两路分离、文件、错误路由、冻结与去重，隔离HTTP设施不冒充112容器。浏览器覆盖来源/开关/文件路径保存重载、原始值试算、解析失败目标、旧MCP、1440/390。首次运行受本机监听权限限制后通过授权测试入口完成；夹具编辑规则时使done不可达已纠正为变更条件，保留原失败。标准sandbox_delivery.py固定make verify已改成显式退出码0→QA/非0→研发，项目不需JSON输出；补真实模板生成与Go路由验证。完整标准验证及112标准升级/真实沙箱复验进行中，不恢复定时任务或已有产品Run。
+
+完整scripts/verify.sh本轮exit0，Go race82.908s及vet/build、真实浏览器、133模板测试通过；最终补充原始文本脱敏/UTF-8与大小上限、预览API和模板0/1/2/137路由定向0.426s通过。接续标准部署和112并发同路径隔离实测。

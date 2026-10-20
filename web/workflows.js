@@ -249,7 +249,7 @@ function fitWorkflowCanvas(editor){
  editor.zoom=zoom;editor.viewExtent=null;$('#wf-stage').style.zoom=zoom;sizeWorkflowStage(editor);v.scrollTo(0,0);$('#wf-actual').textContent=Math.round(zoom*1000)/10+'%';
 }
 function workflowPoint(event){const rect=$('#wf-stage').getBoundingClientRect(),scale=workflowEditor?.zoom||1,p=workflowCanvasOffset(workflowEditor||{});return {x:(event.clientX-rect.left)/scale-p.x,y:(event.clientY-rect.top)/scale-p.y};}
-function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);if(kind==='execution')n.rule_handoff=workflowRulePolicy();editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
+function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);if(kind==='execution'){n.rule_handoff=workflowRulePolicy();n.execution.output={source:'exit_code'}}editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
 function renderWorkflowNodes(editor){
  if(workflowEditor!==editor)return;
  const w=editor.graph.value;
@@ -452,7 +452,7 @@ function renderWorkflowInspector(editor){
   const syncDraft=()=>{try{editor.nodeFormEdited=true;Object.assign(n,workflowNodeDraft(editor,n,false));if(n.agent)delete n.agent_id;$('#wf-panel-title').textContent=n.name;const meta=$('#wf-inspector .wf-panel-meta');if(meta&&n.kind==='agent')meta.textContent=agentExecutionLabel(n.agent);workflowChanged(editor);renderWorkflowNodes(editor)}catch(error){toast(error.message)}};
   if(n.kind==='execution'){
    $('#wf-execution-timeout').oninput=syncDraft;
-   $('#wf-execution-mode').onchange=()=>{const mode=$('#wf-execution-mode').value;rememberWorkflowNodeDraft(editor);n.execution=mode==='mcp'?{mode,server_id:'',tool:'',arguments:{}}:mode==='code'?{mode,language:'python',code:''}:{mode,command:''};if(editor.executionDrafts)delete editor.executionDrafts[n.id];if(editor.bindingDrafts)delete editor.bindingDrafts[n.id];if(editor.executionEnvDrafts)delete editor.executionEnvDrafts[n.id];workflowChanged(editor);renderWorkflowInspector(editor);renderWorkflowNodes(editor)};
+   $('#wf-execution-mode').onchange=()=>{const mode=$('#wf-execution-mode').value;const oldMode=n.execution.mode;if((mode==='mcp')!==(oldMode==='mcp')&&n.rule_handoff?.rules.length){$('#wf-execution-mode').value=oldMode;toast('交接规则依赖当前执行方式，请先移除规则再切换工具调用');return}rememberWorkflowNodeDraft(editor);const output=n.execution.output;n.execution=mode==='mcp'?{mode,server_id:'',tool:'',arguments:{}}:mode==='code'?{mode,language:'python',code:''}:{mode,command:''};if(n.rule_handoff){if((mode==='mcp')!==(oldMode==='mcp'))n.rule_handoff=workflowRulePolicy(mode);if(mode!=='mcp')n.execution.output=output||{source:'exit_code'}}if(editor.executionDrafts)delete editor.executionDrafts[n.id];if(editor.bindingDrafts)delete editor.bindingDrafts[n.id];if(editor.executionEnvDrafts)delete editor.executionEnvDrafts[n.id];workflowChanged(editor);renderWorkflowInspector(editor);renderWorkflowNodes(editor)};
    if(n.execution.mode==='mcp'){
     $('#wf-execution-arguments').oninput=syncDraft;$('#wf-execution-bindings').oninput=syncDraft;
     $('#wf-execution-tool').onchange=()=>{syncDraft();renderWorkflowInspector(editor)};

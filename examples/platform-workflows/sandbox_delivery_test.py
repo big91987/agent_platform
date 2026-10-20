@@ -29,6 +29,6 @@ class DeliveryExampleTest(unittest.TestCase):
             )
         compile(nodes["prepare"]["execution"]["code"], "prepare", "exec")
         edges = {(e["source"], e["route"]): e["target"] for e in graph["edges"]}
-        self.assertEqual(edges["tests", "failed"], "development")
+        self.assertEqual(edges["tests", "rule_2"], "development")
         self.assertEqual(edges["qa", "revise"], "development")
         self.assertEqual(edges["qa", "approved"], "approval")
