@@ -223,21 +223,34 @@ Code Review核对实现、规范、契约、安全和可维护性；QA核对用�
 
 结果来源可选：仅使用执行状态（`output.result` 为 `{}`）、代码/项目命令的标准输出 JSON、工作区相对路径中的 JSON 文件，或 MCP 的结构化结果。标准输出须为单个 JSON 值，其他日志请写 stderr；文件只读取工作区内普通文件，不跟随符号链接。结构化结果上限 1 MiB，显式注入的环境变量值会在保存前脱敏。运行回执保留结构化结果及读取/解析错误。
 
-JSON Schema 校验 `output.result`。默认灰色示例可直接编辑，例如：
+JSON Schema 定义完整交接输入，包括 `output` 根字段；运行时校验、表达式、联想和试算使用相同结构。默认灰色示例可直接编辑：
 
 ```json
 {
   "type": "object",
   "properties": {
-    "passed": {"type": "boolean"},
-    "score": {"type": "number", "minimum": 0, "maximum": 100}
+    "output": {
+      "type": "object",
+      "properties": {
+        "exit_code": { "type": "integer" },
+        "result": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "score": { "type": "number" }
+          }
+        }
+      },
+      "required": ["exit_code", "result"]
+    }
   },
-  "required": ["passed", "score"],
-  "additionalProperties": false
+  "required": ["output"]
 }
 ```
 
-条件示例：`output.result.passed == true && output.result.score >= 80`。命令/代码还可使用 `output.exit_code`，MCP 可使用 `output.is_error`。编辑器按 Schema 中声明的字段联想，布尔值提示 `true`/`false`；如定义 `{"type":"integer","enum":[0,1]}`，则提示 `0`/`1`，其业务含义由使用者决定，不内置验收结论。
+字段路径就是表达式路径：`output.exit_code`、`output.result.passed`。MCP 节点默认在 `output` 内使用布尔字段 `is_error` 替代 `exit_code`。仅使用执行状态时 `result` 为 `{}`；需要业务字段必填时，在 `result` 的 `required` 中声明。试算填写同样的完整输入，例如 `{"output":{"exit_code":0,"result":{"passed":true,"score":86}}}`。
+
+条件示例：`output.result.passed == true && output.result.score >= 80`。也可使用 `output.exit_code == 0`（MCP 为 `output.is_error == false`），前提是字段已在 Schema 中声明。编辑器按 Schema 中声明的字段联想，布尔值提示 `true`/`false`；如定义 `{"type":"integer","enum":[0,1]}`，则提示 `0`/`1`，其业务含义由使用者决定，不内置验收结论。
 
 表达式支持点分字段、双引号字符串、数字、布尔值、`null`、`== != > >= < <= && || !` 和括号；不执行脚本或函数。可引用的自定义字段需在 Schema 中明确单一 `type`，路径各段使用英文标识符；数组索引、联合类型及 `$ref` 引用不在当前表达式范围内。Schema 支持平台已有的本地类型、对象/数组、枚举、必填、数值/长度等约束，不拉取远端 Schema。保存时检查 Schema 和表达式类型；运行时先校验实际结果，再计算条件。可选字段缺失且被求值会进入「条件计算错误」，不是自动判 false。
 

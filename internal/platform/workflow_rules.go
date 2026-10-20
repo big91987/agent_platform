@@ -16,6 +16,8 @@ import (
 // Rules belong to a node. Edges are a deterministic projection for the canvas
 // and the existing scheduler; a line never owns an independent condition.
 type WorkflowRules struct {
+	// Empty scope preserves persisted result-only schemas and frozen runs.
+	SchemaScope  string              `json:"schema_scope,omitempty"`
 	Schema       json.RawMessage     `json:"schema"`
 	Rules        []WorkflowRule      `json:"rules"`
 	OnInvalid    WorkflowRuleFailure `json:"on_invalid"`
@@ -86,9 +88,9 @@ func ruleSchema(raw json.RawMessage) (*jsonschema.Resolved, error) {
 }
 func ruleTypes(p *WorkflowRules, mode string) (map[string]string, error) {
 	out := map[string]string{}
-	if mode == "mcp" {
+	if p.SchemaScope != "input" && mode == "mcp" {
 		out["output.is_error"] = "boolean"
-	} else {
+	} else if p.SchemaScope != "input" {
 		out["output.exit_code"] = "number"
 	}
 	var schema map[string]any
@@ -101,17 +103,25 @@ func ruleTypes(p *WorkflowRules, mode string) (map[string]string, error) {
 		if t == "integer" {
 			t = "number"
 		}
-		if t != "" {
+		if t != "" && path != "" {
 			out[path] = t
 		}
 		props, _ := s["properties"].(map[string]any)
 		for k, v := range props {
 			if child, ok := v.(map[string]any); ok && token.IsIdentifier(k) {
-				walk(child, path+"."+k)
+				next := k
+				if path != "" {
+					next = path + "." + k
+				}
+				walk(child, next)
 			}
 		}
 	}
-	walk(schema, "output.result")
+	if p.SchemaScope == "input" {
+		walk(schema, "")
+	} else {
+		walk(schema, "output.result")
+	}
 	return out, nil
 }
 func validateRuleHandoff(w Workflow, n WorkflowNode) error {
@@ -121,6 +131,9 @@ func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 	}
 	if n.Kind != "execution" || n.Execution == nil {
 		return errors.New("rule handoff requires an execution node")
+	}
+	if p.SchemaScope != "" && p.SchemaScope != "input" {
+		return errors.New("unsupported handoff schema scope")
 	}
 	if _, err := ruleSchema(p.Schema); err != nil {
 		return fmt.Errorf("handoff schema: %w", err)
@@ -394,13 +407,6 @@ func routeExecutionRules(n WorkflowNode, receipt ConnectorReceipt) (string, stri
 			return fail("invalid", p.OnInvalid, err)
 		}
 	}
-	schema, err := ruleSchema(p.Schema)
-	if err != nil {
-		return "", "", err
-	}
-	if err = schema.Validate(result); err != nil {
-		return fail("invalid", p.OnInvalid, fmt.Errorf("output.result does not match JSON Schema: %w", err))
-	}
 	output := map[string]any{"result": result}
 	if n.Execution.Mode == "mcp" {
 		if receipt.MCP == nil {
@@ -412,6 +418,33 @@ func routeExecutionRules(n WorkflowNode, receipt ConnectorReceipt) (string, stri
 			return "", "", errors.New("exit code unavailable")
 		}
 		output["exit_code"] = float64(*receipt.ExitCode)
+	}
+	return routeRuleInput(n, map[string]any{"output": output})
+}
+
+// Runtime receipts and preview samples use the same schema and expression input.
+func routeRuleInput(n WorkflowNode, input any) (string, string, error) {
+	p := n.RuleHandoff
+	fail := func(key string, f WorkflowRuleFailure, err error) (string, string, error) {
+		if f.Action == "route" {
+			return "rule_" + key, err.Error(), nil
+		}
+		return "", "", err
+	}
+	schema, err := ruleSchema(p.Schema)
+	if err != nil {
+		return "", "", err
+	}
+	values, _ := input.(map[string]any)
+	var value any = input
+	name := "handoff input"
+	if p.SchemaScope != "input" {
+		output, _ := values["output"].(map[string]any)
+		value = output["result"]
+		name = "output.result"
+	}
+	if err = schema.Validate(value); err != nil {
+		return fail("invalid", p.OnInvalid, fmt.Errorf("%s does not match JSON Schema: %w", name, err))
 	}
 	types, err := ruleTypes(p, n.Execution.Mode)
 	if err != nil {
@@ -425,7 +458,7 @@ func routeExecutionRules(n WorkflowNode, receipt ConnectorReceipt) (string, stri
 		if err != nil {
 			return fail("expression", p.OnExpression, err)
 		}
-		hit, err := evalRule(x, map[string]any{"output": output})
+		hit, err := evalRule(x, values)
 		if err != nil {
 			return fail("expression", p.OnExpression, err)
 		}

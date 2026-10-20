@@ -13,6 +13,7 @@ func (h *Server) workflowRuleRoutes() {
 			Workflow Workflow        `json:"workflow"`
 			NodeID   string          `json:"node_id"`
 			Output   json.RawMessage `json:"output,omitempty"`
+			Input    json.RawMessage `json:"input,omitempty"`
 		}
 		if err := decode(w, r, &in); err != nil {
 			fail(w, err)
@@ -27,8 +28,31 @@ func (h *Server) workflowRuleRoutes() {
 			fail(w, err)
 			return
 		}
-		if len(in.Output) == 0 {
+		if len(in.Output) > 0 && len(in.Input) > 0 {
+			fail(w, errors.New("provide only one preview input"))
+			return
+		}
+		if len(in.Output) == 0 && len(in.Input) == 0 {
 			respond(w, 200, map[string]any{"valid": true})
+			return
+		}
+		if n.RuleHandoff.SchemaScope == "input" {
+			if len(in.Input) == 0 {
+				fail(w, errors.New("provide the complete handoff input"))
+				return
+			}
+			value, err := completionJSONValue(in.Input)
+			if err != nil {
+				fail(w, err)
+				return
+			}
+			route, summary, err := routeRuleInput(n, value)
+			if err != nil {
+				respond(w, 200, map[string]any{"valid": true, "error": err.Error(), "action": "stop"})
+				return
+			}
+			in.Workflow.projectRuleEdges()
+			respond(w, 200, map[string]any{"valid": true, "route": route, "summary": summary, "target": in.Workflow.target(n.ID, route)})
 			return
 		}
 		value, err := completionJSONValue(in.Output)

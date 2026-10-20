@@ -51,6 +51,16 @@ func TestRuleHandoffRejectsUnsafeAndWrongTypes(t *testing.T) {
 	}
 }
 func TestRuleHandoffMCPRealRunFrozenAndDeduplicated(t *testing.T) {
+	t.Run("legacy", func(t *testing.T) { testRuleMCPRun(t, false) })
+	t.Run("complete-input", func(t *testing.T) { testRuleMCPRun(t, true) })
+}
+func completeRuleFixture() WorkflowNode {
+	n := ruleFixture()
+	n.RuleHandoff.SchemaScope = "input"
+	n.RuleHandoff.Schema = json.RawMessage(`{"type":"object","properties":{"output":{"type":"object","properties":{"is_error":{"type":"boolean"},"result":` + string(n.RuleHandoff.Schema) + `},"required":["is_error","result"],"additionalProperties":false}},"required":["output"],"additionalProperties":false}`)
+	return n
+}
+func testRuleMCPRun(t *testing.T, complete bool) {
 	s := testStore(t)
 	var calls atomic.Int32
 	c, w, dir, _ := executionFixture(t, s, func(context.Context, string) (*mcp.CallToolResult, any, error) {
@@ -58,6 +68,9 @@ func TestRuleHandoffMCPRealRunFrozenAndDeduplicated(t *testing.T) {
 		return nil, map[string]any{"passed": true, "score": 90}, nil
 	})
 	n := ruleFixture()
+	if complete {
+		n = completeRuleFixture()
+	}
 	w.Nodes[0].RuleHandoff = n.RuleHandoff
 	w.Nodes[0].Execution.Output = &ExecutionOutput{Source: "tool"}
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "review", Name: "Review", Kind: "end"})
@@ -142,5 +155,71 @@ func TestRuleHandoffDoesNotTreatDottedPropertyAsNestedField(t *testing.T) {
 	}
 	if _, err = parseRule("output.result.passed.value == true", types); err == nil {
 		t.Fatal("literal dotted property granted access to undeclared nested field")
+	}
+}
+
+func TestRuleHandoffOutputSchemaIsExpressionContract(t *testing.T) {
+	var p WorkflowRules
+	err := json.Unmarshal([]byte(`{"schema_scope":"input","schema":{"type":"object","properties":{"output":{"type":"object","properties":{"exit_code":{"type":"integer","enum":[0,1]},"result":{"type":"object","properties":{"passed":{"type":"boolean"}}}},"required":["exit_code"],"additionalProperties":false}},"required":["output"],"additionalProperties":false},"rules":[{"title":"\u5b8c\u6210","when":"output.exit_code == 0","target":"done"},{"title":"\u5176\u4ed6","else":true,"target":"review"}],"on_invalid":{"action":"route","target":"review","title":"\u683c\u5f0f\u9519\u8bef"},"on_expression":{"action":"stop"}}`), &p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := WorkflowNode{ID: "call", Kind: "execution", Execution: &WorkflowExecution{Mode: "command"}, RuleHandoff: &p}
+	types, err := ruleTypes(&p, "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if types["output.result.passed"] != "boolean" || types["output.exit_code"] != "number" {
+		t.Fatal("schema and expression paths differ", types)
+	}
+	for _, c := range []struct {
+		code  int
+		route string
+	}{{0, "rule_1"}, {1, "rule_2"}, {2, "rule_invalid"}} {
+		route, _, err := routeExecutionRules(n, ConnectorReceipt{ExitCode: &c.code, Result: json.RawMessage(`{}`)})
+		if err != nil || route != c.route {
+			t.Fatal(c, route, err)
+		}
+	}
+	p.Schema = json.RawMessage(`{"type":"object","properties":{"output":{"type":"object","properties":{"result":{"type":"object"}}}}}`)
+	types, err = ruleTypes(&p, "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = parseRule("output.exit_code == 0", types); err == nil {
+		t.Fatal("undeclared built-in field bypassed schema")
+	}
+}
+
+func TestRuleHandoffCompletePreviewValidatesRootAndMetadata(t *testing.T) {
+	s := testStore(t)
+	s.initAuth("password")
+	h := NewServer(s, nil, nil, "password", "http://localhost")
+	login := cookieRequest(t, h, nil, "POST", "/api/login", map[string]string{"username": "admin", "password": "password"})
+	if login.Code != 200 {
+		t.Fatal(login.Body.String())
+	}
+	cookie := login.Result().Cookies()[0]
+	n := completeRuleFixture()
+	w := Workflow{Nodes: []WorkflowNode{n, {ID: "done", Kind: "end"}, {ID: "review", Kind: "end"}}}
+	for _, c := range []struct{ input, route string }{
+		{`{"output":{"is_error":false,"result":{"passed":true,"score":90}}}`, "rule_1"},
+		{`{"output":{"is_error":false,"result":{"passed":false,"score":90}}}`, "rule_2"},
+		{`{"output":{"is_error":1,"result":{"passed":true,"score":90}}}`, "rule_invalid"},
+		{`{"is_error":false,"result":{"passed":true,"score":90}}`, "rule_invalid"},
+		{`{"output":{"is_error":false,"result":{"passed":true,"score":90}},"extra":1}`, "rule_invalid"},
+		{`{"output":{"result":{"passed":true,"score":90}}}`, "rule_invalid"},
+	} {
+		body := map[string]any{"workflow": w, "node_id": "call", "input": json.RawMessage(c.input)}
+		r := cookieRequest(t, h, cookie, "POST", "/api/workflows/rules/preview", body)
+		var out struct{ Route string }
+		json.Unmarshal(r.Body.Bytes(), &out)
+		if r.Code != 200 || out.Route != c.route {
+			t.Fatal(c.input, r.Code, r.Body.String())
+		}
+	}
+	n.RuleHandoff.SchemaScope = "unknown"
+	if err := validateRuleHandoff(w, n); err == nil {
+		t.Fatal("unknown scope silently accepted")
 	}
 }

@@ -310,8 +310,11 @@ const {chromium}=require('playwright');
   await page.locator('#wf-tab-handoff').click();
   assert.match(await page.locator('#wf-tab-handoff').textContent(),/交接策略（基于规则）/);
   await page.locator('#wf-enable-rules').click();
+  const defaultSchema=JSON.parse(await page.locator('#wf-rule-schema').inputValue());
+  assert.equal(defaultSchema.properties.output.properties.is_error.type,'boolean');
+  assert.equal(await page.locator('[data-rule-index="0"][data-rule-field="when"]').inputValue(),'output.is_error == false');
   await page.locator('#wf-result-source').selectOption('tool');
-  await page.locator('#wf-rule-schema').fill(JSON.stringify({type:'object',properties:{native_response:{type:'string'}},required:['native_response'],additionalProperties:false},null,2));
+  await page.locator('#wf-rule-schema').fill(JSON.stringify({type:'object',properties:{output:{type:'object',properties:{is_error:{type:'boolean'},result:{type:'object',properties:{native_response:{type:'string'}},required:['native_response'],additionalProperties:false}},required:['is_error','result'],additionalProperties:false}},required:['output'],additionalProperties:false},null,2));
   const condition=page.locator('[data-rule-index="0"][data-rule-field="when"]');
   await condition.fill('output.is_error == ');
   await page.locator('[data-rule-suggestions="0"]').getByRole('button',{name:'false boolean',exact:true}).click();
@@ -322,18 +325,18 @@ const {chromium}=require('playwright');
   await page.locator('[data-rule-index="1"][data-rule-field="title"]').fill('其他结果');
   await page.locator('[data-rule-index="1"][data-rule-field="target"]').selectOption('done');
   await page.getByText('试算',{exact:true}).click();
-  const trial=async (result,expected)=>{await page.locator('#wf-rule-sample').fill(JSON.stringify({is_error:false,result}));await page.locator('#wf-rule-simulate').click();await page.waitForFunction(expected=>document.querySelector('#wf-rule-simulation').textContent.includes(expected),expected)};
+  const trial=async (result,expected)=>{await page.locator('#wf-rule-sample').fill(JSON.stringify({output:{is_error:false,result}}));await page.locator('#wf-rule-simulate').click();await page.waitForFunction(expected=>document.querySelector('#wf-rule-simulation').textContent.includes(expected),expected)};
   // A pending field-validation debounce must not discard an explicit simulation.
   await page.route('**/api/workflows/rules/preview',async route=>{
-    if(Object.hasOwn(route.request().postDataJSON(),'output'))await new Promise(resolve=>setTimeout(resolve,650));
+    if(Object.hasOwn(route.request().postDataJSON(),'input'))await new Promise(resolve=>setTimeout(resolve,650));
     await route.continue();
   });
   await condition.fill('output.is_error == false');
   await trial({native_response:123},'停止：');
   // A response for an earlier sample must not be displayed after the sample changes.
-  const stale=page.waitForResponse(r=>r.url().endsWith('/api/workflows/rules/preview')&&Object.hasOwn(r.request().postDataJSON(),'output'));
+  const stale=page.waitForResponse(r=>r.url().endsWith('/api/workflows/rules/preview')&&Object.hasOwn(r.request().postDataJSON(),'input'));
   await page.locator('#wf-rule-simulate').click();
-  await page.locator('#wf-rule-sample').fill(JSON.stringify({is_error:false,result:{native_response:'new sample'}}));
+  await page.locator('#wf-rule-sample').fill(JSON.stringify({output:{is_error:false,result:{native_response:'new sample'}}}));
   await (await stale).finished();
   assert.equal(await page.locator('#wf-rule-simulation').textContent(),'');
   // Rebuilding rule cards cancels the old card's pending validation.
@@ -347,7 +350,7 @@ const {chromium}=require('playwright');
   await page.locator('#wf-rule-schema').fill('{');
   await page.locator('#wf-save').click();
   assert.match(await page.locator('#toast').textContent(),/JSON Schema/,'invalid draft cannot be saved');
-  await page.locator('#wf-rule-schema').fill(JSON.stringify({type:'object',properties:{native_response:{type:'string'}},required:['native_response'],additionalProperties:false},null,2));
+  await page.locator('#wf-rule-schema').fill(JSON.stringify({type:'object',properties:{output:{type:'object',properties:{is_error:{type:'boolean'},result:{type:'object',properties:{native_response:{type:'string'}},required:['native_response'],additionalProperties:false}},required:['is_error','result'],additionalProperties:false}},required:['output'],additionalProperties:false},null,2));
   await saveReload();
   await page.locator('#wf-tab-handoff').click();
   assert.equal(await page.locator('#wf-result-source').inputValue(),'tool');
