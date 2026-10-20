@@ -186,6 +186,9 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		}
 	} else {
 		result := NodeResult{Route: route, Summary: summary}
+		if node.Execution != nil {
+			result.Artifacts = append(result.Artifacts, node.Execution.Artifacts...)
+		}
 		if ruleBased {
 			result.Inputs = map[string]any{"output": map[string]any{"result": receipt.Result, "exit_code": receipt.ExitCode}, "handoff_route": route}
 		}

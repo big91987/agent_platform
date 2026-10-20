@@ -71,25 +71,26 @@ func (s WorkflowStep) actionReceipt() *ConnectorReceipt {
 }
 
 type WorkflowRun struct {
-	NativeProcesses []SandboxNativeProcess          `json:"native_processes,omitempty"`
-	Environment     *RunEnvironment                 `json:"environment,omitempty"`
-	ExecutionTools  map[string]RegisteredToolServer `json:"-"`
-	Parameters      map[string]string               `json:"parameters,omitempty"`
-	Connectors      map[string]Connector            `json:"connectors,omitempty"`
-	ID              string                          `json:"id"`
-	WorkflowID      string                          `json:"workflow_id"`
-	Owner           string                          `json:"owner"`
-	Username        string                          `json:"-"`
-	Definition      Workflow                        `json:"definition"`
-	Input           string                          `json:"input"`
-	WorkspacePath   string                          `json:"workspace_path"`
-	Status          string                          `json:"status"`
-	Seq             int                             `json:"seq"`
-	MaxSteps        int                             `json:"max_steps"`
-	Error           string                          `json:"error,omitempty"`
-	Created         string                          `json:"created_at"`
-	Updated         string                          `json:"updated_at"`
-	Steps           []WorkflowStep                  `json:"steps"`
+	ArchiveArtifacts bool                            `json:"archive_artifacts,omitempty"`
+	NativeProcesses  []SandboxNativeProcess          `json:"native_processes,omitempty"`
+	Environment      *RunEnvironment                 `json:"environment,omitempty"`
+	ExecutionTools   map[string]RegisteredToolServer `json:"-"`
+	Parameters       map[string]string               `json:"parameters,omitempty"`
+	Connectors       map[string]Connector            `json:"connectors,omitempty"`
+	ID               string                          `json:"id"`
+	WorkflowID       string                          `json:"workflow_id"`
+	Owner            string                          `json:"owner"`
+	Username         string                          `json:"-"`
+	Definition       Workflow                        `json:"definition"`
+	Input            string                          `json:"input"`
+	WorkspacePath    string                          `json:"workspace_path"`
+	Status           string                          `json:"status"`
+	Seq              int                             `json:"seq"`
+	MaxSteps         int                             `json:"max_steps"`
+	Error            string                          `json:"error,omitempty"`
+	Created          string                          `json:"created_at"`
+	Updated          string                          `json:"updated_at"`
+	Steps            []WorkflowStep                  `json:"steps"`
 }
 
 const workflowExecutionLimitError = "maximum node executions reached; inspect loop before starting another run"
@@ -145,12 +146,22 @@ func (s *Store) initWorkflowRuns() error {
  CREATE TABLE IF NOT EXISTS workflow_run_limits(run_id TEXT PRIMARY KEY REFERENCES workflow_runs(id),max_steps INTEGER NOT NULL CHECK(max_steps BETWEEN 1 AND 1000));
  CREATE TABLE IF NOT EXISTS workflow_node_controls(run_id TEXT NOT NULL,seq INTEGER NOT NULL,wait_kind TEXT NOT NULL DEFAULT '',wait_reason TEXT NOT NULL DEFAULT '',wait_message_id INTEGER NOT NULL DEFAULT 0,continuations INTEGER NOT NULL DEFAULT 0,last_message_id INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(run_id,seq),FOREIGN KEY(run_id,seq) REFERENCES workflow_steps(run_id,seq));
  CREATE UNIQUE INDEX IF NOT EXISTS workflow_conversation ON workflow_steps(conversation_id) WHERE conversation_id!='';`)
+	if e != nil {
+		return e
+	}
+	var n int
+	if e = s.DB.QueryRow(`SELECT count(*) FROM pragma_table_info('workflow_runs') WHERE name='archive_artifacts'`).Scan(&n); e != nil {
+		return e
+	}
+	if n == 0 {
+		_, e = s.DB.Exec(`ALTER TABLE workflow_runs ADD COLUMN archive_artifacts INTEGER NOT NULL DEFAULT 0`)
+	}
 	return e
 }
 func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	var r WorkflowRun
 	var raw string
-	e := tx.QueryRow(`SELECT id,workflow_id,owner,username,definition,input,workspace,status,seq,error,created,updated FROM workflow_runs WHERE id=?`, id).Scan(&r.ID, &r.WorkflowID, &r.Owner, &r.Username, &raw, &r.Input, &r.WorkspacePath, &r.Status, &r.Seq, &r.Error, &r.Created, &r.Updated)
+	e := tx.QueryRow(`SELECT id,workflow_id,owner,username,definition,input,workspace,status,seq,error,created,updated,archive_artifacts FROM workflow_runs WHERE id=?`, id).Scan(&r.ID, &r.WorkflowID, &r.Owner, &r.Username, &raw, &r.Input, &r.WorkspacePath, &r.Status, &r.Seq, &r.Error, &r.Created, &r.Updated, &r.ArchiveArtifacts)
 	if errors.Is(e, sql.ErrNoRows) {
 		return r, ErrNotFound
 	}
@@ -501,7 +512,7 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if in.RequestID != "" {
 		key = in.RequestID
 	}
-	_, e = tx.Exec(`INSERT INTO workflow_runs(id,workflow_id,owner,username,definition,input,workspace,status,seq,created,updated,request_key,request_hash) VALUES(?,?,?,?,?,?,?,'running',1,?,?,?,?)`, id, w.ID, c.UserID, c.Username, raw, in.Input, path, stamp, stamp, key, hashText(string(fingerprint)))
+	_, e = tx.Exec(`INSERT INTO workflow_runs(id,workflow_id,owner,username,definition,input,workspace,status,seq,created,updated,request_key,request_hash,archive_artifacts) VALUES(?,?,?,?,?,?,?,'running',1,?,?,?,?,1)`, id, w.ID, c.UserID, c.Username, raw, in.Input, path, stamp, stamp, key, hashText(string(fingerprint)))
 	if e != nil {
 		return zero, e
 	}
@@ -646,6 +657,11 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 		raw, e = json.Marshal(result)
 		if e != nil {
 			return e
+		}
+	}
+	if r.ArchiveArtifacts {
+		if _, err := archivePaths(WorkflowStep{Result: &result}); err != nil {
+			return err
 		}
 	}
 	if r.Definition.target(step.NodeID, result.Route) == "" {

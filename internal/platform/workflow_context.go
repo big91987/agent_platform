@@ -131,6 +131,9 @@ func markdownValues(b *strings.Builder, prefix string, v any) {
 
 func (s *Store) workflowAgentInput(r WorkflowRun, step WorkflowStep, n WorkflowNode) (string, error) {
 	prompt, err := workflowNodeInstructions(r.Definition, n)
+	if r.ArchiveArtifacts {
+		prompt += "\n产物留存：artifacts 只填写已完成的工作区相对文件路径或外部 HTTP(S) 链接，不填写目录、隐藏文件、依赖目录或凭据。平台在本轮结束后、下一节点开始前保存文件快照；单文件最多 8 MiB，每次节点执行最多 256 件、128 MiB。文件归档失败会阻止交接。链接只保留引用，不复制远端内容。\n"
+	}
 	if err != nil {
 		return "", err
 	}

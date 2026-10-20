@@ -11,6 +11,7 @@ import (
 )
 
 func (h *Server) workflowRunRoutes() {
+	h.workflowArchiveRoutes()
 	h.workflowContextRoutes()
 	h.connectorRoutes()
 	h.workflowHookRoutes()

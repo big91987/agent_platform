@@ -122,6 +122,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(node.kind==='execution'){
       const v=node.execution;
       if(!v||!['code','command','mcp'].includes(v.mode))throw new Error('请选择执行方式');
+      if(v.artifacts!=null){if(!Array.isArray(v.artifacts)||v.artifacts.length>256||v.artifacts.some(p=>typeof p!=='string'||p.length>4096||!p||p.startsWith('/')||p.includes('\\')||p.includes('\0')||p==='AGENTS.md'||p.split('/').some(v=>!v||v.startsWith('.')||v==='node_modules')))throw new Error('留存产物须为工作区相对文件路径，每行一个，最多 256 件');if(v.mode==='mcp'&&v.artifacts.length)throw new Error('MCP 节点不配置工作区文件留存');}
       if(v.mode==='mcp'){
         if(typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
         if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');

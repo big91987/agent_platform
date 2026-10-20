@@ -28,6 +28,7 @@ type ExecutionOutput struct {
 	Path   string `json:"path,omitempty"`
 }
 type WorkflowExecution struct {
+	Artifacts []string                    `json:"artifacts,omitempty"`
 	Output    *ExecutionOutput            `json:"output,omitempty"`
 	Language  string                      `json:"language,omitempty"`
 	Code      string                      `json:"code,omitempty"`
@@ -50,6 +51,19 @@ type ExecutionBinding struct {
 func validateWorkflowExecution(v *WorkflowExecution) error {
 	if v == nil {
 		return errors.New("select a supported execution mode")
+	}
+	if len(v.Artifacts) > 0 {
+		if v.Mode == "mcp" {
+			return errors.New("MCP nodes do not retain workspace files")
+		}
+		if _, err := archivePaths(WorkflowStep{Result: &NodeResult{Artifacts: v.Artifacts}}); err != nil {
+			return err
+		}
+		for _, p := range v.Artifacts {
+			if !validArchivePath(p) {
+				return errors.New("retained artifacts must be workspace-relative files")
+			}
+		}
 	}
 	if v.Output != nil {
 		o := v.Output

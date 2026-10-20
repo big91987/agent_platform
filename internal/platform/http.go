@@ -551,6 +551,11 @@ func (h *Server) file(w http.ResponseWriter, r *http.Request, c Caller) {
 		}
 		content, modified = f, st.ModTime()
 	}
+	serveArtifactContent(w, r, path, modified, content)
+}
+func serveArtifactContent(w http.ResponseWriter, r *http.Request, path string, modified time.Time, content io.ReadSeeker) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
 	if r.URL.Query().Get("preview") == "1" && r.URL.Query().Get("download") != "1" && (strings.EqualFold(filepath.Ext(path), ".html") || strings.EqualFold(filepath.Ext(path), ".htm")) {
 		// Generated HTML runs in an opaque origin, without platform cookies or API access.

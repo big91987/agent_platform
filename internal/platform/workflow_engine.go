@@ -290,6 +290,28 @@ func (e *WorkflowEngine) tickRun(ctx context.Context, r WorkflowRun) error {
 		return err
 	}
 	if step.Result != nil {
+		if !e.connectorQuiet(r.ID) || !e.quiet(step.ConversationID) {
+			return nil
+		}
+		if r.ArchiveArtifacts {
+			paths, err := archivePaths(step)
+			if err != nil {
+				return fmt.Errorf("%s%w", archiveFailurePrefix, err)
+			}
+			if len(paths) > 0 {
+				state, err := e.store.archiveState(r, step)
+				if err != nil {
+					return err
+				}
+				if state.Status == "failed" {
+					return fmt.Errorf("%s%s", archiveFailurePrefix, state.Error)
+				}
+				if state.Status != "retained" {
+					e.startArchive(ctx, r, step, false)
+					return nil
+				}
+			}
+		}
 		return e.store.advanceWorkflow(r.ID, r.Seq)
 	}
 	return nil

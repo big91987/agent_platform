@@ -375,6 +375,10 @@ func (e *WorkflowEngine) ReleaseSandbox(ctx context.Context, c Caller, id string
 		e.mu.Unlock()
 		return errors.New("reconcile the environment before releasing; uncertain release was not replayed")
 	}
+	if err := e.store.requireWorkflowArchives(r); err != nil {
+		e.mu.Unlock()
+		return err
+	}
 	if err := e.store.updateRunEnvironment(r.ID, "ready", r.Environment.ID, "releasing", ""); err != nil {
 		e.mu.Unlock()
 		return err
