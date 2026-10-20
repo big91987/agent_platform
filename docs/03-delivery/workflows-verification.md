@@ -3332,3 +3332,16 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 2026-10-20 按用户确认的执行数据交接设计整改：命令/代码节点直接选择退出码、STDOUT、STDERR或工作区文件；退出码为整数，其他来源默认原始UTF-8文本，保留换行。可选JSON Schema校验同时启用解析，规则用$引用原始值，不再注入output包装；读取/解析/Schema/条件计算分别配置停止或目标，else仅用于正常未命中。旧空scope与input scope冻结定义保持原语义，本轮不拆分既有MCP节点。新增行为用例先红（旧来源/范围不支持、默认仍包装、原模板隐式分支），实现后定向真实进程/HTTP回归及Chromium15.228s通过；含真实make通过/失败、两路分离、文件、错误路由、冻结与去重，隔离HTTP设施不冒充112容器。浏览器覆盖来源/开关/文件路径保存重载、原始值试算、解析失败目标、旧MCP、1440/390。首次运行受本机监听权限限制后通过授权测试入口完成；夹具编辑规则时使done不可达已纠正为变更条件，保留原失败。标准sandbox_delivery.py固定make verify已改成显式退出码0→QA/非0→研发，项目不需JSON输出；补真实模板生成与Go路由验证。完整标准验证及112标准升级/真实沙箱复验进行中，不恢复定时任务或已有产品Run。
 
 完整scripts/verify.sh本轮exit0，Go race82.908s及vet/build、真实浏览器、133模板测试通过；最终补充原始文本脱敏/UTF-8与大小上限、预览API和模板0/1/2/137路由定向0.426s通过。接续标准部署和112并发同路径隔离实测。
+
+
+### 2026-10-20：原始数据交接部署与真实并发隔离复验
+
+维护源8dd6344dffb334cac9417d082d9254ed85bbbab9已仅开发分支推送，并通过标准build/install部署112:8795；二进制SHA256 b487c2320609feb53b141ec9eedd69c2e02af6f00bd50fe28f17c98f3c7e1237。完整源码门禁exit0/129923bytes/SHA256 5e86b78e021b6845b1720640b37b3bd1d687ba6599e8f8fc95c8e1293e9d2452（Go race82.908s、vet/build、浏览器、133模板测试）。安装前后等待产品Run、历史Run、工作流及私有配置逐值保持。
+
+用户补充文件隔离要求，已通过正式API在真实OpenSandbox同时启动A/e2fad7e5ee2df4ab91009bbf03d674ba和B/f02fb9aa0dd8ec6829ee94213afdb55f；两容器ID不同，相同/workspace/handoff-check/result.txt分别写A/B，写后持有时间实际交叠9.998515844秒，各自读取原值并进入对应分支。两次重复提交各返回原Run，未多建环境。同Run内节点共享文件；不同Run隔离，本机共用宿主目录不提供此保证。两Run均18步completed：真实make退出0/2、stdout/stderr分离、原始文件、JSON布尔/整数/对象、解析/Schema/表达式异常、缺文件、最终符号链接和父目录链接越界均按配置路由；else不接管这些异常。时间回执核验脚本起初按每行JSON解码，实际事件文本相邻拼接导致Extra data；改为逐值解码已有日志后确认时间交叠，没有重跑补造。
+
+另外从当前产品Run的固定repository_commit=84c000f8945d7532043f7aedd29e62dc4e86b866复制准备节点和原make verify到隔离Harness Run38e6a404773bdb17bf80c0482564318d：prepare成功，tests3真实exit2，rule_2进入project_fail人工核对节点。完整输出21页至EOF，667779bytes/SHA256 aa786ac12ff5278f9eb43c4709fe178c54c3006368c3fee8b8572ad440428d70，truncated=false。报错review historical HTTP rejected: unparsed baseline output，158件源6e359667…前后未变；与历史同版测试设施失败一致，不冒称原项目全量绿、不代产品修复、不重跑求绿。此项证明实际项目非零交接与完整失败保留；成功分支是独立Harness真实make夹具证明，不是本次产品完整通过。
+
+正式工作流83f08f81f7040fcd0c12e6ff4e2acd2d通过PUT从revision4升5：只从同版标准sandbox_delivery.py提取tests数据来源及规则，0→qa/非0→development，并投影两条实线；其余节点不变。原等待产品Run6f3f26f6207ab1b6bfbc5ccd246797de冻结定义与回执逐值不变、未resume。生成规则时占位凭据引用带连字符被模板拒绝，发生在PUT之前；改为合法占位标识后正式保存，不涉及实际凭据或权限改动。
+
+通过正式decision记录产品门禁失败但Harness核验结束，三个验证Run均completed/环境released；临时工作流c0a5749a1feb6a8cb681f796c6a615d8已正式DELETE，运行历史仍可访问。实际部署页面检查退出码0/2、原始文本换行差异、stderr JSON布尔、解析/Schema错误、文件及开关、1440/390无根横溢出；界面草稿未保存。浏览器最初使用错误button/label选择器及离开确认影响测试脚本，改用实际tab/textbox并分开处理导航，没有修改业务断言。证据在忽略目录.data/opensandbox-verification/rule-selected-data，远端同名rule-selected-*回执与完整日志保留，截图output/playwright/selected-data-112-*.png。自动化及本机平台保持停止；没有新产品Issue、PR或部署。
