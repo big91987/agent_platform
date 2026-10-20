@@ -323,7 +323,26 @@ const {chromium}=require('playwright');
   await page.locator('[data-rule-index="1"][data-rule-field="target"]').selectOption('done');
   await page.getByText('试算',{exact:true}).click();
   const trial=async (result,expected)=>{await page.locator('#wf-rule-sample').fill(JSON.stringify({is_error:false,result}));await page.locator('#wf-rule-simulate').click();await page.waitForFunction(expected=>document.querySelector('#wf-rule-simulation').textContent.includes(expected),expected)};
+  // A pending field-validation debounce must not discard an explicit simulation.
+  await page.route('**/api/workflows/rules/preview',async route=>{
+    if(Object.hasOwn(route.request().postDataJSON(),'output'))await new Promise(resolve=>setTimeout(resolve,650));
+    await route.continue();
+  });
+  await condition.fill('output.is_error == false');
   await trial({native_response:123},'停止：');
+  // A response for an earlier sample must not be displayed after the sample changes.
+  const stale=page.waitForResponse(r=>r.url().endsWith('/api/workflows/rules/preview')&&Object.hasOwn(r.request().postDataJSON(),'output'));
+  await page.locator('#wf-rule-simulate').click();
+  await page.locator('#wf-rule-sample').fill(JSON.stringify({is_error:false,result:{native_response:'new sample'}}));
+  await (await stale).finished();
+  assert.equal(await page.locator('#wf-rule-simulation').textContent(),'');
+  // Rebuilding rule cards cancels the old card's pending validation.
+  await condition.fill('output.is_error == false');
+  await page.locator('#wf-rule-add').click();
+  await page.locator('[data-rule-remove="1"]').click();
+  await page.getByText('试算',{exact:true}).click();
+  await trial({native_response:'checked'},'工具完成');
+  await page.unroute('**/api/workflows/rules/preview');
   await trial({native_response:'checked'},'工具完成');
   await page.locator('#wf-rule-schema').fill('{');
   await page.locator('#wf-save').click();

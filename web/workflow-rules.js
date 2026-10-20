@@ -25,11 +25,12 @@ function bindWorkflowRules(editor,n){
  const redraw=()=>{changed();renderWorkflowInspector(editor)};
  if(!n.rule_handoff){$('#wf-enable-rules').onclick=()=>{rememberWorkflowNodeDraft(editor);const p=workflowRulePolicy();p.schema={type:'object'};p.rules=editor.graph.value.edges.filter(e=>e.source===n.id).map(e=>({title:e.title||(e.route==='next'?'成功':'失败'),content:e.description||'',when:n.execution.mode==='mcp'?`output.is_error == ${e.route==='failed'}`:`output.exit_code ${e.route==='next'?'==':'!='} 0`,target:e.target}));n.rule_handoff=p;redraw()};return}
  const p=n.rule_handoff;
- let timer;
- const validate=async(simulate=false)=>{const box=$('#wf-rule-validation');if(!box)return;const request={};editor.ruleValidation=request;
+ const validationBox=$('#wf-rule-validation');
+ const clearTrial=()=>{const result=$('#wf-rule-simulation');if(result)result.textContent=''};
+ const validate=async(simulate=false)=>{const box=$('#wf-rule-validation');if(!box||box!==validationBox)return;if(simulate){clearTimeout(editor.ruleValidationTimer);$('#wf-rule-simulation').textContent='正在试算…'};const request={};editor.ruleValidation=request;
   try{const graph=new WorkflowGraph(editor.graph.value);applyRuleSchemaDrafts(graph,editor.ruleSchemaDrafts);let body={workflow:graph.value,node_id:n.id};if(simulate)body.output=WorkflowGraph.parseJSON($('#wf-rule-sample').value);const result=await api('/api/workflows/rules/preview','POST',body);if(workflowEditor!==editor||editor.selected!==n.id||editor.ruleValidation!==request)return;box.hidden=true;if(simulate)$('#wf-rule-simulation').textContent=result.error?'停止：'+result.error:result.summary+' → '+(editor.graph.node(result.target)?.name||result.target)}catch(e){if(workflowEditor!==editor||editor.selected!==n.id||editor.ruleValidation!==request)return;box.hidden=false;box.textContent=e.message;if(simulate)$('#wf-rule-simulation').textContent='未执行试算'}
  };
- const schedule=()=>{clearTimeout(timer);editor.ruleValidation=null;timer=setTimeout(()=>{if(workflowEditor===editor&&editor.selected===n.id)validate()},450)};
+ const schedule=()=>{clearTimeout(editor.ruleValidationTimer);editor.ruleValidation=null;clearTrial();editor.ruleValidationTimer=setTimeout(()=>{if(workflowEditor===editor&&editor.selected===n.id)validate()},450)};
  $('#wf-rule-schema').oninput=e=>{(editor.ruleSchemaDrafts||={})[n.id]=e.target.value;e.target.classList.remove('wf-default-value');changed();schedule()};
  $('#wf-result-source').onchange=e=>{n.execution.output={source:e.target.value,...(e.target.value==='file'?{path:''}:{})};redraw()};
  if($('#wf-result-path'))$('#wf-result-path').oninput=e=>{n.execution.output.path=e.target.value;changed()};
@@ -45,6 +46,6 @@ function bindWorkflowRules(editor,n){
  document.querySelectorAll('[data-rule-remove]').forEach(b=>b.onclick=()=>{p.rules.splice(+b.dataset.ruleRemove,1);redraw()});
  for(const dir of ['up','down'])document.querySelectorAll('[data-rule-'+dir+']').forEach(b=>b.onclick=()=>{const i=Number(b.dataset[dir==='up'?'ruleUp':'ruleDown']),j=i+(dir==='up'?-1:1);if(j<0||j>=p.rules.length||p.rules[j].else)return;[p.rules[i],p.rules[j]]=[p.rules[j],p.rules[i]];redraw()});
  document.querySelectorAll('[data-rule-failure]').forEach(el=>el.oninput=()=>{const f=p[el.dataset.ruleFailure];f[el.dataset.failureField]=el.value;if(el.dataset.failureField==='action'){if(f.action==='stop')delete f.target;redraw()}else{changed();schedule()}});
- $('#wf-rule-sample').oninput=e=>(editor.ruleSamples||={})[n.id]=e.target.value;
+ $('#wf-rule-sample').oninput=e=>{(editor.ruleSamples||={})[n.id]=e.target.value;editor.ruleValidation=null;clearTrial()};
  $('#wf-rule-simulate').onclick=()=>validate(true);
 }

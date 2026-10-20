@@ -428,6 +428,7 @@ async function previewWorkflowNode(editor,n){
 function renderWorkflowInspector(editor){
  if(workflowEditor!==editor)return;
  editor.nodeFormEdited=false;
+ clearTimeout(editor.ruleValidationTimer);
  editor.ruleValidation=null;
  editor.previewRequest=null;
  const n=editor.graph.node(editor.selected),w=editor.graph.value;
