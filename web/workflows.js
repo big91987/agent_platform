@@ -412,6 +412,16 @@ function workflowContextHelp(editor){
  $('#dialog').setAttribute('aria-labelledby','wf-context-help-title');
  $('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
 }
+function workflowArtifactHelp(){
+ dialog(`<div class="dialog-head"><h2 id="wf-artifact-help-title">产物保存策略</h2><button type="button" data-close aria-label="关闭产物保存说明">关闭</button></div><div class="dialog-body wf-context-explanation">
+ <h3>保存哪些内容</h3><p>代码和项目命令通过“留存产物”的文件清单指定要保存的文件，每行填写一个工作区相对路径，例如 <code>reports/result.json</code>。用于交接判断的结果文件，也需要加入清单才会留存。未列出的文件、进程内存和环境变量不会随产物保存；MCP 工具返回的外部链接不会自动下载归档。</p>
+ <h3>何时保存，如何隔离</h3><p>执行结束并接受交接后，平台先复制文件，再进入下一节点。文件保存在平台的持久存储中，按运行和节点执行次数分别留存。同一次运行共享工作区，但返工或重复执行产生的同名文件会保存为各次执行的独立副本，不覆盖先前产物。</p>
+ <h3>保存失败怎么办</h3><p>文件缺失、无法读取、超过限制或存储失败时，交接停止，下一节点不会开始。处理问题后，可在运行记录的“留存产物”中重试保存；此操作只重新保存文件，不重新执行命令。正式释放环境前会核验已声明产物，缺失或损坏会阻止释放。</p>
+ <h3>沙箱释放后还能看吗</h3><p>已保存的产物可在运行记录中查看或下载，沙箱释放、平台重启后仍然保留。当前没有自动到期删除策略，保留依赖平台持久数据及其备份。产物保存不会延长沙箱寿命；沙箱若在保存前到期或被外部删除，尚未保存的文件可能丢失。</p>
+ <h3>文件限制</h3><p>每次节点执行最多保存 256 个文件、合计 128 MiB，单文件最多 8 MiB。仅支持普通文件，不支持目录、符号链接、隐藏路径、<code>node_modules</code> 中的文件或工作区根目录的 <code>AGENTS.md</code>。不要填写密码、密钥或其他凭据文件。</p></div>`);
+ $('#dialog').setAttribute('aria-labelledby','wf-artifact-help-title');
+ $('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
+}
 async function previewWorkflowNode(editor,n){
  const request={};editor.previewRequest=request;
  try{
@@ -440,9 +450,9 @@ function renderWorkflowInspector(editor){
  const tabs=[{key:'config',label:'配置',body:content.slice(0,split)},{key:'handoff',label:n.kind==='execution'?'交接策略（基于规则）':'交接',body:n.kind==='execution'?workflowRulesFields(editor,n)+(editor.readOnly?'':content.slice(content.indexOf('<div class="wf-inspector-actions">'))):content.slice(split)}];
  if(n.kind==='agent')tabs.push({key:'preview',label:'输入预览',body:'<div id="wf-preview-content"><p class="hint">查看当前节点的工作流提示词，包含交接、完成和等待规则。</p><button id="wf-load-preview" class="primary">生成输入预览</button></div>'});
  const active=tabs.some(t=>t.key===editor.panelTab)?editor.panelTab:'config';editor.panelTab=active;
- $('#wf-inspector').innerHTML=workflowPanelMarkup('wf',n.name,n.kind==='agent'?agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id)):WorkflowGraph.kinds[n.kind],tabs,active,n.kind==='agent');
+ $('#wf-inspector').innerHTML=workflowPanelMarkup('wf',n.name,n.kind==='agent'?agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id)):WorkflowGraph.kinds[n.kind],tabs,active,n.kind==='execution'?'产物保存策略':n.kind==='agent'?'上下文如何组装':'');
  bindWorkflowPanel('wf',tabs,active,key=>{editor.panelTab=key;if(key==='preview')previewWorkflowNode(editor,n)},()=>closeWorkflowInspector(editor));
- if(n.kind==='execution')bindWorkflowRules(editor,n);
+ if(n.kind==='execution'){bindWorkflowRules(editor,n);$('#wf-context-help').onclick=workflowArtifactHelp;}
  if(n.kind==='agent'){bindWorkflowExit(editor,n);$('#wf-context-help').onclick=()=>workflowContextHelp(editor);}
  if(n.kind==='agent')$('#wf-load-preview').onclick=()=>previewWorkflowNode(editor,n);
  document.querySelectorAll('[data-edit-edge]').forEach(el=>{el.onclick=()=>workflowEdgeDialog(editor,Number(el.dataset.editEdge));el.onkeydown=e=>{if(e.key==='Enter')el.onclick()}});
