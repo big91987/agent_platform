@@ -9,6 +9,8 @@ node --check web/workflow-model.js
 node --check web/agent-config.js
 node --check web/connectors.js
 node --check web/workflows.js
+node --check web/workflow-rules.js
+node --test web/workflow-rules_test.js
 node --check web/workflow-runs.js
 node --test web/workflow-runs_test.js
 node --test web/workflow-model_test.js

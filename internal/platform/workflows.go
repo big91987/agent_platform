@@ -31,6 +31,7 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
+	RuleHandoff             *WorkflowRules     `json:"rule_handoff,omitempty"`
 	Execution               *WorkflowExecution `json:"execution,omitempty"`
 	ExitMode                string             `json:"exit_mode,omitempty"`
 	CompletionSchema        json.RawMessage    `json:"completion_schema,omitempty"`
@@ -50,6 +51,7 @@ type WorkflowNode struct {
 	Y                       float64            `json:"y"`
 }
 type WorkflowEdge struct {
+	Title       string `json:"title,omitempty"`
 	Mode        string `json:"mode,omitempty"`
 	Description string `json:"description,omitempty"`
 	Source      string `json:"source"`
@@ -60,6 +62,7 @@ type WorkflowEdge struct {
 var workflowKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]{0,63}$`)
 
 func validateWorkflow(w Workflow) error {
+	w.projectRuleEdges()
 	if w.Environment != "" && w.Environment != "opensandbox" {
 		return errors.New("unsupported workflow environment")
 	}
@@ -132,6 +135,9 @@ func validateWorkflow(w Workflow) error {
 		}
 		if n.ContinuationLimit < 0 || n.ContinuationLimit > 10 || n.ExecutionTimeoutSeconds < 0 || n.ExecutionTimeoutSeconds > 86400 {
 			return fmt.Errorf("invalid continuation limits for node %s", n.ID)
+		}
+		if err := validateRuleHandoff(w, n); err != nil {
+			return fmt.Errorf("node %s: %w", n.ID, err)
 		}
 		if err := validateCompletionConfig(w, n); err != nil {
 			return fmt.Errorf("node %s: %w", n.ID, err)
@@ -317,6 +323,7 @@ func (s *Store) SaveWorkflow(c Caller, w Workflow) (Workflow, error) {
 	if !c.Admin {
 		return w, ErrForbidden
 	}
+	w.projectRuleEdges()
 	w.Name = strings.TrimSpace(w.Name)
 	if w.MaxSteps == 0 {
 		w.MaxSteps = 100
@@ -447,6 +454,7 @@ func (s *Store) DeleteWorkflow(c Caller, id string, revision int64) error {
 }
 
 func (h *Server) workflowRoutes() {
+	h.workflowRuleRoutes()
 	h.mux.HandleFunc("GET /api/workflows", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		v, e := h.store.Workflows(c)
 		if e != nil {

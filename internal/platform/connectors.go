@@ -45,6 +45,8 @@ type ConnectorInput struct {
 	IssueNumber    int    `json:"issue_number,omitempty"`
 }
 type ConnectorReceipt struct {
+	Result         json.RawMessage       `json:"structured_result,omitempty"`
+	ResultError    string                `json:"result_error,omitempty"`
 	Sandbox        *SandboxCommandResult `json:"sandbox,omitempty"`
 	MCP            *mcp.CallToolResult   `json:"mcp,omitempty"`
 	TimeoutSeconds int                   `json:"timeout_seconds,omitempty"`

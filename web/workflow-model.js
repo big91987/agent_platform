@@ -41,6 +41,14 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     return changed;
   }
   node(id) { return this.value.nodes.find(n=>n.id===id); }
+  syncRuleEdges(){
+    this.value.edges=this.value.edges.filter(e=>!this.node(e.source)?.rule_handoff);
+    for(const n of this.value.nodes){const p=n.rule_handoff;if(!p)continue;
+      p.rules.forEach((r,i)=>{if(r.target)this.value.edges.push({source:n.id,route:'rule_'+(i+1),target:r.target,mode:'automatic',title:r.title,description:r.content||''})});
+      for(const [key,f]of [['invalid',p.on_invalid],['expression',p.on_expression]])if(f?.action==='route'&&f.target)this.value.edges.push({source:n.id,route:'rule_'+key,target:f.target,mode:'automatic',title:f.title,description:f.content||''});
+    }
+  }
+
   add(kind,x,y) {
     if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error('节点位置无效');
     if(this.value.nodes.length>=128)throw new Error('最多添加 128 个节点');
@@ -61,13 +69,15 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   }
   remove(id) {
     this.value.nodes=this.value.nodes.filter(n=>n.id!==id);
+    for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression])if(f.target===id)f.target='';}
     this.value.edges=this.value.edges.filter(e=>e.source!==id&&e.target!==id);
     this.value.start_nodes=this.value.start_nodes.filter(n=>n!==id);
+    this.syncRuleEdges();
     if(this.value.entry===id)this.value.entry=this.value.nodes[0]?.id||'';
   }
   edgeMode(edge) { return edge.mode || (this.node(edge.source)?.kind==='agent'?'handoff':'automatic'); }
   connect(source,route,target,mode,description='') {
-    const n=this.node(source);if(!n||!this.node(target))throw new Error('连线节点不存在');
+    const n=this.node(source);if(n?.rule_handoff)throw new Error('请在节点的交接策略中配置规则和目标');if(!n||!this.node(target))throw new Error('连线节点不存在');
     if(n.kind==='end')throw new Error('结束节点不能继续连线');
     if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(route))throw new Error('路由使用字母开头的英文、数字、下划线或短横线');
     if(this.value.edges.some(e=>e.source===source&&e.route===route))throw new Error('这个节点已经有同名路由');
@@ -104,6 +114,11 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     } catch(error) {this.value.edges=backup;throw error;}
   }
   validateAgent(node) {
+    if(node.rule_handoff){
+      const p=node.rule_handoff;if(node.kind!=='execution'||!p.schema||typeof p.schema!=='object'||!Array.isArray(p.rules)||p.rules.length>64)throw new Error('规则交接配置无效');
+      for(const [i,r]of p.rules.entries()){if(!r.title?.trim()||!this.node(r.target)||r.target===node.id)throw new Error('请填写规则标题并选择目标');if(r.else?(i!==p.rules.length-1||r.when):!r.when?.trim())throw new Error('条件不能为空，else 仅能位于最后');}
+      for(const f of [p.on_invalid,p.on_expression])if(!f||!['stop','route'].includes(f.action)||f.action==='route'&&(!this.node(f.target)||f.target===node.id||!f.title?.trim()))throw new Error('请配置异常处理方式及目标');
+    }
     if(node.kind==='execution'){
       const v=node.execution;
       if(!v||!['code','command','mcp'].includes(v.mode))throw new Error('请选择执行方式');

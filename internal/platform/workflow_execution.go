@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -20,7 +22,12 @@ import (
 
 // WorkflowExecution invokes an existing capability without a reasoning turn.
 // The graph carries arguments, while credentials remain in the tool registry.
+type ExecutionOutput struct {
+	Source string `json:"source"`
+	Path   string `json:"path,omitempty"`
+}
 type WorkflowExecution struct {
+	Output    *ExecutionOutput            `json:"output,omitempty"`
 	Language  string                      `json:"language,omitempty"`
 	Code      string                      `json:"code,omitempty"`
 	Command   string                      `json:"command,omitempty"`
@@ -42,6 +49,29 @@ type ExecutionBinding struct {
 func validateWorkflowExecution(v *WorkflowExecution) error {
 	if v == nil {
 		return errors.New("select a supported execution mode")
+	}
+	if v.Output != nil {
+		o := v.Output
+		switch o.Source {
+		case "none":
+			if o.Path != "" {
+				return errors.New("no output cannot specify a path")
+			}
+		case "file":
+			if v.Mode == "mcp" || o.Path == "" || path.IsAbs(o.Path) || path.Clean(o.Path) != o.Path || o.Path == ".." || strings.HasPrefix(o.Path, "../") || hiddenArtifact(o.Path) || strings.ContainsRune(o.Path, 0) {
+				return errors.New("result file must be a visible workspace-relative file")
+			}
+		case "stdout":
+			if v.Mode == "mcp" || o.Path != "" {
+				return errors.New("stdout result requires code or command")
+			}
+		case "tool":
+			if v.Mode != "mcp" || o.Path != "" {
+				return errors.New("tool result requires MCP")
+			}
+		default:
+			return errors.New("unsupported execution result source")
+		}
 	}
 	if err := validateExecutionEnvRefs(v.EnvRefs); err != nil {
 		return err
@@ -272,6 +302,18 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 			result, err := callMCPTool(callCtx, server.Connection, request.Tool, request.Arguments)
 			receipt = ConnectorReceipt{Kind: "mcp", MCP: result}
 			callErr = err
+			if err == nil && node.Execution.Output != nil && node.Execution.Output.Source == "tool" {
+				if result == nil || result.StructuredContent == nil {
+					receipt.ResultError = "MCP tool returned no structured result"
+				} else {
+					raw, err := json.Marshal(result.StructuredContent)
+					if err != nil {
+						receipt.ResultError = "MCP structured result cannot be encoded"
+					} else {
+						setExecutionResult(&receipt, raw, runtimeEnv)
+					}
+				}
+			}
 		} else {
 			receipt, callErr = e.executeSandboxNode(callCtx, r, step, node, runtimeEnv)
 		}
@@ -404,6 +446,8 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	}
 	runtimeEnv["WORKFLOW_INPUT_FILE"] = inputPath
 	request := opensandbox.RunCommandRequest{Cwd: r.WorkspacePath, Envs: runtimeEnv, Command: command, Timeout: int64(seconds) * 1000}
+	var stdout bytes.Buffer
+	stdoutOverflow := false
 	result, commandErr := service.commandWithIntent(ctx, r.Environment.ID, r.ID, request, func(event opensandbox.StreamEvent) error {
 		var output struct {
 			Type string `json:"type"`
@@ -412,6 +456,13 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 		if json.Unmarshal([]byte(event.Data), &output) == nil && output.Type == "init" {
 			if err := e.store.recordExecutionProcess(r.ID, step.Seq, output.Text, false); err != nil {
 				return err
+			}
+		}
+		if json.Unmarshal([]byte(event.Data), &output) == nil && output.Type == "stdout" && node.Execution.Output != nil && node.Execution.Output.Source == "stdout" {
+			if stdout.Len()+len(output.Text) > 1<<20 {
+				stdoutOverflow = true
+			} else if !stdoutOverflow {
+				stdout.WriteString(output.Text)
 			}
 		}
 		if json.Unmarshal([]byte(event.Data), &output) == nil && (output.Type == "stdout" || output.Type == "stderr") {
@@ -428,5 +479,61 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 		exit := int(*result.ExitCode)
 		out.ExitCode = &exit
 	}
+	if commandErr == nil && result.Stopped && out.ExitCode != nil && node.Execution.Output != nil {
+		switch node.Execution.Output.Source {
+		case "stdout":
+			if stdoutOverflow {
+				out.ResultError = "structured stdout exceeds 1 MiB"
+			} else {
+				setExecutionResult(&out, stdout.Bytes(), runtimeEnv)
+			}
+		case "file":
+			_, raw, err := e.store.sandboxArtifacts(ctx, r, node.Execution.Output.Path)
+			if err != nil {
+				out.ResultError = "cannot read structured result file: " + err.Error()
+			} else {
+				setExecutionResult(&out, raw, runtimeEnv)
+			}
+		}
+	}
 	return out, commandErr
+}
+
+func setExecutionResult(out *ConnectorReceipt, raw []byte, env map[string]string) {
+	out.Result, out.ResultError = nil, ""
+	if len(raw) > 1<<20 {
+		out.ResultError = "structured result exceeds 1 MiB"
+		return
+	}
+	value, err := completionJSONValue(raw)
+	if err != nil {
+		out.ResultError = "structured result must be valid JSON with lossless numbers"
+		return
+	}
+	// Never persist an explicitly injected secret in a structured result.
+	var redact func(any) any
+	redact = func(v any) any {
+		switch x := v.(type) {
+		case string:
+			for _, secret := range env {
+				if secret != "" {
+					x = strings.ReplaceAll(x, secret, "[redacted]")
+				}
+			}
+			return x
+		case map[string]any:
+			m := map[string]any{}
+			for k, item := range x {
+				m[redact(k).(string)] = redact(item)
+			}
+			return m
+		case []any:
+			for i, item := range x {
+				x[i] = redact(item)
+			}
+			return x
+		}
+		return v
+	}
+	out.Result, _ = json.Marshal(redact(value))
 }

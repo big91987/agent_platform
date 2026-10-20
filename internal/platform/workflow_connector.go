@@ -132,6 +132,8 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 	if current.Seq != step.Seq {
 		return ErrConflict
 	}
+	node := current.Definition.node(step.NodeID)
+	ruleBased := node.RuleHandoff != nil
 	route, summary := "next", "GitHub 资源已确认："+receipt.URL
 	if actionErr == nil && (receipt.Kind == "command" || receipt.Kind == "code") {
 		if receipt.ExitCode == nil {
@@ -140,7 +142,7 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 			summary = fmt.Sprintf("命令已结束 · 退出码 %d", *receipt.ExitCode)
 			if *receipt.ExitCode != 0 {
 				route = "failed"
-				if r.Definition.target(step.NodeID, route) == "" {
+				if !ruleBased && r.Definition.target(step.NodeID, route) == "" {
 					actionErr = fmt.Errorf("command exited %d; inspect receipt and return explicitly to retry", *receipt.ExitCode)
 				}
 			}
@@ -152,10 +154,16 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 			actionErr = errors.New("MCP call returned no result")
 		} else if receipt.MCP.IsError {
 			route, summary = "failed", "工具返回失败"
-			if r.Definition.target(step.NodeID, route) == "" {
+			if !ruleBased && r.Definition.target(step.NodeID, route) == "" {
 				actionErr = errors.New("MCP tool returned an error; inspect its receipt and return explicitly to retry")
 			}
 		}
+	}
+	if actionErr == nil && ruleBased {
+		if len(receipt.Result) == 0 && receipt.ResultError == "" && (node.Execution.Output == nil || node.Execution.Output.Source == "none") {
+			receipt.Result = json.RawMessage(`{}`)
+		}
+		route, summary, actionErr = routeExecutionRules(node, receipt)
 	}
 	message := ""
 	if actionErr != nil {
@@ -178,8 +186,17 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		}
 	} else {
 		result := NodeResult{Route: route, Summary: summary}
+		if ruleBased {
+			result.Inputs = map[string]any{"output": map[string]any{"result": receipt.Result, "exit_code": receipt.ExitCode}, "handoff_route": route}
+		}
 		if receipt.MCP != nil {
-			result.Inputs = map[string]any{"tool_result": receipt.MCP}
+			if result.Inputs == nil {
+				result.Inputs = map[string]any{}
+			}
+			result.Inputs["tool_result"] = receipt.MCP
+			if ruleBased {
+				result.Inputs["output"].(map[string]any)["is_error"] = receipt.MCP.IsError
+			}
 		}
 		if receipt.URL != "" {
 			result.Artifacts = []string{receipt.URL}

@@ -120,7 +120,7 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 			}
 			id := fmt.Sprintf("execution-%d", calls.Add(1))
 			// The fixture maps container /tmp paths into its isolated filesystem.
-			shell := request.Command
+			shell := strings.ReplaceAll(request.Command, "/workspace", directory)
 			for _, prefix := range []string{"/tmp/agent-platform-code-"} {
 				shell = strings.ReplaceAll(shell, prefix, filepath.Join(directory, "agent-platform-code-"))
 			}
@@ -147,7 +147,7 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 			exits[id] = exit
 			mu.Unlock()
 			w.Header().Set("Content-Type", "text/event-stream")
-			for _, event := range []any{map[string]any{"type": "init", "text": id}, map[string]any{"type": "stdout", "text": string(output[:3])}, map[string]any{"type": "stdout", "text": string(output[3:])}, map[string]any{"type": "execution_complete"}} {
+			for _, event := range []any{map[string]any{"type": "init", "text": id}, map[string]any{"type": "stdout", "text": string(output[:min(3, len(output))])}, map[string]any{"type": "stdout", "text": string(output[min(3, len(output)):])}, map[string]any{"type": "execution_complete"}} {
 				raw, _ := json.Marshal(event)
 				fmt.Fprintf(w, "%s\n\n", raw)
 			}
@@ -317,6 +317,29 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 	}
 	endpointUnavailable.Store(false)
 	failEndpointAfterUpload.Store(false)
+
+	for _, source := range []string{"stdout", "file"} {
+		t.Run("structured-"+source, func(t *testing.T) {
+			n := ruleFixture()
+			n.Execution = &WorkflowExecution{Mode: "command", Command: `printf '{"passed":true,"score":86}'`, Output: &ExecutionOutput{Source: source}}
+			if source == "file" {
+				n.Execution.Command += " > result.json"
+				n.Execution.Output.Path = "result.json"
+			}
+			g, err := s.SaveWorkflow(caller, Workflow{Name: "Structured execution", Enabled: true, Environment: "opensandbox", ContextVersion: 2, MaxSteps: 10, Entry: "call", Nodes: []WorkflowNode{n, {ID: "done", Name: "Done", Kind: "end"}, {ID: "review", Name: "Review", Kind: "end"}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err := s.StartWorkflow(caller, WorkflowStart{WorkflowID: g.ID, Input: "check structured output", RequestID: "structured-" + source})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r = waitConnectorRun(t, engine, r.ID, "completed")
+			if r.Steps[0].Result.Route != "rule_1" || r.Steps[1].NodeID != "done" || string(r.Steps[0].ExecutionReceipt.Result) != `{"passed":true,"score":86}` {
+				t.Fatalf("structured routing failed: %+v; receipt=%+v", r.Steps, r.Steps[0].ExecutionReceipt)
+			}
+		})
+	}
 	if err := engine.Return(caller, unknown.ID, unknown.Seq, "call", "confirmed original stopped"); err != nil {
 		t.Fatal(err)
 	}

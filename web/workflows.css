@@ -61,3 +61,10 @@
 .wf-panel-actions{display:flex;gap:8px;flex-shrink:0}.wf-context-help{width:30px;height:30px;padding:0;border-radius:50%;color:#526888;background:#f3f5f9}.wf-context-explanation{overflow-wrap:anywhere}.wf-context-explanation h3{margin:18px 0 6px;font-size:15px}.wf-context-explanation h3:first-child{margin-top:0}.wf-context-explanation p{margin:0 0 12px}.wf-context-explanation ol{padding-left:24px}.wf-context-explanation li+li{margin-top:6px}
 
 #wf-viewport.wf-pan-ready,#wf-viewport.wf-pan-ready *{cursor:grab!important}#wf-viewport.wf-panning,#wf-viewport.wf-panning *{cursor:grabbing!important;user-select:none}.wf-zoom-presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+
+.wf-rule-card{border:1px solid var(--line,#dce3ef);border-radius:10px;padding:14px;margin:14px 0;background:var(--surface,#fff)}
+.wf-rule-card header{display:flex;gap:8px;align-items:center;margin-bottom:12px}.wf-rule-card header span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wf-rule-card header button{padding:3px 8px}.wf-rule-card header strong{font-size:12px;color:#4567ad}
+.wf-rule-card label input,.wf-rule-card label textarea,.wf-rule-card label select,.wf-rule-failure label input,.wf-rule-failure label select,.wf-rule-failure label textarea{display:block;width:100%;margin-top:6px}
+.wf-rule-add{display:flex;gap:8px;margin-bottom:18px}.wf-rule-failure{padding:12px 0}.wf-expression-field{position:relative}.wf-expression-field textarea,.wf-code{font-family:ui-monospace,monospace}.wf-default-value{color:#8791a1}
+.wf-rule-suggestions{position:absolute;z-index:3;left:0;right:0;top:100%;max-height:220px;overflow:auto;background:white;border:1px solid #dce3ef;border-radius:7px;box-shadow:0 4px 12px #0002}.wf-rule-suggestions button{display:flex;width:100%;text-align:left;justify-content:space-between;border:0;border-radius:0;padding:9px}.wf-rule-suggestions button.active{background:#edf2ff}.wf-rule-suggestions span{color:#7b8599;font-size:12px}.wf-rule-suggestions code{overflow-wrap:anywhere}
+.wf-edge-error path{stroke:#b88428!important;stroke-dasharray:none!important}.wf-edge-error text{fill:#986a26!important}
