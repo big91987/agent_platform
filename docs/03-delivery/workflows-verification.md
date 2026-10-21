@@ -3392,3 +3392,12 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 - 已标准 build/install 到112:8795，health同版，二进制SHA-256 `7e7041b062af9cfa9ab5771a67a02487d2f1403366a333d50beee95eb8cf2cb1`。原私有配置、凭据、等待/完成Run及三个已释放Run的归档和下载保持。
 - 正式隔离Harness Run [`f3fe21067c69b8cbb4d2f8a375deb049`](http://10.1.20.112:8795/workflow-runs/f3fe21067c69b8cbb4d2f8a375deb049) completed：缺规则的旧配置先被400拒绝；有效配置用同一共享工作区真实执行exit0→下一节点、exit7→结束，重复请求返回同一Run。正式释放沙箱后result.txt仍可下载且为verified；临时验证工作流已正式删除。此为平台规则与产物能力回归，不是Model Relay产品验收。
 - 112真实浏览器检查准备、固定测试、发布三个节点均直接显示数据来源与条件规则，无“配置规则交接”按钮，未保存或修改图。证据位于忽略目录 `.data/opensandbox-verification/explicit-execution-rules/`、`output/playwright/explicit-rules-prepare.png`。未恢复定时任务、未启动本机常驻平台、未创建平台PR或合并main。
+
+
+### 2026-10-21 · 节点标题直接编辑
+
+用户要求节点详情顶部标题可编辑。实现 `a04c91c7d891fe9b6b3a38b0bf641cf7f6969bbc` 采用标题样式的原生文本输入，提供铅笔提示与焦点边框：回车或失焦确认、Esc取消，拒绝空白和超长名称；确认后画布同步、随工作流保存。移除配置页重复名称字段，各类节点共用；只读详情保持静态标题。
+
+87项前端测试、真实浏览器配置往返14.192s、go vet及构建通过。浏览器覆盖标题位置、回车、Esc不关闭面板、空名称拒绝、交接页改名及保存刷新；首轮不可编辑红例保留，随后用例还原名称未保存引起的“取消拖动不应变脏”失败已修正测试收尾，原断言保持。此UI范围未重复全量后端race，不宣称新产品整链验收。
+
+已标准build/install至112:8795，health同提交，二进制SHA-256 `b6fdf234c19a0cede7c9c69615bc1b4b473af9a80215ad0048695783344e5acc`。正式工作流revision6、等待/完成Run、私有配置与三个已释放Run的归档下载保持。112真实浏览器验证取消编辑及1440/390宽度，无正式改名保存、无新Run；截图 `output/playwright/inline-node-title-{1440,390}.png`，日志 `.data/opensandbox-verification/inline-node-title/`。专用浏览器会话关闭，未恢复定时任务或本机常驻平台。
