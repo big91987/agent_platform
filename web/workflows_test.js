@@ -199,7 +199,7 @@ test('new input protocol saves node name and common settings without a separate 
  const {ctx,el}=editorPage();vm.runInContext('graph.value.context_version=2;delete a.prompt;renderWorkflowInspector(editor)',ctx);
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-node-prompt"/);
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-agent-seed"/);
- el('#wf-node-name').value='独立验收';el('#wf-node-name').oninput();
+ el('#wf-node-name').value='独立验收';el('#wf-node-name').onblur();
  el('#wf-agent-model').value='gpt-6.1-sol';el('#wf-agent-instructions').value='核对实际证据';
  ctx.requests=[];vm.runInContext("history={replaceState(){}};api=async(path,method,body)=>{requests.push(JSON.parse(JSON.stringify(body)));return {...body,id:'saved',revision:1}}",ctx);
  await vm.runInContext('saveWorkflow(editor)',ctx);
@@ -341,4 +341,16 @@ test('execution missing its required handoff does not fabricate a policy from ed
  assert.match(el('#wf-inspector').innerHTML,/role="alert"/);
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-result-source"|id="wf-enable-rules"/);
  assert.equal(vm.runInContext('JSON.stringify(graph.value)===original',ctx),true);
+});
+
+test('header rename trims text, rejects blank names and is absent in read-only details',()=>{
+ const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
+ el('#wf-node-name').value='  新节点名称  ';el('#wf-node-name').onblur();
+ assert.equal(vm.runInContext('a.name',ctx),'新节点名称');
+ el('#wf-node-name').value=' ';el('#wf-node-name').onblur();
+ assert.equal(vm.runInContext('a.name',ctx),'新节点名称');
+ assert.equal(el('#wf-node-name').value,'新节点名称');
+ vm.runInContext('editor.readOnly=true;renderWorkflowInspector(editor)',ctx);
+ assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-node-name"/);
+ assert.match(el('#wf-inspector').innerHTML,/<h2[^>]*>新节点名称<\/h2>/);
 });
