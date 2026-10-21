@@ -1047,3 +1047,15 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 用户发现准备节点只展示成功去向和“配置规则交接”按钮，而固定测试节点直接显示数据来源及规则。根因是界面依据是否已存 `rule_handoff` 分成两种交互。现将旧 next/failed 路径按等价条件投影到同一规则表单，浏览/关闭/只读查看不修改图；实际编辑后才写入当前草稿，显式保存后生效。保留目标、说明及原结果文件收集设置；无法识别的自定义路径不猜条件或丢弃，显示问题供核对。
 
 实现 `661b574bc068df99a2b11981d3298f7129046eb5` 已通过标准 build/install 部署112:8795并核health同版。复现检查先红后绿；55项页面/规则回归、18项图模型/面板回归及真实浏览器配置往返14.781s通过。112正式图上准备/测试两个节点均直接显示数据来源及规则；准备节点实际试算0进入研发、2停止，未保存图或启动Run。等待Run、正式图revision5、私有配置和三个已释放Run的产物摘要/下载保持；无本地常驻服务、无定时恢复。截图 `output/playwright/unified-handoff-{prepare,tests}.png`，本轮日志 `.data/opensandbox-verification/unified-execution-handoff/`。此次为平台UI与配置保存验证，不宣称新增产品整链验收。
+
+
+### 2026-10-21 · 删除执行节点旧交接配置与兼容投影
+
+用户明确要求除非另行指定，不保留旧配置兼容分支。此前 `661b574` 的 next/failed 表单投影方案被本次实现取代；历史记录保留，不代表继续支持旧执行方式。工程约定已写入 AGENTS.md。
+
+- 实现 `3cb6b90a35c45cfaf9aa6c820fd943115a94b817` 删除执行节点旧配置投影和隐式成功/失败跳转，新增、保存与执行均要求显式 `rule_handoff`；缺失时明确拒绝，不从连线猜条件。Agent、人工确认与外部 Connector 的原有交接语义不在此次删除范围。
+- 标准交付模板及 OpenSandbox 示例已同步显式退出码规则。112 正式工作流 `83f08f81f7040fcd0c12e6ff4e2acd2d` 经 revision 校验 API 从5更新到6：prepare的 `$ == 0`→development、publish的 `$ == 0`→done；未匹配停止，保留原意。冻结等待Run未改写或恢复。
+- 标准 `scripts/verify.sh` 最终 exit0，日志130021 bytes / SHA-256 `45045ab64e02ef68bf482a6697deb70f0c8890e411804801d39ad29b6c75587e`，含133模板测试21.166s、实际浏览器配置往返13.717s、go vet、完整Go race（平台85.167s）与构建。前期测试夹具重复字段、浏览器目标/选择器修正及未设PYTHONPATH的单独调用失败均保留原日志，未当产品失败或通过。
+- 已标准 build/install 到112:8795，health同版，二进制SHA-256 `7e7041b062af9cfa9ab5771a67a02487d2f1403366a333d50beee95eb8cf2cb1`。原私有配置、凭据、等待/完成Run及三个已释放Run的归档和下载保持。
+- 正式隔离Harness Run [`f3fe21067c69b8cbb4d2f8a375deb049`](http://10.1.20.112:8795/workflow-runs/f3fe21067c69b8cbb4d2f8a375deb049) completed：缺规则的旧配置先被400拒绝；有效配置用同一共享工作区真实执行exit0→下一节点、exit7→结束，重复请求返回同一Run。正式释放沙箱后result.txt仍可下载且为verified；临时验证工作流已正式删除。此为平台规则与产物能力回归，不是Model Relay产品验收。
+- 112真实浏览器检查准备、固定测试、发布三个节点均直接显示数据来源与条件规则，无“配置规则交接”按钮，未保存或修改图。证据位于忽略目录 `.data/opensandbox-verification/explicit-execution-rules/`、`output/playwright/explicit-rules-prepare.png`。未恢复定时任务、未启动本机常驻平台、未创建平台PR或合并main。
