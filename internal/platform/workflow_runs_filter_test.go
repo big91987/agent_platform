@@ -112,3 +112,27 @@ func TestRevokedWorkflowStillListsOwnedRunHistory(t *testing.T) {
 		t.Fatalf("other user's history leaked: %d %s", response.Code, response.Body.String())
 	}
 }
+
+func TestWorkflowRunPagingOrdersVariableTimestampPrecision(t *testing.T) {
+	s := testStore(t)
+	c, w, old := runFixture(t, s)
+	newer, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, WorkspacePath: t.TempDir(), Input: "new"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both timestamps are emitted by RFC3339Nano. The terminal Z must not
+	// sort a shorter fractional value after a more recent, longer fraction.
+	for id, stamp := range map[string]string{old.ID: "2026-10-21T07:00:00.1938Z", newer.ID: "2026-10-21T07:00:00.193808Z"} {
+		if _, err = s.DB.Exec(`UPDATE workflow_runs SET created=? WHERE id=?`, stamp, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := s.WorkflowRunsPage(c, w.ID, "")
+	if err != nil || len(page) != 2 || page[0].ID != newer.ID {
+		t.Fatalf("timestamp ordering: %+v %v", page, err)
+	}
+	page, err = s.WorkflowRunsPage(c, w.ID, newer.ID)
+	if err != nil || len(page) != 1 || page[0].ID != old.ID {
+		t.Fatalf("timestamp cursor: %+v %v", page, err)
+	}
+}

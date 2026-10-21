@@ -6,7 +6,7 @@ function workflowRuleSchema(n){
  const key=n.execution.mode==='mcp'?'is_error':'exit_code';
  return {type:'object',properties:{output:{type:'object',properties:{[key]:{type:key==='is_error'?'boolean':'integer'},result:p.schema},required:[key,'result']}},required:['output']};
 }
-function workflowRuleForEdge(n,edge){if(!n.rule_handoff)return null;const p=n.rule_handoff;if(edge.route==='rule_read')return p.on_read;if(edge.route==='rule_parse')return p.on_parse;if(edge.route==='rule_invalid')return p.on_invalid;if(edge.route==='rule_expression')return p.on_expression;const i=Number(edge.route.slice(5))-1;return p.rules[i]||null}
+function workflowRuleForEdge(n,edge){if(!n.rule_handoff)return null;const p=n.rule_handoff;if(edge.route==='rule_execution')return n.execution?.on_error;if(edge.route==='rule_read')return p.on_read;if(edge.route==='rule_parse')return p.on_parse;if(edge.route==='rule_invalid')return p.on_invalid;if(edge.route==='rule_expression')return p.on_expression;const i=Number(edge.route.slice(5))-1;return p.rules[i]||null}
 function workflowRuleVariables(n,schema=workflowRuleSchema(n)){
  const vars=[];
  function walk(s,path){if(!s||typeof s!=='object')return;if(s.type&&path)vars.push({path,type:s.type,values:s.enum||(s.type==='boolean'?[true,false]:[])});for(const [k,v]of Object.entries(s.properties||{}))if(/^[A-Za-z_][A-Za-z0-9_]*$/.test(k))walk(v,path?path+'.'+k:k)}

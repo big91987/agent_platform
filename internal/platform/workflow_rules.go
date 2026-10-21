@@ -96,6 +96,10 @@ func ruleEdges(n WorkflowNode) []WorkflowEdge {
 			edges = append(edges, WorkflowEdge{Source: n.ID, Route: "rule_" + v.key, Target: v.f.Target, Mode: "automatic", Title: v.f.Title, Description: v.f.Content})
 		}
 	}
+	if n.Execution != nil && n.Execution.OnError != nil && n.Execution.OnError.Action == "route" {
+		f := n.Execution.OnError
+		edges = append(edges, WorkflowEdge{Source: n.ID, Route: "rule_execution", Target: f.Target, Mode: "automatic", Title: f.Title, Description: f.Content})
+	}
 	return edges
 }
 func (w *Workflow) projectRuleEdges() {
@@ -221,7 +225,14 @@ func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 			return fmt.Errorf("rule %d: %w", i+1, err)
 		}
 	}
-	for _, item := range ruleFailures(p) {
+	failures := ruleFailures(p)
+	if n.Execution.OnError != nil {
+		failures = append(failures, struct {
+			key string
+			f   WorkflowRuleFailure
+		}{"execution", *n.Execution.OnError})
+	}
+	for _, item := range failures {
 		f := item.f
 		if f.Action != "stop" && f.Action != "route" {
 			return errors.New("choose stop or route for rule errors")

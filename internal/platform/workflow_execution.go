@@ -27,7 +27,13 @@ type ExecutionOutput struct {
 	Source string `json:"source"`
 	Path   string `json:"path,omitempty"`
 }
+type ExecutionRetry struct {
+	MaxRetries      int `json:"max_retries"`
+	IntervalSeconds int `json:"interval_seconds"`
+}
 type WorkflowExecution struct {
+	Retry     *ExecutionRetry             `json:"retry,omitempty"`
+	OnError   *WorkflowRuleFailure        `json:"on_error,omitempty"`
 	Artifacts []string                    `json:"artifacts,omitempty"`
 	Output    *ExecutionOutput            `json:"output,omitempty"`
 	Language  string                      `json:"language,omitempty"`
@@ -51,6 +57,9 @@ type ExecutionBinding struct {
 func validateWorkflowExecution(v *WorkflowExecution) error {
 	if v == nil {
 		return errors.New("select a supported execution mode")
+	}
+	if v.Retry != nil && (v.Retry.MaxRetries < 0 || v.Retry.MaxRetries > 10 || v.Retry.IntervalSeconds < 1 || v.Retry.IntervalSeconds > 3600) {
+		return errors.New("execution retries must be 0–10 with a 1–3600 second interval")
 	}
 	if len(v.Artifacts) > 0 {
 		if v.Mode == "mcp" {
@@ -262,6 +271,15 @@ func (e *WorkflowEngine) executionAccess(r WorkflowRun, node WorkflowNode) (Regi
 // The action intent is committed before starting external work. Both legacy
 // connectors and execution nodes use the same per-step receipt and stop path.
 func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step WorkflowStep, node WorkflowNode) error {
+	if step.RetryAt != "" {
+		at, err := time.Parse(time.RFC3339Nano, step.RetryAt)
+		if err != nil {
+			return err
+		}
+		if time.Now().Before(at) {
+			return nil
+		}
+	}
 	if node.RuleHandoff == nil {
 		return errors.New("execution node requires rule_handoff; update the workflow before starting a new run")
 	}
@@ -318,7 +336,7 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 		var callErr error
 		if node.Execution.Mode == "mcp" {
 			result, err := callMCPTool(callCtx, server.Connection, request.Tool, request.Arguments)
-			receipt = ConnectorReceipt{Kind: "mcp", MCP: result}
+			receipt = ConnectorReceipt{Kind: "mcp", MCP: result, RetrySafe: mcpNotCalled(err)}
 			callErr = err
 			if err == nil && node.Execution.Output != nil && node.Execution.Output.Source == "tool" {
 				if result == nil || result.StructuredContent == nil {
@@ -433,6 +451,12 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	defer func() {
 		out.Log = log.finishArchive()
 		out.Output = log.String()
+		if callErr != nil && out.Log != nil && !errors.Is(callErr, context.Canceled) {
+			var quiet bool
+			if e.store.DB.QueryRow(`SELECT command_quiet FROM workflow_connector_actions WHERE run_id=? AND seq=?`, r.ID, step.Seq).Scan(&quiet) == nil {
+				out.RetrySafe = quiet
+			}
+		}
 		if out.Log == nil {
 			callErr = errors.Join(callErr, errors.New("sandbox execution log could not be retained; inspect actual effects before explicitly returning"))
 		}

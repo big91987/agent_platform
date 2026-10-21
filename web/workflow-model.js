@@ -45,7 +45,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     this.value.edges=this.value.edges.filter(e=>!this.node(e.source)?.rule_handoff);
     for(const n of this.value.nodes){const p=n.rule_handoff;if(!p)continue;
       p.rules.forEach((r,i)=>{if(r.target)this.value.edges.push({source:n.id,route:'rule_'+(i+1),target:r.target,mode:'automatic',title:r.title,description:r.content||''})});
-      for(const [key,f]of [['invalid',p.on_invalid],['expression',p.on_expression],['read',p.on_read],['parse',p.on_parse]])if(f?.action==='route'&&f.target)this.value.edges.push({source:n.id,route:'rule_'+key,target:f.target,mode:'automatic',title:f.title,description:f.content||''});
+      for(const [key,f]of [['invalid',p.on_invalid],['expression',p.on_expression],['read',p.on_read],['parse',p.on_parse],['execution',n.execution?.on_error]])if(f?.action==='route'&&f.target)this.value.edges.push({source:n.id,route:'rule_'+key,target:f.target,mode:'automatic',title:f.title,description:f.content||''});
     }
   }
 
@@ -69,7 +69,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   }
   remove(id) {
     this.value.nodes=this.value.nodes.filter(n=>n.id!==id);
-    for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression,n.rule_handoff.on_read,n.rule_handoff.on_parse])if(f?.target===id)f.target='';}
+    for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression,n.rule_handoff.on_read,n.rule_handoff.on_parse,n.execution?.on_error])if(f?.target===id)f.target='';}
     this.value.edges=this.value.edges.filter(e=>e.source!==id&&e.target!==id);
     this.value.start_nodes=this.value.start_nodes.filter(n=>n!==id);
     this.syncRuleEdges();
@@ -121,6 +121,8 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     }
     if(node.kind==='execution'){
       const v=node.execution;
+      if(v?.retry&&(!Number.isInteger(v.retry.max_retries)||v.retry.max_retries<0||v.retry.max_retries>10||!Number.isInteger(v.retry.interval_seconds)||v.retry.interval_seconds<1||v.retry.interval_seconds>3600))throw new Error('重试次数须为 0–10 次，间隔须为 1–3600 秒');
+      const f=v?.on_error;if(f&&(!['stop','route'].includes(f.action)||f.action==='stop'&&f.target||f.action==='route'&&(!this.node(f.target)||f.target===node.id||!f.title?.trim()||f.title.length>200||(f.content||'').length>4000)))throw new Error('请配置执行异常处理方式及目标');
       if(!v||!['code','command','mcp'].includes(v.mode))throw new Error('请选择执行方式');
       if(v.artifacts!=null){if(!Array.isArray(v.artifacts)||v.artifacts.length>256||v.artifacts.some(p=>typeof p!=='string'||p.length>4096||!p||p.startsWith('/')||p.includes('\\')||p.includes('\0')||p==='AGENTS.md'||p.split('/').some(v=>!v||v.startsWith('.')||v==='node_modules')))throw new Error('留存产物须为工作区相对文件路径，每行一个，最多 256 件');if(v.mode==='mcp'&&v.artifacts.length)throw new Error('MCP 节点不配置工作区文件留存');}
       if(v.mode==='mcp'){

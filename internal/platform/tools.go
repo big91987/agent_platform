@@ -281,7 +281,7 @@ func connectMCP(ctx context.Context, c MCPConnection) (*mcp.ClientSession, error
 	client := mcp.NewClient(&mcp.Implementation{Name: "agent-platform", Version: "0.1.0"}, nil)
 	session, err := client.Connect(ctx, transport, nil)
 	if err != nil {
-		return nil, errors.New("MCP connection failed; check address, command and credentials")
+		return nil, &mcpBeforeCallError{errors.Join(errors.New("MCP connection failed; check address, command and credentials"), ctx.Err())}
 	}
 	return session, nil
 }

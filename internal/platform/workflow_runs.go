@@ -45,6 +45,8 @@ func (r *NodeResult) UnmarshalJSON(data []byte) error {
 }
 
 type WorkflowStep struct {
+	RetryAttempt        int               `json:"retry_attempt,omitempty"`
+	RetryAt             string            `json:"retry_at,omitempty"`
 	ExecutionReceipt    *ConnectorReceipt `json:"execution_receipt,omitempty"`
 	ExecutionDispatched bool              `json:"execution_dispatched,omitempty"`
 	WaitKind            string            `json:"wait_kind,omitempty"`
@@ -156,7 +158,20 @@ func (s *Store) initWorkflowRuns() error {
 	if n == 0 {
 		_, e = s.DB.Exec(`ALTER TABLE workflow_runs ADD COLUMN archive_artifacts INTEGER NOT NULL DEFAULT 0`)
 	}
-	return e
+	if e != nil {
+		return e
+	}
+	for _, col := range []struct{ name, def string }{{"retry_attempt", "INTEGER NOT NULL DEFAULT 0"}, {"retry_at", "TEXT NOT NULL DEFAULT ''"}} {
+		if e = s.DB.QueryRow(`SELECT count(*) FROM pragma_table_info('workflow_steps') WHERE name=?`, col.name).Scan(&n); e != nil {
+			return e
+		}
+		if n == 0 {
+			if _, e = s.DB.Exec("ALTER TABLE workflow_steps ADD COLUMN " + col.name + " " + col.def); e != nil {
+				return e
+			}
+		}
+	}
+	return nil
 }
 func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	var r WorkflowRun
@@ -222,7 +237,7 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	if e != nil {
 		return r, e
 	}
-	rows, e := tx.Query(`SELECT s.seq,s.node_id,s.status,s.conversation_id,s.result,s.error,s.created,s.updated,COALESCE(a.receipt,''),a.request IS NOT NULL,COALESCE(c.wait_kind,''),COALESCE(c.wait_reason,''),COALESCE(c.continuations,0) FROM workflow_steps s LEFT JOIN workflow_connector_actions a ON a.run_id=s.run_id AND a.seq=s.seq LEFT JOIN workflow_node_controls c ON c.run_id=s.run_id AND c.seq=s.seq WHERE s.run_id=? ORDER BY s.seq`, id)
+	rows, e := tx.Query(`SELECT s.seq,s.node_id,s.status,s.conversation_id,s.result,s.error,s.created,s.updated,COALESCE(a.receipt,''),a.request IS NOT NULL,COALESCE(c.wait_kind,''),COALESCE(c.wait_reason,''),COALESCE(c.continuations,0),s.retry_attempt,s.retry_at FROM workflow_steps s LEFT JOIN workflow_connector_actions a ON a.run_id=s.run_id AND a.seq=s.seq LEFT JOIN workflow_node_controls c ON c.run_id=s.run_id AND c.seq=s.seq WHERE s.run_id=? ORDER BY s.seq`, id)
 	if e != nil {
 		return r, e
 	}
@@ -231,7 +246,7 @@ func loadWorkflowRun(tx *sql.Tx, id string) (WorkflowRun, error) {
 	for rows.Next() {
 		var step WorkflowStep
 		var result, receipt string
-		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated, &receipt, &step.ConnectorDispatched, &step.WaitKind, &step.WaitReason, &step.Continuations); e != nil {
+		if e = rows.Scan(&step.Seq, &step.NodeID, &step.Status, &step.ConversationID, &result, &step.Error, &step.Created, &step.Updated, &receipt, &step.ConnectorDispatched, &step.WaitKind, &step.WaitReason, &step.Continuations, &step.RetryAttempt, &step.RetryAt); e != nil {
 			return r, e
 		}
 		if receipt != "" {
@@ -279,8 +294,8 @@ func (s *Store) WorkflowRunGroups(c Caller) ([]WorkflowRunGroup, error) {
 	rows, err := s.DB.Query(`SELECT r.workflow_id,r.definition FROM workflow_runs r
  WHERE (r.owner=? OR ?) AND r.id=(SELECT x.id FROM workflow_runs x
  WHERE x.workflow_id=r.workflow_id AND (x.owner=? OR ?)
- ORDER BY x.created DESC,x.id DESC LIMIT 1)
- ORDER BY r.created DESC,r.id DESC`, c.UserID, c.Admin, c.UserID, c.Admin)
+ ORDER BY rtrim(x.created,'Z') DESC,x.id DESC LIMIT 1)
+ ORDER BY rtrim(r.created,'Z') DESC,r.id DESC`, c.UserID, c.Admin, c.UserID, c.Admin)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +326,9 @@ func (s *Store) WorkflowRunsFor(c Caller, workflowID string) ([]WorkflowRun, err
 	return s.WorkflowRunsPage(c, workflowID, "")
 }
 func (s *Store) WorkflowRunsPage(c Caller, workflowID, before string) ([]WorkflowRun, error) {
-	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE (owner=? OR ?) AND (?='' OR workflow_id=?) AND (?='' OR (created,id)<(SELECT created,id FROM workflow_runs WHERE id=?)) ORDER BY created DESC,id DESC LIMIT 200`, c.UserID, c.Admin, workflowID, workflowID, before, before)
+	// Stored times are UTC RFC3339Nano. Remove the trailing Z for comparisons:
+	// a shorter fractional prefix is earlier, whereas Z sorts after every digit.
+	rows, e := s.DB.Query(`SELECT id FROM workflow_runs WHERE (owner=? OR ?) AND (?='' OR workflow_id=?) AND (?='' OR (rtrim(created,'Z'),id)<(SELECT rtrim(created,'Z'),id FROM workflow_runs WHERE id=?)) ORDER BY rtrim(created,'Z') DESC,id DESC LIMIT 200`, c.UserID, c.Admin, workflowID, workflowID, before, before)
 	if e != nil {
 		return nil, e
 	}

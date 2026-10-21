@@ -162,6 +162,7 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 			}
 		}
 	}
+	executionErr := actionErr
 	if actionErr == nil && ruleBased {
 		if len(receipt.Result) == 0 && receipt.ResultError == "" && (node.Execution.Output == nil || node.Execution.Output.Source == "none") {
 			receipt.Result = json.RawMessage(`{}`)
@@ -176,6 +177,34 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 	if _, err = tx.Exec(`UPDATE workflow_connector_actions SET receipt=?,error=? WHERE run_id=? AND seq=?`, string(raw), message, r.ID, step.Seq); err != nil {
 		return err
 	}
+	// Retry is a new step with its own intent, log and receipt. The failed
+	// attempt and the scheduled retry commit atomically; each consumes the Run limit.
+	if ruleBased && executionErr != nil && !errors.Is(executionErr, context.Canceled) && receipt.RetrySafe && (current.Status == "running" || current.Status == "waiting") {
+		policy := node.Execution.Retry
+		if policy != nil && step.RetryAttempt < policy.MaxRetries {
+			if current.atExecutionLimit() {
+				message += "; " + workflowExecutionLimitError
+			} else {
+				if _, err = tx.Exec(`UPDATE workflow_steps SET status='failed',error=?,updated=? WHERE run_id=? AND seq=?`, message, now(), r.ID, step.Seq); err != nil {
+					return err
+				}
+				current.Seq++
+				if err = insertWorkflowStep(tx, current, node.ID); err != nil {
+					return err
+				}
+				at := time.Now().UTC().Add(time.Duration(policy.IntervalSeconds) * time.Second).Format(time.RFC3339Nano)
+				if _, err = tx.Exec(`UPDATE workflow_steps SET retry_attempt=?,retry_at=? WHERE run_id=? AND seq=?`, step.RetryAttempt+1, at, r.ID, current.Seq); err != nil {
+					return err
+				}
+				return tx.Commit()
+			}
+		} else if failureOrStop(node.Execution.OnError).Action == "route" {
+			route, summary, actionErr = "rule_execution", message, nil
+			if _, err = tx.Exec(`UPDATE workflow_steps SET error=? WHERE run_id=? AND seq=?`, message, r.ID, step.Seq); err != nil {
+				return err
+			}
+		}
+	}
 	// Receipt, result and failure are committed together. Stop/revocation retains
 	// the actual outcome but cannot turn into permission to advance.
 	if actionErr != nil {
@@ -189,7 +218,7 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		}
 	} else {
 		result := NodeResult{Route: route, Summary: summary}
-		if node.Execution != nil {
+		if node.Execution != nil && executionErr == nil {
 			result.Artifacts = append(result.Artifacts, node.Execution.Artifacts...)
 		}
 		if ruleBased {

@@ -9,6 +9,15 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type mcpBeforeCallError struct{ error }
+
+func (e *mcpBeforeCallError) Unwrap() error { return e.error }
+
+func mcpNotCalled(err error) bool {
+	var before *mcpBeforeCallError
+	return errors.As(err, &before) && !errors.Is(err, context.Canceled)
+}
+
 // callMCPTool makes one call. A disconnected response is not permission to
 // repeat a possibly successful external write. Business failures remain raw
 // MCP results; dispatch owns their workflow routing and persistence.

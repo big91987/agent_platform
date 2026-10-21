@@ -26,7 +26,7 @@ func executionTestRules(mode, target string) *WorkflowRules {
 	return p
 }
 
-func executionFixture(t *testing.T, s *Store, handler func(context.Context, string) (*mcp.CallToolResult, any, error)) (Caller, Workflow, string, RegisteredToolServer) {
+func executionFixture(t *testing.T, s *Store, handler func(context.Context, string) (*mcp.CallToolResult, any, error), wrappers ...func(http.Handler) http.Handler) (Caller, Workflow, string, RegisteredToolServer) {
 	t.Helper()
 	if err := s.initAuth("password"); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,11 @@ func executionFixture(t *testing.T, s *Store, handler func(context.Context, stri
 	}) (*mcp.CallToolResult, any, error) {
 		return handler(ctx, in.Text)
 	})
-	remote := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil))
+	var transport http.Handler = mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
+	for _, wrap := range wrappers {
+		transport = wrap(transport)
+	}
+	remote := httptest.NewServer(transport)
 	t.Cleanup(remote.Close)
 	config, err := s.SaveToolServer(RegisteredToolServer{ID: "execution-test", Name: "Execution test", Enabled: true, Connection: MCPConnection{URL: remote.URL}})
 	if err != nil {
@@ -266,6 +270,7 @@ func TestWorkflowExecutionMCPBusinessFailureRoutesAndKeepsContent(t *testing.T) 
 	c, w, dir, _ := executionFixture(t, s, func(context.Context, string) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: "quota denied"}}}, nil, nil
 	})
+	w.Nodes[0].Execution.Retry = &ExecutionRetry{MaxRetries: 2, IntervalSeconds: 1}
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "review", Name: "Review", Kind: "approval"})
 	w.Nodes[0].RuleHandoff.Rules = append(w.Nodes[0].RuleHandoff.Rules, WorkflowRule{Title: "失败", When: "output.is_error == true", Target: "review"})
 	w.Edges = append(w.Edges, WorkflowEdge{Source: "review", Route: "next", Target: "done"})
