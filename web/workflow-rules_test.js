@@ -37,16 +37,3 @@ test('legacy draft displays a complete equivalent schema without changing saved 
  const schema=run('workflowRuleSchema(legacy)');assert.equal(schema.properties.output.properties.exit_code.type,'integer');assert.equal(schema.properties.output.properties.result.properties.score.type,'number');
  assert.equal(run('legacy.rule_handoff').schema_scope,undefined);
 });
-
-test('old route projection preserves result collection and rejects unknown routes without inventing conditions',()=>{
- ctx.source={id:'prepare',execution:{mode:'code',language:'python',code:'print(0)',output:{source:'file',path:'report.json'}}};
- ctx.edges=[{source:'prepare',route:'next',target:'dev',description:'继续'}];
- const before=JSON.stringify(ctx.source);
- const view=run('workflowRuleView({graph:{value:{edges}}},source)');
- assert.deepEqual(view.execution.output,ctx.source.execution.output);
- assert.equal(view.rule_handoff.rules[0].when,'output.exit_code == 0');
- assert.deepEqual(view.rule_handoff.schema.properties.output.properties.result,{});
- assert.equal(JSON.stringify(ctx.source),before);
- ctx.edges.push({source:'prepare',route:'custom-result',target:'review'});
- assert.equal(run('workflowRuleView({graph:{value:{edges}}},source)').rule_handoff,undefined);
-});

@@ -234,7 +234,7 @@ const {chromium}=require('playwright');
   const arranged=await page.evaluate(async id=>(await fetch('/api/workflows/'+id)).json(),fixture.workflow);
   assert.notEqual(arranged.nodes[0].x,arranged.nodes[1].x,'explicit arrangement persists');
   // A multi-row graph with large saved coordinates must use the same complete canvas.
-  const large={...arranged,entry:'stage0',nodes:Array.from({length:10},(_,i)=>({...original.nodes[i===9?1:0],id:'stage'+i,name:'阶段 '+(i+1),x:7000+(i%3)*300,y:7000+Math.floor(i/3)*180})),edges:Array.from({length:9},(_,i)=>({...original.edges[0],source:'stage'+i,target:'stage'+(i+1)}))};
+  const large={...arranged,entry:'stage0',nodes:Array.from({length:10},(_,i)=>{const n={...structuredClone(original.nodes[i===9?1:0]),id:'stage'+i,name:'阶段 '+(i+1),x:7000+(i%3)*300,y:7000+Math.floor(i/3)*180};if(n.kind==='execution')n.rule_handoff.rules[0].target='stage'+(i+1);return n}),edges:Array.from({length:9},(_,i)=>({...original.edges[0],source:'stage'+i,target:'stage'+(i+1)}))};
   await page.evaluate(async w=>{const r=await fetch('/api/workflows/'+w.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:JSON.stringify(w)});if(!r.ok)throw Error('large fixture failed')},large);
   await page.reload();await page.locator('#wf-stage').waitFor();
   for(const width of [1440,1024,390]){
@@ -280,7 +280,9 @@ const {chromium}=require('playwright');
    await page.reload();await page.locator('[data-node="call"] .wf-node-body').click();
   };
   console.log('phase: code/command configurations');
+  await page.locator('#wf-tab-handoff').click();await page.getByRole('button',{name:'删除规则',exact:true}).click();await page.locator('#wf-tab-config').click();
   await page.getByLabel('执行方式',{exact:true}).selectOption('code');
+  await page.locator('#wf-tab-handoff').click();await page.locator('#wf-rule-add').click();await page.getByLabel('连线标题',{exact:true}).fill('完成');await page.getByLabel('条件表达式',{exact:true}).fill('$ == 0');await page.locator('[data-rule-index="0"][data-rule-field="target"]').selectOption('done');await page.locator('#wf-tab-config').click();
   await page.getByLabel('代码',{exact:true}).fill("print('browser literal $(no shell)')");
   await page.getByText('留存产物',{exact:true}).click();
   await page.getByLabel('文件清单',{exact:true}).fill('reports/result.json\nreports/dashboard.html');
@@ -327,8 +329,8 @@ const {chromium}=require('playwright');
   await page.locator('#wf-rule-json').uncheck();await rawCondition.fill('$ == "PASS"');await saveReload();await page.locator('#wf-tab-handoff').click();assert.equal(await page.locator('#wf-rule-schema').count(),0);assert.equal(await page.locator('#wf-rule-json').isChecked(),false);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:fixture.screenshot.replace('.png','-selected-'+width+'.png'),fullPage:true})}
   await page.setViewportSize({width:1440,height:900});
-  // Restore the isolated fixture through the API before checking the independent legacy MCP contract.
-  await page.evaluate(async id=>{const w=await(await fetch('/api/workflows/'+id)).json();delete w.nodes[0].rule_handoff;delete w.nodes[0].execution.output;w.edges=[{source:'call',target:'done',route:'next',mode:'automatic'}];const r=await fetch('/api/workflows/'+id,{method:'PUT',headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:JSON.stringify(w)});if(!r.ok)throw Error(await r.text())},fixture.workflow);
+  // Restore a valid explicit MCP policy before checking the tool contract.
+  await page.evaluate(async original=>{const w=await(await fetch('/api/workflows/'+original.id)).json();w.nodes[0]=original.nodes[0];w.edges=original.edges;const r=await fetch('/api/workflows/'+w.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Platform-Request':'1'},body:JSON.stringify(w)});if(!r.ok)throw Error(await r.text())},original);
   await page.reload();await page.locator('[data-node="call"] .wf-node-body').click();
   await page.getByLabel('执行方式',{exact:true}).selectOption('mcp');
   await page.getByLabel('工具服务',{exact:true}).selectOption('execution-test');

@@ -16,6 +16,16 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func executionTestRules(mode, target string) *WorkflowRules {
+	p := &WorkflowRules{SchemaScope: "value", Rules: []WorkflowRule{{Title: "完成", When: "$ == 0", Target: target}}, OnInvalid: WorkflowRuleFailure{Action: "stop"}, OnExpression: WorkflowRuleFailure{Action: "stop"}}
+	if mode == "mcp" {
+		p.SchemaScope = "input"
+		p.Schema = json.RawMessage(`{"type":"object","properties":{"output":{"type":"object","properties":{"is_error":{"type":"boolean"},"result":{}},"required":["is_error"]}},"required":["output"]}`)
+		p.Rules[0].When = "output.is_error == false"
+	}
+	return p
+}
+
 func executionFixture(t *testing.T, s *Store, handler func(context.Context, string) (*mcp.CallToolResult, any, error)) (Caller, Workflow, string, RegisteredToolServer) {
 	t.Helper()
 	if err := s.initAuth("password"); err != nil {
@@ -50,8 +60,8 @@ func executionFixture(t *testing.T, s *Store, handler func(context.Context, stri
 		t.Fatal(err)
 	}
 	w, err := s.SaveWorkflow(c, Workflow{Name: "MCP execution", Enabled: true, Entry: "call", MaxSteps: 10, ContextVersion: 2,
-		Nodes: []WorkflowNode{{ID: "call", Name: "Deliver", Kind: "execution", X: 40, Y: 40, Execution: &WorkflowExecution{Mode: "mcp", ServerID: config.ID, Tool: "deliver", Arguments: json.RawMessage(`{"text":"literal $(no shell)"}`)}}, {ID: "done", Name: "Done", Kind: "end", X: 340, Y: 40}},
-		Edges: []WorkflowEdge{{Source: "call", Route: "next", Target: "done"}},
+		Nodes: []WorkflowNode{{ID: "call", Name: "Deliver", Kind: "execution", RuleHandoff: executionTestRules("mcp", "done"), X: 40, Y: 40, Execution: &WorkflowExecution{Mode: "mcp", ServerID: config.ID, Tool: "deliver", Arguments: json.RawMessage(`{"text":"literal $(no shell)"}`)}}, {ID: "done", Name: "Done", Kind: "end", X: 340, Y: 40}},
+		Edges: []WorkflowEdge{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -107,13 +117,14 @@ func TestWorkflowExecutionMCPReferencesTaskAndLatestNodeResult(t *testing.T) {
 	if err := json.Unmarshal(first, w.Nodes[0].Execution); err != nil {
 		t.Fatal(err)
 	}
-	second := WorkflowNode{ID: "consume", Name: "Consume result", Kind: "execution", Execution: &WorkflowExecution{}}
+	second := WorkflowNode{ID: "consume", Name: "Consume result", Kind: "execution", RuleHandoff: executionTestRules("mcp", "done"), Execution: &WorkflowExecution{}}
 	raw, _ := json.Marshal(map[string]any{"mode": "mcp", "server_id": config.ID, "tool": "deliver", "arguments": map[string]any{}, "bindings": map[string]any{"text": map[string]any{"node": "call", "path": "/execution_receipt/mcp/structuredContent/text"}}})
 	if err := json.Unmarshal(raw, second.Execution); err != nil {
 		t.Fatal(err)
 	}
 	w.Nodes = append(w.Nodes, second)
-	w.Edges = []WorkflowEdge{{Source: "call", Route: "next", Target: "consume"}, {Source: "consume", Route: "next", Target: "done"}}
+	w.Nodes[0].RuleHandoff.Rules[0].Target = "consume"
+	w.Edges = nil
 	w, err := s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)
@@ -256,7 +267,8 @@ func TestWorkflowExecutionMCPBusinessFailureRoutesAndKeepsContent(t *testing.T) 
 		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: "quota denied"}}}, nil, nil
 	})
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "review", Name: "Review", Kind: "approval"})
-	w.Edges = append(w.Edges, WorkflowEdge{Source: "call", Route: "failed", Target: "review"}, WorkflowEdge{Source: "review", Route: "next", Target: "done"})
+	w.Nodes[0].RuleHandoff.Rules = append(w.Nodes[0].RuleHandoff.Rules, WorkflowRule{Title: "失败", When: "output.is_error == true", Target: "review"})
+	w.Edges = append(w.Edges, WorkflowEdge{Source: "review", Route: "next", Target: "done"})
 	w, err := s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)
@@ -266,7 +278,7 @@ func TestWorkflowExecutionMCPBusinessFailureRoutesAndKeepsContent(t *testing.T) 
 		t.Fatal(err)
 	}
 	r = waitConnectorRun(t, NewWorkflowEngine(s, nil, ""), r.ID, "waiting")
-	if r.Seq != 2 || r.Steps[0].Result.Route != "failed" || r.Steps[0].ExecutionReceipt.MCP.Content[0].(*mcp.TextContent).Text != "quota denied" {
+	if r.Seq != 2 || r.Steps[0].Result.Route != "rule_2" || r.Steps[0].ExecutionReceipt.MCP.Content[0].(*mcp.TextContent).Text != "quota denied" {
 		t.Fatalf("lost failure routing: %+v", r)
 	}
 }
@@ -316,7 +328,7 @@ func TestWorkflowExecutionMCPResultReachesNativeInputAfterStoreRestart(t *testin
 	})
 	a := testAgent(t, s)
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "reader", Name: "Review", Kind: "agent", AgentID: a.ID})
-	w.Edges[0].Target = "reader"
+	w.Nodes[0].RuleHandoff.Rules[0].Target = "reader"
 	w.Edges = append(w.Edges, WorkflowEdge{Source: "reader", Route: "next", Target: "done", Mode: "automatic"})
 	w, err := s.SaveWorkflow(c, w)
 	if err != nil {
@@ -489,5 +501,16 @@ func TestExecutionEnvironmentCapturesSelectedValuesAndRedactsSplitWrites(t *test
 	log.Write([]byte("tured-private"))
 	if strings.Contains(log.String(), "captured-private") || !strings.Contains(log.String(), "[redacted]") {
 		t.Fatal("split secret was not redacted")
+	}
+}
+
+func TestExecutionRejectsMissingRulesBeforeDispatch(t *testing.T) {
+	n := WorkflowNode{ID: "call", Kind: "execution", Execution: &WorkflowExecution{Mode: "command", Command: "touch should-not-exist"}}
+	if err := validateRuleHandoff(Workflow{}, n); err == nil {
+		t.Fatal("missing rule policy accepted")
+	}
+	// No store or sandbox is needed: reject before any environment or action access.
+	if err := (&WorkflowEngine{}).startExecution(context.Background(), WorkflowRun{}, WorkflowStep{}, n); err == nil || !strings.Contains(err.Error(), "rule_handoff") {
+		t.Fatalf("old dispatch path remains: %v", err)
 	}
 }

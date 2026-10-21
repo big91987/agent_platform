@@ -262,6 +262,9 @@ func (e *WorkflowEngine) executionAccess(r WorkflowRun, node WorkflowNode) (Regi
 // The action intent is committed before starting external work. Both legacy
 // connectors and execution nodes use the same per-step receipt and stop path.
 func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step WorkflowStep, node WorkflowNode) error {
+	if node.RuleHandoff == nil {
+		return errors.New("execution node requires rule_handoff; update the workflow before starting a new run")
+	}
 	if !e.connectorQuiet(r.ID) || len(e.connectorJobs) >= 8 {
 		return nil
 	}

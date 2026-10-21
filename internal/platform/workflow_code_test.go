@@ -179,9 +179,9 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 	base = remote.URL
 	s.sandbox, _ = newOpenSandbox(base, "private-control-key", "python:3.12-slim", 600)
 	graph, err := s.SaveWorkflow(caller, Workflow{Name: "Run code then project command", Enabled: true, Environment: "opensandbox", ContextVersion: 2, MaxSteps: 10, Entry: "code", Nodes: []WorkflowNode{
-		{ID: "code", Name: "Write artifact", Kind: "execution", Execution: &WorkflowExecution{Mode: "code", Language: "python", EnvRefs: map[string]string{"GITHUB_TOKEN": "PROJECT_GITHUB_TOKEN"}, Code: `import json,os; assert len(os.environ["GITHUB_TOKEN"])==25; assert "UNRELATED_SECRET" not in os.environ; print(os.environ["GITHUB_TOKEN"]); inputs=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert len(inputs['input'])==60000; assert len(inputs['parameters']['parameter_30'])==4096; print(inputs['parameters']['commit']); open('proof.txt','w').write('shared proof')`}},
-		{ID: "command", Name: "Read same artifact", Kind: "execution", Execution: &WorkflowExecution{Mode: "command", Command: `python3 -c "import os,json; v=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert v['previous_results'][0]['execution_receipt']['sandbox']['id']=='execution-1'" && cat proof.txt; exit 7`}},
-		{ID: "review", Name: "Inspect nonzero result", Kind: "approval"}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "code", Route: "next", Target: "command"}, {Source: "command", Route: "next", Target: "done"}, {Source: "command", Route: "failed", Target: "review"}, {Source: "review", Route: "next", Target: "done"}}})
+		{ID: "code", Name: "Write artifact", Kind: "execution", RuleHandoff: executionTestRules("code", "command"), Execution: &WorkflowExecution{Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "python", EnvRefs: map[string]string{"GITHUB_TOKEN": "PROJECT_GITHUB_TOKEN"}, Code: `import json,os; assert len(os.environ["GITHUB_TOKEN"])==25; assert "UNRELATED_SECRET" not in os.environ; print(os.environ["GITHUB_TOKEN"]); inputs=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert len(inputs['input'])==60000; assert len(inputs['parameters']['parameter_30'])==4096; print(inputs['parameters']['commit']); open('proof.txt','w').write('shared proof')`}},
+		{ID: "command", Name: "Read same artifact", Kind: "execution", RuleHandoff: &WorkflowRules{SchemaScope: "value", Rules: []WorkflowRule{{Title: "完成", When: "$ == 0", Target: "done"}, {Title: "失败", When: "$ != 0", Target: "review"}}, OnInvalid: WorkflowRuleFailure{Action: "stop"}, OnExpression: WorkflowRuleFailure{Action: "stop"}}, Execution: &WorkflowExecution{Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: `python3 -c "import os,json; v=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert v['previous_results'][0]['execution_receipt']['sandbox']['id']=='execution-1'" && cat proof.txt; exit 7`}},
+		{ID: "review", Name: "Inspect nonzero result", Kind: "approval"}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "review", Route: "next", Target: "done"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 		t.Fatal("command replayed")
 	}
 	// A completed local goroutine does not prove the remote command stopped.
-	blocked, err := s.SaveWorkflow(caller, Workflow{Name: "Unknown command completion", Enabled: true, Environment: "opensandbox", ContextVersion: 2, MaxSteps: 10, Entry: "call", Nodes: []WorkflowNode{{ID: "call", Name: "Original command", Kind: "execution", Execution: &WorkflowExecution{Mode: "command", Command: "printf retained"}}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "call", Route: "next", Target: "done"}}})
+	blocked, err := s.SaveWorkflow(caller, Workflow{Name: "Unknown command completion", Enabled: true, Environment: "opensandbox", ContextVersion: 2, MaxSteps: 10, Entry: "call", Nodes: []WorkflowNode{{ID: "call", Name: "Original command", Kind: "execution", RuleHandoff: executionTestRules("command", "done"), Execution: &WorkflowExecution{Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: "printf retained"}}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 }
 
 func TestWorkflowExecutionRejectsMixedModesAndHostCode(t *testing.T) {
-	for _, value := range []*WorkflowExecution{{Mode: "code", Language: "go", Code: "main()"}, {Mode: "command", Command: "go test ./...", Code: "other instructions"}, {Mode: "code", Language: "python", Code: "print(1)", ServerID: "other-server"}} {
+	for _, value := range []*WorkflowExecution{{Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "go", Code: "main()"}, {Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: "go test ./...", Code: "other instructions"}, {Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "python", Code: "print(1)", ServerID: "other-server"}} {
 		if err := validateWorkflowExecution(value); err == nil {
 			t.Fatal("conflicting execution configuration accepted", value)
 		}
@@ -413,11 +413,11 @@ func TestWorkflowExecutionRejectsMixedModesAndHostCode(t *testing.T) {
 	s := testStore(t)
 	s.initAuth("password")
 	caller, _ := s.userCaller("admin")
-	_, err := s.SaveWorkflow(caller, Workflow{Name: "No host fallback", Enabled: true, Entry: "code", MaxSteps: 10, Nodes: []WorkflowNode{{ID: "code", Name: "Code", Kind: "execution", Execution: &WorkflowExecution{Mode: "code", Language: "python", Code: "print(1)"}}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "code", Route: "next", Target: "done"}}})
+	_, err := s.SaveWorkflow(caller, Workflow{Name: "No host fallback", Enabled: true, Entry: "code", MaxSteps: 10, Nodes: []WorkflowNode{{ID: "code", Name: "Code", Kind: "execution", RuleHandoff: executionTestRules("code", "done"), Execution: &WorkflowExecution{Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "python", Code: "print(1)"}}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{}})
 	if err == nil {
 		t.Fatal("code without isolated environment saved")
 	}
-	if err = validateWorkflowExecution(&WorkflowExecution{Mode: "command", Command: "go test ./..."}); err != nil {
+	if err = validateWorkflowExecution(&WorkflowExecution{Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: "go test ./..."}); err != nil {
 		t.Fatal("compiled repository language was restricted", err)
 	}
 }

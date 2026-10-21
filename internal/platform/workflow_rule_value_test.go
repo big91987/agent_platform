@@ -75,6 +75,17 @@ func TestSandboxDeliveryTemplateUsesSelectedExitCode(t *testing.T) {
 	if err = json.Unmarshal(raw, &w); err != nil {
 		t.Fatal(err)
 	}
+	for _, node := range w.Nodes {
+		if node.Kind != "execution" {
+			continue
+		}
+		if node.RuleHandoff == nil || node.Execution.Output == nil || node.Execution.Output.Source != "exit_code" {
+			t.Fatalf("execution %s lacks explicit source and rules", node.ID)
+		}
+		if err := validateRuleHandoff(w, node); err != nil {
+			t.Fatal(err)
+		}
+	}
 	n := w.node("tests")
 	if n.RuleHandoff == nil || n.Execution.Output == nil || n.Execution.Output.Source != "exit_code" {
 		t.Fatal("template still uses implicit success/failure paths")

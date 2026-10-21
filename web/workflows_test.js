@@ -335,25 +335,10 @@ test('elastic zoom is independent of event subdivision and reverses without hidd
  assert.ok(zoom(upper,-.1,1)<2);
 });
 
-test('stored execution routes open the same rule form without changing the graph until edited',()=>{
+test('execution missing its required handoff does not fabricate a policy from edges',()=>{
  const {ctx,el}=editorPage();
- vm.runInContext("var exec=graph.add('execution',0,0);exec.execution={mode:'code',language:'python',code:'print(1)'};graph.connect(exec.id,'next',b.id,'automatic','继续研发');graph.connect(exec.id,'failed',c.id,'automatic','处理失败');editor.selected=exec.id;editor.panelTab='handoff';var original=JSON.stringify(graph.value);renderWorkflowInspector(editor)",ctx);
- assert.match(el('#wf-inspector').innerHTML,/id="wf-result-source"/);
- assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-enable-rules"/);
- assert.match(el('#wf-inspector').innerHTML,/\$ == 0/);
- assert.match(el('#wf-inspector').innerHTML,/\$ != 0/);
- assert.equal(vm.runInContext('JSON.stringify(graph.value)===original',ctx),true);
- assert.equal(vm.runInContext('editor.dirty',ctx),false);
- el('#wf-result-source').onchange({target:{value:'stdout'}});
- assert.equal(vm.runInContext('exec.execution.output.source',ctx),'stdout');
- assert.equal(vm.runInContext('exec.rule_handoff.rules[0].target===b.id',ctx),true);
- assert.equal(vm.runInContext('exec.rule_handoff.rules[1].content',ctx),'处理失败');
- assert.equal(vm.runInContext('editor.dirty',ctx),true);
-});
-
-test('readonly execution route inspection shows rules without enabling edits or migrating stored configuration',()=>{
- const {ctx,el}=editorPage();
- vm.runInContext("var exec=graph.add('execution',0,0);exec.execution={mode:'command',command:'make verify'};graph.connect(exec.id,'next',b.id,'automatic');editor.selected=exec.id;editor.readOnly=true;var original=JSON.stringify(graph.value);renderWorkflowInspector(editor)",ctx);
- assert.match(el('#wf-inspector').innerHTML,/<fieldset disabled><div class="field"><label for="wf-result-source">/);
+ vm.runInContext("var exec=graph.add('execution',0,0);exec.execution={mode:'command',command:'make verify'};graph.connect(exec.id,'next',b.id,'automatic');editor.selected=exec.id;var original=JSON.stringify(graph.value);renderWorkflowInspector(editor)",ctx);
+ assert.match(el('#wf-inspector').innerHTML,/role="alert"/);
+ assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-result-source"|id="wf-enable-rules"/);
  assert.equal(vm.runInContext('JSON.stringify(graph.value)===original',ctx),true);
 });

@@ -133,7 +133,10 @@ func (e *WorkflowEngine) finishWorkflowAction(r WorkflowRun, step WorkflowStep, 
 		return ErrConflict
 	}
 	node := current.Definition.node(step.NodeID)
-	ruleBased := node.RuleHandoff != nil
+	ruleBased := node.Kind == "execution"
+	if ruleBased && node.RuleHandoff == nil {
+		actionErr = errors.Join(actionErr, errors.New("execution node requires rule_handoff"))
+	}
 	route, summary := "next", "GitHub 资源已确认："+receipt.URL
 	if actionErr == nil && (receipt.Kind == "command" || receipt.Kind == "code") {
 		if receipt.ExitCode == nil {

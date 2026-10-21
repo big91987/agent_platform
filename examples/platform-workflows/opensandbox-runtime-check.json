@@ -18,7 +18,32 @@
       "execution": {
         "mode": "code",
         "language": "python",
-        "code": "import json,os\nfrom pathlib import Path\ncontext=json.loads(Path(os.environ[\"WORKFLOW_INPUT_FILE\"]).read_text())\nassert context[\"parameters\"][\"check\"]==\"shared-workspace\"\nassert context[\"previous_results\"]==[]\nPath(\"/workspace/proof.json\").write_text(json.dumps({\"input\":context[\"input\"],\"python\":True}))\nPath(\"/workspace/main.go\").write_text('package main\\nimport(\"fmt\";\"os\";\"encoding/json\")\\nfunc main(){b,e:=os.ReadFile(\"/workspace/proof.json\");if e!=nil{panic(e)};var p map[string]any;if e=json.Unmarshal(b,&p);e!=nil{panic(e)};if p[\"typescript\"]!=true{panic(\"previous node proof lost\")};fmt.Println(\"PLATFORM_PROJECT_COMMAND_PASS\")}\\n')\nprint(\"PLATFORM_PYTHON_PASS\")\n"
+        "code": "import json,os\nfrom pathlib import Path\ncontext=json.loads(Path(os.environ[\"WORKFLOW_INPUT_FILE\"]).read_text())\nassert context[\"parameters\"][\"check\"]==\"shared-workspace\"\nassert context[\"previous_results\"]==[]\nPath(\"/workspace/proof.json\").write_text(json.dumps({\"input\":context[\"input\"],\"python\":True}))\nPath(\"/workspace/main.go\").write_text('package main\\nimport(\"fmt\";\"os\";\"encoding/json\")\\nfunc main(){b,e:=os.ReadFile(\"/workspace/proof.json\");if e!=nil{panic(e)};var p map[string]any;if e=json.Unmarshal(b,&p);e!=nil{panic(e)};if p[\"typescript\"]!=true{panic(\"previous node proof lost\")};fmt.Println(\"PLATFORM_PROJECT_COMMAND_PASS\")}\\n')\nprint(\"PLATFORM_PYTHON_PASS\")\n",
+        "output": {
+          "source": "exit_code"
+        }
+      },
+      "rule_handoff": {
+        "schema_scope": "value",
+        "rules": [
+          {
+            "when": "$ == 0",
+            "title": "完成",
+            "target": "typescript"
+          }
+        ],
+        "on_read": {
+          "action": "stop"
+        },
+        "on_parse": {
+          "action": "stop"
+        },
+        "on_invalid": {
+          "action": "stop"
+        },
+        "on_expression": {
+          "action": "stop"
+        }
       }
     },
     {
@@ -31,7 +56,32 @@
       "execution": {
         "mode": "code",
         "language": "typescript",
-        "code": "import fs from 'node:fs';\nconst context=JSON.parse(fs.readFileSync(process.env.WORKFLOW_INPUT_FILE!,'utf8'));\nif(context.parameters.check!=='shared-workspace'||context.previous_results.length!==1)throw Error('full input or previous result lost');\nconst proof=JSON.parse(fs.readFileSync('/workspace/proof.json','utf8'));\nif(!proof.python||proof.input!==context.input)throw Error('shared workspace or input changed');\nproof.typescript=true;fs.writeFileSync('/workspace/proof.json',JSON.stringify(proof));\nconsole.log('PLATFORM_TYPESCRIPT_PASS');\n"
+        "code": "import fs from 'node:fs';\nconst context=JSON.parse(fs.readFileSync(process.env.WORKFLOW_INPUT_FILE!,'utf8'));\nif(context.parameters.check!=='shared-workspace'||context.previous_results.length!==1)throw Error('full input or previous result lost');\nconst proof=JSON.parse(fs.readFileSync('/workspace/proof.json','utf8'));\nif(!proof.python||proof.input!==context.input)throw Error('shared workspace or input changed');\nproof.typescript=true;fs.writeFileSync('/workspace/proof.json',JSON.stringify(proof));\nconsole.log('PLATFORM_TYPESCRIPT_PASS');\n",
+        "output": {
+          "source": "exit_code"
+        }
+      },
+      "rule_handoff": {
+        "schema_scope": "value",
+        "rules": [
+          {
+            "when": "$ == 0",
+            "title": "完成",
+            "target": "confirm"
+          }
+        ],
+        "on_read": {
+          "action": "stop"
+        },
+        "on_parse": {
+          "action": "stop"
+        },
+        "on_invalid": {
+          "action": "stop"
+        },
+        "on_expression": {
+          "action": "stop"
+        }
       }
     },
     {
@@ -50,7 +100,32 @@
       "execution_timeout_seconds": 90,
       "execution": {
         "mode": "command",
-        "command": "go run /workspace/main.go"
+        "command": "go run /workspace/main.go",
+        "output": {
+          "source": "exit_code"
+        }
+      },
+      "rule_handoff": {
+        "schema_scope": "value",
+        "rules": [
+          {
+            "when": "$ == 0",
+            "title": "完成",
+            "target": "done"
+          }
+        ],
+        "on_read": {
+          "action": "stop"
+        },
+        "on_parse": {
+          "action": "stop"
+        },
+        "on_invalid": {
+          "action": "stop"
+        },
+        "on_expression": {
+          "action": "stop"
+        }
       }
     },
     {
@@ -64,15 +139,19 @@
   "edges": [
     {
       "source": "python",
-      "route": "next",
+      "route": "rule_1",
       "target": "typescript",
-      "mode": "automatic"
+      "mode": "automatic",
+      "title": "完成",
+      "description": ""
     },
     {
       "source": "typescript",
-      "route": "next",
+      "route": "rule_1",
       "target": "confirm",
-      "mode": "automatic"
+      "mode": "automatic",
+      "title": "完成",
+      "description": ""
     },
     {
       "source": "confirm",
@@ -82,9 +161,11 @@
     },
     {
       "source": "project",
-      "route": "next",
+      "route": "rule_1",
       "target": "done",
-      "mode": "automatic"
+      "mode": "automatic",
+      "title": "完成",
+      "description": ""
     }
   ]
 }

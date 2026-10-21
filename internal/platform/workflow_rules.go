@@ -171,6 +171,9 @@ func ruleTypes(p *WorkflowRules, mode string) (map[string]string, error) {
 func validateRuleHandoff(w Workflow, n WorkflowNode) error {
 	p := n.RuleHandoff
 	if p == nil {
+		if n.Kind == "execution" {
+			return errors.New("execution node requires rule_handoff")
+		}
 		return nil
 	}
 	if n.Kind != "execution" || n.Execution == nil {

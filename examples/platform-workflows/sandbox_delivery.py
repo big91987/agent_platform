@@ -75,7 +75,23 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                 "name": "准备固定仓库版本",
                 "kind": "execution",
                 "execution_timeout_seconds": 240,
+                "rule_handoff": {
+                    "schema_scope": "value",
+                    "rules": [
+                        {
+                            "when": "$ == 0",
+                            "title": "准备完成",
+                            "content": "",
+                            "target": "development",
+                        }
+                    ],
+                    "on_read": {"action": "stop"},
+                    "on_parse": {"action": "stop"},
+                    "on_invalid": {"action": "stop"},
+                    "on_expression": {"action": "stop"},
+                },
                 "execution": {
+                    "output": {"source": "exit_code"},
                     "mode": "code",
                     "language": "python",
                     "code": prepare,
@@ -142,7 +158,23 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                 "name": "发布同版草稿PR",
                 "kind": "execution",
                 "execution_timeout_seconds": 240,
+                "rule_handoff": {
+                    "schema_scope": "value",
+                    "rules": [
+                        {
+                            "when": "$ == 0",
+                            "title": "发布完成",
+                            "content": "",
+                            "target": "done",
+                        }
+                    ],
+                    "on_read": {"action": "stop"},
+                    "on_parse": {"action": "stop"},
+                    "on_invalid": {"action": "stop"},
+                    "on_expression": {"action": "stop"},
+                },
                 "execution": {
+                    "output": {"source": "exit_code"},
                     "mode": "command",
                     "command": "python3 .harness/agent-platform/examples/platform-workflows/sandbox_publish.py --repository "
                     + repository,
@@ -154,13 +186,11 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
         "edges": [
             {"source": a, "route": route, "target": b, "mode": mode}
             for a, route, b, mode in [
-                ("prepare", "next", "development", "automatic"),
                 ("development", "tests", "tests", "handoff"),
                 ("qa", "revise", "development", "handoff"),
                 ("qa", "approved", "approval", "handoff"),
                 ("approval", "next", "report", "automatic"),
                 ("report", "next", "publish", "automatic"),
-                ("publish", "next", "done", "automatic"),
             ]
         ],
     }
