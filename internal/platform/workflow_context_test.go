@@ -12,9 +12,9 @@ import (
 func markdownRun(t *testing.T, s *Store) (Caller, WorkflowRun) {
 	return inputProtocolRun(t, s, 1)
 }
-func inputProtocolRun(t *testing.T, s *Store, version int) (Caller, WorkflowRun) {
+func inputProtocolRun(t *testing.T, s *Store, version int, configure ...func(*Workflow)) (Caller, WorkflowRun) {
 	t.Helper()
-	c, r := agentRun(t, s)
+	c, r := agentRun(t, s, configure...)
 	w := r.Definition
 	// Original legacy fixture run has no conversation and is stopped through the engine.
 	e := NewWorkflowEngine(s, nil, "http://localhost")

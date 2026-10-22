@@ -212,7 +212,7 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 
 ## 智能体编排：路由与事件通知
 
-- `edges[].mode=handoff` 是 Agent 根据当前上下文选择的交接，画布用虚线；`description` 给出选择依据。Agent 调用 `handoff(target, message, context, artifacts)`，平台校验目标、权限及当前节点。
+- `edges[].mode=handoff` 是 Agent 根据当前上下文选择的交接，画布用虚线；`description` 给出选择依据。Agent 调用 `handoff(target, message, params, artifacts)`，平台校验目标、权限及当前节点。
 - Agent 统一调用 `handoff`，单一目标、多个目标和结束节点都显式填写 `target`。执行节点按用户配置的规则继续，人工确认节点按用户选择继续，画布用实线表示。
 - 普通澄清留在当前会话，不交接、不为每次提问增加图节点；必须审批的流程使用显式人工确认节点。自动推荐写在 Agent 策略中，不等于取消固定审批。
 - 老模板缺少 `mode` 时继续兼容；运行冻结定义快照。模板更新只影响新运行，不能假设在途任务自动切换定义。
@@ -377,7 +377,9 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 Agent 节点的“交接策略”页直接配置目标及选择条件。只配置一个目标时，Agent 仍须显式填写该目标；结束运行时填写已配置的结束节点 ID。
 
-工具参数为 `target`、`message`、可选 `context` 和 `artifacts`。`message` 是交给下一节点的说明；`context` 是可包含布尔、数值、数组和对象的结构化信息；`artifacts` 列工作区内的实际文件。可选的 `handoff_schema` 约束 context，`handoff_instructions` 补充填写要求。配置 Schema 后必须提交符合格式的 context，错误不会推进流程。
+工具固定参数为 `target`、`message` 和可选 `artifacts`。节点默认关闭 `handoff_params`；需要下游程序消费结构化参数时显式开启，并配置 `handoff_schema`（type=object）和 `handoff_instructions`。开启后工具要求提交符合格式的 `params`，Schema 与业务填写说明均提供给 Agent，平台用同一份 Schema 校验；关闭时工具不提供 params，提交参数会被拒绝。Schema 和填写说明在关闭后仍保留，便于重新开启。固定命令 make verify 无参数需求时保持关闭。
+
+执行节点通过 WORKFLOW_INPUT_FILE 读取 prior result.params；MCP 工具可显式绑定 `{"text":{"node":"author","path":"/result/params/commit"}}`。参数按 JSON 类型传递，缺失时停止，不自动拼接 Shell。节点编辑仅在点击“应用”后更新工作流草稿，工作流“保存”后持久化；取消或明确放弃编辑不改变已应用配置。执行方式和数据来源分别保留草稿，未选择的方式不执行。
 
 旧的 `exit_mode`、`completion_schema`、`completion_instructions` 不再用于新配置。升级保存的工作流时，显式删除 exit_mode、将后两项分别改为 handoff_schema/handoff_instructions，并将所有 Agent 出边设为 handoff。历史 Run 的冻结定义保持原样；不自动转换或重放旧任务。
 

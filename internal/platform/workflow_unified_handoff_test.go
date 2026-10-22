@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-func TestUnifiedHandoffMCPRequiresTargetAndTypedContext(t *testing.T) {
+func TestUnifiedHandoffMCPRequiresTargetAndTypedParams(t *testing.T) {
 	s := testStore(t)
-	c, r := inputProtocolRun(t, s, 2)
+	c, r := inputProtocolRun(t, s, 2, enableTestHandoffParams)
 	h := NewServer(s, nil, nil, "password", "http://localhost")
 	remote := httptest.NewServer(h)
 	defer remote.Close()
@@ -43,7 +43,7 @@ func TestUnifiedHandoffMCPRequiresTargetAndTypedContext(t *testing.T) {
 		if tool.Name == "handoff" {
 			found = true
 			b, _ := json.Marshal(tool.InputSchema)
-			if !strings.Contains(string(b), `"message"`) || !strings.Contains(string(b), `"context"`) {
+			if !strings.Contains(string(b), `"message"`) || !strings.Contains(string(b), `"params"`) {
 				t.Fatalf("missing unified fields: %s", b)
 			}
 		}
@@ -61,7 +61,7 @@ func TestUnifiedHandoffMCPRequiresTargetAndTypedContext(t *testing.T) {
 			t.Fatal("invalid call persisted")
 		}
 	}
-	args := json.RawMessage(`{"target":"done","message":"verified","context":{"ready":true,"count":2,"files":["a.txt"]}}`)
+	args := json.RawMessage(`{"target":"done","message":"verified","params":{"ready":true,"count":2,"files":["a.txt"]}}`)
 	for i := 0; i < 2; i++ {
 		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: args})
 		if err != nil || result.IsError {
@@ -73,8 +73,8 @@ func TestUnifiedHandoffMCPRequiresTargetAndTypedContext(t *testing.T) {
 	if fresh.Seq != 1 {
 		t.Fatal("advanced while native running")
 	}
-	if fresh.Steps[0].Result.Inputs["ready"] != true {
-		t.Fatal("lost typed context")
+	if fresh.Steps[0].Result.Params["ready"] != true {
+		t.Fatal("lost typed params")
 	}
 	if err = s.Complete(conv.ID, msg.ID, "completed", ""); err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func (s *Store) testHandoffResult(id string, seq int, token string, result NodeR
 	if message == "" {
 		message = "fixture handoff"
 	}
-	return s.handoffWorkflowNode(id, seq, token, HandoffInput{Target: target, Message: message, Context: result.Inputs, Artifacts: result.Artifacts})
+	return s.handoffWorkflowNode(id, seq, token, HandoffInput{Target: target, Message: message, Params: result.Params, Artifacts: result.Artifacts})
 }
 
 func TestRetiredHandoffConfigurationRemainsReadableButCannotExecute(t *testing.T) {
@@ -235,4 +235,9 @@ func TestClaimSkipsRetiredRunWithoutStarvingCurrentWork(t *testing.T) {
 	if err != nil || oldConversation.Status != "queued" {
 		t.Fatal("modified historical queued conversation", err)
 	}
+}
+
+func enableTestHandoffParams(w *Workflow) {
+	w.Nodes[0].HandoffParams = true
+	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object"}`)
 }

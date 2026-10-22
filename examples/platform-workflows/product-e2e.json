@@ -35,7 +35,8 @@
       "agent": {
         "executor": "codex",
         "instructions": "执行专用产品测试角色；产品实现和产品修复不属于此流水线。"
-      }
+      },
+      "handoff_params": false
     },
     {
       "id": "e2e_plan_review",
@@ -46,7 +47,8 @@
       "agent": {
         "executor": "codex",
         "instructions": "执行独立测试计划评审；产品实现和产品修复不属于此流水线。"
-      }
+      },
+      "handoff_params": false
     },
     {
       "id": "e2e_execute",
@@ -57,7 +59,8 @@
       "agent": {
         "executor": "codex",
         "instructions": "执行专用产品测试角色；产品实现和产品修复不属于此流水线。"
-      }
+      },
+      "handoff_params": false
     },
     {
       "id": "tests",
@@ -76,7 +79,8 @@
       "agent": {
         "executor": "codex",
         "instructions": "执行专用产品测试角色；产品实现和产品修复不属于此流水线。"
-      }
+      },
+      "handoff_params": false
     },
     {
       "id": "e2e_report",
@@ -87,7 +91,8 @@
       "agent": {
         "executor": "codex",
         "instructions": "执行专用产品测试角色；产品实现和产品修复不属于此流水线。"
-      }
+      },
+      "handoff_params": false
     },
     {
       "id": "report_publish",

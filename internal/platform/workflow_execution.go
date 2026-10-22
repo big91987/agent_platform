@@ -593,3 +593,31 @@ func setSelectedExecutionResult(n WorkflowNode, out *ConnectorReceipt, raw []byt
 	}
 	setExecutionResult(out, raw, env)
 }
+
+// Inactive editor forms are retained with the workflow, never executed. The
+// selected execution still passes the full runtime configuration validation.
+func validateExecutionDrafts(node WorkflowNode) error {
+	if len(node.ExecutionDrafts) == 0 {
+		return nil
+	}
+	if node.Kind != "execution" || len(node.ExecutionDrafts) > 256000 {
+		return errors.New("execution drafts require an execution node and fit within 256000 bytes")
+	}
+	var drafts map[string]json.RawMessage
+	if json.Unmarshal(node.ExecutionDrafts, &drafts) != nil || drafts == nil || len(drafts) > 3 {
+		return errors.New("execution drafts must be an object of execution modes")
+	}
+	for mode, raw := range drafts {
+		if mode != "code" && mode != "command" && mode != "mcp" {
+			return errors.New("unsupported execution draft mode")
+		}
+		var value struct {
+			Execution *WorkflowExecution `json:"execution"`
+			Rules     *WorkflowRules     `json:"rules"`
+		}
+		if json.Unmarshal(raw, &value) != nil || value.Execution == nil || value.Execution.Mode != mode || value.Rules == nil {
+			return errors.New("execution draft must retain its mode and rules")
+		}
+	}
+	return nil
+}

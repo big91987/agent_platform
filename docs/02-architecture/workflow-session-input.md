@@ -16,7 +16,7 @@ Agent.instructions 仅保存角色职责；Codex 映射为 developerInstructions
 
 ## 完成与等待
 
-Agent通过显式 `handoff(target, message, context?, artifacts?)` 提交交接。无论目标有一个、多个，或目标为结束节点，都必须填写合法target；不再提供complete_node或双模式选择。context是可选JSON对象，按节点可选handoff_schema校验。`wait_for_input(reason, kind)` 的kind为clarification或blocked；它不完成节点，只声明为什么必须等待。自然语言回复不作为完成或澄清信号。
+Agent通过显式 `handoff(target, message, params?, artifacts?)` 提交交接。无论目标有一个、多个，或目标为结束节点，都必须填写合法target；不再提供complete_node或双模式选择。交接参数开关默认关闭，工具不提供params；开启后根据配置的handoff_schema校验params JSON对象，并向Agent提供Schema和handoff_instructions填写说明。`wait_for_input(reason, kind)` 的kind为clarification或blocked；它不完成节点，只声明为什么必须等待。自然语言回复不作为完成或澄清信号。
 
 新节点配置 continuation_limit（0–10 次；0 关闭）与 execution_timeout_seconds（0–86400 秒；0 不启用时间限制）。正式模板默认 3 次、14400 秒。正常 turn 结束、未交接且没有明确等待时，由平台在原会话追加一次继续指令；计数与对应完成消息持久化，事务检查当前 Run/seq/会话，重启和重复 tick 不重复排队。达到上限时留下明确等待原因，不宣称完成。失败、用户停止、权限撤销不自动续跑。等待后新用户输入沿用同一会话；轮数预算属于节点执行，不被每条消息重置。
 

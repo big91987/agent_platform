@@ -34,8 +34,10 @@ type WorkflowNode struct {
 	RetiredCompletionSchema       json.RawMessage    `json:"completion_schema,omitempty"`
 	RetiredCompletionInstructions string             `json:"completion_instructions,omitempty"`
 	RuleHandoff                   *WorkflowRules     `json:"rule_handoff,omitempty"`
+	ExecutionDrafts               json.RawMessage    `json:"execution_drafts,omitempty"`
 	Execution                     *WorkflowExecution `json:"execution,omitempty"`
 	ExitMode                      string             `json:"exit_mode,omitempty"`
+	HandoffParams                 bool               `json:"handoff_params,omitempty"`
 	HandoffSchema                 json.RawMessage    `json:"handoff_schema,omitempty"`
 	HandoffInstructions           string             `json:"handoff_instructions,omitempty"`
 	AllowUserInput                *bool              `json:"allow_user_input,omitempty"`

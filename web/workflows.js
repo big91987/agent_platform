@@ -1,7 +1,7 @@
 'use strict';
 let workflowEditor = null;
 function leaveWorkflowEditor(){workflowEditor?.cancelZoom?.();workflowEditor?.cancelPan?.();workflowEditor?.cancelNodeDrag?.();workflowEditor?.resizeObserver?.disconnect();workflowEditor=null;if(typeof leaveWorkflowRun==='function')leaveWorkflowRun();}
-window.addEventListener('beforeunload',event=>{if(workflowEditor?.dirty){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(workflowEditor?.dirty||workflowEditor?.nodeEditor?.dirty){event.preventDefault();event.returnValue='';}});
 
 async function workflowsView(){
  const [items,runGroups]=await Promise.all([api('/api/workflows'),api('/api/workflow-run-groups')]);
@@ -27,7 +27,7 @@ function importWorkflow(){
  $('#wf-import-form').onsubmit=async e=>{e.preventDefault();try{const graph=WorkflowGraph.import($('#wf-import-json').value,state.agents);$('#dialog').close();history.replaceState({},'','/workflows/new');await openWorkflowEditor(graph);toast('已导入副本。请核对 Agent 和授权后保存。')}catch(error){toast(error.message)}};
 }
 function exportWorkflow(editor){
- let copy;try{const selected=editor.graph.node(editor.selected);copy=workflowPayload(editor.graph.value,selected?workflowNodeDraft(editor,selected):null,editor.agentEnvDrafts,state.agents,editor.completionDrafts,editor.executionDrafts,editor.bindingDrafts,editor.executionEnvDrafts,editor.ruleSchemaDrafts)}catch(error){toast(error.message);return}
+ let copy;try{rememberWorkflowNodeDraft(editor);if(editor.nodeEditor?.dirty)throw Error('请先应用或取消节点修改');copy=workflowPayload(editor.graph.value,null,{},state.agents)}catch(error){toast(error.message);return}
  copy.id='';copy.revision=0;copy.authorized_users=[];delete copy.updated_at;
  for(const node of copy.nodes)if(node.agent){node.agent.env={};node.agent.native_config='';}
  const text=JSON.stringify(copy,null,2);
@@ -83,13 +83,48 @@ async function openWorkflowEditor(graph){
  editor.resizeObserver=new ResizeObserver(()=>{if(workflowEditor===editor&&editor.fit)fitWorkflowCanvas(editor)});editor.resizeObserver.observe($('#wf-viewport'));
 }
 function workflowSaveStatus(editor){
- if(workflowEditor!==editor)return;
+ if(!workflowEditorActive(editor))return;
  $('#wf-save-state').textContent=editor.dirty?'有未保存的改动':`已保存 · 版本 ${editor.graph.value.revision}`;
  $('#wf-title').textContent=editor.graph.value.name;
  const edges=editor.graph.value.edges;const visible=editor.showAllEdges||!editor.selected?edges:edges.filter(e=>e.source===editor.selected||e.target===editor.selected);$('#wf-count').textContent=`${editor.graph.value.nodes.length} 节点 / ${visible.length} 条可见连线（共 ${edges.length} 条）`;
 }
-function workflowChanged(editor){editor.dirty=true;editor.previewRequest=null;workflowSaveStatus(editor);}
+function workflowChanged(editor){editor.dirty=true;editor.previewRequest=null;if(editor.owner){$('#wf-node-edit-state').textContent='有未应用的修改';return}workflowSaveStatus(editor);}
+function workflowEditorActive(editor){return workflowEditor===(editor.owner||editor)&&(!editor.owner||(editor.owner.nodeEditor===editor&&editor.owner.selected===editor.selected))}
+function workflowNodeEditor(editor){
+ if(editor.owner)return editor;
+ if(editor.nodeEditor?.selected!==editor.selected){
+  if(editor.nodeEditor?.dirty&&!confirm('有未应用的节点修改，放弃这些修改？')){editor.selected=editor.nodeEditor.selected;return editor.nodeEditor}
+  editor.nodeEditor={owner:editor,graph:new WorkflowGraph(editor.graph.value),selected:editor.selected,panelTab:editor.panelTab,readOnly:editor.readOnly,dirty:false,connectors:editor.connectors,toolServers:editor.toolServers,positions:editor.positions,modeDrafts:JSON.parse(JSON.stringify(editor.modeDrafts||{})),users:editor.users};
+ }
+ editor.nodeEditor.readOnly=editor.readOnly;editor.nodeEditor.panelTab=editor.panelTab||editor.nodeEditor.panelTab;
+ const draft=editor.nodeEditor,node=draft.graph.node(draft.selected);
+ if(node?.execution_drafts&&!draft.modeDrafts[node.id]){
+ draft.modeDrafts[node.id]=JSON.parse(JSON.stringify(node.execution_drafts));
+ const saved=draft.modeDrafts[node.id][node.execution.mode];
+ if(saved?.sources)(draft.resultDrafts||={})[node.id]=JSON.parse(JSON.stringify(saved.sources));
+ }
+ return draft;
+}
+function applyWorkflowNodeEditor(editor){
+ const draft=editor.owner?editor:editor.nodeEditor;if(!draft)return;
+ const n=draft.graph.node(draft.selected),next=workflowNodeDraft(draft,n);
+ if(!next.name?.trim())throw Error('请填写节点名称');
+ if(next.kind==='execution'&&n.rule_handoff){
+ const modes=(draft.modeDrafts||={})[n.id]||={};
+ modes[next.execution.mode]={execution:JSON.parse(JSON.stringify(next.execution)),rules:JSON.parse(JSON.stringify(n.rule_handoff)),sources:draft.resultDrafts?.[n.id]};
+ if(Object.keys(modes).length)next.execution_drafts=JSON.parse(JSON.stringify(modes));
+ }
+ const value={...draft.owner.graph.value,nodes:draft.graph.value.nodes,edges:draft.graph.value.edges,entry:draft.graph.value.entry};
+ const payload=workflowPayload(value,next,draft.agentEnvDrafts,state.agents,draft.completionDrafts,draft.executionDrafts,draft.bindingDrafts,draft.executionEnvDrafts,draft.ruleSchemaDrafts);
+ const owner=draft.owner,applied=payload.nodes.find(v=>v.id===n.id),original=owner.graph.node(n.id);
+ for(const key of Object.keys(original))delete original[key];Object.assign(original,applied);
+ owner.graph.value.edges=owner.graph.value.edges.filter(e=>e.source!==n.id).concat(payload.edges.filter(e=>e.source===n.id));owner.graph.value.entry=payload.entry;
+ owner.panelTab=draft.panelTab;owner.modeDrafts=draft.modeDrafts;owner.nodeEditor=null;workflowChanged(owner);renderWorkflowNodes(owner);renderWorkflowInspector(owner);
+}
+function cancelWorkflowNodeEditor(editor){const owner=editor.owner||editor;owner.nodeEditor=null;owner.selected=null;renderWorkflowInspector(owner);renderWorkflowNodes(owner)}
+
 function rememberWorkflowNodeDraft(editor){
+ if(!editor.owner){if(editor.nodeEditor&&editor.nodeEditor.selected===editor.selected)rememberWorkflowNodeDraft(editor.nodeEditor);return;}
  const node=editor.graph.node(editor.selected);if(!node||editor.readOnly||!$('#wf-node-form'))return;
  if(node.agent_id&&!editor.nodeFormEdited)return;
  const next=workflowNodeDraft(editor,node,false);
@@ -150,7 +185,7 @@ function applyWorkflowZoom(editor,zoom,anchor,world,elastic=false){
 function workflowZoomDialog(editor){
  editor.cancelZoom?.();
  dialog(`<form id="wf-zoom-form"><div class="dialog-head"><h2>缩放画布</h2><button type="button" data-close aria-label="关闭缩放设置">关闭</button></div><div class="dialog-body"><div class="wf-zoom-presets">${[25,50,75,100,125,150,200].map(value=>`<button type="button" data-zoom="${value}">${value}%</button>`).join('')}</div><div class="field"><label for="wf-zoom-value">缩放比例（%）</label><input id="wf-zoom-value" type="number" min="2.5" max="200" step="0.1" required value="${Math.round(editor.zoom*1000)/10}"><p class="hint">2.5%–200%。100% 恢复原尺寸。</p></div></div><div class="dialog-footer"><button class="primary">应用</button></div></form>`);
- const apply=value=>{if(workflowEditor!==editor)return;editor.fit=false;setWorkflowZoom(editor,value/100);$('#dialog').close();};
+ const apply=value=>{if(!workflowEditorActive(editor))return;editor.fit=false;setWorkflowZoom(editor,value/100);$('#dialog').close();};
  $('#wf-zoom-form').onsubmit=e=>{e.preventDefault();if($('#wf-zoom-form').reportValidity())apply(Number($('#wf-zoom-value').value));};
  $('#dialog').querySelectorAll('[data-zoom]').forEach(button=>button.onclick=()=>apply(Number(button.dataset.zoom)));
 }
@@ -249,9 +284,10 @@ function fitWorkflowCanvas(editor){
  editor.zoom=zoom;editor.viewExtent=null;$('#wf-stage').style.zoom=zoom;sizeWorkflowStage(editor);v.scrollTo(0,0);$('#wf-actual').textContent=Math.round(zoom*1000)/10+'%';
 }
 function workflowPoint(event){const rect=$('#wf-stage').getBoundingClientRect(),scale=workflowEditor?.zoom||1,p=workflowCanvasOffset(workflowEditor||{});return {x:(event.clientX-rect.left)/scale-p.x,y:(event.clientY-rect.top)/scale-p.y};}
-function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);if(kind==='execution'){n.rule_handoff=workflowRulePolicy(n.execution.mode);if(n.execution.mode!=='mcp')n.execution.output={source:'exit_code'}}editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
+function addWorkflowNode(editor,kind,x,y){if(editor.readOnly)return;rememberWorkflowNodeDraft(editor);if(editor.nodeEditor?.dirty&&!confirm('有未应用的节点修改，放弃这些修改？'))return;editor.nodeEditor=null;materializeWorkflowPositions(editor);const n=editor.graph.add(kind,x,y);if(kind==='execution'){n.rule_handoff=workflowRulePolicy(n.execution.mode);if(n.execution.mode!=='mcp')n.execution.output={source:'exit_code'}}editor.panelTab='config';editor.selected=n.id;editor.previewRequest=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor);}
 function renderWorkflowNodes(editor){
- if(workflowEditor!==editor)return;
+ if(editor.owner)return;
+ if(!workflowEditorActive(editor))return;
  const w=editor.graph.value;
  $('#wf-nodes').innerHTML=w.nodes.map(n=>`<div class="wf-node wf-${esc(n.kind)} ${n.id===editor.selected?'selected':''}" data-node="${esc(n.id)}"><button class="wf-port wf-in" data-port="in" title="连接到 ${esc(n.name)}" aria-label="连接到 ${esc(n.name)}" ${editor.readOnly?'disabled':''}></button><div class="wf-node-body" role="button" tabindex="0" aria-label="${esc(n.name)} 节点"><span class="wf-node-type">${esc(WorkflowGraph.kinds[n.kind])}${n.id===w.entry?' · 入口':''}</span><strong>${esc(n.name)}</strong><small>${n.kind==='agent'?esc(agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id))):n.kind==='end'?'完成运行':n.kind==='execution'?(esc(n.execution?.mode==='code'?({python:'Python 代码',typescript:'TypeScript 代码'}[n.execution.language]||'选择语言'):n.execution?.mode==='command'?'项目命令':n.execution?.tool||'选择执行工具')):n.kind==='connector'?'外部操作':'等待用户决策'}</small></div>${n.kind==='end'?'':`<button class="wf-port wf-out" data-port="out" title="从 ${esc(n.name)} 连线" aria-label="从 ${esc(n.name)} 连线" ${editor.readOnly?'disabled':''}></button>`}</div>`).join('')||'<div class="wf-empty">从左侧拖入第一个节点<br><small>例如：Agent → 人工确认 → 结束</small></div>';
  $('#wf-nodes').querySelectorAll('[data-node]').forEach(el=>{const n=workflowNodePosition(editor,editor.graph.node(el.dataset.node));el.style.left=n.x+'px';el.style.top=n.y+'px'});
@@ -261,6 +297,7 @@ function renderWorkflowNodes(editor){
 }
 function workflowCurve(a,b){const bend=Math.max(65,Math.abs(b.x-a.x)*.45);return `M ${a.x} ${a.y} C ${a.x+bend} ${a.y}, ${b.x-bend} ${b.y}, ${b.x} ${b.y}`;}
 function renderWorkflowEdges(editor){
+ if(editor.owner)return;
  const w=editor.graph.value;
  const visible=w.edges.filter(e=>editor.showAllEdges||!editor.selected||e.source===editor.selected||e.target===editor.selected);
  $('#wf-edge-group').innerHTML=w.edges.map((e,i)=>{
@@ -317,14 +354,15 @@ function workflowPointerDown(e,editor){
  stage.setPointerCapture(e.pointerId);stage.addEventListener('pointermove',move);stage.addEventListener('pointerup',finish);stage.addEventListener('pointercancel',cancel);stage.addEventListener('lostpointercapture',cancel);
 }
 function workflowConnectDialog(editor,source,target,index=null){
- if(workflowEditor!==editor)return;
+ if(!workflowEditorActive(editor))return;
  const sourceNode=editor.graph.node(source);
  if(sourceNode?.kind==='agent'){
-  rememberWorkflowNodeDraft(editor);
-  if(!editor.readOnly&&index==null&&target&&!editor.graph.value.edges.some(e=>e.source===source&&e.target===target)){
-   try{editor.graph.connect(source,editor.graph.nextRoute(source),target,'handoff');workflowChanged(editor)}catch(error){toast(error.message);return}
+  rememberWorkflowNodeDraft(editor);const owner=editor.owner||editor;owner.selected=source;owner.panelTab='handoff';
+  const draft=workflowNodeEditor(owner);if(draft.selected!==source){renderWorkflowInspector(owner);return;}
+  if(!draft.readOnly&&index==null&&target&&!draft.graph.value.edges.some(e=>e.source===source&&e.target===target)){
+   try{draft.graph.connect(source,draft.graph.nextRoute(source),target,'handoff');workflowChanged(draft)}catch(error){toast(error.message);return}
   }
-  editor.selected=source;editor.panelTab='handoff';renderWorkflowNodes(editor);renderWorkflowInspector(editor);return;
+  renderWorkflowNodes(owner);renderWorkflowInspector(owner);return;
  }
  if(editor.graph.node(source)?.kind==='execution'){rememberWorkflowNodeDraft(editor);editor.selected=source;editor.panelTab='handoff';renderWorkflowInspector(editor);return;}
  const old=index==null?null:editor.graph.value.edges[index],n=editor.graph.node(source),mode=old?editor.graph.edgeMode(old):'automatic';
@@ -373,6 +411,7 @@ function workflowPayload(value,nodeDraft,envDrafts,agents,completionDrafts,execu
  return graph.value;
 }
 function workflowNodeDraft(editor,n,validate=true){
+ if(editor.owner)editor.graph.value.environment=editor.owner.graph.value.environment;
  const next={...n};if(editor.readOnly||editor.selected!==n.id||!$('#wf-node-form'))return next;
  if(n.kind==='agent'){const draft=editor.completionDrafts?.[n.id];if(draft){if(validate)applyCompletionDraft(next,draft);else{try{applyCompletionDraft(next,draft)}catch{}}}}
  next.x=Number($('#wf-node-x').value);next.y=Number($('#wf-node-y').value);
@@ -402,12 +441,12 @@ function workflowNodeDraft(editor,n,validate=true){
  if(n.kind==='agent')delete next.prompt;
  if(validate)editor.graph.validateAgent(next);return next;
 }
-function applyWorkflowNode(editor,n){
- const next=workflowNodeDraft(editor,n);editor.graph.move(n.id,next.x,next.y);Object.assign(n,next);if(next.agent)delete n.agent_id;workflowChanged(editor);renderWorkflowNodes(editor);
-}
+function applyWorkflowNode(editor){return applyWorkflowNodeEditor(editor)}
 function closeWorkflowInspector(editor){
- if(workflowEditor!==editor)return;
- rememberWorkflowNodeDraft(editor);
+ if(!workflowEditorActive(editor))return;
+ editor=editor.owner||editor;rememberWorkflowNodeDraft(editor);
+ if(editor.nodeEditor?.dirty&&!confirm('有未应用的节点修改，放弃这些修改？'))return;
+ editor.nodeEditor=null;
  const id=editor.selected;editor.selected=null;editor.previewRequest=null;renderWorkflowInspector(editor);renderWorkflowNodes(editor);
  document.querySelector?.('[data-node="'+id+'"] .wf-node-body')?.focus();
 }
@@ -436,17 +475,18 @@ function workflowArtifactHelp(){
  $('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
 }
 async function previewWorkflowNode(editor,n){
+ editor=workflowNodeEditor(editor);n=editor.graph.node(n.id);
  const request={};editor.previewRequest=request;
  try{
   const draft=new WorkflowGraph(editor.graph.value),next=workflowNodeDraft(editor,n);Object.assign(draft.node(n.id),next);if(next.agent)delete draft.node(n.id).agent_id;
-  editor.panelTab='preview';
+  editor.panelTab='preview';(editor.owner||editor).panelTab='preview';
   for(const key of ['config','handoff','advanced','preview']){const pane=$('#wf-pane-'+key),tab=$('#wf-tab-'+key);if(pane)pane.hidden=key!=='preview';if(tab){tab.setAttribute('aria-selected',String(key==='preview'));tab.tabIndex=key==='preview'?0:-1;}}
   $('#wf-preview-content').innerHTML='<p class="hint" role="status">正在展开当前草稿…</p>';
   const result=await api('/api/workflows/preview','POST',{workflow:draft.value,node_id:n.id});
-  if(workflowEditor!==editor||editor.selected!==n.id||editor.previewRequest!==request)return;
+  if(!workflowEditorActive(editor)||editor.selected!==n.id||editor.previewRequest!==request)return;
   $('#wf-preview-content').innerHTML=`<p class="hint">根据当前节点配置生成，包含交接、完成和等待规则。具体任务和上游结果在运行时追加。</p><button id="wf-refresh-preview" class="quiet">刷新预览</button><div class="field"><label for="wf-preview-input">工作流提示词（Prompt）</label><textarea id="wf-preview-input" rows="14" readonly>${esc(result.input)}</textarea></div>`;
   $('#wf-refresh-preview').onclick=()=>previewWorkflowNode(editor,n);
- }catch(error){if(workflowEditor===editor&&editor.selected===n.id&&editor.previewRequest===request)$('#wf-preview-content').innerHTML='<p class="callout" role="alert">'+esc(error.message)+'</p>';}
+ }catch(error){if(workflowEditorActive(editor)&&editor.selected===n.id&&editor.previewRequest===request)$('#wf-preview-content').innerHTML='<p class="callout" role="alert">'+esc(error.message)+'</p>';}
 }
 function bindWorkflowNodeTitle(editor,n){
  const input=$('#wf-node-name');
@@ -464,7 +504,8 @@ function bindWorkflowNodeTitle(editor,n){
  };
 }
 function renderWorkflowInspector(editor){
- if(workflowEditor!==editor)return;
+ if(!workflowEditorActive(editor))return;
+ if(!editor.owner&&editor.selected)editor=workflowNodeEditor(editor);
  editor.nodeFormEdited=false;
  clearTimeout(editor.ruleValidationTimer);
  editor.ruleValidation=null;
@@ -473,7 +514,7 @@ function renderWorkflowInspector(editor){
  if(!n){$('#wf-inspector').hidden=true;$('#wf-inspector').innerHTML='';return}
  $('#wf-inspector').hidden=false;
  const outgoing=w.edges.map((e,i)=>({...e,index:i})).filter(e=>e.source===n.id);
- const content=`<form id="wf-node-form"><fieldset ${editor.readOnly?'disabled':''}>${n.kind==='agent'?workflowAgentFields(editor,n):''}${n.kind==='execution'?workflowExecutionFields(editor,n):''}${n.kind==='connector'?`<div class="field"><label for="wf-node-connector">使用 Connector</label><select id="wf-node-connector"><option value="">请选择</option>${editor.connectors.map(c=>`<option value="${esc(c.id)}" ${c.id===n.connector_id?'selected':''}>${esc(c.name)} · ${esc(connectorKinds[c.kind])}</option>`).join('')}</select></div>${connectorNodeFields(editor,n)}`:''}${n.kind==='approval'?`<div class="field"><label for="wf-node-prompt">确认内容</label><textarea id="wf-node-prompt" rows="7" maxlength="32000">${esc(n.prompt||'')}</textarea></div>`:''}<details><summary>画布位置</summary><div class="wf-coordinates"><div class="field"><label for="wf-node-x">横坐标</label><input id="wf-node-x" type="number" min="0" max="10000" value="${workflowNodePosition(editor,n).x}"></div><div class="field"><label for="wf-node-y">纵坐标</label><input id="wf-node-y" type="number" min="0" max="10000" value="${workflowNodePosition(editor,n).y}"></div></div></details><button type="submit">应用设置</button></fieldset></form><h4>交接目标与策略</h4><div class="wf-route-list">${outgoing.map(e=>`<div><span data-edit-edge="${e.index}" role="button" tabindex="0"><strong>${editor.graph.edgeMode(e)==='handoff'?'┄':'━'} ${esc(editor.graph.node(e.target)?.name)} · ${esc(e.target)}</strong><small>${editor.graph.edgeMode(e)==='handoff'?'自主交接':'固定完成'} · ${esc(e.description||'尚未填写策略')}${n.kind!=='agent'?' · '+esc(e.route):''}</small></span>${editor.readOnly?'':`<button data-remove-edge="${e.index}" aria-label="删除到 ${esc(e.target)} 的连线">×</button>`}</div>`).join('')||'<p class="hint">'+(n.kind==='end'?'此节点结束运行。':'从右侧圆点连接目标，或添加交接目标。')+'</p>'}</div>${editor.readOnly||n.kind==='end'?'':'<button id="wf-add-target">添加交接目标</button>'}${editor.readOnly?'':`<div class="wf-inspector-actions">${n.id===w.entry?'<span class="hint">当前入口节点</span>':'<button id="wf-set-entry">设为入口</button>'}<button id="wf-delete-node" class="danger">删除节点</button></div>`}`;
+ const content=`<form id="wf-node-form"><fieldset ${editor.readOnly?'disabled':''}>${n.kind==='agent'?workflowAgentFields(editor,n):''}${n.kind==='execution'?workflowExecutionFields(editor,n):''}${n.kind==='connector'?`<div class="field"><label for="wf-node-connector">使用 Connector</label><select id="wf-node-connector"><option value="">请选择</option>${editor.connectors.map(c=>`<option value="${esc(c.id)}" ${c.id===n.connector_id?'selected':''}>${esc(c.name)} · ${esc(connectorKinds[c.kind])}</option>`).join('')}</select></div>${connectorNodeFields(editor,n)}`:''}${n.kind==='approval'?`<div class="field"><label for="wf-node-prompt">确认内容</label><textarea id="wf-node-prompt" rows="7" maxlength="32000">${esc(n.prompt||'')}</textarea></div>`:''}<details><summary>画布位置</summary><div class="wf-coordinates"><div class="field"><label for="wf-node-x">横坐标</label><input id="wf-node-x" type="number" min="0" max="10000" value="${workflowNodePosition(editor,n).x}"></div><div class="field"><label for="wf-node-y">纵坐标</label><input id="wf-node-y" type="number" min="0" max="10000" value="${workflowNodePosition(editor,n).y}"></div></div></details></fieldset></form><h4>交接目标与策略</h4><div class="wf-route-list">${outgoing.map(e=>`<div><span data-edit-edge="${e.index}" role="button" tabindex="0"><strong>${editor.graph.edgeMode(e)==='handoff'?'┄':'━'} ${esc(editor.graph.node(e.target)?.name)} · ${esc(e.target)}</strong><small>${editor.graph.edgeMode(e)==='handoff'?'自主交接':'固定完成'} · ${esc(e.description||'尚未填写策略')}${n.kind!=='agent'?' · '+esc(e.route):''}</small></span>${editor.readOnly?'':`<button data-remove-edge="${e.index}" aria-label="删除到 ${esc(e.target)} 的连线">×</button>`}</div>`).join('')||'<p class="hint">'+(n.kind==='end'?'此节点结束运行。':'从右侧圆点连接目标，或添加交接目标。')+'</p>'}</div>${editor.readOnly||n.kind==='end'?'':'<button id="wf-add-target">添加交接目标</button>'}${editor.readOnly?'':`<div class="wf-inspector-actions">${n.id===w.entry?'<span class="hint">当前入口节点</span>':'<button id="wf-set-entry">设为入口</button>'}<button id="wf-delete-node" class="danger">删除节点</button></div>`}`;
  const split=content.indexOf('<h4>交接目标与策略</h4>');
  const tabs=[{key:'config',label:'配置',body:content.slice(0,split)},{key:'handoff',label:n.kind==='execution'?'交接策略（基于规则）':'交接策略',body:n.kind==='execution'?workflowRulesFields(editor,n)+(editor.readOnly?'':content.slice(content.indexOf('<div class="wf-inspector-actions">'))):n.kind==='agent'?workflowAgentHandoffFields(editor,n):content.slice(split)}];
  if(n.kind==='execution')tabs.push({key:'advanced',label:'高级设置',body:workflowExecutionAdvanced(editor,n)});
@@ -481,20 +522,24 @@ function renderWorkflowInspector(editor){
  if(n.kind==='agent')tabs.push({key:'preview',label:'输入预览',body:'<div id="wf-preview-content"><p class="hint">查看当前节点的工作流提示词，包含交接、完成和等待规则。</p><button id="wf-load-preview" class="primary">生成输入预览</button></div>'});
  const active=tabs.some(t=>t.key===editor.panelTab)?editor.panelTab:'config';editor.panelTab=active;
  $('#wf-inspector').innerHTML=workflowPanelMarkup('wf',n.name,n.kind==='agent'?agentExecutionLabel(n.agent||state.agents.find(a=>a.id===n.agent_id)):WorkflowGraph.kinds[n.kind],tabs,active,n.kind==='execution'?'产物保存策略':n.kind==='agent'?'Agent 节点说明':'',!editor.readOnly);
- bindWorkflowPanel('wf',tabs,active,key=>{editor.panelTab=key;if(key==='preview')previewWorkflowNode(editor,n)},()=>closeWorkflowInspector(editor));
- if(!editor.readOnly)bindWorkflowNodeTitle(editor,n);
+ bindWorkflowPanel('wf',tabs,active,key=>{editor.panelTab=key;(editor.owner||editor).panelTab=key;if(key==='preview')previewWorkflowNode(editor,n)},()=>closeWorkflowInspector(editor));
+ if(!editor.readOnly){
+ $('#wf-inspector').insertAdjacentHTML('beforeend','<footer class="wf-node-edit-footer"><span id="wf-node-edit-state" class="hint">'+(editor.dirty?'有未应用的修改':'')+'</span><button id="wf-node-cancel" type="button">取消</button><button id="wf-node-apply" type="button" class="primary">应用</button></footer>');
+ $('#wf-node-apply').onclick=()=>{try{applyWorkflowNodeEditor(editor)}catch(error){toast(error.message)}};
+ $('#wf-node-cancel').onclick=()=>cancelWorkflowNodeEditor(editor);bindWorkflowNodeTitle(editor,n);
+ }
  if(n.kind==='execution'){bindWorkflowRules(editor,n);$('#wf-context-help').onclick=workflowArtifactHelp;}
  if(n.kind==='agent'){bindWorkflowAgentHandoff(editor,n);$('#wf-context-help').onclick=()=>workflowAgentHelp(editor);}
  if(n.kind==='agent')$('#wf-load-preview').onclick=()=>previewWorkflowNode(editor,n);
  document.querySelectorAll('[data-edit-edge]').forEach(el=>{el.onclick=()=>workflowEdgeDialog(editor,Number(el.dataset.editEdge));el.onkeydown=e=>{if(e.key==='Enter')el.onclick()}});
- $('#wf-node-form').onsubmit=e=>{e.preventDefault();if(editor.readOnly)return;try{applyWorkflowNode(editor,n)}catch(error){toast(error.message)}};
+ $('#wf-node-form').onsubmit=e=>{e.preventDefault();if(editor.readOnly)return;try{applyWorkflowNodeEditor(editor)}catch(error){toast(error.message)}};
 
  if(!editor.readOnly){
   const syncDraft=()=>{try{editor.nodeFormEdited=true;Object.assign(n,workflowNodeDraft(editor,n,false));if(n.agent)delete n.agent_id;const meta=$('#wf-inspector .wf-panel-meta');if(meta&&n.kind==='agent')meta.textContent=agentExecutionLabel(n.agent);workflowChanged(editor);renderWorkflowNodes(editor)}catch(error){toast(error.message)}};
   if(n.kind==='execution'){
    for(const id of ['timeout','retries','interval','error-target','error-title','error-content']){const input=$('#wf-execution-'+id);if(input)input.oninput=()=>{syncDraft();editor.graph.syncRuleEdges();renderWorkflowEdges(editor);if(id==='retries')$('#wf-execution-interval-field').hidden=Number(input.value)===0};}
    $('#wf-execution-error').onchange=()=>{syncDraft();editor.graph.syncRuleEdges();renderWorkflowInspector(editor);renderWorkflowNodes(editor)};
-   $('#wf-execution-mode').onchange=()=>{const mode=$('#wf-execution-mode').value;const oldMode=n.execution.mode;if((mode==='mcp')!==(oldMode==='mcp')&&n.rule_handoff?.rules.length){$('#wf-execution-mode').value=oldMode;toast('交接规则依赖当前执行方式，请先移除规则再切换工具调用');return}rememberWorkflowNodeDraft(editor);const output=n.execution.output,artifacts=n.execution.artifacts,retry=n.execution.retry,onError=n.execution.on_error;n.execution=mode==='mcp'?{mode,server_id:'',tool:'',arguments:{}}:mode==='code'?{mode,language:'python',code:''}:{mode,command:''};if(retry)n.execution.retry=retry;if(onError)n.execution.on_error=onError;if(mode!=='mcp'&&artifacts)n.execution.artifacts=artifacts;if(n.rule_handoff){if((mode==='mcp')!==(oldMode==='mcp'))n.rule_handoff=workflowRulePolicy(mode);if(mode!=='mcp')n.execution.output=output||{source:'exit_code'}}if(editor.executionDrafts)delete editor.executionDrafts[n.id];if(editor.bindingDrafts)delete editor.bindingDrafts[n.id];if(editor.executionEnvDrafts)delete editor.executionEnvDrafts[n.id];workflowChanged(editor);renderWorkflowInspector(editor);renderWorkflowNodes(editor)};
+   $('#wf-execution-mode').onchange=()=>switchWorkflowExecutionMode(editor,n,$('#wf-execution-mode').value);
    if(n.execution.mode==='mcp'){
     $('#wf-execution-arguments').oninput=syncDraft;$('#wf-execution-bindings').oninput=syncDraft;
     $('#wf-execution-tool').onchange=()=>{syncDraft();renderWorkflowInspector(editor)};
@@ -505,10 +550,10 @@ function renderWorkflowInspector(editor){
   }
   if(n.kind==='connector')$('#wf-node-form').querySelectorAll('input,textarea,select').forEach(field=>field.oninput=syncDraft);
   for(const selector of ['#wf-node-x','#wf-node-y',...(n.kind==='approval'?['#wf-node-prompt']:[]),...(n.kind==='agent'?['#wf-allow-user-input','#wf-continuation','#wf-timeout']:[])])$(selector).oninput=syncDraft;
-  if(n.kind==='agent'){for(const id of ['executor','model','instructions','sandbox','network','elevation','seed','skills','native','trust','inherit','env'])if($('#wf-agent-'+id))$('#wf-agent-'+id).oninput=syncDraft;$('#wf-agent-tools')?.querySelectorAll('input,select').forEach(field=>field.onchange=syncDraft);}
+  if(n.kind==='agent'){for(const id of ['executor','model','instructions','sandbox','network','elevation','reviewer','seed','skills','native','trust','inherit','env'])if($('#wf-agent-'+id))$('#wf-agent-'+id).oninput=syncDraft;$('#wf-agent-tools')?.querySelectorAll('input,select').forEach(field=>field.onchange=syncDraft);}
   if($('#wf-node-connector')&&n.kind==='connector')$('#wf-node-connector').onchange=()=>{n.connector_id=$('#wf-node-connector').value;n.connector_input={};workflowChanged(editor);renderWorkflowInspector(editor);renderWorkflowNodes(editor)};
   if(n.kind!=='end'&&n.kind!=='execution'&&n.kind!=='agent')$('#wf-add-target').onclick=()=>{const target=w.nodes.find(t=>t.id!==n.id);if(!target){toast('请先添加目标节点');return}workflowConnectDialog(editor,n.id,target.id)};
-  $('#wf-delete-node').onclick=()=>{editor.graph.remove(n.id);if(editor.agentEnvDrafts)delete editor.agentEnvDrafts[n.id];if(editor.completionDrafts)delete editor.completionDrafts[n.id];if(editor.executionDrafts)delete editor.executionDrafts[n.id];if(editor.bindingDrafts)delete editor.bindingDrafts[n.id];if(editor.executionEnvDrafts)delete editor.executionEnvDrafts[n.id];if(editor.ruleSchemaDrafts)delete editor.ruleSchemaDrafts[n.id];if(editor.ruleSamples)delete editor.ruleSamples[n.id];editor.selected=null;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor)};
+  $('#wf-delete-node').onclick=()=>{const owner=editor.owner||editor;if(!confirm('删除这个节点及其连线？'))return;owner.graph.remove(n.id);owner.nodeEditor=null;owner.selected=null;if(owner.modeDrafts)delete owner.modeDrafts[n.id];workflowChanged(owner);renderWorkflowNodes(owner);renderWorkflowInspector(owner)};
   if(n.id!==w.entry)$('#wf-set-entry').onclick=()=>{w.entry=n.id;workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor)};
   document.querySelectorAll('[data-remove-edge]').forEach(b=>b.onclick=()=>{editor.graph.removeEdge(Number(b.dataset.removeEdge));workflowChanged(editor);renderWorkflowEdges(editor);renderWorkflowInspector(editor)});
   try{editor.nodeFormBaseline=JSON.stringify(workflowNodeDraft(editor,n,false))}catch{editor.nodeFormBaseline=null}
@@ -516,23 +561,27 @@ function renderWorkflowInspector(editor){
 }
 // Raw JSON lives in the editor until valid, so closing a panel cannot discard a typo.
 function applyCompletionDraft(node,draft){
- let schema;try{schema=draft.schema.trim()?WorkflowGraph.parseJSON(draft.schema):undefined}catch(error){if(error.message.includes('数值'))throw error;throw new Error('节点「'+node.name+'」的输出格式不是有效 JSON')}
- if(schema!==undefined&&(!schema||typeof schema!=='object'||Array.isArray(schema)||schema.type!=='object'))throw new Error('输出格式须为 type=object 的 JSON Schema');
+ node.handoff_params=!!draft.enabled;
+ let schema;try{schema=draft.schema.trim()?WorkflowGraph.parseJSON(draft.schema):undefined}catch(error){throw new Error('参数格式不是有效 JSON：'+error.message)}
+ if(schema!==undefined&&(!schema||typeof schema!=='object'||Array.isArray(schema)||schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
+ if(node.handoff_params&&!schema)throw new Error('开启传递参数后，请填写参数格式');
  if(schema===undefined)delete node.handoff_schema;else node.handoff_schema=schema;
  node.handoff_instructions=draft.instructions;
 }
 function workflowAgentAdvanced(editor,n){
  return `<fieldset ${editor.readOnly?'disabled':''}><div class="field"><label><input id="wf-allow-user-input" type="checkbox" ${n.allow_user_input!==false?'checked':''}> 允许请求用户输入</label><p class="hint">允许智能体提出问题，并在当前会话等待答复。</p></div><div class="field"><label for="wf-continuation">自动继续次数</label><input id="wf-continuation" type="number" min="0" max="10" required value="${n.continuation_limit??0}"><p class="hint">未完成且未明确等待时在原会话继续。0 关闭，最多 10 次。</p></div><div class="field"><label for="wf-timeout">持续推进期限（秒）</label><input id="wf-timeout" type="number" min="0" max="86400" required value="${n.execution_timeout_seconds??0}"><p class="hint">从本次节点开始计时，到期后不再自动接续，不中断正在执行的回合。0 表示不设期限。</p></div></fieldset>`;
 }
+function workflowHandoffParamsExample(){return JSON.stringify({type:'object',properties:{name:{type:'string',description:'处理对象名称'},count:{type:'integer',minimum:1,description:'处理数量'}},required:['name']},null,2)}
 function workflowAgentHandoffFields(editor,n){
- const draft=editor.completionDrafts?.[n.id]||{schema:n.handoff_schema?JSON.stringify(n.handoff_schema,null,2):'',instructions:n.handoff_instructions||''};
+ const draft=editor.completionDrafts?.[n.id]||{enabled:!!n.handoff_params,schema:n.handoff_schema?JSON.stringify(n.handoff_schema,null,2):'',instructions:n.handoff_instructions||''};
  const edges=editor.graph.value.edges.map((edge,index)=>({...edge,index})).filter(e=>e.source===n.id);
- return `<fieldset ${editor.readOnly?'disabled':''}><div class="wf-agent-target-heading"><h4>交接目标</h4><button type="button" id="wf-agent-add-target" ${editor.readOnly?'disabled':''}>＋ 添加目标</button></div>${edges.map((e,i)=>`<div class="wf-agent-target"><div class="wf-agent-target-heading"><span class="hint">目标 ${i+1}</span><button type="button" data-agent-remove="${e.index}" aria-label="移除目标 ${i+1}">×</button></div><div class="field"><label for="wf-agent-target-${e.index}">目标节点</label><select id="wf-agent-target-${e.index}" data-agent-target="${e.index}">${editor.graph.value.nodes.filter(t=>t.id===e.target||!edges.some(other=>other.target===t.id)).map(t=>`<option value="${esc(t.id)}" ${t.id===e.target?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-agent-condition-${e.index}">交接条件</label><textarea id="wf-agent-condition-${e.index}" data-agent-condition="${e.index}" rows="3" maxlength="4000" placeholder="说明什么情况下交给这个节点。">${esc(e.description||'')}</textarea></div></div>`).join('')||'<p class="hint">添加下一节点；结束流程请选择结束节点。</p>'}<div class="field wf-agent-schema"><label for="wf-completion-schema">交接信息格式（JSON Schema，可选）</label><textarea id="wf-completion-schema" rows="7" maxlength="32000" spellcheck="false" placeholder='{"type":"object","properties":{"ready":{"type":"boolean"},"notes":{"type":"string"}},"required":["ready"]}'>${esc(draft.schema)}</textarea><p class="hint">校验交接信息 context；留空允许任意 JSON 对象。</p></div><div class="field"><label for="wf-completion-instructions">交接信息填写说明</label><textarea id="wf-completion-instructions" rows="3" maxlength="16000" placeholder="说明字段含义、取值依据和提交条件。">${esc(draft.instructions)}</textarea></div></fieldset>`;
+ return `<fieldset ${editor.readOnly?'disabled':''}><div class="wf-agent-target-heading"><h4>交接目标</h4><button type="button" id="wf-agent-add-target" ${editor.readOnly?'disabled':''}>＋ 添加目标</button></div>${edges.map((e,i)=>`<div class="wf-agent-target"><div class="wf-agent-target-heading"><span class="hint">目标 ${i+1}</span><button type="button" data-agent-remove="${e.index}" aria-label="移除目标 ${i+1}">×</button></div><div class="field"><label for="wf-agent-target-${e.index}">目标节点</label><select id="wf-agent-target-${e.index}" data-agent-target="${e.index}">${editor.graph.value.nodes.filter(t=>t.id===e.target||!edges.some(other=>other.target===t.id)).map(t=>`<option value="${esc(t.id)}" ${t.id===e.target?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-agent-condition-${e.index}">交接条件</label><textarea id="wf-agent-condition-${e.index}" data-agent-condition="${e.index}" rows="3" maxlength="4000" placeholder="说明什么情况下交给这个节点。">${esc(e.description||'')}</textarea></div></div>`).join('')||'<p class="hint">添加下一节点；结束流程请选择结束节点。</p>'}<label class="check"><input id="wf-handoff-params" type="checkbox" ${draft.enabled?'checked':''}>传递参数</label><div id="wf-handoff-params-fields" ${draft.enabled?'':'hidden'}><div class="field wf-agent-schema"><label for="wf-completion-schema">参数格式（JSON Schema）</label><textarea id="wf-completion-schema" class="${draft.schema===workflowHandoffParamsExample()?'wf-default-value':''}" rows="8" maxlength="32000" spellcheck="false" placeholder='{"type":"object","properties":{"commit":{"type":"string"},"timeout_seconds":{"type":"integer","minimum":1}},"required":["commit"]}'>${esc(draft.schema)}</textarea><p class="hint">定义 params 中的字段、类型和必填项。</p></div><div class="field"><label for="wf-completion-instructions">参数填写说明</label><textarea id="wf-completion-instructions" rows="3" maxlength="16000" placeholder="说明字段含义、取值依据和填写要求，例如 commit 填写本次实际提交的完整 SHA。">${esc(draft.instructions)}</textarea></div></div></fieldset>`;
 }
 function bindWorkflowAgentHandoff(editor,n){
  if(editor.readOnly)return;
- const remember=()=>{const draft={schema:$('#wf-completion-schema').value,instructions:$('#wf-completion-instructions').value};(editor.completionDrafts||={})[n.id]=draft;try{applyCompletionDraft(n,draft)}catch{}workflowChanged(editor)};
- $('#wf-completion-schema').oninput=remember;$('#wf-completion-instructions').oninput=remember;
+ const remember=()=>{const draft={enabled:$('#wf-handoff-params').checked,schema:$('#wf-completion-schema').value,instructions:$('#wf-completion-instructions').value};(editor.completionDrafts||={})[n.id]=draft;try{applyCompletionDraft(n,draft)}catch{}workflowChanged(editor)};
+ $('#wf-handoff-params').onchange=()=>{if($('#wf-handoff-params').checked&&!$('#wf-completion-schema').value.trim()){$('#wf-completion-schema').value=workflowHandoffParamsExample();$('#wf-completion-schema').classList.add('wf-default-value')}remember();$('#wf-handoff-params-fields').hidden=!$('#wf-handoff-params').checked};
+ $('#wf-completion-schema').oninput=()=>{$('#wf-completion-schema').classList.remove('wf-default-value');remember()};$('#wf-completion-instructions').oninput=remember;
  const refresh=()=>{workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor)};
  document.querySelectorAll('[data-agent-target]').forEach(el=>el.onchange=()=>{try{rememberWorkflowNodeDraft(editor);editor.graph.updateEdge(Number(el.dataset.agentTarget),{target:el.value,mode:'handoff'});refresh()}catch(error){toast(error.message);renderWorkflowInspector(editor)}});
  document.querySelectorAll('[data-agent-condition]').forEach(el=>el.oninput=()=>{editor.graph.value.edges[Number(el.dataset.agentCondition)].description=el.value;workflowChanged(editor);renderWorkflowEdges(editor)});
@@ -541,7 +590,7 @@ function bindWorkflowAgentHandoff(editor,n){
 }
 function workflowAgentHelp(editor){
  if(editor.panelTab==='preview'){workflowContextHelp(editor);return}
- const content=editor.panelTab==='handoff'?'<p><b>交接目标：</b>多个目标时由 Agent 按条件选择；单个目标时交给该节点；结束运行需明确连接结束节点。</p><p><b>交接工具：</b>统一调用 handoff，必须填写 target 和 message；context 是可选的结构化交接信息，artifacts 是实际产物文件路径。</p><p><b>格式校验：</b>JSON Schema 只校验 context。参数不合格时不推进；受理后等待本轮结束和必要产物保存，再进入下一节点。</p>':editor.panelTab==='advanced'?'<p><b>请求用户输入：</b>允许 Agent 暂停并等待答复，随后继续原会话。</p><p><b>自动继续次数：</b>回合结束、节点未完成且未明确等待时，最多接续的次数。0 表示关闭。</p><p><b>持续推进期限：</b>从进入节点开始计时，到期不再自动接续，不中断当前回合。0 表示不设期限。</p>':'<p><b>执行器与模型：</b>决定运行方式和推理模型。</p><p><b>角色指令：</b>规定职责；具体任务由运行输入和上游交接传入。</p><p><b>Skills 与工具：</b>提供工作方法和可调用能力。</p><p><b>执行权限：</b>决定访问范围及审批方式，任务文字本身不授予权限。</p>';
+ const content=editor.panelTab==='handoff'?'<p><b>交接目标：</b>多个目标时由 Agent 按条件选择；单个目标时交给该节点；结束运行需明确连接结束节点。</p><p><b>交接工具：</b>统一调用 handoff，必须填写 target 和 message；artifacts 是实际产物文件路径。开启“传递参数”后，params 按配置传递结构化参数。</p><p><b>格式校验：</b>开启后，参数格式和填写说明都会提供给 Agent；平台用同一份 Schema 校验 params。参数不合格时不推进；受理后等待本轮结束和必要产物保存，再进入下一节点。</p>':editor.panelTab==='advanced'?'<p><b>请求用户输入：</b>允许 Agent 暂停并等待答复，随后继续原会话。</p><p><b>自动继续次数：</b>回合结束、节点未完成且未明确等待时，最多接续的次数。0 表示关闭。</p><p><b>持续推进期限：</b>从进入节点开始计时，到期不再自动接续，不中断当前回合。0 表示不设期限。</p>':'<p><b>执行器与模型：</b>决定运行方式和推理模型。</p><p><b>角色指令：</b>规定职责；具体任务由运行输入和上游交接传入。</p><p><b>Skills 与工具：</b>提供工作方法和可调用能力。</p><p><b>执行权限：</b>决定访问范围及审批方式，任务文字本身不授予权限。</p>';
  dialog(`<div class="dialog-head"><h2 id="wf-agent-help-title">${editor.panelTab==='handoff'?'交接策略说明':editor.panelTab==='advanced'?'高级设置说明':'Agent 配置说明'}</h2><button type="button" data-close aria-label="关闭帮助">×</button></div><div class="dialog-body wf-agent-help">${content}</div>`);$('#dialog').setAttribute('aria-labelledby','wf-agent-help-title');$('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
 }
 function workflowSettings(editor){
@@ -552,12 +601,11 @@ function workflowSettings(editor){
 async function saveWorkflow(editor){
  const button=$('#wf-save');button.disabled=true;
  try{
-  // Apply the visible node form before saving, including text not yet blurred.
-  if($('#wf-node-form')&&!$('#wf-node-form').checkValidity()){$('#wf-tab-config')?.click();$('#wf-node-form').reportValidity();return}
-  const selected=editor.graph.node(editor.selected),w=workflowPayload(editor.graph.value,selected?workflowNodeDraft(editor,selected):null,editor.agentEnvDrafts,state.agents,editor.completionDrafts,editor.executionDrafts,editor.bindingDrafts,editor.executionEnvDrafts,editor.ruleSchemaDrafts);
+  rememberWorkflowNodeDraft(editor);if(editor.nodeEditor?.dirty)throw Error('请先应用或取消节点修改');
+  const w=workflowPayload(editor.graph.value,null,{},state.agents);
   $('#content').inert=true;
   const saved=await api('/api/workflows'+(w.id?'/'+w.id:''),w.id?'PUT':'POST',w);
-  if(workflowEditor!==editor)return;
+  if(!workflowEditorActive(editor))return;
   editor.graph.value=saved;editor.dirty=false;renderWorkflowNodes(editor);renderWorkflowInspector(editor);$('#wf-hint').textContent='选择节点配置交接策略 · 悬浮连线查看条件';history.replaceState({},'','/workflows/'+saved.id);workflowSaveStatus(editor);toast('智能体编排已保存');
  }catch(e){toast(e.status===409?'智能体编排已被其他页面更新。请导出当前改动，再重新打开合并。':e.message)}finally{button.disabled=false;if(workflowEditor===editor)$('#content').inert=false}
 }
@@ -597,7 +645,7 @@ function applyExecutionBindings(node,raw){
 function workflowExecutionFields(editor,node){
  const v=node.execution||{},servers=editor.toolServers||[],server=servers.find(s=>s.id===v.server_id),tools=server?.tools||[],tool=tools.find(t=>t.name===v.tool);
  const raw=editor.executionDrafts?.[node.id]??JSON.stringify(v.arguments||{},null,2),bindings=editor.bindingDrafts?.[node.id]??JSON.stringify(v.bindings||{},null,2);
- return `<div class="field"><label for="wf-execution-mode">执行方式</label><select id="wf-execution-mode">${[['code','代码'],['command','项目命令'],['mcp','MCP 工具']].map(([key,label])=>`<option value="${key}" ${v.mode===key?'selected':''}>${label}</option>`).join('')}</select></div>${v.mode==='code'?`<div class="field"><label for="wf-execution-language">语言</label><select id="wf-execution-language"><option value="python" ${v.language==='python'?'selected':''}>Python</option><option value="typescript" ${v.language==='typescript'?'selected':''}>TypeScript</option></select></div><div class="field"><label for="wf-execution-code">代码</label><textarea id="wf-execution-code" rows="14" maxlength="64000" spellcheck="false">${esc(v.code||'')}</textarea></div>`:v.mode==='command'?`<div class="field"><label for="wf-execution-command">项目命令</label><textarea id="wf-execution-command" rows="7" maxlength="64000" spellcheck="false" placeholder="例如：make verify、go test ./...、mvn verify">${esc(v.command||'')}</textarea></div>`:`<div class="field"><label for="wf-execution-server">工具服务</label><select id="wf-execution-server" required><option value="">请选择</option>${v.server_id&&!server?`<option value="${esc(v.server_id)}" selected>${esc(v.server_id)} · 不可用</option>`:''}${servers.map(s=>`<option value="${esc(s.id)}" ${s.id===v.server_id?'selected':''}>${esc(s.name)}${s.enabled?'':' · 已停用'}</option>`).join('')}</select></div><div class="field"><label for="wf-execution-tool">工具</label><select id="wf-execution-tool" required><option value="">请选择</option>${v.tool&&!tool?`<option value="${esc(v.tool)}" selected>${esc(v.tool)} · 不可用</option>`:''}${tools.map(t=>`<option value="${esc(t.name)}" ${t.name===v.tool?'selected':''}>${esc(t.title||t.name)}</option>`).join('')}</select>${tool?.description?`<p class="hint">${esc(tool.description)}</p>`:''}</div><div class="field"><label for="wf-execution-arguments">工具参数（JSON）</label><textarea id="wf-execution-arguments" rows="10" maxlength="64000" spellcheck="false">${esc(raw)}</textarea></div><details ${Object.keys(v.bindings||{}).length?'open':''}><summary>引用任务输入或节点结果</summary><div class="field"><label for="wf-execution-bindings">参数引用（JSON）</label><textarea id="wf-execution-bindings" rows="6" maxlength="64000" spellcheck="false">${esc(bindings)}</textarea><p class="hint">按工具参数名填写引用，替换对应固定值。省略 node 使用本次任务输入；填写 node 使用该节点最近一次已结束的结果。路径缺失或类型不符时停止执行。</p><pre>${esc(JSON.stringify({title:{path:'/input'},body:{node:'report',path:'/result/inputs/report'}},null,2))}</pre><p class="hint">可引用的节点：${editor.graph.value.nodes.filter(n=>n.id!==node.id).map(n=>esc(n.name)+' · '+esc(n.id)).join('、')||'尚无其他节点'}。路径使用 JSON Pointer，例如 /parameters/commit；字段名中的 / 写作 ~1，~ 写作 ~0。</p></div></details>${tool?`<details><summary>参数格式</summary><pre>${esc(JSON.stringify(tool.inputSchema,null,2))}</pre></details>`:''}`}${v.mode!=='mcp'?`<details ${v.artifacts?.length?'open':''}><summary>留存产物</summary><div class="field"><label for="wf-execution-artifacts">文件清单</label><textarea id="wf-execution-artifacts" rows="3" placeholder="reports/result.json&#10;reports/dashboard.html">${esc((v.artifacts||[]).join('\n'))}</textarea><p class="hint">每行一个工作区相对文件路径。交接前保存到运行记录，释放环境后仍可下载。单文件最多 8 MiB，每次节点执行最多 256 件、128 MiB；不要填写凭据文件。</p></div></details><details ${Object.keys(v.env_refs||{}).length?'open':''}><summary>环境变量引用</summary><div class="field"><label for="wf-execution-env">环境变量引用（JSON）</label><textarea id="wf-execution-env" rows="5" spellcheck="false">${esc(editor.executionEnvDrafts?.[node.id]??JSON.stringify(v.env_refs||{},null,2))}</textarea><p class="hint">填写命令需要的变量名及管理员配置的引用名，例如 {"GITHUB_TOKEN":"PROJECT_GITHUB_TOKEN"}。实际值不会保存到工作流；缺少配置时停止执行。</p></div></details><p class="hint">在本次运行的工作区执行。通过 WORKFLOW_INPUT_FILE 读取 JSON 文件，包含任务输入、参数与已有结果。</p>`:''}`;
+ return `<div class="field"><label for="wf-execution-mode">执行方式</label><select id="wf-execution-mode">${[['code','代码'],['command','项目命令'],['mcp','MCP 工具']].map(([key,label])=>`<option value="${key}" ${v.mode===key?'selected':''}>${label}</option>`).join('')}</select></div>${v.mode==='code'?`<div class="field"><label for="wf-execution-language">语言</label><select id="wf-execution-language"><option value="python" ${v.language==='python'?'selected':''}>Python</option><option value="typescript" ${v.language==='typescript'?'selected':''}>TypeScript</option></select></div><div class="field"><label for="wf-execution-code">代码</label><textarea id="wf-execution-code" rows="14" maxlength="64000" spellcheck="false">${esc(v.code||'')}</textarea></div>`:v.mode==='command'?`<div class="field"><label for="wf-execution-command">项目命令</label><textarea id="wf-execution-command" rows="7" maxlength="64000" spellcheck="false" placeholder="例如：make verify、go test ./...、mvn verify">${esc(v.command||'')}</textarea></div>`:`<div class="field"><label for="wf-execution-server">工具服务</label><select id="wf-execution-server" required><option value="">请选择</option>${v.server_id&&!server?`<option value="${esc(v.server_id)}" selected>${esc(v.server_id)} · 不可用</option>`:''}${servers.map(s=>`<option value="${esc(s.id)}" ${s.id===v.server_id?'selected':''}>${esc(s.name)}${s.enabled?'':' · 已停用'}</option>`).join('')}</select></div><div class="field"><label for="wf-execution-tool">工具</label><select id="wf-execution-tool" required><option value="">请选择</option>${v.tool&&!tool?`<option value="${esc(v.tool)}" selected>${esc(v.tool)} · 不可用</option>`:''}${tools.map(t=>`<option value="${esc(t.name)}" ${t.name===v.tool?'selected':''}>${esc(t.title||t.name)}</option>`).join('')}</select>${tool?.description?`<p class="hint">${esc(tool.description)}</p>`:''}</div><div class="field"><label for="wf-execution-arguments">工具参数（JSON）</label><textarea id="wf-execution-arguments" rows="10" maxlength="64000" spellcheck="false">${esc(raw)}</textarea></div><details ${Object.keys(v.bindings||{}).length?'open':''}><summary>引用任务输入或节点结果</summary><div class="field"><label for="wf-execution-bindings">参数引用（JSON）</label><textarea id="wf-execution-bindings" rows="6" maxlength="64000" spellcheck="false">${esc(bindings)}</textarea><p class="hint">按工具参数名填写引用，替换对应固定值。省略 node 使用本次任务输入；填写 node 使用该节点最近一次已结束的结果。路径缺失或类型不符时停止执行。</p><pre>${esc(JSON.stringify({title:{path:'/input'},body:{node:'report',path:'/result/params/report'}},null,2))}</pre><p class="hint">可引用的节点：${editor.graph.value.nodes.filter(n=>n.id!==node.id).map(n=>esc(n.name)+' · '+esc(n.id)).join('、')||'尚无其他节点'}。路径使用 JSON Pointer，例如 /parameters/commit；字段名中的 / 写作 ~1，~ 写作 ~0。</p></div></details>${tool?`<details><summary>参数格式</summary><pre>${esc(JSON.stringify(tool.inputSchema,null,2))}</pre></details>`:''}`}${v.mode!=='mcp'?`<details ${v.artifacts?.length?'open':''}><summary>留存产物</summary><div class="field"><label for="wf-execution-artifacts">文件清单</label><textarea id="wf-execution-artifacts" rows="3" placeholder="reports/result.json&#10;reports/dashboard.html">${esc((v.artifacts||[]).join('\n'))}</textarea><p class="hint">每行一个工作区相对文件路径。交接前保存到运行记录，释放环境后仍可下载。单文件最多 8 MiB，每次节点执行最多 256 件、128 MiB；不要填写凭据文件。</p></div></details><details ${Object.keys(v.env_refs||{}).length?'open':''}><summary>环境变量引用</summary><div class="field"><label for="wf-execution-env">环境变量引用（JSON）</label><textarea id="wf-execution-env" rows="5" spellcheck="false">${esc(editor.executionEnvDrafts?.[node.id]??JSON.stringify(v.env_refs||{},null,2))}</textarea><p class="hint">填写命令需要的变量名及管理员配置的引用名，例如 {"GITHUB_TOKEN":"PROJECT_GITHUB_TOKEN"}。实际值不会保存到工作流；缺少配置时停止执行。</p></div></details><p class="hint">在本次运行的工作区执行。通过 WORKFLOW_INPUT_FILE 读取 JSON 文件，包含任务输入、参数与已有结果。</p>`:''}`;
 }
 
 function workflowExecutionAdvanced(editor,node){
@@ -610,4 +658,17 @@ function workflowExecutionAdvanced(editor,node){
  ${f.action==='route'?`<div class="field"><label for="wf-execution-error-target">交给</label><select id="wf-execution-error-target">${workflowRuleTargets(editor,node,f.target)}</select></div><div class="field"><label for="wf-execution-error-title">连线标题</label><input id="wf-execution-error-title" maxlength="200" value="${esc(f.title||'执行异常')}"></div><div class="field"><label for="wf-execution-error-content">悬浮说明</label><textarea id="wf-execution-error-content" rows="2" maxlength="4000">${esc(f.content||'')}</textarea></div>`:''}
  <p class="hint">每次重试保留独立运行记录，并计入流程设置中的最大节点执行次数。</p>
  </fieldset>`;
+}
+
+// Each mode retains its own form and rule inputs; only the selected mode executes.
+function switchWorkflowExecutionMode(editor,node,mode){
+ rememberWorkflowNodeDraft(editor);
+ const modes=(editor.modeDrafts||={})[node.id]||={};
+ const old=node.execution.mode;
+ modes[old]={execution:JSON.parse(JSON.stringify(node.execution)),rules:JSON.parse(JSON.stringify(node.rule_handoff)),raw:editor.executionDrafts?.[node.id],bindings:editor.bindingDrafts?.[node.id],env:editor.executionEnvDrafts?.[node.id],schema:editor.ruleSchemaDrafts?.[node.id],sources:editor.resultDrafts?.[node.id]};
+ const selected=modes[mode];
+ node.execution=selected?JSON.parse(JSON.stringify(selected.execution)):mode==='mcp'?{mode,server_id:'',tool:'',arguments:{}}:mode==='code'?{mode,language:'python',code:'',output:{source:'exit_code'}}:{mode,command:'',output:{source:'exit_code'}};
+ if(selected)node.rule_handoff=JSON.parse(JSON.stringify(selected.rules));else if(old!=='mcp'&&mode!=='mcp'){node.rule_handoff=JSON.parse(JSON.stringify(modes[old].rules));node.execution.output=JSON.parse(JSON.stringify(modes[old].execution.output||{source:'exit_code'}));node.execution.artifacts=modes[old].execution.artifacts;node.execution.env_refs=modes[old].execution.env_refs;}else node.rule_handoff=workflowRulePolicy(mode);
+ for(const [key,value] of [['executionDrafts',selected?.raw],['bindingDrafts',selected?.bindings],['executionEnvDrafts',selected?.env],['ruleSchemaDrafts',selected?.schema],['resultDrafts',selected?.sources]]){editor[key]||={};if(value===undefined)delete editor[key][node.id];else editor[key][node.id]=value;}
+ editor.graph.syncRuleEdges();node.execution_drafts=JSON.parse(JSON.stringify(modes));workflowChanged(editor);renderWorkflowInspector(editor);
 }

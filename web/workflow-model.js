@@ -144,7 +144,9 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
     }
     if(node.exit_mode||node.completion_schema!=null||node.completion_instructions)throw new Error('旧交接模式需通过工作流升级后编辑');
-    if(node.handoff_schema!=null&&(typeof node.handoff_schema!=='object'||Array.isArray(node.handoff_schema)||node.handoff_schema.type!=='object'))throw new Error('输出格式须为 type=object 的 JSON Schema');
+    if(node.handoff_params!=null&&typeof node.handoff_params!=='boolean')throw new Error('传递参数开关须为布尔值');
+    if(node.handoff_params&&!node.handoff_schema)throw new Error('开启传递参数后，请填写参数格式');
+    if(node.handoff_schema!=null&&(typeof node.handoff_schema!=='object'||Array.isArray(node.handoff_schema)||node.handoff_schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
     if(!this.value.context_version||node.kind!=='agent')return;
     if(this.value.context_version===2&&node.agent?.seed_dir)throw new Error('工作区在开始运行时统一指定，节点不单独设置工作区模板');
     if(this.value.context_version===2&&node.prompt)throw new Error('此编排不再使用独立工作说明；请将长期职责放入角色指令，具体任务在运行时输入');

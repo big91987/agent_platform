@@ -28,6 +28,7 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             "id": key,
             "name": name,
             "kind": "agent",
+            "handoff_params": False,
             "allow_user_input": True,
             "continuation_limit": 3,
             "execution_timeout_seconds": 1800,

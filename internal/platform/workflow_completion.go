@@ -161,17 +161,23 @@ func checkHandoffSchema(value any, depth int) error {
 }
 
 func validateCompletionConfig(w Workflow, n WorkflowNode) error {
+	if err := validateExecutionDrafts(n); err != nil {
+		return err
+	}
 	if n.ExitMode != "" || len(n.RetiredCompletionSchema) > 0 || n.RetiredCompletionInstructions != "" {
 		return errors.New("retired Agent handoff configuration; upgrade the workflow before starting a new Run")
 	}
 	if n.Kind != "agent" {
-		if len(n.HandoffSchema) > 0 || n.HandoffInstructions != "" {
+		if n.HandoffParams || len(n.HandoffSchema) > 0 || n.HandoffInstructions != "" {
 			return errors.New("handoff settings require an Agent node")
 		}
 		return nil
 	}
 	if len(n.HandoffInstructions) > 16000 {
 		return errors.New("handoff_instructions exceeds 16000 bytes")
+	}
+	if n.HandoffParams && len(n.HandoffSchema) == 0 {
+		return errors.New("enabled handoff params require a JSON Schema")
 	}
 	if len(n.HandoffSchema) > 0 {
 		if _, err := completionInputsSchema(n); err != nil {
@@ -211,7 +217,7 @@ func handoffToolSchema(w Workflow, n WorkflowNode) (*jsonschema.Schema, error) {
 	if err := validateWorkflowHandoffs(w); err != nil {
 		return nil, err
 	}
-	contextSchema, err := completionInputsSchema(n)
+	paramsSchema, err := completionInputsSchema(n)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +228,11 @@ func handoffToolSchema(w Workflow, n WorkflowNode) (*jsonschema.Schema, error) {
 	schema.Required = []string{"target", "message"}
 	schema.Properties["message"].Description = "给下一节点的交接说明：完成事项、未决问题及后续工作。"
 
-	schema.Properties["context"] = contextSchema
+	delete(schema.Properties, "params")
+	if n.HandoffParams {
+		paramsSchema.Description = "交给下一节点的参数，按配置的格式和填写说明提交。"
+		schema.Properties["params"] = paramsSchema
+	}
 	schema.Properties["artifacts"].Description = "需留存的实际产物，使用工作区相对文件路径。"
 	targets := []any{}
 	for _, edge := range w.Edges {
@@ -232,37 +242,46 @@ func handoffToolSchema(w Workflow, n WorkflowNode) (*jsonschema.Schema, error) {
 	}
 	schema.Properties["target"].Enum = targets
 	schema.Properties["target"].Description = "必须填写配置允许的目标节点ID，包括唯一目标或结束节点。"
-	if len(n.HandoffSchema) > 0 {
-		schema.Required = append(schema.Required, "context")
+	if n.HandoffParams {
+		schema.Required = append(schema.Required, "params")
 	}
 	return schema, nil
 }
 
 func validateCompletionResult(n WorkflowNode, result NodeResult) error {
+	if !n.HandoffParams {
+		if result.Params != nil {
+			return errors.New("handoff params are disabled")
+		}
+		return nil
+	}
 	schema, err := completionInputsSchema(n)
 	if err != nil {
 		return err
 	}
-	if result.Inputs == nil && len(n.HandoffSchema) == 0 {
+	if result.Params == nil && len(n.HandoffSchema) == 0 {
 		return nil
 	}
 	resolved, err := schema.Resolve(nil)
 	if err != nil {
 		return err
 	}
-	if err = resolved.Validate(result.Inputs); err != nil {
-		return fmt.Errorf("handoff context do not match the configured schema: %w", err)
+	if err = resolved.Validate(result.Params); err != nil {
+		return fmt.Errorf("handoff params do not match the configured schema: %w", err)
 	}
 	return nil
 }
 
 func completionGuidance(n WorkflowNode) string {
+	if !n.HandoffParams {
+		return ""
+	}
 	var b strings.Builder
 	if n.HandoffInstructions != "" {
-		b.WriteString("\n\n## 交接信息填写说明\n" + n.HandoffInstructions)
+		b.WriteString("\n\n## 交接参数填写说明\n" + n.HandoffInstructions)
 	}
 	if len(n.HandoffSchema) > 0 {
-		b.WriteString("\n\n## 交接信息格式\nhandoff 的 context 必须符合以下 JSON Schema；message 提交交接说明，artifacts 列出实际产物路径。校验不通过时修正工具参数后重试，不得声称完成。\n```json\n" + string(n.HandoffSchema) + "\n```")
+		b.WriteString("\n\n## 交接参数格式\nhandoff 的 params 必须符合以下 JSON Schema；message 提交交接说明，artifacts 列出实际产物路径。校验不通过时修正工具参数后重试，不得声称完成。\n```json\n" + string(n.HandoffSchema) + "\n```")
 	}
 	return b.String()
 }

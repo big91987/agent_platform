@@ -22,7 +22,7 @@ func TestHandoffRejectsFixedAgentEdgeConfiguration(t *testing.T) {
 
 func TestHandoffRejectsInvalidTargetsAndRetainsStructuredInputs(t *testing.T) {
 	s := testStore(t)
-	c, r := agentRun(t, s)
+	c, r := agentRun(t, s, enableTestHandoffParams)
 	engine := NewWorkflowEngine(s, nil, "http://localhost")
 	engine.Tick(context.Background())
 	conv, _, e := s.Claim()
@@ -33,7 +33,7 @@ func TestHandoffRejectsInvalidTargetsAndRetainsStructuredInputs(t *testing.T) {
 	if e = s.handoffWorkflowNode(r.ID, 1, token, HandoffInput{Target: "missing", Message: "test"}); e == nil {
 		t.Fatal("invalid target accepted")
 	}
-	in := HandoffInput{Target: "revise", Message: "revise evidence", Context: map[string]any{"problem": "missing evidence"}}
+	in := HandoffInput{Target: "revise", Message: "revise evidence", Params: map[string]any{"problem": "missing evidence"}}
 	if e = s.handoffWorkflowNode(r.ID, 1, token, in); e != nil {
 		t.Fatal(e)
 	}
@@ -41,7 +41,7 @@ func TestHandoffRejectsInvalidTargetsAndRetainsStructuredInputs(t *testing.T) {
 		t.Fatal("duplicate", e)
 	}
 	after, _ := s.WorkflowRun(c, r.ID)
-	if after.Steps[0].Result.Inputs["problem"] != "missing evidence" {
+	if after.Steps[0].Result.Params["problem"] != "missing evidence" {
 		t.Fatal(after)
 	}
 	in.Target = "done"

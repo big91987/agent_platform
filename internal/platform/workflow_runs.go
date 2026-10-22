@@ -28,6 +28,7 @@ func matchesWorkflowEnvironment(w Workflow, expected string) bool {
 }
 
 type NodeResult struct {
+	Params    map[string]any `json:"params,omitzero"`
 	Inputs    map[string]any `json:"inputs,omitzero"`
 	Route     string         `json:"route,omitempty"`
 	Summary   string         `json:"summary"`

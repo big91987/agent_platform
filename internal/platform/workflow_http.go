@@ -243,7 +243,7 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		err = addHandoffTool(service, &mcp.Tool{Name: "handoff", InputSchema: schema, Description: "Submit handoff to one configured target, including a sole target or the end node. target and message are required. context carries optional structured handoff information; artifacts lists actual workspace-relative files. After acceptance end this turn and stop changing files; the platform advances only after execution ends and required artifacts are retained." + completionGuidance(node)}, schema, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
+		err = addHandoffTool(service, &mcp.Tool{Name: "handoff", InputSchema: schema, Description: "Submit handoff to one configured target, including a sole target or the end node. target and message are required. artifacts lists actual workspace-relative files. After acceptance end this turn and stop changing files; the platform advances only after execution ends and required artifacts are retained." + completionGuidance(node)}, schema, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
 			current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 			if e != nil {
 				return nil, nil, e

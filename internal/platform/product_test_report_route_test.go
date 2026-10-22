@@ -42,6 +42,8 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 			w.Edges = append(w.Edges, edge)
 		}
 	}
+	w.Nodes[0].HandoffParams = true
+	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object"}`)
 	w, err = s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +58,7 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := HandoffInput{Target: "e2e_report", Message: "Blocked: required authorization is unavailable", Context: map[string]any{"product_result": "Not Run", "plan_verdict": "Blocked"}}
+	in := HandoffInput{Target: "e2e_report", Message: "Blocked: required authorization is unavailable", Params: map[string]any{"product_result": "Not Run", "plan_verdict": "Blocked"}}
 	if err = s.handoffWorkflowNode(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], in); err != nil {
 		t.Fatalf("blocked plan cannot reach the existing report agent: %v", err)
 	}
@@ -73,7 +75,7 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.Seq != 2 || after.Steps[1].NodeID != "e2e_report" || after.Steps[0].Result.Inputs["product_result"] != "Not Run" {
+	if after.Seq != 2 || after.Steps[1].NodeID != "e2e_report" || after.Steps[0].Result.Params["product_result"] != "Not Run" {
 		t.Fatalf("blocked result did not reach reporting intact: %+v", after)
 	}
 }

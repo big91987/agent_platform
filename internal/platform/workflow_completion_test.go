@@ -27,6 +27,7 @@ func configuredCompletion(t *testing.T, w Workflow, mode, schema string) Workflo
 			t.Fatal(err)
 		}
 		n["handoff_schema"] = x
+		n["handoff_params"] = true
 	}
 	raw, _ = json.Marshal(v)
 	if err := json.Unmarshal(raw, &w); err != nil {
@@ -72,7 +73,7 @@ func TestConfiguredCompletionRejectsInvalidResultAndPreservesTypes(t *testing.T)
 		t.Fatal("invalid result was persisted")
 	}
 	var in NodeResult
-	if err = json.Unmarshal([]byte(`{"summary":"verified","inputs":{"passed":true,"count":2,"files":["a.txt","b.txt"]}}`), &in); err != nil {
+	if err = json.Unmarshal([]byte(`{"summary":"verified","params":{"passed":true,"count":2,"files":["a.txt","b.txt"]}}`), &in); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.testHandoffResult(r.ID, 1, token, in); err != nil {
@@ -166,7 +167,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 	if !found {
 		t.Fatal("missing completion tool")
 	}
-	for _, args := range []string{`{"target":"done","message":"bad","context":{"passed":true,"count":9007199254740993,"files":[]}}`, `{"target":"done","message":"bad"}`, `{"target":"done","message":"bad","context":{"passed":"true","count":2,"files":[]}}`, `{"target":"done","message":"bad","context":{"passed":true,"count":2,"files":[],"extra":1}}`} {
+	for _, args := range []string{`{"target":"done","message":"bad","params":{"passed":true,"count":9007199254740993,"files":[]}}`, `{"target":"done","message":"bad"}`, `{"target":"done","message":"bad","params":{"passed":"true","count":2,"files":[]}}`, `{"target":"done","message":"bad","params":{"passed":true,"count":2,"files":[],"extra":1}}`} {
 		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(args)})
 		if err == nil && !result.IsError {
 			t.Fatal("accepted invalid arguments", args)
@@ -176,7 +177,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 			t.Fatal("invalid completion changed state")
 		}
 	}
-	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(`{"target":"done","message":"verified","context":{"passed":true,"count":2,"files":["a.txt"]}}`)})
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(`{"target":"done","message":"verified","params":{"passed":true,"count":2,"files":["a.txt"]}}`)})
 	if err != nil || result.IsError {
 		t.Fatal(result, err)
 	}
@@ -196,7 +197,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 	if err = json.Unmarshal([]byte(req.Stdin), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Previous) != 1 || payload.Previous[0].Result.Inputs["passed"] != true || payload.Previous[0].Result.Inputs["count"] != float64(2) {
+	if len(payload.Previous) != 1 || payload.Previous[0].Result.Params["passed"] != true || payload.Previous[0].Result.Params["count"] != float64(2) {
 		t.Fatal(req.Stdin)
 	}
 	if err = s.Complete(conv.ID, msg.ID, "completed", ""); err != nil {
@@ -210,7 +211,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 }
 
 func TestCompletionEmptyInputsAndUnrepresentableNumbers(t *testing.T) {
-	raw := `{"summary":"ok","inputs":{}}`
+	raw := `{"summary":"ok","params":{}}`
 	var result NodeResult
 	if err := json.Unmarshal([]byte(raw), &result); err != nil {
 		t.Fatal(err)
@@ -221,10 +222,10 @@ func TestCompletionEmptyInputsAndUnrepresentableNumbers(t *testing.T) {
 	}
 	var got map[string]any
 	json.Unmarshal(encoded, &got)
-	if _, ok := got["inputs"].(map[string]any); !ok {
+	if _, ok := got["params"].(map[string]any); !ok {
 		t.Fatalf("empty object lost: %s", encoded)
 	}
-	for _, raw := range []string{`{"summary":"bad","inputs":{"id":9007199254740993}}`, `{"summary":"bad","inputs":{"nested":[{"value":1.0000000000000001}]}}`} {
+	for _, raw := range []string{`{"summary":"bad","params":{"id":9007199254740993}}`, `{"summary":"bad","params":{"nested":[{"value":1.0000000000000001}]}}`} {
 		if err := json.Unmarshal([]byte(raw), &result); err == nil {
 			t.Fatalf("accepted lossy number: %s", raw)
 		}
@@ -232,5 +233,133 @@ func TestCompletionEmptyInputsAndUnrepresentableNumbers(t *testing.T) {
 	n := WorkflowNode{HandoffSchema: json.RawMessage(`{"type":"object","properties":{"id":{"const":9007199254740993}}}`)}
 	if _, err := completionInputsSchema(n); err == nil {
 		t.Fatal("accepted lossy schema constraint")
+	}
+}
+
+func TestHandoffParamsToggleAndDescriptions(t *testing.T) {
+	n := WorkflowNode{ID: "a", Kind: "agent", HandoffSchema: json.RawMessage(completionTestSchema), HandoffInstructions: "根据实际执行结果填写；count为通过用例数。"}
+	w := Workflow{Nodes: []WorkflowNode{n, {ID: "done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "a", Target: "done", Route: "next", Mode: "handoff"}}}
+	schema, err := handoffToolSchema(w, n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if schema.Properties["params"] != nil || schema.Properties["context"] != nil {
+		t.Fatal("disabled params exposed")
+	}
+	n.HandoffParams = true
+	w.Nodes[0] = n
+	schema, err = handoffToolSchema(w, n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if schema.Properties["params"] == nil || schema.Properties["context"] != nil {
+		t.Fatal("wrong public fields")
+	}
+	for _, key := range []string{"target", "message", "params", "artifacts"} {
+		if schema.Properties[key].Description == "" {
+			t.Fatal("missing description", key)
+		}
+	}
+	if !strings.Contains(completionGuidance(n), "count为通过用例数") || !strings.Contains(completionGuidance(n), "params") {
+		t.Fatal("missing guidance")
+	}
+	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{"passed": true, "count": 2, "files": []any{"proof.txt"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{"passed": "true"}}); err == nil {
+		t.Fatal("invalid params accepted")
+	}
+	n.HandoffParams = false
+	if completionGuidance(n) != "" {
+		t.Fatal("disabled guidance leaked")
+	}
+	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{}}); err == nil {
+		t.Fatal("disabled params accepted")
+	}
+	n.HandoffParams = true
+	n.HandoffSchema = nil
+	if err := validateCompletionConfig(w, n); err == nil {
+		t.Fatal("enabled params need a schema")
+	}
+}
+
+// Real platform/MCP transports prove both parameter consumption and the next
+// Agent input. Native reasoning is controlled by Claim/Complete in this test.
+func TestAgentParamsReachMCPAndNextAgent(t *testing.T) {
+	s := testStore(t)
+	var received string
+	c, w, dir, _ := executionFixture(t, s, func(_ context.Context, text string) (*mcp.CallToolResult, any, error) {
+		received = text
+		return nil, map[string]any{"checked_commit": text}, nil
+	})
+	agent := testAgent(t, s)
+	w.Entry = "author"
+	w.Nodes = append(w.Nodes, WorkflowNode{ID: "author", Name: "Author", Kind: "agent", AgentID: agent.ID, HandoffParams: true, HandoffSchema: json.RawMessage(`{"type":"object","properties":{"commit":{"type":"string"}},"required":["commit"],"additionalProperties":false}`), HandoffInstructions: "commit填写实际提交，不填分支名。"}, WorkflowNode{ID: "review", Name: "Review", Kind: "agent", AgentID: agent.ID})
+	w.Nodes[0].RuleHandoff = executionTestRules("mcp", "review")
+	w.Nodes[0].Execution.Bindings = map[string]ExecutionBinding{"text": {Node: "author", Path: "/result/params/commit"}}
+	w.Edges = append(w.Edges, WorkflowEdge{Source: "author", Target: "call", Route: "next", Mode: "handoff"}, WorkflowEdge{Source: "review", Target: "done", Route: "next", Mode: "handoff"})
+	var err error
+	w, err = s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, WorkspacePath: dir, Input: "verify params"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewServer(s, nil, nil, "password", "http://localhost")
+	remote := httptest.NewServer(h)
+	defer remote.Close()
+	h.workflows.base = remote.URL
+	h.workflows.Tick(context.Background())
+	conv, msg, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client, err := mcp.NewClient(&mcp.Implementation{Name: "params-flow", Version: "1"}, nil).Connect(ctx, &mcp.StreamableClientTransport{Endpoint: remote.URL + "/api/workflow-node/mcp", HTTPClient: &http.Client{Transport: bearerTransport{http.DefaultTransport, *conv.Snapshot.Env[workflowTokenEnv]}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	for _, args := range []string{`{"target":"call","message":"bad","params":{"commit":1}}`, `{"target":"call","message":"old","context":{"commit":"old"}}`} {
+		out, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(args)})
+		if err == nil && !out.IsError {
+			t.Fatal("bad params accepted")
+		}
+	}
+	out, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(`{"target":"call","message":"检查已提交版本","params":{"commit":"abc123 $(not a command)"}}`)})
+	if err != nil || out.IsError {
+		t.Fatal(out, err)
+	}
+	s.Complete(conv.ID, msg.ID, "completed", "")
+	deadline := time.Now().Add(4 * time.Second)
+	for time.Now().Before(deadline) {
+		h.workflows.Tick(ctx)
+		r, _ = s.WorkflowRun(c, r.ID)
+		if r.Seq == 3 && r.Steps[2].ConversationID != "" {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if received != "abc123 $(not a command)" {
+		t.Fatal("params not passed literally", received)
+	}
+	review, input, err := s.Claim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(input.Content, "checked_commit") || !strings.Contains(input.Content, "abc123 $(not a command)") {
+		t.Fatal("execution result missing from Agent input", input.Content)
+	}
+	if err = s.handoffWorkflowNode(r.ID, 3, *review.Snapshot.Env[workflowTokenEnv], HandoffInput{Target: "done", Message: "检查完成"}); err != nil {
+		t.Fatal(err)
+	}
+	s.Complete(review.ID, input.ID, "completed", "")
+	h.workflows.Tick(ctx)
+	r, _ = s.WorkflowRun(c, r.ID)
+	if r.Status != "completed" {
+		t.Fatal(r.Status)
 	}
 }

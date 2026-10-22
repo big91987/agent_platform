@@ -519,3 +519,36 @@ func TestExecutionRejectsMissingRulesBeforeDispatch(t *testing.T) {
 		t.Fatalf("old dispatch path remains: %v", err)
 	}
 }
+
+func TestInactiveExecutionDraftsPersistWithoutDispatch(t *testing.T) {
+	s := testStore(t)
+	var calls atomic.Int32
+	c, w, dir, _ := executionFixture(t, s, func(_ context.Context, text string) (*mcp.CallToolResult, any, error) {
+		calls.Add(1)
+		return nil, map[string]any{"text": text}, nil
+	})
+	w.Nodes[0].ExecutionDrafts = json.RawMessage(`{"code":{"execution":{"mode":"code","language":"python","code":"raise Exception('inactive')"},"rules":{"schema_scope":"value","rules":[],"on_invalid":{"action":"stop"},"on_expression":{"action":"stop"}},"sources":{"file":{"output":{"source":"file","path":"reports/result.json"}}}}}`)
+	saved, err := s.SaveWorkflow(c, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := s.Workflow(c, saved.ID)
+	if err != nil || string(loaded.Nodes[0].ExecutionDrafts) != string(w.Nodes[0].ExecutionDrafts) {
+		t.Fatal("drafts not retained", err)
+	}
+	r, err := s.StartWorkflow(c, WorkflowStart{WorkflowID: saved.ID, WorkspacePath: dir, Input: "active MCP only"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r = waitConnectorRun(t, NewWorkflowEngine(s, nil, ""), r.ID, "completed")
+	if calls.Load() != 1 || len(r.Steps) != 2 {
+		t.Fatal("inactive mode dispatched", calls.Load(), r.Seq)
+	}
+	for _, raw := range []string{`null`, `[]`, `{"unknown":{}}`, `{"code":{"execution":{"mode":"command"},"rules":{}}}`} {
+		n := loaded.Nodes[0]
+		n.ExecutionDrafts = json.RawMessage(raw)
+		if validateExecutionDrafts(n) == nil {
+			t.Fatal("invalid draft accepted", raw)
+		}
+	}
+}

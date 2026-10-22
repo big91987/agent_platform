@@ -19,7 +19,7 @@ func (w Workflow) edgeMode(edge WorkflowEdge) string {
 type HandoffInput struct {
 	Target    string         `json:"target"`
 	Message   string         `json:"message"`
-	Context   map[string]any `json:"context,omitempty"`
+	Params    map[string]any `json:"params,omitempty"`
 	Artifacts []string       `json:"artifacts,omitempty"`
 }
 
@@ -45,7 +45,7 @@ func (s *Store) handoffWorkflowNode(id string, seq int, token string, in Handoff
 	if len(routes) != 1 {
 		return errors.New("target must identify exactly one configured handoff destination")
 	}
-	result := NodeResult{Route: routes[0], Summary: in.Message, Inputs: in.Context, Artifacts: in.Artifacts}
+	result := NodeResult{Route: routes[0], Summary: in.Message, Params: in.Params, Artifacts: in.Artifacts}
 	if err := validateCompletionResult(node, result); err != nil {
 		return err
 	}

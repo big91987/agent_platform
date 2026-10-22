@@ -11,12 +11,15 @@ import (
 	"testing"
 )
 
-func agentRun(t *testing.T, s *Store) (Caller, WorkflowRun) {
+func agentRun(t *testing.T, s *Store, configure ...func(*Workflow)) (Caller, WorkflowRun) {
 	t.Helper()
 	c, w, _ := runFixture(t, s)
 	a := testAgent(t, s)
 	w.Nodes[0].Kind = "agent"
 	w.Nodes[0].AgentID = a.ID
+	for _, f := range configure {
+		f(&w)
+	}
 	w, e := s.SaveWorkflow(c, w)
 	if e != nil {
 		t.Fatal(e)

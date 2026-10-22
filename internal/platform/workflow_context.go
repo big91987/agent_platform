@@ -38,7 +38,7 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 				return "", errors.New("handoff target missing")
 			}
 			if handoff.Len() == 0 {
-				handoff.WriteString("## 自主交接\n使用 handoff，target 为下列节点 ID，message 说明真实结论、未决问题及后续工作；context 携带结构化交接信息，artifacts 列出实际工作区相对文件路径。只有一个目标或目标是结束节点时，也必须填写 target。\n")
+				handoff.WriteString("## 自主交接\n使用 handoff，target 为下列节点 ID，message 说明真实结论、未决问题及后续工作；artifacts 列出实际工作区相对文件路径。只有一个目标或目标是结束节点时，也必须填写 target。\n")
 			}
 			fmt.Fprintf(&handoff, "\n### %s（target: `%s`）\n%s\n", w.node(edge.Target).Name, edge.Target, edge.Description)
 		}
@@ -204,6 +204,7 @@ func appendWorkflowResult(b *strings.Builder, old WorkflowStep) {
 		v[k] = val
 	}
 	markdownValues(b, "交接输入", v)
+	markdownValues(b, "交接参数 params", old.Result.Params)
 	for _, p := range old.Result.Artifacts {
 		fmt.Fprintf(b, "- 产物引用：%s\n", p)
 	}
