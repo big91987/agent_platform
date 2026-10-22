@@ -266,7 +266,7 @@ class NodeAgentInstallTest(unittest.TestCase):
         )
         nodes = {node["id"]: node for node in graph["nodes"]}
         self.assertEqual(nodes["e2e_plan_review"]["kind"], "agent")
-        self.assertEqual(nodes["e2e_plan_review"]["exit_mode"], "handoff")
+        self.assertNotIn("exit_mode", nodes["e2e_plan_review"])
         # Simulate an installation made before the plan review stage existed.
         graph["nodes"] = [
             node for node in graph["nodes"] if node["id"] != "e2e_plan_review"

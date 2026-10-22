@@ -557,8 +557,8 @@ func TestOpenSandboxAgentStartupAcceptsOuterIsolationAndRejectsUnenforcedRestric
 		t.Run(scenario.name, func(t *testing.T) {
 			store := testStore(t)
 			caller, graph, posts, _ := sandboxWorkflowFixture(t, store, false, false)
-			graph.Nodes[0] = WorkflowNode{ID: "review", Name: "Native role", Kind: "agent", ExitMode: "complete", Agent: &Agent{Executor: "codex", Model: "gpt-6.1-sol", Sandbox: scenario.sandbox, NetworkAccess: scenario.network, Instructions: "Use this task's shared environment."}}
-			graph.Edges[0].Mode = "automatic"
+			graph.Nodes[0] = WorkflowNode{ID: "review", Name: "Native role", Kind: "agent", Agent: &Agent{Executor: "codex", Model: "gpt-6.1-sol", Sandbox: scenario.sandbox, NetworkAccess: scenario.network, Instructions: "Use this task's shared environment."}}
+			graph.Edges[0].Mode = "handoff"
 			var err error
 			graph, err = store.SaveWorkflow(caller, graph)
 			if err != nil {

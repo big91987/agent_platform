@@ -3420,3 +3420,15 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 112正式API隔离Run `7ec15e623d41b44084d50d167b68a930` 完成6步：3秒命令超时并确认停止→第二次执行成功；另一个命令两次超时耗尽→rule_execution异常目标；后续命令exit7按明确规则完成。五次原层日志分别228/367/228/228/406bytes，均通过format=text完整读取并核bytes、计算SHA；Run环境释放后recovery.txt仍可下载。另一Run `d6e82291d8769c2f26138b71c5abd5b4` 在第2步等待重试时正式stop，未派发新命令，环境释放。临时Workflow `be5f017e56f195b563b03aab4923394c` 已通过revision API删除，仅保留Run历史与原层回执。原始记录在112 `execution-limits-live.json` 和本地ignored验证目录。
 
 真实浏览器核112正式Workflow revision6新增高级页，prepare原240秒保持、重试0；未保存正式工作流。截图 `output/playwright/execution-limits-112.png`，专用浏览器已关闭。标准升级前后既有等待/完成Run、正式工作流、私有配置及3个已释放Run的归档和下载逐项保持。MCP真实HTTP超时/连接恢复证明来自隔离平台回归，112现场证明来自真实OpenSandbox命令；二者均是Harness能力验证，不是Model Relay产品验收、供应商调用或新整链研发。未启用定时任务、未启动本机常驻平台。
+
+### 2026-10-22 · 统一 Agent handoff 源码回归
+
+用户确认所有目标均由 Agent 显式填写 target，当前实现删除 complete_node 与双模式界面，统一 handoff(target,message,context,artifacts)。context 支持类型化对象及可选 handoff_schema，单一、多目标和结束节点共用目标配置；交接条件直接在节点面板编辑，高级参数独立分页，问号为简短模态说明。权限、用户输入队列、重复/冲突与原生结束后归档推进保持。历史 exit_mode/completion_* 只作冻结记录读取，新保存/启动/恢复拒绝旧契约，正式工作流待通过 API 显式升级。
+
+定向真实 MCP 测试先红后绿，覆盖缺目标/非法目标/旧字段/额外 route/空 message、类型化 context、重复提交及原生未结束不推进。真实 Chromium 14.891s 通过，含目标增删、Schema/参数保存重载和帮助弹窗。完整 scripts/verify.sh exit0：133 模板、60 部署控制器、前端与安装/SDK回归、go vet、Go race 91.839s 及构建通过。Mac链接器 LC_DYSYMTAB warning 未阻止测试/构建。初期失败是旧契约夹具与新增浏览器图不可达/操作分页不一致，保留日志，修正后未降低产品断言。
+
+正式完整日志 130053 bytes / SHA256 b274ee6d50aea1307c0b6659801eb8df9374b7b325e95e584ffad426b459e7fe，位于 ignored unified-agent-handoff/verify-second.log。112只读核验仍b7d469e/工作流revision6，原Issue51 Run仍waiting且无活跃conversation；没有部署本次版本或启动新Run。独立评审、标准安装升级、项目模板同步及真实Issue整链正在推进，不把本机回归当Pipeline验收。
+
+2026-10-22 独立评审发现并关闭旧冻结Run执行边界P1：仅Start/Resume/startAgent校验不足，既有会话续跑、输入、accepted回执advance、Return及Claim仍可触发旧契约。新增统一冻结图交接校验：后台跳过保留历史；显式输入/交接/确认/回退/继续入口拒绝；Claim按消息顺序跳过旧候选且继续选正常任务，停止/取消不受阻。定向实际Store/Engine/MCP回归0.664s exit0，覆盖waiting及accepted回执不变化、原队列保持和正常任务不饿死。独立复审关闭P1、无新增C/I；重新Go vet/race验证中。没有在112改库或检查点。
+
+- 2026-10-22：统一 Agent handoff 的历史 Run 执行边界回归完成；独立复审确认原 P1 已关闭，无新增 Critical/Important。最终 go vet ./... 与 go test -race ./... exit 0，platform 包 92.240s；历史排队消息跳过且不阻塞新任务、旧 Run 不变、停止入口保留均有隔离回归。完整 scripts/verify.sh 已通过；正式 112 升级及 GitHub Issue 整链尚待执行，不把回归通过写成 Pipeline 完成。

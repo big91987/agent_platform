@@ -9,33 +9,9 @@ import (
 )
 
 func workflowNodeTools(w Workflow, n WorkflowNode) []string {
-	if w.ContextVersion == 0 {
-		return []string{"complete_node", "handoff", "read_command_output"}
-	}
-	tools := []string{"read_command_output"}
+	tools := []string{"handoff", "read_command_output"}
 	if n.AllowUserInput == nil || *n.AllowUserInput {
 		tools = append(tools, "wait_for_input")
-	}
-	fixed, choice := false, false
-	for _, edge := range w.Edges {
-		if edge.Source == n.ID {
-			if w.edgeMode(edge) == "handoff" {
-				choice = true
-			} else {
-				fixed = true
-			}
-		}
-	}
-	if n.ExitMode == "handoff" {
-		choice, fixed = true, false
-	} else if n.ExitMode == "complete" {
-		choice, fixed = false, true
-	}
-	if choice {
-		tools = append(tools, "handoff")
-	}
-	if fixed || !choice {
-		tools = append(tools, "complete_node")
 	}
 	return tools
 }
@@ -48,7 +24,7 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 	}
 	seenTargets := map[string]bool{}
 	var handoff strings.Builder
-	fixed := []WorkflowEdge{}
+
 	for _, edge := range w.Edges {
 		if edge.Source != n.ID {
 			continue
@@ -62,11 +38,9 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 				return "", errors.New("handoff target missing")
 			}
 			if handoff.Len() == 0 {
-				handoff.WriteString("## 自主交接\n使用 handoff，target 为下列节点 ID，summary 说明真实结论、未决问题及版本；inputs/artifacts 携带可访问的仓库相对产物路径。\n")
+				handoff.WriteString("## 自主交接\n使用 handoff，target 为下列节点 ID，message 说明真实结论、未决问题及后续工作；context 携带结构化交接信息，artifacts 列出实际工作区相对文件路径。只有一个目标或目标是结束节点时，也必须填写 target。\n")
 			}
 			fmt.Fprintf(&handoff, "\n### %s（target: `%s`）\n%s\n", w.node(edge.Target).Name, edge.Target, edge.Description)
-		} else {
-			fixed = append(fixed, edge)
 		}
 	}
 	if w.ContextVersion == 2 {
@@ -85,15 +59,7 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 		}
 		prompt = strings.Replace(prompt, "{{handoff}}", handoff.String(), 1)
 	}
-	if len(fixed) > 0 {
-		fmtLine := "\n\n## 固定流转\n确认本节点全部责任完成后调用 complete_node，省略 route。平台沿固定线推进："
-		for _, edge := range fixed {
-			fmtLine += w.node(edge.Target).Name + "（" + edge.Target + "）\n"
-		}
-		prompt += fmtLine + completionGuidance(n)
-	} else if handoff.Len() == 0 {
-		prompt += "\n\n## 完成\n全部责任完成后调用 complete_node，提交真实 summary 和实际产物。"
-	}
+	prompt += completionGuidance(n)
 	prompt += "\n\n## 执行与等待\n继续完成本节点全部责任。进展回复不等于节点完成；没有明确阻塞时继续工作。"
 	if n.AllowUserInput == nil || *n.AllowUserInput {
 		prompt += "必须由用户澄清时调用 wait_for_input(kind=clarification, reason=具体问题)，真实外部阻塞使用 kind=blocked；然后向用户说明并结束本轮。"

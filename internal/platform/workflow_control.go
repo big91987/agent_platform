@@ -82,6 +82,9 @@ func (s *Store) continueWorkflowNode(id string, seq int) error {
 	if err != nil {
 		return err
 	}
+	if err = validateWorkflowHandoffs(r.Definition); err != nil {
+		return err
+	}
 	if r.Seq != seq || (r.Status != "running" && r.Status != "waiting") {
 		return ErrConflict
 	}

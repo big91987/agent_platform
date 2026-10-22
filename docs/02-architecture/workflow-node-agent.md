@@ -22,7 +22,15 @@
 
 实施状态按[交付计划](../03-delivery/workflow-node-agent-plan.md)维护；本修订的真实浏览器、Codex 和产品研发链路验证完成前不沿用上阶段验收结论。
 
-## 交接模式与固定输出（2026-10-07）
+## 统一 Agent 交接（2026-10-22）
+
+Agent 节点统一使用 MCP `handoff`；`target`、`message` 必填，`context` 是可选 JSON 对象，`artifacts` 是可选工作区文件清单。单目标和结束节点也必须明确填写 target。配置的全部目标直接成为工具 target 的枚举，非法目标和格式错误不会持久化交接结果。
+
+画布配置直接展示目标及条件，可选 handoff_schema/handoff_instructions 对 context 约束及说明。没有双模式切换，也不公开 route。平台内部继续用既有 NodeResult 保存消息和结构化信息，不改变命令节点结果或历史回执。校验后事务保存；原生回合结束且必要产物归档后调度下一节点。待处理用户输入、权限、幂等和冲突规则保持。
+
+标准模板使用新契约；旧配置须经工作流 API 显式升级后才能新建 Run。旧 Run 冻结快照原样留存，不自动改写、转换或重放。以下记录保留作为已被替代的历史决策。
+
+## 历史：交接模式与固定输出（2026-10-07，已被上节替代）
 
 用户确认节点提供两种可切换的交接模式。新节点保存 `exit_mode=handoff|complete`，默认handoff；同一节点只启用一种方式。handoff页配置多个目标及各自选择策略；固定流转页配置唯一目标、`completion_schema`和`completion_instructions`。说明用于解释输出字段的来源、生成规则与示例，不另设任务说明。保留现有工具名complete_node。
 

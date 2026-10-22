@@ -222,6 +222,10 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 		fail(w, loadErr)
 		return
 	}
+	if current.Seq != seq {
+		fail(w, ErrConflict)
+		return
+	}
 	toolNames := workflowNodeTools(current.Definition, current.Definition.node(current.Steps[len(current.Steps)-1].NodeID))
 	allows := func(name string) bool {
 		for _, tool := range toolNames {
@@ -232,41 +236,14 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 		return false
 	}
 	service := mcp.NewServer(&mcp.Implementation{Name: "workflow-node", Version: "1.0.0"}, nil)
-	if allows("complete_node") {
-		node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
-		schema, err := completionToolSchema(node)
-		if err != nil {
-			fail(w, err)
-			return
-		}
-		err = addCompletionTool(service, &mcp.Tool{Name: "complete_node", InputSchema: schema, Description: "Declare this node complete using a factual summary and artifact paths. Omit route to follow its fixed edge. Legacy graphs also accept their named routes; use handoff for autonomous choices. The platform waits for this turn to finish before advancing. After acceptance, end this turn and stop changing files." + completionGuidance(node)}, schema, func(ctx context.Context, req *mcp.CallToolRequest, in NodeResult) (*mcp.CallToolResult, any, error) {
-			current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
-			if e != nil {
-				return nil, nil, e
-			}
-			owner, e := h.store.workflowCaller(current)
-			if e != nil {
-				return nil, nil, e
-			}
-			if _, e = h.store.Workflow(owner, current.WorkflowID); e != nil {
-				return nil, nil, e
-			}
-			node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
-			if current.Seq == seq && !nodeAgentAllowed(owner, node) {
-				return nil, nil, ErrForbidden
-			}
-			if e = h.store.completeWorkflowNode(Caller{}, id, seq, token, in); e != nil {
-				return nil, nil, e
-			}
-			return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "route": in.Route, "message": "Result saved. End this turn; the platform advances after the Agent is quiet."}, nil
-		})
-		if err != nil {
-			fail(w, err)
-			return
-		}
-	}
 	if allows("handoff") {
-		mcp.AddTool(service, &mcp.Tool{Name: "handoff", Description: "Choose an allowed Agent handoff target. Include summary, structured inputs and artifact paths. After acceptance end this turn; the platform waits for it to finish."}, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
+		node := current.Definition.node(current.Steps[len(current.Steps)-1].NodeID)
+		schema, err := handoffToolSchema(current.Definition, node)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		err = addHandoffTool(service, &mcp.Tool{Name: "handoff", InputSchema: schema, Description: "Submit handoff to one configured target, including a sole target or the end node. target and message are required. context carries optional structured handoff information; artifacts lists actual workspace-relative files. After acceptance end this turn and stop changing files; the platform advances only after execution ends and required artifacts are retained." + completionGuidance(node)}, schema, func(ctx context.Context, req *mcp.CallToolRequest, in HandoffInput) (*mcp.CallToolResult, any, error) {
 			current, e := h.store.WorkflowRun(Caller{Admin: true}, id)
 			if e != nil {
 				return nil, nil, e
@@ -290,7 +267,12 @@ func (h *Server) workflowNodeMCP(w http.ResponseWriter, r *http.Request) {
 			}
 			return nil, map[string]any{"accepted": true, "run_id": id, "seq": seq, "target": in.Target, "message": "Handoff saved. End this turn; dispatch follows after the Agent is quiet."}, nil
 		})
+		if err != nil {
+			fail(w, err)
+			return
+		}
 	}
+
 	if allows("wait_for_input") {
 		mcp.AddTool(service, &mcp.Tool{Name: "wait_for_input", Description: "Explicitly wait for a user clarification or a real external blocker. Supply kind clarification/blocked and a concrete reason. This does not complete the node. A new user message resumes this same conversation."}, func(ctx context.Context, req *mcp.CallToolRequest, in WorkflowWait) (*mcp.CallToolResult, any, error) {
 			run, err := h.store.WorkflowRun(Caller{Admin: true}, id)

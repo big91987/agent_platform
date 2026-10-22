@@ -123,8 +123,8 @@ func ruleSchema(raw json.RawMessage) (*jsonschema.Resolved, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = checkCompletionSchema(value, 0); err != nil {
-		return nil, errors.New(strings.ReplaceAll(err.Error(), "completion_schema", "JSON Schema"))
+	if err = checkHandoffSchema(value, 0); err != nil {
+		return nil, errors.New(strings.ReplaceAll(err.Error(), "handoff_schema", "JSON Schema"))
 	}
 	var schema jsonschema.Schema
 	if err = json.Unmarshal(raw, &schema); err != nil {

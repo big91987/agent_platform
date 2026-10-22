@@ -23,7 +23,7 @@ class DeliveryRoutesTest(unittest.TestCase):
                 if node["kind"] != "agent":
                     continue
                 with self.subTest(template=name, node=node["id"]):
-                    self.assertEqual(node.get("exit_mode"), "handoff")
+                    self.assertNotIn("exit_mode", node)
                     self.assertTrue(
                         all(
                             edge["mode"] == "handoff"

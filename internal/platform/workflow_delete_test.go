@@ -123,7 +123,7 @@ func TestWorkflowDeletedNodeHistoryRetainsCurrentGrant(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], NodeResult{Summary: "verified"}); err != nil {
+			if err = s.testHandoffResult(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], NodeResult{Summary: "verified"}); err != nil {
 				t.Fatal(err)
 			}
 			if err = s.Complete(conv.ID, msg.ID, "completed", ""); err != nil {

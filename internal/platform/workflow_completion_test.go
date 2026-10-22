@@ -17,14 +17,16 @@ func configuredCompletion(t *testing.T, w Workflow, mode, schema string) Workflo
 	var v map[string]any
 	json.Unmarshal(raw, &v)
 	n := v["nodes"].([]any)[0].(map[string]any)
-	n["exit_mode"] = mode
-	n["completion_instructions"] = "从真实验证结果生成 passed、count 和 files，不推测。"
+	if mode != "" {
+		n["exit_mode"] = mode
+	}
+	n["handoff_instructions"] = "从真实验证结果生成 passed、count 和 files，不推测。"
 	if schema != "" {
 		var x any
 		if err := json.Unmarshal([]byte(schema), &x); err != nil {
 			t.Fatal(err)
 		}
-		n["completion_schema"] = x
+		n["handoff_schema"] = x
 	}
 	raw, _ = json.Marshal(v)
 	if err := json.Unmarshal(raw, &w); err != nil {
@@ -44,9 +46,9 @@ func TestConfiguredCompletionRejectsInvalidResultAndPreservesTypes(t *testing.T)
 		t.Fatal(err)
 	}
 	e.Tick(context.Background())
-	w.Edges = []WorkflowEdge{{Source: w.Entry, Target: "done", Route: "next", Mode: "automatic"}}
+	w.Edges = []WorkflowEdge{{Source: w.Entry, Target: "done", Route: "next", Mode: "handoff"}}
 	w.Nodes = []WorkflowNode{w.Nodes[0], w.node("done")}
-	w = configuredCompletion(t, w, "complete", completionTestSchema)
+	w = configuredCompletion(t, w, "", completionTestSchema)
 	var err error
 	w, err = s.SaveWorkflow(c, w)
 	if err != nil {
@@ -62,7 +64,7 @@ func TestConfiguredCompletionRejectsInvalidResultAndPreservesTypes(t *testing.T)
 		t.Fatal(err)
 	}
 	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Summary: "missing required output"}); err == nil || !strings.Contains(err.Error(), "schema") {
+	if err = s.testHandoffResult(r.ID, 1, token, NodeResult{Summary: "missing required output"}); err == nil || !strings.Contains(err.Error(), "schema") {
 		t.Fatalf("missing inputs should fail schema validation: %v", err)
 	}
 	fresh, _ := s.WorkflowRun(c, r.ID)
@@ -73,7 +75,7 @@ func TestConfiguredCompletionRejectsInvalidResultAndPreservesTypes(t *testing.T)
 	if err = json.Unmarshal([]byte(`{"summary":"verified","inputs":{"passed":true,"count":2,"files":["a.txt","b.txt"]}}`), &in); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, token, in); err != nil {
+	if err = s.testHandoffResult(r.ID, 1, token, in); err != nil {
 		t.Fatal(err)
 	}
 	fresh, _ = s.WorkflowRun(c, r.ID)
@@ -90,9 +92,9 @@ func TestCompletionConfigurationRejectsModeAndSchemaErrors(t *testing.T) {
 	for _, test := range []struct{ mode, schema string }{
 		{"complete", completionTestSchema}, // existing edges are handoff
 		{"invalid", ""},
-		{"handoff", `{"type":"object","properties":{"n":{"type":"imaginary"}}}`},
-		{"handoff", `{"type":"object","$ref":"https://example.test/schema"}`},
-		{"handoff", `{"type":"object","propertiez":{}}`},
+		{"", `{"type":"object","properties":{"n":{"type":"imaginary"}}}`},
+		{"", `{"type":"object","$ref":"https://example.test/schema"}`},
+		{"", `{"type":"object","propertiez":{}}`},
 	} {
 		if err := validateWorkflow(configuredCompletion(t, w, test.mode, test.schema)); err == nil {
 			t.Errorf("accepted invalid config: %s %s", test.mode, test.schema)
@@ -110,8 +112,8 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 	e.Tick(context.Background())
 	w := r.Definition
 	w.Nodes = []WorkflowNode{w.Nodes[0], w.node("done")}
-	w.Edges = []WorkflowEdge{{Source: w.Entry, Target: "done", Route: "next", Mode: "automatic"}}
-	w = configuredCompletion(t, w, "complete", completionTestSchema)
+	w.Edges = []WorkflowEdge{{Source: w.Entry, Target: "done", Route: "next", Mode: "handoff"}}
+	w = configuredCompletion(t, w, "", completionTestSchema)
 	w, err := s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +135,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 		t.Fatal("input did not include configured guidance")
 	}
 	// Editing the saved workflow must never change a running Agent's contract.
-	w.Nodes[0].CompletionSchema = json.RawMessage(`{"type":"object","required":["new_field"]}`)
+	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object","required":["new_field"]}`)
 	if _, err = s.SaveWorkflow(c, w); err != nil {
 		t.Fatal(err)
 	}
@@ -150,10 +152,10 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 	}
 	found := false
 	for _, tool := range list.Tools {
-		if tool.Name == "handoff" {
-			t.Fatal("fixed node exposed handoff")
-		}
 		if tool.Name == "complete_node" {
+			t.Fatal("obsolete tool exposed")
+		}
+		if tool.Name == "handoff" {
 			found = true
 			b, _ := json.Marshal(tool.InputSchema)
 			if !strings.Contains(string(b), `"passed"`) || strings.Contains(string(b), `"route"`) {
@@ -164,8 +166,8 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 	if !found {
 		t.Fatal("missing completion tool")
 	}
-	for _, args := range []string{`{"summary":"bad","inputs":{"passed":true,"count":9007199254740993,"files":[]}}`, `{"summary":"bad"}`, `{"summary":"bad","inputs":{"passed":"true","count":2,"files":[]}}`, `{"summary":"bad","inputs":{"passed":true,"count":2,"files":[],"extra":1}}`} {
-		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: json.RawMessage(args)})
+	for _, args := range []string{`{"target":"done","message":"bad","context":{"passed":true,"count":9007199254740993,"files":[]}}`, `{"target":"done","message":"bad"}`, `{"target":"done","message":"bad","context":{"passed":"true","count":2,"files":[]}}`, `{"target":"done","message":"bad","context":{"passed":true,"count":2,"files":[],"extra":1}}`} {
+		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(args)})
 		if err == nil && !result.IsError {
 			t.Fatal("accepted invalid arguments", args)
 		}
@@ -174,7 +176,7 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 			t.Fatal("invalid completion changed state")
 		}
 	}
-	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: json.RawMessage(`{"summary":"verified","inputs":{"passed":true,"count":2,"files":["a.txt"]}}`)})
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(`{"target":"done","message":"verified","context":{"passed":true,"count":2,"files":["a.txt"]}}`)})
 	if err != nil || result.IsError {
 		t.Fatal(result, err)
 	}
@@ -227,7 +229,7 @@ func TestCompletionEmptyInputsAndUnrepresentableNumbers(t *testing.T) {
 			t.Fatalf("accepted lossy number: %s", raw)
 		}
 	}
-	n := WorkflowNode{CompletionSchema: json.RawMessage(`{"type":"object","properties":{"id":{"const":9007199254740993}}}`)}
+	n := WorkflowNode{HandoffSchema: json.RawMessage(`{"type":"object","properties":{"id":{"const":9007199254740993}}}`)}
 	if _, err := completionInputsSchema(n); err == nil {
 		t.Fatal("accepted lossy schema constraint")
 	}

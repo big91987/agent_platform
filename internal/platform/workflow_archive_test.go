@@ -172,7 +172,7 @@ func TestWorkflowArchiveWaitsForNativeTurn(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(r.WorkspacePath, "report.txt"), []byte("unfinished"), 0600)
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], NodeResult{Route: "approved", Summary: "done", Artifacts: []string{"report.txt"}}); err != nil {
+	if err = s.testHandoffResult(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], NodeResult{Route: "approved", Summary: "done", Artifacts: []string{"report.txt"}}); err != nil {
 		t.Fatal(err)
 	}
 	e.Tick(context.Background())

@@ -29,7 +29,7 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 	a := testAgent(t, s)
 	w := Workflow{Name: "blocked plan report", Enabled: true, ContextVersion: 2, Entry: "e2e_plan_review", MaxSteps: 10}
 	for _, id := range []string{"e2e_plan_review", "e2e_plan", "e2e_execute", "e2e_report"} {
-		w.Nodes = append(w.Nodes, WorkflowNode{ID: id, Name: id, Kind: "agent", AgentID: a.ID, ExitMode: "handoff"})
+		w.Nodes = append(w.Nodes, WorkflowNode{ID: id, Name: id, Kind: "agent", AgentID: a.ID})
 	}
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "done", Name: "done", Kind: "end"})
 	w.Edges = append(w.Edges,
@@ -56,7 +56,7 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := HandoffInput{Target: "e2e_report", Summary: "Blocked: required authorization is unavailable", Inputs: map[string]string{"product_result": "Not Run", "plan_verdict": "Blocked"}}
+	in := HandoffInput{Target: "e2e_report", Message: "Blocked: required authorization is unavailable", Context: map[string]any{"product_result": "Not Run", "plan_verdict": "Blocked"}}
 	if err = s.handoffWorkflowNode(r.ID, 1, *conv.Snapshot.Env[workflowTokenEnv], in); err != nil {
 		t.Fatalf("blocked plan cannot reach the existing report agent: %v", err)
 	}

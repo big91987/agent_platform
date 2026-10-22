@@ -537,12 +537,23 @@ func (s *Store) Claim(busyWorkspaces ...string) (Conversation, Message, error) {
 			args = append(args, path)
 		}
 	}
-	e = tx.QueryRow(query+` ORDER BY m.id LIMIT 1`, args...).Scan(&m.ID, &m.ConversationID, &m.Content, &m.Created)
-	if errors.Is(e, sql.ErrNoRows) {
-		return conv, m, ErrNotFound
-	}
-	if e != nil {
-		return conv, m, e
+	var after int64
+	for {
+		e = tx.QueryRow(query+` AND m.id>? ORDER BY m.id LIMIT 1`, append(append([]any{}, args...), after)...).Scan(&m.ID, &m.ConversationID, &m.Content, &m.Created)
+		if errors.Is(e, sql.ErrNoRows) {
+			return conv, m, ErrNotFound
+		}
+		if e != nil {
+			return conv, m, e
+		}
+		if e = workflowConversationHandoffAllowed(tx, m.ConversationID); errors.Is(e, errRetiredAgentHandoff) {
+			after = m.ID
+			continue
+		}
+		if e != nil {
+			return conv, m, e
+		}
+		break
 	}
 	conv, e = scanConv(tx.QueryRow(`SELECT `+convColumns+` FROM conversations WHERE id=?`, m.ConversationID))
 	if e != nil {

@@ -83,7 +83,7 @@ func TestWorkflowUserInputOnlyWaitAndHandoff(t *testing.T) {
 	if next.ID != conv.ID {
 		t.Fatal("reply replaced native conversation")
 	}
-	if err = s.handoffWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], HandoffInput{Target: r.Definition.Edges[0].Target, Summary: "已完成当前范围"}); err != nil {
+	if err = s.handoffWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], HandoffInput{Target: r.Definition.Edges[0].Target, Message: "已完成当前范围"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Complete(next.ID, reply.ID, "completed", ""); err != nil {
@@ -164,19 +164,19 @@ func TestWorkflowMarkdownPromptValidationAndModes(t *testing.T) {
 		}
 	}
 	n.Prompt = "{{handoff}}"
-	w.Edges[0].Mode = "automatic"
+	w.Edges[0].Mode = "handoff"
 	// Fixture has one completion edge and no remaining handoff edge.
 	w.Edges = w.Edges[:1]
 	text, err := workflowNodeInstructions(w, n)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(text, "## 自主交接") || strings.Contains(text, "{{handoff}}") {
+	if !strings.Contains(text, "## 自主交接") || strings.Contains(text, "{{handoff}}") {
 		t.Fatal("fixed mode leaked handoff SOP")
 	}
 	for _, name := range workflowNodeTools(w, n) {
-		if name == "handoff" {
-			t.Fatal("fixed node received handoff tool")
+		if name == "complete_node" {
+			t.Fatal("obsolete completion tool exposed")
 		}
 	}
 }
@@ -313,8 +313,8 @@ func TestWorkflowMarkdownRejectsAmbiguousTargetStrategy(t *testing.T) {
 		t.Fatal("new target-only contract accepted ambiguous duplicate handoff target")
 	}
 	w.ContextVersion = 0
-	if err := validateWorkflow(w); err != nil {
-		t.Fatalf("legacy graph was silently invalidated: %v", err)
+	if err := validateWorkflow(w); err == nil {
+		t.Fatal("ambiguous legacy graph accepted for new execution")
 	}
 }
 func TestWorkflowMarkdownRealReturnCarriesCancelledFeedback(t *testing.T) {
@@ -517,15 +517,15 @@ func TestWorkflowMarkdownPreviousTurnCannotCompleteNewTurn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, old, NodeResult{Route: "done", Summary: "old turn result"}); err == nil {
+	if err = s.testHandoffResult(r.ID, 1, old, NodeResult{Route: "done", Summary: "old turn result"}); err == nil {
 		t.Fatal("old turn completed current execution")
 	}
 	route := r.Definition.Edges[0].Route
 	result := NodeResult{Route: route, Summary: "current turn result"}
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
+	if err = s.testHandoffResult(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
+	if err = s.testHandoffResult(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], result); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.waitWorkflowNode(r.ID, 1, *next.Snapshot.Env[workflowTokenEnv], WorkflowWait{Kind: "clarification", Reason: "late wait after completion"}); err == nil {
@@ -536,10 +536,10 @@ func TestWorkflowMarkdownPreviousTurnCannotCompleteNewTurn(t *testing.T) {
 func TestWorkflowInputCarriesCompletedOperatorDecisions(t *testing.T) {
 	s := testStore(t)
 	r := WorkflowRun{ID: "decision-context", Definition: Workflow{ContextVersion: 2, Nodes: []WorkflowNode{
-		{ID: "qa", Kind: "agent", ExitMode: "complete"},
+		{ID: "qa", Kind: "agent"},
 		{ID: "approve", Kind: "approval"},
 		{ID: "other", Kind: "approval"},
-		{ID: "report", Kind: "agent", ExitMode: "complete"},
+		{ID: "report", Kind: "agent"},
 	}}, Steps: []WorkflowStep{
 		{Seq: 1, NodeID: "qa", Status: "completed", Result: &NodeResult{Summary: "independent QA evidence"}},
 		{Seq: 2, NodeID: "approve", Status: "completed", Result: &NodeResult{Route: "next", Summary: "superseded operator decision"}},

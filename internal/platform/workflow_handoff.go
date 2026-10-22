@@ -1,9 +1,11 @@
 package platform
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
-// Explicit modes apply to new definitions. Old frozen definitions retain their
-// original route tool and source-based semantics without a data migration.
+// Agent edges represent tool-selected targets; other nodes follow their rules.
 func (w Workflow) edgeMode(edge WorkflowEdge) string {
 	if edge.Mode != "" {
 		return edge.Mode
@@ -15,14 +17,16 @@ func (w Workflow) edgeMode(edge WorkflowEdge) string {
 }
 
 type HandoffInput struct {
-	Target    string            `json:"target"`
-	Route     string            `json:"route,omitempty"`
-	Summary   string            `json:"summary"`
-	Inputs    map[string]string `json:"inputs,omitempty"`
-	Artifacts []string          `json:"artifacts,omitempty"`
+	Target    string         `json:"target"`
+	Message   string         `json:"message"`
+	Context   map[string]any `json:"context,omitempty"`
+	Artifacts []string       `json:"artifacts,omitempty"`
 }
 
 func (s *Store) handoffWorkflowNode(id string, seq int, token string, in HandoffInput) error {
+	if strings.TrimSpace(in.Target) == "" || strings.TrimSpace(in.Message) == "" {
+		return errors.New("target and message are required")
+	}
 	r, err := s.WorkflowRun(Caller{Admin: true}, id)
 	if err != nil {
 		return err
@@ -31,21 +35,19 @@ func (s *Store) handoffWorkflowNode(id string, seq int, token string, in Handoff
 		return ErrConflict
 	}
 	step := r.Steps[len(r.Steps)-1]
-	if r.Definition.node(step.NodeID).ExitMode == "complete" {
-		return errors.New("this node uses fixed completion")
-	}
+	node := r.Definition.node(step.NodeID)
 	routes := []string{}
 	for _, edge := range r.Definition.Edges {
-		if edge.Source == step.NodeID && edge.Target == in.Target && r.Definition.edgeMode(edge) == "handoff" && (in.Route == "" || in.Route == edge.Route) {
+		if edge.Source == step.NodeID && edge.Target == in.Target && r.Definition.edgeMode(edge) == "handoff" {
 			routes = append(routes, edge.Route)
 		}
 	}
 	if len(routes) != 1 {
-		return errors.New("select one allowed handoff target; specify route when several edges share the same target")
+		return errors.New("target must identify exactly one configured handoff destination")
 	}
-	inputs := map[string]any{}
-	for k, v := range in.Inputs {
-		inputs[k] = v
+	result := NodeResult{Route: routes[0], Summary: in.Message, Inputs: in.Context, Artifacts: in.Artifacts}
+	if err := validateCompletionResult(node, result); err != nil {
+		return err
 	}
-	return s.submitWorkflowResult(Caller{}, id, seq, token, NodeResult{Route: routes[0], Summary: in.Summary, Inputs: inputs, Artifacts: in.Artifacts}, true)
+	return s.submitWorkflowResult(Caller{}, id, seq, token, result, true)
 }

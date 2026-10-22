@@ -62,7 +62,7 @@ func TestWorkflowMessageAtomicRoutingAndReplay(t *testing.T) {
 		t.Fatal(msg, err)
 	}
 	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if err = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Route: "approved", Summary: "done"}); err != nil {
+	if err = s.testHandoffResult(r.ID, 1, token, NodeResult{Route: "approved", Summary: "done"}); err != nil {
 		t.Fatal(err)
 	}
 	s.Complete(conv.ID, msg.ID, "completed", "")

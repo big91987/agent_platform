@@ -41,7 +41,7 @@ func TestWorkflowEngineSealsHandoffAndWaitsForNativeTurn(t *testing.T) {
 		t.Fatal(e)
 	}
 	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if e = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Route: "approved", Summary: "草稿完成"}); e != nil {
+	if e = s.testHandoffResult(r.ID, 1, token, NodeResult{Route: "approved", Summary: "草稿完成"}); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = s.Submit(c, Input{UserID: c.UserID, ConversationID: conv.ID, Message: "late input"}); !errors.Is(e, ErrConflict) {
@@ -60,7 +60,7 @@ func TestWorkflowEngineSealsHandoffAndWaitsForNativeTurn(t *testing.T) {
 	if r.Status != "completed" {
 		t.Fatal(r)
 	}
-	if e = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Route: "approved"}); !errors.Is(e, ErrConflict) {
+	if e = s.testHandoffResult(r.ID, 1, token, NodeResult{Route: "approved"}); !errors.Is(e, ErrConflict) {
 		t.Fatal("stale scoped tool accepted", e)
 	}
 }
@@ -78,7 +78,7 @@ func TestWorkflowIdleDoesNotMeanCompletedAndPendingInputBlocksHandoff(t *testing
 		t.Fatal(e)
 	}
 	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if e = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Route: "approved"}); !errors.Is(e, ErrConflict) {
+	if e = s.testHandoffResult(r.ID, 1, token, NodeResult{Route: "approved"}); !errors.Is(e, ErrConflict) {
 		t.Fatal(e)
 	}
 	if e = s.Complete(conv.ID, msg.ID, "completed", ""); e != nil {
@@ -189,7 +189,7 @@ func TestWorkflowAgentContextIsNotPresentedAsUserInput(t *testing.T) {
 	if msg.Content != r.Input {
 		t.Fatal("internal workflow instructions in user message")
 	}
-	if !strings.Contains(conv.Snapshot.Instructions, "complete_node") || conv.Snapshot.ResolvedTools[workflowToolServer].Connection.URL == "" {
+	if !strings.Contains(conv.Snapshot.Instructions, "handoff") || conv.Snapshot.ResolvedTools[workflowToolServer].Connection.URL == "" {
 		t.Fatal("scoped context/tool missing")
 	}
 }

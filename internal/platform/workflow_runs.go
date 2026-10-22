@@ -421,6 +421,9 @@ func (s *Store) StartWorkflow(c Caller, in WorkflowStart) (WorkflowRun, error) {
 	if !workflowAllowed(c, w) {
 		return zero, ErrForbidden
 	}
+	if e = validateWorkflow(w); e != nil {
+		return zero, e
+	}
 	if !w.Enabled {
 		return zero, errors.New("workflow is disabled")
 	}
@@ -633,6 +636,9 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 	if e != nil {
 		return e
 	}
+	if e = validateWorkflowHandoffs(r.Definition); e != nil {
+		return e
+	}
 	if token == "" && !runAllowed(c, r) {
 		return ErrForbidden
 	}
@@ -653,29 +659,15 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 		return errors.New("Agent nodes require their scoped completion tool")
 	}
 	if token != "" {
-		if result.Route == "" && !handoff {
-			for _, edge := range r.Definition.Edges {
-				if edge.Source == node.ID && edge.Mode == "automatic" {
-					result.Route = edge.Route
-				}
-			}
-		}
-		for _, edge := range r.Definition.Edges {
-			if edge.Source != node.ID || edge.Route != result.Route {
-				continue
-			}
-			if handoff && r.Definition.edgeMode(edge) != "handoff" {
-				return errors.New("handoff cannot select a fixed edge")
-			}
-			if !handoff && edge.Mode == "handoff" {
-				return errors.New("use handoff for Agent-selected edges")
-			}
+		if !handoff {
+			return errors.New("Agent nodes require handoff")
 		}
 		raw, e = json.Marshal(result)
 		if e != nil {
 			return e
 		}
 	}
+
 	if r.ArchiveArtifacts {
 		if _, err := archivePaths(WorkflowStep{Result: &result}); err != nil {
 			return err
@@ -683,14 +675,6 @@ func (s *Store) submitWorkflowResult(c Caller, id string, seq int, token string,
 	}
 	if r.Definition.target(step.NodeID, result.Route) == "" {
 		return errors.New("route is not an outgoing edge of this node")
-	}
-	if token != "" && !handoff {
-		if node.ExitMode == "handoff" {
-			return errors.New("this node uses handoff")
-		}
-		if e = validateCompletionResult(node, result); e != nil {
-			return e
-		}
 	}
 	if step.Result != nil {
 		previous, _ := json.Marshal(step.Result)
@@ -732,6 +716,9 @@ func (s *Store) advanceWorkflow(id string, seq int) error {
 	defer tx.Rollback()
 	r, e := loadWorkflowRun(tx, id)
 	if e != nil {
+		return e
+	}
+	if e = validateWorkflowHandoffs(r.Definition); e != nil {
 		return e
 	}
 	if r.Seq != seq || (r.Status != "running" && r.Status != "waiting") {
@@ -786,7 +773,23 @@ func workflowInputAllowed(tx *sql.Tx, conversationID string) error {
 	if n != 0 {
 		return fmt.Errorf("workflow node is sealed; continue from its run page: %w", ErrConflict)
 	}
-	return nil
+	return workflowConversationHandoffAllowed(tx, conversationID)
+}
+
+func workflowConversationHandoffAllowed(q rowQuerier, id string) error {
+	var raw string
+	err := q.QueryRow(`SELECT r.definition FROM workflow_steps s JOIN workflow_runs r ON r.id=s.run_id WHERE s.conversation_id=?`, id).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var w Workflow
+	if err = json.Unmarshal([]byte(raw), &w); err != nil {
+		return err
+	}
+	return validateWorkflowHandoffs(w)
 }
 
 // WorkflowRunByRequest resolves only the calling user's stable event key.

@@ -71,17 +71,11 @@ test('adding nodes at the same palette position keeps the new node selectable',(
  const G=model(),g=new G();const a=g.add('approval',40,60),b=g.add('end',40,60);
  assert.ok(Math.abs(a.x-b.x)>=184 || Math.abs(a.y-b.y)>=96,'new node must not cover the existing node');
 });
-test('edge choices survive export/import and invalid fixed Agent branches are rejected',()=>{
+test('Agent target choices survive export/import and fixed edges are rejected',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
- delete a.exit_mode; // Existing v2 mixed definitions remain compatible.
- g.connect(a.id,'approved',b.id,'handoff','通过时交接');
- g.connect(a.id,'finished',c.id,'automatic');
- assert.equal(g.edgeMode(g.value.edges[0]),'handoff');
- assert.equal(g.edgeMode(g.value.edges[1]),'automatic');
- assert.throws(()=>g.connect(a.id,'another',b.id,'automatic'),/固定/);
- const copy=G.import(JSON.stringify(g.value));assert.equal(copy.value.edges[0].description,'通过时交接');
- assert.equal(copy.edgeMode(copy.value.edges[1]),'handoff');assert.equal(copy.node(a.id).exit_mode,'handoff');
- assert.throws(()=>G.import(JSON.stringify({...g.value,edges:[{source:a.id,target:b.id,route:'next',mode:'guess'}]})),/连线/);
+ g.connect(a.id,'approved',b.id,'handoff','通过时交接');g.connect(a.id,'revise',c.id,'handoff');
+ assert.throws(()=>g.connect(a.id,'fixed',b.id,'automatic'),/Agent/);
+ const copy=G.import(JSON.stringify(g.value));assert.equal(copy.value.edges.length,2);assert.equal(copy.value.edges[0].description,'通过时交接');
 });
 
 test('new Agent drafts use task inputs without a separate session prompt while opening legacy graphs preserves their protocol',()=>{
@@ -118,17 +112,17 @@ test('session prompt validation distinguishes autonomous fixed and mixed legacy 
  a.prompt='{{handoff}}';a.continuation_limit=0;a.execution_timeout_seconds=0;assert.doesNotThrow(()=>g.validateAgent(a));
  a.continuation_limit=11;assert.throws(()=>g.validateAgent(a),/继续/);a.continuation_limit=3;
  a.execution_timeout_seconds=86401;assert.throws(()=>g.validateAgent(a),/期限/);a.execution_timeout_seconds=14400;
- g.updateEdge(0,{mode:'automatic'});a.prompt='完成后提交结果';assert.doesNotThrow(()=>g.validateAgent(a));
- g.connect(a.id,'revise',c.id,'handoff');assert.equal(g.agentMode(a.id),'mixed');
+ assert.throws(()=>g.updateEdge(0,{mode:'automatic'}),/Agent/);
+ g.connect(a.id,'revise',c.id,'handoff');assert.equal(g.value.edges.every(e=>e.mode==='handoff'),true);
  assert.equal(g.value.edges.length,2,'mixed compatibility must not drop either outgoing edge');
 });
-test('target-only handoff rejects duplicate targets but keeps legacy route graphs',()=>{
+test('target-only handoff rejects duplicate targets for every definition',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',400,0);
  g.connect(a.id,'target_1',b.id,'handoff','第一策略');
  assert.throws(()=>g.connect(a.id,'target_2',b.id,'handoff','第二策略'),/同一.*目标/);
  g.value.context_version=0;
- g.connect(a.id,'target_2',b.id,'handoff','旧版不同route');
- assert.equal(g.value.edges.length,2);
+ assert.throws(()=>g.connect(a.id,'target_2',b.id,'handoff','重复目标'),/同一.*目标/);
+ assert.equal(g.value.edges.length,1);
 });
 test('new nodes expose a typed user input switch and preserve explicit disabled settings on import',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0);
@@ -137,23 +131,21 @@ test('new nodes expose a typed user input switch and preserve explicit disabled 
  assert.equal(G.import(JSON.stringify(g.value)).node(a.id).allow_user_input,false);
  a.allow_user_input='false';assert.throws(()=>g.validateAgent(a),/用户输入/);
 });
-test('explicit Agent exit mode is exclusive and fixed mode requires an intentional retained target',()=>{
+test('one and multiple Agent targets share the same typed handoff configuration',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
- assert.equal(a.exit_mode,'handoff');g.connect(a.id,'b',b.id);g.connect(a.id,'c',c.id);
- assert.throws(()=>g.setExitMode(a.id,'complete'),/目标/);
- assert.equal(g.value.edges.length,2);
- g.setExitMode(a.id,'complete','c');assert.equal(g.value.edges.length,1);assert.equal(g.value.edges[0].target,c.id);
- assert.equal(g.value.edges[0].mode,'automatic');assert.throws(()=>g.connect(a.id,'b',b.id,'handoff'),/方式/);
- a.completion_schema={type:'object',properties:{passed:{type:'boolean'}},required:['passed']};a.completion_instructions='真实验证结果';
- g.setExitMode(a.id,'handoff');assert.equal(a.completion_schema.required[0],'passed');assert.equal(g.value.edges[0].mode,'handoff');
+ assert.equal(a.exit_mode,undefined);g.connect(a.id,'b',b.id);
+ a.handoff_schema={type:'object',properties:{ready:{type:'boolean'}},required:['ready']};
+ assert.doesNotThrow(()=>g.validateAgent(a));g.connect(a.id,'c',c.id);assert.doesNotThrow(()=>g.validateAgent(a));
+ a.exit_mode='complete';assert.throws(()=>g.validateAgent(a),/旧交接/);
 });
+
 test('editing any stored definition uses current Agent config and exits without a legacy prompt field',()=>{
  const G=model();
  for(const version of [0,1,2]){
   const value={context_version:version,nodes:[{id:'work',name:'研发',kind:'agent',agent_id:'shared',prompt:version===2?'':'检查真实结果 {{handoff}}',x:0,y:0},{id:'done',name:'完成',kind:'end',x:300,y:0}],edges:[{source:'work',route:'next',target:'done',mode:'handoff'}]};
   const g=new G(value),agents=[{id:'shared',executor:'codex',model:'chosen-model',instructions:'长期职责',skills:['/skills'],env:{MODE:'kept'},seed_dir:'/unused-seed'}];
   assert.equal(g.upgradeForEditing(agents),true);assert.equal(g.value.context_version,2);
-  const n=g.node('work');assert.equal(n.agent_id,undefined);assert.equal(n.prompt,undefined);assert.equal(n.exit_mode,'handoff');assert.equal(n.agent.model,'chosen-model');assert.equal(n.agent.seed_dir,undefined);
+  const n=g.node('work');assert.equal(n.agent_id,undefined);assert.equal(n.prompt,undefined);assert.equal(n.exit_mode,undefined);assert.equal(n.agent.model,'chosen-model');assert.equal(n.agent.seed_dir,undefined);
   if(version<2)assert.match(n.agent.instructions,/检查真实结果/);
   assert.equal(g.value.edges[0].route,'next');n.agent.env.MODE='changed';assert.equal(agents[0].env.MODE,'kept');assert.equal(value.nodes[0].agent_id,'shared');
   assert.equal(g.upgradeForEditing(agents),false);

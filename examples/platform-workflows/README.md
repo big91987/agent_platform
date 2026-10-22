@@ -212,8 +212,8 @@ go test -race ./internal/platform -run '^TestWorkflowGitHubLiveLostResponse$' -c
 
 ## 智能体编排：路由与事件通知
 
-- `edges[].mode=handoff` 是 Agent 根据当前上下文选择的交接，画布用虚线；`description` 给出选择依据。Agent 调用 `handoff(target, summary, inputs, artifacts)`，平台校验目标、权限及当前节点。
-- `mode=automatic` 是固定完成路由，用实线。Agent 完成时调用 `complete_node(summary, artifacts)`，不填目标；Connector 按真实成功/失败结果选配置路由。Agent 可有多个自主交接出口，但只有一个固定完成出口。
+- `edges[].mode=handoff` 是 Agent 根据当前上下文选择的交接，画布用虚线；`description` 给出选择依据。Agent 调用 `handoff(target, message, context, artifacts)`，平台校验目标、权限及当前节点。
+- Agent 统一调用 `handoff`，单一目标、多个目标和结束节点都显式填写 `target`。执行节点按用户配置的规则继续，人工确认节点按用户选择继续，画布用实线表示。
 - 普通澄清留在当前会话，不交接、不为每次提问增加图节点；必须审批的流程使用显式人工确认节点。自动推荐写在 Agent 策略中，不等于取消固定审批。
 - 老模板缺少 `mode` 时继续兼容；运行冻结定义快照。模板更新只影响新运行，不能假设在途任务自动切换定义。
 - `hooks` 将 `node.started`（Agent 会话已创建）、`agent.reply.completed`、`handoff.after`、`run.completed` 映射到已注册 Connector。首版支持 GitHub Issue 评论动作，GitLab 适配和阻塞型 before Hook 尚未实现。
@@ -359,7 +359,7 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 原 manifest 加 `--upgrade` 会重建维护源拥有的角色配置并升级工作流版本；人工编辑漂移仍拒绝覆盖。冻结 v0/v1 Run、旧 Agent、原生会话与消息保持原样。自建旧图不会自动丢弃非空 prompt：长期规则转入角色指令，任务内容改由启动输入提供后，才能明确采用 v2。
 
-正常回复结束不代表节点完成。必须调用合法 `handoff` 或 `complete_node`。确需用户回答时使用 `wait_for_input(kind=clarification, reason=具体问题)`，真实外部阻塞使用 `kind=blocked`；再向用户说明。无需等待且未完成的正常收尾，会在同一原生会话追加继续指令，默认最多 3 次，持续推进期限为节点开始后的 14400 秒。失败或用户停止不自动续跑；达到上限显示具体原因，保留现场。新的用户回复解除旧等待声明，不重置该节点的续跑预算。
+正常回复结束不代表节点完成。必须调用合法 `handoff`。确需用户回答时使用 `wait_for_input(kind=clarification, reason=具体问题)`，真实外部阻塞使用 `kind=blocked`；再向用户说明。无需等待且未完成的正常收尾，会在同一原生会话追加继续指令，默认最多 3 次，持续推进期限为节点开始后的 14400 秒。失败或用户停止不自动续跑；达到上限显示具体原因，保留现场。新的用户回复解除旧等待声明，不重置该节点的续跑预算。
 
 安装升级仍使用原 manifest 和 `--upgrade`。安装器要求关联在途 Run 完成或正式停止；先保护在途会话与工作区，不能通过重建 Run 或修改数据库绕过检查。升级后新 Run 使用新协议，旧冻结图和已准备的原生会话保留旧语义。
 
@@ -373,12 +373,13 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 取消保留文件、消息与外部回执，关闭当前会话，释放工作区；无法继续或回退。重新工作须建新的任务/Run。研发准备步骤仍拒绝脏目录，需先明确保留和交接已有成果，不能手改数据库或删除入口状态文件绕过去重。GitHub 旧 Issue 的重复事件仍关联原已取消 Run，不自动重启；新工作使用引用原 Issue/Run 的新 Issue。
 
-### Agent 交接方式与固定输出
+### Agent 交接目标与交接信息
 
-Agent 节点的“交接”页可选择两种方式：
+Agent 节点的“交接策略”页直接配置目标及选择条件。只配置一个目标时，Agent 仍须显式填写该目标；结束运行时填写已配置的结束节点 ID。
 
-- **自主交接（handoff）**：为各目标填写交接策略，Agent 选择目标并提交 summary、inputs、artifacts。研发与返工模板使用此方式。
-- **固定流转（complete_node）**：设置唯一后续目标、输出 JSON Schema 和输出填写说明。Schema 约束工具的 `inputs` 对象，字段描述与填写说明一起提供给 Agent。调用不合规则返回错误，修正后才能继续。`summary`、`artifacts` 仍分别记录结论和产物路径。
+工具参数为 `target`、`message`、可选 `context` 和 `artifacts`。`message` 是交给下一节点的说明；`context` 是可包含布尔、数值、数组和对象的结构化信息；`artifacts` 列工作区内的实际文件。可选的 `handoff_schema` 约束 context，`handoff_instructions` 补充填写要求。配置 Schema 后必须提交符合格式的 context，错误不会推进流程。
+
+旧的 `exit_mode`、`completion_schema`、`completion_instructions` 不再用于新配置。升级保存的工作流时，显式删除 exit_mode、将后两项分别改为 handoff_schema/handoff_instructions，并将所有 Agent 出边设为 handoff。历史 Run 的冻结定义保持原样；不自动转换或重放旧任务。
 
 例如，下游脚本需要一个布尔结论和文件列表：
 

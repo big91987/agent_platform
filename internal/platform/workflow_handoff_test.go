@@ -5,52 +5,18 @@ import (
 	"testing"
 )
 
-func TestHandoffDistinguishesAgentChoiceFromFixedCompletion(t *testing.T) {
+func TestHandoffRejectsFixedAgentEdgeConfiguration(t *testing.T) {
 	s := testStore(t)
-	c, w, _ := runFixture(t, s)
-	a := testAgent(t, s)
-	w.Nodes[0].Kind = "agent"
-	w.Nodes[0].AgentID = a.ID
-	for i := range w.Edges {
-		if w.Edges[i].Source == w.Entry {
-			w.Edges[i].Mode = "handoff"
-		}
+	_, r := agentRun(t, s)
+	w := r.Definition
+	w.Edges[0].Mode = "automatic"
+	if err := validateWorkflow(w); err == nil {
+		t.Fatal("obsolete fixed Agent edge accepted")
 	}
-	w.Edges = append(w.Edges, WorkflowEdge{Source: w.Entry, Route: "finished", Target: "done", Mode: "automatic"})
-	w, e := s.SaveWorkflow(c, w)
-	if e != nil {
-		t.Fatal(e)
-	}
-	r, e := s.StartWorkflow(c, WorkflowStart{WorkflowID: w.ID, Input: "inspect", WorkspacePath: t.TempDir()})
-	if e != nil {
-		t.Fatal(e)
-	}
-	engine := NewWorkflowEngine(s, nil, "http://localhost")
-	engine.Tick(context.Background())
-	conv, msg, e := s.Claim()
-	if e != nil {
-		t.Fatal(e)
-	}
-	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if e = s.handoffWorkflowNode(r.ID, 1, token, HandoffInput{Target: "done", Route: "finished", Summary: "wrong tool"}); e == nil {
-		t.Fatal("Agent selected a fixed edge")
-	}
-	if e = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Route: "approved"}); e == nil {
-		t.Fatal("new autonomous edge accepted through fixed completion")
-	}
-	if e = s.completeWorkflowNode(Caller{}, r.ID, 1, token, NodeResult{Summary: "complete"}); e != nil {
-		t.Fatal(e)
-	}
-	engine.Tick(context.Background())
-	before, _ := s.WorkflowRun(c, r.ID)
-	if before.Seq != 1 {
-		t.Fatal("advanced before turn ended")
-	}
-	s.Complete(conv.ID, msg.ID, "completed", "")
-	engine.Tick(context.Background())
-	after, _ := s.WorkflowRun(c, r.ID)
-	if after.Status != "completed" {
-		t.Fatal(after)
+	w.Edges[0].Mode = "handoff"
+	w.Nodes[0].ExitMode = "complete"
+	if err := validateWorkflow(w); err == nil {
+		t.Fatal("obsolete exit mode accepted")
 	}
 }
 
@@ -64,10 +30,10 @@ func TestHandoffRejectsInvalidTargetsAndRetainsStructuredInputs(t *testing.T) {
 		t.Fatal(e)
 	}
 	token := *conv.Snapshot.Env[workflowTokenEnv]
-	if e = s.handoffWorkflowNode(r.ID, 1, token, HandoffInput{Target: "missing", Summary: "test"}); e == nil {
+	if e = s.handoffWorkflowNode(r.ID, 1, token, HandoffInput{Target: "missing", Message: "test"}); e == nil {
 		t.Fatal("invalid target accepted")
 	}
-	in := HandoffInput{Target: "revise", Summary: "revise evidence", Inputs: map[string]string{"problem": "missing evidence"}}
+	in := HandoffInput{Target: "revise", Message: "revise evidence", Context: map[string]any{"problem": "missing evidence"}}
 	if e = s.handoffWorkflowNode(r.ID, 1, token, in); e != nil {
 		t.Fatal(e)
 	}

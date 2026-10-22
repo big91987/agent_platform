@@ -334,7 +334,7 @@ func TestWorkflowExecutionMCPResultReachesNativeInputAfterStoreRestart(t *testin
 	a := testAgent(t, s)
 	w.Nodes = append(w.Nodes, WorkflowNode{ID: "reader", Name: "Review", Kind: "agent", AgentID: a.ID})
 	w.Nodes[0].RuleHandoff.Rules[0].Target = "reader"
-	w.Edges = append(w.Edges, WorkflowEdge{Source: "reader", Route: "next", Target: "done", Mode: "automatic"})
+	w.Edges = append(w.Edges, WorkflowEdge{Source: "reader", Route: "next", Target: "done", Mode: "handoff"})
 	w, err := s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)

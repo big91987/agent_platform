@@ -11,7 +11,7 @@ import (
 
 func independentWorkflow(t *testing.T, config map[string]any) Workflow {
 	t.Helper()
-	raw, err := json.Marshal(map[string]any{"name": "独立节点", "enabled": true, "context_version": 1, "entry": "worker", "max_steps": 10, "nodes": []any{map[string]any{"id": "worker", "name": "研发", "kind": "agent", "agent": config, "prompt": "完成节点工作", "continuation_limit": 1}, map[string]any{"id": "done", "name": "结束", "kind": "end"}}, "edges": []any{map[string]any{"source": "worker", "target": "done", "route": "next", "mode": "automatic"}}})
+	raw, err := json.Marshal(map[string]any{"name": "独立节点", "enabled": true, "context_version": 1, "entry": "worker", "max_steps": 10, "nodes": []any{map[string]any{"id": "worker", "name": "研发", "kind": "agent", "agent": config, "prompt": "{{handoff}}", "continuation_limit": 1}, map[string]any{"id": "done", "name": "结束", "kind": "end"}}, "edges": []any{map[string]any{"source": "worker", "target": "done", "route": "next", "mode": "handoff"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestIndependentNodeWaitResumeAndPermissionReset(t *testing.T) {
 	if err != nil || next.ID != conv.ID || input.Content != "Confirmed scope; continue" {
 		t.Fatal(next.ID, input.Content, err)
 	}
-	if err = s.completeWorkflowNode(Caller{}, r.ID, r.Seq, *next.Snapshot.Env[workflowTokenEnv], NodeResult{Route: "next", Summary: "Verified"}); err != nil {
+	if err = s.testHandoffResult(r.ID, r.Seq, *next.Snapshot.Env[workflowTokenEnv], NodeResult{Route: "next", Summary: "Verified"}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Complete(next.ID, input.ID, "completed", ""); err != nil {

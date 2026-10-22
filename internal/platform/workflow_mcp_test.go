@@ -42,10 +42,10 @@ func TestWorkflowMCPAuthenticatesAndCompletesOnlyItsNode(t *testing.T) {
 	}
 	defer session.Close()
 	list, e := session.ListTools(ctx, nil)
-	if e != nil || len(list.Tools) != 3 || list.Tools[0].Name != "complete_node" {
+	if e != nil || len(list.Tools) != 3 || list.Tools[0].Name != "handoff" {
 		t.Fatal(list, e)
 	}
-	result, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: map[string]any{"route": "approved", "summary": "完成"}})
+	result, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: map[string]any{"target": "done", "message": "完成"}})
 	if e != nil || result.IsError {
 		t.Fatal(result, e)
 	}
@@ -55,7 +55,7 @@ func TestWorkflowMCPAuthenticatesAndCompletesOnlyItsNode(t *testing.T) {
 	if r.Status != "completed" {
 		t.Fatal(r)
 	}
-	result, e = session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: map[string]any{"route": "approved", "summary": "完成"}})
+	result, e = session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: map[string]any{"target": "done", "message": "完成"}})
 	if e == nil && !result.IsError {
 		t.Fatal("old MCP execution remained authorized")
 	}
@@ -173,7 +173,7 @@ func TestWorkflowMCPReadsOnlyPriorLogsWhileCurrent(t *testing.T) {
 	if err == nil && !result.IsError {
 		t.Fatal("read current/future execution")
 	}
-	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "complete_node", Arguments: map[string]any{"route": "approved", "summary": "done"}})
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: map[string]any{"target": "done", "message": "done"}})
 	if err != nil || result.IsError {
 		t.Fatal(result, err)
 	}

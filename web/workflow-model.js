@@ -24,15 +24,8 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       const guidance=(n.prompt||'').replaceAll('{{handoff}}','').trim();
       if(guidance)n.agent.instructions=[n.agent.instructions,guidance].filter(Boolean).join('\n\n');
       delete n.prompt;
-      const outgoing=next.value.edges.filter(e=>e.source===n.id);
-      const modes=new Set(outgoing.map(e=>next.edgeMode(e)));
-      if(!n.exit_mode){
-        n.exit_mode=modes.size===1&&modes.has('automatic')?'complete':'handoff';
-        if(modes.size>1){
-          for(const e of outgoing)e.mode='handoff';
-          n.agent.instructions=(n.agent.instructions||'').replaceAll('complete_node','handoff');
-        }
-      }
+      if(n.exit_mode||n.completion_schema!=null||n.completion_instructions)throw new Error('旧交接模式需通过工作流升级后编辑');
+
     }
     const before=new WorkflowGraph(this.value).value;
     for(const n of before.nodes)if(n.agent){n.agent=WorkflowGraph.agentConfig(n.agent);if(!n.agent.seed_dir)delete n.agent.seed_dir;}
@@ -57,7 +50,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     x=Math.max(0,Math.min(10000,Math.round(x)));y=Math.max(0,Math.min(10000,Math.round(y)));
     while(this.value.nodes.some(n=>Math.abs(n.x-x)<210&&Math.abs(n.y-y)<120)){y+=140;if(y>9800){y=40;x=(x+240)%9800;}}
     const n={id:'node_'+i,name:WorkflowGraph.kinds[kind],kind,x:0,y:0};
-    if(kind==='agent'){if(this.value.context_version===2)n.exit_mode='handoff';n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;if(this.value.context_version!==2)n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
+    if(kind==='agent'){n.agent={executor:'codex',model:'',instructions:'',skills:[],tool_servers:[],sandbox:'workspace-write',network_access:false,allow_elevation:false,native_config:'',trust_hooks:false,inherit_env:true,env:{},seed_dir:''};n.allow_user_input=true;if(this.value.context_version!==2)n.prompt='{{handoff}}';n.continuation_limit=3;n.execution_timeout_seconds=14400;}
     if(kind==='execution'){n.execution={mode:'mcp',server_id:'',tool:'',arguments:{}};n.execution_timeout_seconds=60;}
     this.value.nodes.push(n);this.move(n.id,x,y);
     if(!this.value.entry)this.value.entry=n.id;
@@ -81,26 +74,11 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     if(n.kind==='end')throw new Error('结束节点不能继续连线');
     if(!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(route))throw new Error('路由使用字母开头的英文、数字、下划线或短横线');
     if(this.value.edges.some(e=>e.source===source&&e.route===route))throw new Error('这个节点已经有同名路由');
-    mode ||= n.kind==='agent'&&n.exit_mode!=='complete'?'handoff':'automatic';
-    if(n.exit_mode&&mode!==(n.exit_mode==='complete'?'automatic':'handoff'))throw new Error('连线方式须与节点交接方式一致');
+    mode ||= n.kind==='agent'?'handoff':'automatic';
+    if(n.kind==='agent'&&mode!=='handoff')throw new Error('Agent 统一使用交接目标');
     if(!['handoff','automatic'].includes(mode)||mode==='handoff'&&n.kind!=='agent')throw new Error('连线决策方式无效');
-    if(this.value.context_version>=1&&mode==='handoff'&&this.value.edges.some(e=>e.source===source&&e.target===target&&this.edgeMode(e)==='handoff'))throw new Error('同一自主交接目标只能配置一条策略，请合并策略内容');
-    if(mode==='automatic'&&n.kind==='agent'&&this.value.edges.some(e=>e.source===source&&this.edgeMode(e)==='automatic'))throw new Error('Agent 只能有一条固定完成线');
+    if(mode==='handoff'&&this.value.edges.some(e=>e.source===source&&e.target===target&&this.edgeMode(e)==='handoff'))throw new Error('同一自主交接目标只能配置一条策略，请合并策略内容');
     this.value.edges.push({source,route,target,mode,description});
-  }
-  setExitMode(id,mode,route) {
-    const n=this.node(id);if(n?.kind!=='agent'||this.value.context_version!==2||!['handoff','complete'].includes(mode))throw new Error('交接方式无效');
-    const edges=this.value.edges.filter(e=>e.source===id);
-    if(mode==='complete'&&edges.length>1&&!edges.some(e=>e.route===route))throw new Error('请选择固定流转保留的目标');
-    if(mode==='handoff'&&new Set(edges.map(e=>e.target)).size!==edges.length)throw new Error('同一目标存在多条连线，请先合并策略');
-    this.value.edges=this.value.edges.filter(e=>e.source!==id||mode!=='complete'||edges.length<=1||e.route===route);
-    for(const e of this.value.edges.filter(e=>e.source===id))e.mode=mode==='complete'?'automatic':'handoff';
-    n.exit_mode=mode;
-  }
-  agentMode(id) {
-    if(this.node(id)?.exit_mode)return this.node(id).exit_mode==='complete'?'automatic':'handoff';
-    const modes=new Set(this.value.edges.filter(e=>e.source===id).map(e=>this.edgeMode(e)));
-    return modes.size>1?'mixed':modes.has('handoff')?'handoff':'automatic';
   }
   nextRoute(source) { let i=1;while(this.value.edges.some(e=>e.source===source&&e.route==='target_'+i))i++;return 'target_'+i; }
   removeEdge(index) { this.value.edges.splice(index,1); }
@@ -165,13 +143,8 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       if(a.approvals_reviewer==='auto_review'&&(a.tool_servers||[]).some(b=>b.tools.some(t=>b.approvals?.[t]==='confirm')))throw new Error('自动审核不能与工具的每次确认混用，请选择人工审批或调整工具设置');
       for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
     }
-    if(node.exit_mode){
-      if(node.kind!=='agent'||this.value.context_version!==2||!['handoff','complete'].includes(node.exit_mode))throw new Error('节点交接方式无效');
-      const edges=this.value.edges.filter(e=>e.source===node.id);
-      if(edges.some(e=>this.edgeMode(e)!==(node.exit_mode==='complete'?'automatic':'handoff')))throw new Error('连线方式须与节点交接方式一致');
-      if(node.exit_mode==='complete'&&edges.length!==1)throw new Error('固定流转须配置一个目标');
-    }
-    if(node.completion_schema!=null&&(typeof node.completion_schema!=='object'||Array.isArray(node.completion_schema)||node.completion_schema.type!=='object'))throw new Error('输出格式须为 type=object 的 JSON Schema');
+    if(node.exit_mode||node.completion_schema!=null||node.completion_instructions)throw new Error('旧交接模式需通过工作流升级后编辑');
+    if(node.handoff_schema!=null&&(typeof node.handoff_schema!=='object'||Array.isArray(node.handoff_schema)||node.handoff_schema.type!=='object'))throw new Error('输出格式须为 type=object 的 JSON Schema');
     if(!this.value.context_version||node.kind!=='agent')return;
     if(this.value.context_version===2&&node.agent?.seed_dir)throw new Error('工作区在开始运行时统一指定，节点不单独设置工作区模板');
     if(this.value.context_version===2&&node.prompt)throw new Error('此编排不再使用独立工作说明；请将长期职责放入角色指令，具体任务在运行时输入');

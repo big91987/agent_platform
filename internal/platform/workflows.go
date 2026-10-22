@@ -31,24 +31,26 @@ type Workflow struct {
 	Updated         string         `json:"updated_at"`
 }
 type WorkflowNode struct {
-	RuleHandoff             *WorkflowRules     `json:"rule_handoff,omitempty"`
-	Execution               *WorkflowExecution `json:"execution,omitempty"`
-	ExitMode                string             `json:"exit_mode,omitempty"`
-	CompletionSchema        json.RawMessage    `json:"completion_schema,omitempty"`
-	CompletionInstructions  string             `json:"completion_instructions,omitempty"`
-	AllowUserInput          *bool              `json:"allow_user_input,omitempty"`
-	ContinuationLimit       int                `json:"continuation_limit,omitempty"`
-	ExecutionTimeoutSeconds int                `json:"execution_timeout_seconds,omitempty"`
-	ID                      string             `json:"id"`
-	Name                    string             `json:"name"`
-	Kind                    string             `json:"kind"`
-	AgentID                 string             `json:"agent_id,omitempty"`
-	Agent                   *Agent             `json:"agent,omitempty"`
-	ConnectorID             string             `json:"connector_id,omitempty"`
-	ConnectorInput          ConnectorInput     `json:"connector_input,omitempty"`
-	Prompt                  string             `json:"prompt,omitempty"`
-	X                       float64            `json:"x"`
-	Y                       float64            `json:"y"`
+	RetiredCompletionSchema       json.RawMessage    `json:"completion_schema,omitempty"`
+	RetiredCompletionInstructions string             `json:"completion_instructions,omitempty"`
+	RuleHandoff                   *WorkflowRules     `json:"rule_handoff,omitempty"`
+	Execution                     *WorkflowExecution `json:"execution,omitempty"`
+	ExitMode                      string             `json:"exit_mode,omitempty"`
+	HandoffSchema                 json.RawMessage    `json:"handoff_schema,omitempty"`
+	HandoffInstructions           string             `json:"handoff_instructions,omitempty"`
+	AllowUserInput                *bool              `json:"allow_user_input,omitempty"`
+	ContinuationLimit             int                `json:"continuation_limit,omitempty"`
+	ExecutionTimeoutSeconds       int                `json:"execution_timeout_seconds,omitempty"`
+	ID                            string             `json:"id"`
+	Name                          string             `json:"name"`
+	Kind                          string             `json:"kind"`
+	AgentID                       string             `json:"agent_id,omitempty"`
+	Agent                         *Agent             `json:"agent,omitempty"`
+	ConnectorID                   string             `json:"connector_id,omitempty"`
+	ConnectorInput                ConnectorInput     `json:"connector_input,omitempty"`
+	Prompt                        string             `json:"prompt,omitempty"`
+	X                             float64            `json:"x"`
+	Y                             float64            `json:"y"`
 }
 type WorkflowEdge struct {
 	Title       string `json:"title,omitempty"`
@@ -166,7 +168,6 @@ func validateWorkflow(w Workflow) error {
 	}
 	forward, reverse := map[string][]string{}, map[string][]string{}
 	routes := map[[2]string]bool{}
-	automatic := map[string]int{}
 	for _, e := range w.Edges {
 		source, ok := nodes[e.Source]
 		if !ok {
@@ -190,12 +191,7 @@ func validateWorkflow(w Workflow) error {
 		if e.Mode == "handoff" && source.Kind != "agent" {
 			return errors.New("only Agent nodes can choose handoff edges")
 		}
-		if e.Mode == "automatic" && source.Kind == "agent" {
-			automatic[e.Source]++
-			if automatic[e.Source] > 1 {
-				return errors.New("Agent completion requires at most one fixed edge")
-			}
-		}
+
 		key := [2]string{e.Source, e.Route}
 		if routes[key] {
 			return fmt.Errorf("ambiguous route %s on %s", e.Route, e.Source)
