@@ -238,6 +238,10 @@ func TestClaimSkipsRetiredRunWithoutStarvingCurrentWork(t *testing.T) {
 }
 
 func enableTestHandoffParams(w *Workflow) {
-	w.Nodes[0].HandoffParams = true
-	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object"}`)
+	w.Nodes[0].HandoffParameters = map[string]HandoffParameters{}
+	for _, edge := range w.Edges {
+		if edge.Source == w.Nodes[0].ID {
+			w.Nodes[0].HandoffParameters[edge.Target] = HandoffParameters{Enabled: true, Schema: json.RawMessage(`{"type":"object"}`)}
+		}
+	}
 }

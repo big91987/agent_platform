@@ -62,6 +62,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
   }
   remove(id) {
     this.value.nodes=this.value.nodes.filter(n=>n.id!==id);
+    for(const n of this.value.nodes)if(n.handoff_parameters)delete n.handoff_parameters[id];
     for(const n of this.value.nodes)if(n.rule_handoff){for(const r of n.rule_handoff.rules)if(r.target===id)r.target='';for(const f of [n.rule_handoff.on_invalid,n.rule_handoff.on_expression,n.rule_handoff.on_read,n.rule_handoff.on_parse,n.execution?.on_error])if(f?.target===id)f.target='';}
     this.value.edges=this.value.edges.filter(e=>e.source!==id&&e.target!==id);
     this.value.start_nodes=this.value.start_nodes.filter(n=>n!==id);
@@ -81,7 +82,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
     this.value.edges.push({source,route,target,mode,description});
   }
   nextRoute(source) { let i=1;while(this.value.edges.some(e=>e.source===source&&e.route==='target_'+i))i++;return 'target_'+i; }
-  removeEdge(index) { this.value.edges.splice(index,1); }
+  removeEdge(index) {const edge=this.value.edges[index];if(edge&&this.node(edge.source)?.handoff_parameters)delete this.node(edge.source).handoff_parameters[edge.target];this.value.edges.splice(index,1); }
   updateEdge(index,changes) {
     const old=this.value.edges[index];if(!old)throw new Error('连线不存在');
     const next={...old,...changes},backup=this.value.edges.slice();
@@ -89,6 +90,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       this.value.edges.splice(index,1);
       this.connect(next.source,next.route,next.target,next.mode,next.description);
       const updated=this.value.edges.pop();this.value.edges.splice(index,0,updated);
+      if(old.target!==next.target||old.source!==next.source){const parameters=this.node(old.source)?.handoff_parameters||{},p=Object.hasOwn(parameters,old.target)?parameters[old.target]:undefined;if(p){(this.node(next.source).handoff_parameters||={})[next.target]=p;delete this.node(old.source).handoff_parameters[old.target];}}
     } catch(error) {this.value.edges=backup;throw error;}
   }
   validateAgent(node) {
@@ -144,9 +146,18 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       for(const key of ['network_access','allow_elevation','trust_hooks','inherit_env'])if(a[key]!=null&&typeof a[key]!=='boolean')throw new Error('节点配置 '+key+' 必须是布尔值');
     }
     if(node.exit_mode||node.completion_schema!=null||node.completion_instructions)throw new Error('旧交接模式需通过工作流升级后编辑');
-    if(node.handoff_params!=null&&typeof node.handoff_params!=='boolean')throw new Error('传递参数开关须为布尔值');
-    if(node.handoff_params&&!node.handoff_schema)throw new Error('开启传递参数后，请填写参数格式');
-    if(node.handoff_schema!=null&&(typeof node.handoff_schema!=='object'||Array.isArray(node.handoff_schema)||node.handoff_schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
+    if(node.handoff_params!=null||node.handoff_schema!=null||node.handoff_instructions!=null)throw new Error('旧节点参数配置需按交接目标升级');
+    if(node.handoff_parameters!=null){
+      const parameters=node.handoff_parameters;
+      if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)||node.kind!=='agent')throw new Error('交接参数配置须属于 Agent 目标');
+      for(const [target,p]of Object.entries(parameters)){
+        if(!this.value.edges.some(e=>e.source===node.id&&e.target===target))throw new Error('参数配置的交接目标不存在');
+        if(!p||typeof p!=='object'||Array.isArray(p)||typeof p.enabled!=='boolean')throw new Error('传递参数开关须为布尔值');
+        if(p.enabled&&!p.schema)throw new Error('开启传递参数后，请填写参数格式');
+        if(p.schema!=null&&(typeof p.schema!=='object'||Array.isArray(p.schema)||p.schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
+        if(p.instructions!=null&&(typeof p.instructions!=='string'||p.instructions.length>16000))throw new Error('参数填写说明最多 16000 字符');
+      }
+    }
     if(!this.value.context_version||node.kind!=='agent')return;
     if(this.value.context_version===2&&node.agent?.seed_dir)throw new Error('工作区在开始运行时统一指定，节点不单独设置工作区模板');
     if(this.value.context_version===2&&node.prompt)throw new Error('此编排不再使用独立工作说明；请将长期职责放入角色指令，具体任务在运行时输入');

@@ -1,5 +1,8 @@
 # 节点独立配置实施计划
 
+当前增量（2026-10-22）：按交接目标分别配置参数已实现并通过最终完整源码门禁与独立复审。节点 handoff_parameters 按 target 保存开关/Schema/说明；同一 handoff 工具按实际目标校验，界面按目标卡片配置，应用/取消与草稿保留。112 HTTP仍为fdedb0a/revision8；部署SSH被远端断开，直连22超时，当前未升级，也未启动本轮三分支原生验证，不能用前轮Run替代。已请求用户恢复ds112连接；标准部署/正式主图升级/原生验证/释放后留存/临时图清理待续。定时任务保持暂停。
+
+
 当前状态（2026-10-22）：112:8795已通过标准Linux构建/安装升级至fdedb0a，正式工作流83f08f81f7040fcd0c12e6ff4e2acd2d/revision8，参数默认关闭。可选params、填写说明及Schema校验、节点应用/取消和执行配置留存已交付。真实Codex参数验证Run18a76ca18b9390ef2cb2c80c15e9ad67已4步completed，Agent→执行→独立Agent→结束通过，归档3文件在环境正式释放后仍可下载；临时工作流已删除，Run历史保留。测试仓标准模板PR56已精确合并main4eade601；产品PR49/55仍未合并部署。定时任务保持暂停；下文早期状态按历史保留。
 
 
@@ -1734,3 +1737,16 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 执行完整日志587bytes、EOF=true/truncated=false，SHA256 1371bce3ece102c0f9690f340fe48f5e2315c4d0729a1c8f02ed97e844343839。最初Builder核验探针把完整日志误按单个JSON解析而报Extra data，原失败保留，未重跑节点；只读核实日志含OpenSandbox init/ping/execution_complete和stdout对象后，按全部连续JSON记录严格核对唯一业务对象与receipt.json一致。Agent读取seq1固定命令输出得到不存在，不作通过证据；Agent原生事件另行保留，不混同执行节点日志。3批3文件2621bytes经正式下载逐项SHA/bytes核验；正式请求释放后实查environment=released，再重读全部归档仍一致。临时工作流2820ad1e5e01d2f3457f3031ecfb2fb8经正式DELETE删除，完成Run和归档仍可查看。
 
 项目自有模板从同一维护源标准导出，147对象逐Git blob核对，无项目定制被覆盖。Harness PR56 https://github.com/big91987/model-relay/pull/56 head a7ae5948c4cc6ecddb9acb0a5b29dfe3ceca59cb，11文件仅模板/安装默认/角色说明与SOURCE；精确授权合并main4eade601b7a46c0cb62dc37f4ba0e7c4a8155675。该head无GitHub checks/status记录，不把无检查写成GitGuardian通过；验证依据为已记录维护源完整门禁、Linux标准构建安装、147对象和本轮原生实证。未改产品或合产品草稿PR49/55，平台仅开发分支提交推送。私有证据位于ignored handoff-params-editor目录及112部署证据目录；定时任务仍暂停。
+
+
+### 2026-10-22 · 按交接目标独立参数契约（源码完成，远端待连接）
+
+用户要求同一Agent的不同交接目标各自决定是否接收参数，下一节点可以是Agent或代码执行，不按类型硬编码。实现采用节点handoff_parameters，以已有目标ID作键，每项enabled/schema/instructions；参数开关、格式和填写说明放在对应目标卡片，连线仍只呈现交接策略。handoff保持target/message/artifacts/params四项，无新增工具或隐式目标；完整工具Schema按target分支要求对应params，平台接受前按实际target再校验。关闭目标拒绝params，开启目标要求存在且匹配自身Schema；不混用其他分支格式。参数仍原样进入result.params，供后续Agent、代码或显式MCP绑定消费，不拼Shell。
+
+节点级旧参数执行逻辑已移除，仅保留历史JSON事实读取和明确拒绝新配置/执行的字段；标准模板删除旧默认字段，安装和说明同步。不能自动猜测分支需求或改历史Run。目标修改保留该卡片配置，移除目标清理其参数；未触及目标保留，原始JSON草稿独立，所有目标校验成功才应用。
+
+回归先证当前实现错误拒绝合法分支params，再完成实现。66项编辑器/模型/规则回归通过；独立复审发现合法constructor/toString节点/目标名读到对象继承属性导致草稿串用，以及空object Schema对typed nil map校验缺失。已分别用自有属性检查和显式nil拒绝修复，保留{}合法，回归及复审确认无新增Critical/Important。首次新增VM夹具改节点ID后未更新选中节点导致无onchange，修正夹具后通过；未将夹具失败冒称产品故障。测试首次因沙箱不能监听临时HTTP端口失败，按测试所需正常授权环境重跑，不绕业务门禁。
+
+最终标准scripts/verify.sh exit0，完整130493bytes/SHA256 15b0029ac5a678dc80130437fea53263a0bc536ba1033431dfead0682b11a7ca，真实Chromium15.107s、133模板20.966s、Go vet、全race96.538s与构建通过。前一轮门禁执行中还有复审修正，以独立最终完整门禁为准；Mac LC_DYSYMTAB警告仍按警告记录。真实HTTP/MCP验证包含不同目标格式混用拒绝、关闭目标带参数拒绝、冻结契约不随保存改变、实际参数绑定消费和下一Agent收到执行结果；不把受控Claim回归写成本轮真实Codex运行。
+
+部署前只读检查时，ds112 SSH被jumpserver远端关闭；其他现有112会话也已退出，本机直连10.1.20.112:22五秒超时。HTTP健康仍200/fdedb0a。没有向本机shell误发安装、没有新112构建或配置写入，也没有重复任务。已通过异步输入请求用户恢复原连接；三条原生验证（代码目标独立版本参数、Agent目标独立审批参数、无参数Agent目标）脚本已准备但尚未启动，不预填结果。后续先核活跃任务，再标准build/install、正式API升级主图8→9、真实分支验证及归档释放/删除临时图。平台仅开发分支提交推送，未建平台PR或合main；测试仓同步PR待标准导出，产品PR49/55未动，自动检查仍暂停。

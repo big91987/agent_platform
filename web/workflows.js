@@ -413,7 +413,7 @@ function workflowPayload(value,nodeDraft,envDrafts,agents,completionDrafts,execu
 function workflowNodeDraft(editor,n,validate=true){
  if(editor.owner)editor.graph.value.environment=editor.owner.graph.value.environment;
  const next={...n};if(editor.readOnly||editor.selected!==n.id||!$('#wf-node-form'))return next;
- if(n.kind==='agent'){const draft=editor.completionDrafts?.[n.id];if(draft){if(validate)applyCompletionDraft(next,draft);else{try{applyCompletionDraft(next,draft)}catch{}}}}
+ if(n.kind==='agent'){const draft=Object.hasOwn(editor.completionDrafts||{},n.id)?editor.completionDrafts[n.id]:undefined;if(draft){if(validate)applyCompletionDraft(next,draft);else{try{applyCompletionDraft(next,draft)}catch{}}}}
  next.x=Number($('#wf-node-x').value);next.y=Number($('#wf-node-y').value);
  if(editor.positions){const p=workflowNodePosition(editor,n);if(next.x===p.x&&next.y===p.y){next.x=n.x;next.y=n.y}else{materializeWorkflowPositions(editor)}}
  if(n.kind==='agent'){
@@ -560,37 +560,51 @@ function renderWorkflowInspector(editor){
  }
 }
 // Raw JSON lives in the editor until valid, so closing a panel cannot discard a typo.
-function applyCompletionDraft(node,draft){
- node.handoff_params=!!draft.enabled;
- let schema;try{schema=draft.schema.trim()?WorkflowGraph.parseJSON(draft.schema):undefined}catch(error){throw new Error('参数格式不是有效 JSON：'+error.message)}
- if(schema!==undefined&&(!schema||typeof schema!=='object'||Array.isArray(schema)||schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
- if(node.handoff_params&&!schema)throw new Error('开启传递参数后，请填写参数格式');
- if(schema===undefined)delete node.handoff_schema;else node.handoff_schema=schema;
- node.handoff_instructions=draft.instructions;
+function applyCompletionDraft(node,drafts){
+ const parameters=JSON.parse(JSON.stringify(node.handoff_parameters||{}));
+ for(const [target,draft]of Object.entries(drafts)){
+  let schema;try{schema=draft.schema.trim()?WorkflowGraph.parseJSON(draft.schema):undefined}catch(error){throw new Error('目标「'+target+'」参数格式不是有效 JSON：'+error.message)}
+  if(schema!==undefined&&(!schema||typeof schema!=='object'||Array.isArray(schema)||schema.type!=='object'))throw new Error('参数格式须为 type=object 的 JSON Schema');
+  if(draft.enabled&&!schema)throw new Error('开启传递参数后，请填写参数格式');
+  parameters[target]={enabled:!!draft.enabled,...(schema===undefined?{}:{schema}),instructions:draft.instructions};
+ }
+ node.handoff_parameters=parameters;
+}
+function workflowTargetParamsDraft(editor,n,target){
+ const p=Object.hasOwn(n.handoff_parameters||{},target)?n.handoff_parameters[target]:{};
+ const drafts=Object.hasOwn(editor.completionDrafts||{},n.id)?editor.completionDrafts[n.id]:{};
+ return Object.hasOwn(drafts,target)?drafts[target]:{enabled:!!p.enabled,schema:p.schema?JSON.stringify(p.schema,null,2):'',instructions:p.instructions||''};
+}
+function workflowTargetParamsFields(editor,n,target){
+ const draft=workflowTargetParamsDraft(editor,n,target),id=esc(target);
+ return `<label class="check"><input id="wf-handoff-params-${id}" type="checkbox" ${draft.enabled?'checked':''}>传递参数</label><div id="wf-handoff-params-fields-${id}" ${draft.enabled?'':'hidden'}><div class="field wf-agent-schema"><label for="wf-completion-schema-${id}">参数格式（JSON Schema）</label><textarea id="wf-completion-schema-${id}" class="${draft.schema===workflowHandoffParamsExample()?'wf-default-value':''}" rows="8" maxlength="32000" spellcheck="false" placeholder='${esc(workflowHandoffParamsExample())}'>${esc(draft.schema)}</textarea></div><div class="field"><label for="wf-completion-instructions-${id}">参数填写说明</label><textarea id="wf-completion-instructions-${id}" rows="3" maxlength="16000" placeholder="说明字段含义、取值依据和填写要求。">${esc(draft.instructions)}</textarea></div></div>`;
 }
 function workflowAgentAdvanced(editor,n){
  return `<fieldset ${editor.readOnly?'disabled':''}><div class="field"><label><input id="wf-allow-user-input" type="checkbox" ${n.allow_user_input!==false?'checked':''}> 允许请求用户输入</label><p class="hint">允许智能体提出问题，并在当前会话等待答复。</p></div><div class="field"><label for="wf-continuation">自动继续次数</label><input id="wf-continuation" type="number" min="0" max="10" required value="${n.continuation_limit??0}"><p class="hint">未完成且未明确等待时在原会话继续。0 关闭，最多 10 次。</p></div><div class="field"><label for="wf-timeout">持续推进期限（秒）</label><input id="wf-timeout" type="number" min="0" max="86400" required value="${n.execution_timeout_seconds??0}"><p class="hint">从本次节点开始计时，到期后不再自动接续，不中断正在执行的回合。0 表示不设期限。</p></div></fieldset>`;
 }
 function workflowHandoffParamsExample(){return JSON.stringify({type:'object',properties:{name:{type:'string',description:'处理对象名称'},count:{type:'integer',minimum:1,description:'处理数量'}},required:['name']},null,2)}
 function workflowAgentHandoffFields(editor,n){
- const draft=editor.completionDrafts?.[n.id]||{enabled:!!n.handoff_params,schema:n.handoff_schema?JSON.stringify(n.handoff_schema,null,2):'',instructions:n.handoff_instructions||''};
  const edges=editor.graph.value.edges.map((edge,index)=>({...edge,index})).filter(e=>e.source===n.id);
- return `<fieldset ${editor.readOnly?'disabled':''}><div class="wf-agent-target-heading"><h4>交接目标</h4><button type="button" id="wf-agent-add-target" ${editor.readOnly?'disabled':''}>＋ 添加目标</button></div>${edges.map((e,i)=>`<div class="wf-agent-target"><div class="wf-agent-target-heading"><span class="hint">目标 ${i+1}</span><button type="button" data-agent-remove="${e.index}" aria-label="移除目标 ${i+1}">×</button></div><div class="field"><label for="wf-agent-target-${e.index}">目标节点</label><select id="wf-agent-target-${e.index}" data-agent-target="${e.index}">${editor.graph.value.nodes.filter(t=>t.id===e.target||!edges.some(other=>other.target===t.id)).map(t=>`<option value="${esc(t.id)}" ${t.id===e.target?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-agent-condition-${e.index}">交接条件</label><textarea id="wf-agent-condition-${e.index}" data-agent-condition="${e.index}" rows="3" maxlength="4000" placeholder="说明什么情况下交给这个节点。">${esc(e.description||'')}</textarea></div></div>`).join('')||'<p class="hint">添加下一节点；结束流程请选择结束节点。</p>'}<label class="check"><input id="wf-handoff-params" type="checkbox" ${draft.enabled?'checked':''}>传递参数</label><div id="wf-handoff-params-fields" ${draft.enabled?'':'hidden'}><div class="field wf-agent-schema"><label for="wf-completion-schema">参数格式（JSON Schema）</label><textarea id="wf-completion-schema" class="${draft.schema===workflowHandoffParamsExample()?'wf-default-value':''}" rows="8" maxlength="32000" spellcheck="false" placeholder='{"type":"object","properties":{"commit":{"type":"string"},"timeout_seconds":{"type":"integer","minimum":1}},"required":["commit"]}'>${esc(draft.schema)}</textarea><p class="hint">定义 params 中的字段、类型和必填项。</p></div><div class="field"><label for="wf-completion-instructions">参数填写说明</label><textarea id="wf-completion-instructions" rows="3" maxlength="16000" placeholder="说明字段含义、取值依据和填写要求，例如 commit 填写本次实际提交的完整 SHA。">${esc(draft.instructions)}</textarea></div></div></fieldset>`;
+ return `<fieldset ${editor.readOnly?'disabled':''}><div class="wf-agent-target-heading"><h4>交接目标</h4><button type="button" id="wf-agent-add-target" ${editor.readOnly?'disabled':''}>＋ 添加目标</button></div>${edges.map((e,i)=>`<div class="wf-agent-target"><div class="wf-agent-target-heading"><span class="hint">目标 ${i+1}</span><button type="button" data-agent-remove="${e.index}" aria-label="移除目标 ${i+1}">×</button></div><div class="field"><label for="wf-agent-target-${e.index}">目标节点</label><select id="wf-agent-target-${e.index}" data-agent-target="${e.index}">${editor.graph.value.nodes.filter(t=>t.id===e.target||!edges.some(other=>other.target===t.id)).map(t=>`<option value="${esc(t.id)}" ${t.id===e.target?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label for="wf-agent-condition-${e.index}">交接条件</label><textarea id="wf-agent-condition-${e.index}" data-agent-condition="${e.index}" rows="3" maxlength="4000" placeholder="说明什么情况下交给这个节点。">${esc(e.description||'')}</textarea></div>${workflowTargetParamsFields(editor,n,e.target)}</div>`).join('')||'<p class="hint">添加下一节点；结束流程请选择结束节点。</p>'}</fieldset>`;
 }
 function bindWorkflowAgentHandoff(editor,n){
  if(editor.readOnly)return;
- const remember=()=>{const draft={enabled:$('#wf-handoff-params').checked,schema:$('#wf-completion-schema').value,instructions:$('#wf-completion-instructions').value};(editor.completionDrafts||={})[n.id]=draft;try{applyCompletionDraft(n,draft)}catch{}workflowChanged(editor)};
- $('#wf-handoff-params').onchange=()=>{if($('#wf-handoff-params').checked&&!$('#wf-completion-schema').value.trim()){$('#wf-completion-schema').value=workflowHandoffParamsExample();$('#wf-completion-schema').classList.add('wf-default-value')}remember();$('#wf-handoff-params-fields').hidden=!$('#wf-handoff-params').checked};
- $('#wf-completion-schema').oninput=()=>{$('#wf-completion-schema').classList.remove('wf-default-value');remember()};$('#wf-completion-instructions').oninput=remember;
+ const edges=editor.graph.value.edges.filter(e=>e.source===n.id);
+ for(const edge of edges){
+  const target=edge.target,toggle=$('#wf-handoff-params-'+target),schema=$('#wf-completion-schema-'+target),instructions=$('#wf-completion-instructions-'+target);
+  const remember=()=>{const all=editor.completionDrafts||={};const drafts=Object.hasOwn(all,n.id)?all[n.id]:(all[n.id]={});drafts[target]={enabled:toggle.checked,schema:schema.value,instructions:instructions.value};try{applyCompletionDraft(n,drafts)}catch{}workflowChanged(editor)};
+  toggle.onchange=()=>{if(toggle.checked&&!schema.value.trim()){schema.value=workflowHandoffParamsExample();schema.classList.add('wf-default-value')}remember();$('#wf-handoff-params-fields-'+target).hidden=!toggle.checked};
+  schema.oninput=()=>{schema.classList.remove('wf-default-value');remember()};instructions.oninput=remember;
+ }
  const refresh=()=>{workflowChanged(editor);renderWorkflowNodes(editor);renderWorkflowInspector(editor)};
- document.querySelectorAll('[data-agent-target]').forEach(el=>el.onchange=()=>{try{rememberWorkflowNodeDraft(editor);editor.graph.updateEdge(Number(el.dataset.agentTarget),{target:el.value,mode:'handoff'});refresh()}catch(error){toast(error.message);renderWorkflowInspector(editor)}});
+ document.querySelectorAll('[data-agent-target]').forEach(el=>el.onchange=()=>{try{rememberWorkflowNodeDraft(editor);const old=editor.graph.value.edges[Number(el.dataset.agentTarget)].target;editor.graph.updateEdge(Number(el.dataset.agentTarget),{target:el.value,mode:'handoff'});const drafts=Object.hasOwn(editor.completionDrafts||{},n.id)?editor.completionDrafts[n.id]:undefined;if(drafts&&Object.hasOwn(drafts,old)){drafts[el.value]=drafts[old];delete drafts[old]}refresh()}catch(error){toast(error.message);renderWorkflowInspector(editor)}});
  document.querySelectorAll('[data-agent-condition]').forEach(el=>el.oninput=()=>{editor.graph.value.edges[Number(el.dataset.agentCondition)].description=el.value;workflowChanged(editor);renderWorkflowEdges(editor)});
- document.querySelectorAll('[data-agent-remove]').forEach(el=>el.onclick=()=>{rememberWorkflowNodeDraft(editor);editor.graph.removeEdge(Number(el.dataset.agentRemove));refresh()});
+ document.querySelectorAll('[data-agent-remove]').forEach(el=>el.onclick=()=>{rememberWorkflowNodeDraft(editor);const target=editor.graph.value.edges[Number(el.dataset.agentRemove)].target;editor.graph.removeEdge(Number(el.dataset.agentRemove));if(Object.hasOwn(editor.completionDrafts||{},n.id))delete editor.completionDrafts[n.id][target];refresh()});
  $('#wf-agent-add-target').onclick=()=>{rememberWorkflowNodeDraft(editor);const target=editor.graph.value.nodes.find(t=>t.id!==n.id&&!editor.graph.value.edges.some(e=>e.source===n.id&&e.target===t.id));if(!target){toast('请先在画布添加其他目标节点');return}editor.graph.connect(n.id,editor.graph.nextRoute(n.id),target.id,'handoff','');refresh()};
 }
 function workflowAgentHelp(editor){
  if(editor.panelTab==='preview'){workflowContextHelp(editor);return}
- const content=editor.panelTab==='handoff'?'<p><b>交接目标：</b>多个目标时由 Agent 按条件选择；单个目标时交给该节点；结束运行需明确连接结束节点。</p><p><b>交接工具：</b>统一调用 handoff，必须填写 target 和 message；artifacts 是实际产物文件路径。开启“传递参数”后，params 按配置传递结构化参数。</p><p><b>格式校验：</b>开启后，参数格式和填写说明都会提供给 Agent；平台用同一份 Schema 校验 params。参数不合格时不推进；受理后等待本轮结束和必要产物保存，再进入下一节点。</p>':editor.panelTab==='advanced'?'<p><b>请求用户输入：</b>允许 Agent 暂停并等待答复，随后继续原会话。</p><p><b>自动继续次数：</b>回合结束、节点未完成且未明确等待时，最多接续的次数。0 表示关闭。</p><p><b>持续推进期限：</b>从进入节点开始计时，到期不再自动接续，不中断当前回合。0 表示不设期限。</p>':'<p><b>执行器与模型：</b>决定运行方式和推理模型。</p><p><b>角色指令：</b>规定职责；具体任务由运行输入和上游交接传入。</p><p><b>Skills 与工具：</b>提供工作方法和可调用能力。</p><p><b>执行权限：</b>决定访问范围及审批方式，任务文字本身不授予权限。</p>';
+ const content=editor.panelTab==='handoff'?'<p><b>交接目标：</b>多个目标时由 Agent 按条件选择；单个目标时交给该节点；结束运行需明确连接结束节点。</p><p><b>交接工具：</b>统一调用 handoff，必须填写 target 和 message；artifacts 是实际产物文件路径。每个交接目标分别设置“传递参数”、格式和说明。</p><p><b>格式校验：</b>选中目标的参数格式和填写说明会提供给 Agent；平台按实际 target 校验 params。未开启的目标不接收 params。参数不合格时不推进；受理后等待本轮结束和必要产物保存，再进入下一节点。</p>':editor.panelTab==='advanced'?'<p><b>请求用户输入：</b>允许 Agent 暂停并等待答复，随后继续原会话。</p><p><b>自动继续次数：</b>回合结束、节点未完成且未明确等待时，最多接续的次数。0 表示关闭。</p><p><b>持续推进期限：</b>从进入节点开始计时，到期不再自动接续，不中断当前回合。0 表示不设期限。</p>':'<p><b>执行器与模型：</b>决定运行方式和推理模型。</p><p><b>角色指令：</b>规定职责；具体任务由运行输入和上游交接传入。</p><p><b>Skills 与工具：</b>提供工作方法和可调用能力。</p><p><b>执行权限：</b>决定访问范围及审批方式，任务文字本身不授予权限。</p>';
  dialog(`<div class="dialog-head"><h2 id="wf-agent-help-title">${editor.panelTab==='handoff'?'交接策略说明':editor.panelTab==='advanced'?'高级设置说明':'Agent 配置说明'}</h2><button type="button" data-close aria-label="关闭帮助">×</button></div><div class="dialog-body wf-agent-help">${content}</div>`);$('#dialog').setAttribute('aria-labelledby','wf-agent-help-title');$('#dialog').addEventListener('close',()=>$('#dialog').removeAttribute('aria-labelledby'),{once:true});
 }
 function workflowSettings(editor){

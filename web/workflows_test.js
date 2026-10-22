@@ -191,15 +191,15 @@ test('standalone and workflow forms read the same execution settings and preserv
 });
 test('optional params retain Schema and instructions across toggles and validate on Apply',()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
- el('#wf-handoff-params').checked=true;el('#wf-handoff-params').onchange();el('#wf-completion-schema').value='{"type":"object","properties":{"passed":{"type":"boolean"}}}';el('#wf-completion-instructions').value='根据实际验证填写 passed';el('#wf-completion-schema').oninput();
- el('#wf-handoff-params').checked=false;el('#wf-handoff-params').onchange();el('#wf-handoff-params').checked=true;el('#wf-handoff-params').onchange();assert.match(el('#wf-completion-schema').value,/passed/);assert.match(el('#wf-completion-instructions').value,/实际验证/);
- el('#wf-completion-schema').value='{bad';el('#wf-completion-schema').oninput();el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.handoff_params',ctx),undefined);assert.match(el('#toast').textContent,/JSON/);
- el('#wf-completion-schema').value='{"type":"object"}';el('#wf-completion-schema').oninput();el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.handoff_params',ctx),true);assert.match(vm.runInContext('a.handoff_instructions',ctx),/实际验证/);
+ el('#wf-handoff-params-node_2').checked=true;el('#wf-handoff-params-node_2').onchange();el('#wf-completion-schema-node_2').value='{"type":"object","properties":{"passed":{"type":"boolean"}}}';el('#wf-completion-instructions-node_2').value='根据实际验证填写 passed';el('#wf-completion-schema-node_2').oninput();
+ el('#wf-handoff-params-node_2').checked=false;el('#wf-handoff-params-node_2').onchange();el('#wf-handoff-params-node_2').checked=true;el('#wf-handoff-params-node_2').onchange();assert.match(el('#wf-completion-schema-node_2').value,/passed/);assert.match(el('#wf-completion-instructions-node_2').value,/实际验证/);
+ el('#wf-completion-schema-node_2').value='{bad';el('#wf-completion-schema-node_2').oninput();el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.handoff_parameters?.node_2?.enabled',ctx),undefined);assert.match(el('#toast').textContent,/JSON/);
+ el('#wf-completion-schema-node_2').value='{"type":"object"}';el('#wf-completion-schema-node_2').oninput();el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.handoff_parameters?.node_2?.enabled',ctx),true);assert.match(vm.runInContext('a.handoff_parameters.node_2.instructions',ctx),/实际验证/);
 });test('schema drafts reject numbers that JSON.parse would silently round',()=>{
  const {ctx}=editorPage();
- assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"id":{"const":9007199254740993}}}\',instructions:""})',ctx),/数值/);
- assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"n":{"minimum":1.0000000000000001}}}\',instructions:""})',ctx),/数值/);
- assert.doesNotThrow(()=>vm.runInContext('applyCompletionDraft(a,{schema:\'{"type":"object","properties":{"n":{"minimum":0.1,"maximum":1e3}}}\',instructions:""})',ctx));
+ assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{node_2:{schema:\'{"type":"object","properties":{"id":{"const":9007199254740993}}}\',instructions:""}})',ctx),/数值/);
+ assert.throws(()=>vm.runInContext('applyCompletionDraft(a,{node_2:{schema:\'{"type":"object","properties":{"n":{"minimum":1.0000000000000001}}}\',instructions:""}})',ctx),/数值/);
+ assert.doesNotThrow(()=>vm.runInContext('applyCompletionDraft(a,{node_2:{schema:\'{"type":"object","properties":{"n":{"minimum":0.1,"maximum":1e3}}}\',instructions:""}})',ctx));
 });
 test('stored workflows open the same current form regardless of their input version',async()=>{
  for(const version of [0,1]){
@@ -290,4 +290,26 @@ test('inactive execution modes and file source drafts survive serialized workflo
  el('#wf-result-source').value='file';el('#wf-result-source').onchange({target:el('#wf-result-source')});assert.equal(el('#wf-result-path').value,'reports/result.json');
  el('#wf-execution-mode').value='command';el('#wf-execution-mode').onchange();assert.equal(el('#wf-execution-command').value,'make verify');
  el('#wf-execution-mode').value='code';el('#wf-execution-mode').onchange();assert.equal(el('#wf-execution-code').value,'print(42)');
+});
+
+test('target parameter drafts stay independent and Apply rejects any invalid target atomically',()=>{
+ const {ctx}=editorPage();
+ vm.runInContext("graph.connect(a.id,'other',c.id,'handoff','另一目标');a.handoff_parameters={[b.id]:{enabled:true,schema:{type:'object',required:['commit']},instructions:'版本'},[c.id]:{enabled:false,schema:{type:'object',required:['ready']},instructions:'复核'}}",ctx);
+ vm.runInContext("applyCompletionDraft(a,{[b.id]:{enabled:false,schema:'{\"type\":\"object\",\"required\":[\"commit\"]}',instructions:'新版说明'}})",ctx);
+ assert.equal(vm.runInContext('a.handoff_parameters[c.id].instructions',ctx),'复核');
+ assert.equal(vm.runInContext('a.handoff_parameters[b.id].enabled',ctx),false);
+ const before=vm.runInContext('JSON.stringify(a.handoff_parameters)',ctx);
+ assert.throws(()=>vm.runInContext("applyCompletionDraft(a,{[b.id]:{enabled:true,schema:'{\"type\":\"object\"}',instructions:'不应提交'},[c.id]:{enabled:true,schema:'{bad',instructions:''}})",ctx),/JSON/);
+ assert.equal(vm.runInContext('JSON.stringify(a.handoff_parameters)',ctx),before);
+});
+
+test('legal target and node names never read or modify inherited object properties',()=>{
+ const {ctx,el}=editorPage();
+ vm.runInContext(`const named={id:'author',handoff_parameters:JSON.parse('{"constructor":{"enabled":true,"schema":{"type":"object","required":["commit"]},"instructions":"原说明"},"toString":{"enabled":true,"schema":{"type":"object"},"instructions":"另一说明"}}')};const drafts={completionDrafts:{author:{review:{enabled:false,schema:'',instructions:''}}}}`,ctx);
+ assert.equal(vm.runInContext("workflowTargetParamsDraft(drafts,named,'constructor').enabled",ctx),true);
+ assert.equal(vm.runInContext("workflowTargetParamsDraft(drafts,named,'toString').instructions",ctx),'另一说明');
+ vm.runInContext("a.id='constructor';editor.selected=a.id;graph.value.entry=a.id;graph.value.edges[0].source=a.id;renderWorkflowInspector(editor)",ctx);
+ el('#wf-handoff-params-node_2').checked=true;el('#wf-handoff-params-node_2').onchange();
+ assert.equal(vm.runInContext("Object.hasOwn(editor.nodeEditor.completionDrafts,'constructor')",ctx),true);
+ assert.equal(vm.runInContext("Object.hasOwn(Object,'node_2')",ctx),false);
 });

@@ -42,8 +42,7 @@ func TestProductTestBlockedPlanCanDeliverReport(t *testing.T) {
 			w.Edges = append(w.Edges, edge)
 		}
 	}
-	w.Nodes[0].HandoffParams = true
-	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object"}`)
+	enableTestHandoffParams(&w)
 	w, err = s.SaveWorkflow(c, w)
 	if err != nil {
 		t.Fatal(err)

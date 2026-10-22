@@ -35,8 +35,7 @@
         "instructions": "根据原始任务、用户指定起点和仓库事实选择必要阶段；范围明确的修复可直接交接开发，不需要补造 PRD 或设计。"
       },
       "x": 660,
-      "y": 70,
-      "handoff_params": false
+      "y": 70
     },
     {
       "id": "requirements",
@@ -47,8 +46,7 @@
         "instructions": "执行 需求与验收标准 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 60,
-      "y": 270,
-      "handoff_params": false
+      "y": 270
     },
     {
       "id": "design",
@@ -59,8 +57,7 @@
         "instructions": "执行 设计方案 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 360,
-      "y": 270,
-      "handoff_params": false
+      "y": 270
     },
     {
       "id": "development",
@@ -71,8 +68,7 @@
         "instructions": "执行 研发实现 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 660,
-      "y": 270,
-      "handoff_params": false
+      "y": 270
     },
     {
       "id": "qa",
@@ -83,8 +79,7 @@
         "instructions": "执行 独立 QA 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 360,
-      "y": 470,
-      "handoff_params": false
+      "y": 470
     },
     {
       "id": "report",
@@ -95,8 +90,7 @@
         "instructions": "执行 整理交付说明 节点，按已挂载的阶段指令和 Skill 完成对应产物。"
       },
       "x": 660,
-      "y": 470,
-      "handoff_params": false
+      "y": 470
     },
     {
       "id": "tests",

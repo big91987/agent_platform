@@ -59,7 +59,7 @@ func workflowNodeInstructions(w Workflow, n WorkflowNode) (string, error) {
 		}
 		prompt = strings.Replace(prompt, "{{handoff}}", handoff.String(), 1)
 	}
-	prompt += completionGuidance(n)
+	prompt += completionGuidance(w, n)
 	prompt += "\n\n## 执行与等待\n继续完成本节点全部责任。进展回复不等于节点完成；没有明确阻塞时继续工作。"
 	if n.AllowUserInput == nil || *n.AllowUserInput {
 		prompt += "必须由用户澄清时调用 wait_for_input(kind=clarification, reason=具体问题)，真实外部阻塞使用 kind=blocked；然后向用户说明并结束本轮。"

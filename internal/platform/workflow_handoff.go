@@ -46,7 +46,7 @@ func (s *Store) handoffWorkflowNode(id string, seq int, token string, in Handoff
 		return errors.New("target must identify exactly one configured handoff destination")
 	}
 	result := NodeResult{Route: routes[0], Summary: in.Message, Params: in.Params, Artifacts: in.Artifacts}
-	if err := validateCompletionResult(node, result); err != nil {
+	if err := validateCompletionResult(node, in.Target, result); err != nil {
 		return err
 	}
 	return s.submitWorkflowResult(Caller{}, id, seq, token, result, true)

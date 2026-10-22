@@ -26,7 +26,7 @@
 
 Agent 节点统一使用 MCP `handoff`；`target`、`message` 必填，`artifacts` 为可选工作区文件清单。单目标和结束节点都显式填写 target，工具枚举只接受已配置目标。固定字段含义由平台提供。
 
-默认关闭 `handoff_params`，工具不提供 params。需要下游程序消费参数时开启，并填写 `handoff_schema`（type=object）和 `handoff_instructions`。Schema 定义 params 的字段、类型与必填项，说明描述业务含义、取值依据与提交条件；两者都传给 Agent，平台在接受交接前用同一份 Schema 校验 params。关闭保留配置内容但不启用校验或提示。删除工具 context 参数，不保留别名。类型化参数保存到 result.params，下游 Agent 在任务消息中读取；执行代码从 WORKFLOW_INPUT_FILE 的 previous_results 读取，MCP 显式引用 `/result/params/字段`。未配置参数引用时不自动推断、不拼接 Shell，缺值停止。
+每个交接目标独立配置参数。节点的 `handoff_parameters` 以目标节点 ID 为键，值包含 `enabled`、`schema`（type=object）和 `instructions`；省略目标或 enabled=false 时不接受 params。开启的目标要求 params，工具完整 Schema 通过 target 分支约束参数，填写说明分别提供给 Agent；平台接受前再按实际 target 校验。关闭保留该目标的 Schema/说明，不向 Agent 提供其字段要求。参数可用于下游 Agent 或执行节点，不依据目标类型推断需求。节点级旧参数字段仅保留历史事实读取，新配置和新执行明确拒绝，正式升级需核对目标后显式迁移，不保留旧执行分支。类型化参数保存到 result.params，下游 Agent 在任务消息中读取；执行代码从 WORKFLOW_INPUT_FILE 的 previous_results 读取，MCP 显式引用 `/result/params/字段`。未配置参数引用时不自动推断、不拼接 Shell，缺值停止。
 
 节点面板使用独立编辑副本；修改名称、配置、目标及规则都需点击“应用”后才更新工作流草稿和连线，顶部“保存”再持久化。取消放弃本次修改，关闭或切换节点有未应用内容时明确选择是否放弃；校验失败保持原字段供修正。代码/命令/MCP和结果来源分别保留编辑内容，execution_drafts 随正式配置持久保存 inactive 表单；只选定 execution 参与运行，隐藏草稿不参与权限、输出选择、调度或参数绑定。Schema/文件路径切回后恢复，不靠旧配置兼容分支。
 

@@ -738,9 +738,6 @@ def main():
         ]
         api.call("POST", "/api/connectors/" + connectors[role] + "/check", {})
     graph["context_version"] = 2
-    for node in graph["nodes"]:
-        if node["kind"] == "agent":
-            node["handoff_params"] = False
     graph["name"] = args.prefix + " · " + graph["name"]
     graph["authorized_users"] = args.authorized_user
     for node in graph["nodes"]:

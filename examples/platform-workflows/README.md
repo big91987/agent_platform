@@ -377,11 +377,11 @@ SDK使用已有 `start_workflow(..., parameters={"material": json.dumps(descript
 
 Agent 节点的“交接策略”页直接配置目标及选择条件。只配置一个目标时，Agent 仍须显式填写该目标；结束运行时填写已配置的结束节点 ID。
 
-工具固定参数为 `target`、`message` 和可选 `artifacts`。节点默认关闭 `handoff_params`；需要下游程序消费结构化参数时显式开启，并配置 `handoff_schema`（type=object）和 `handoff_instructions`。开启后工具要求提交符合格式的 `params`，Schema 与业务填写说明均提供给 Agent，平台用同一份 Schema 校验；关闭时工具不提供 params，提交参数会被拒绝。Schema 和填写说明在关闭后仍保留，便于重新开启。固定命令 make verify 无参数需求时保持关闭。
+工具固定参数为 `target`、`message` 和可选 `artifacts`。每个交接目标分别决定是否接收 `params`：Agent 节点的 `handoff_parameters` 用目标节点 ID 作键，每项配置 `enabled`、`schema`（type=object）和 `instructions`。开启的目标必须提交符合其 Schema 的 params；关闭的目标不接受 params。Schema 与填写说明均提供给 Agent，平台按实际 target 用同一份 Schema 校验。关闭后保留本目标的 Schema 和说明。参数可由下游 Agent 或执行节点消费；固定命令 make verify 无参数需求时保持关闭。配置示例：`"handoff_parameters":{"execute":{"enabled":true,"schema":{"type":"object","properties":{"commit":{"type":"string"}},"required":["commit"]},"instructions":"commit 填写实际提交 SHA"}}`。未列出的合法目标默认关闭参数。
 
 执行节点通过 WORKFLOW_INPUT_FILE 读取 prior result.params；MCP 工具可显式绑定 `{"text":{"node":"author","path":"/result/params/commit"}}`。参数按 JSON 类型传递，缺失时停止，不自动拼接 Shell。节点编辑仅在点击“应用”后更新工作流草稿，工作流“保存”后持久化；取消或明确放弃编辑不改变已应用配置。执行方式和数据来源分别保留草稿，未选择的方式不执行。
 
-旧的 `exit_mode`、`completion_schema`、`completion_instructions` 不再用于新配置。升级保存的工作流时，显式删除 exit_mode、将后两项分别改为 handoff_schema/handoff_instructions，并将所有 Agent 出边设为 handoff。历史 Run 的冻结定义保持原样；不自动转换或重放旧任务。
+旧的 `exit_mode`、`completion_schema`、`completion_instructions` 不再用于新配置。升级保存的工作流时，显式删除 exit_mode，并将所有 Agent 出边设为 handoff。旧节点级 handoff_params/handoff_schema/handoff_instructions 需在核对目标后，逐目标保存为 handoff_parameters；删除旧字段，不能自动猜测哪些分支需要参数。历史 Run 的冻结定义保持原样；不自动转换或重放旧任务。
 
 例如，下游脚本需要一个布尔结论和文件列表：
 

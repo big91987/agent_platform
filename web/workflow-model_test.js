@@ -134,7 +134,7 @@ test('new nodes expose a typed user input switch and preserve explicit disabled 
 test('one and multiple Agent targets share the same typed handoff configuration',()=>{
  const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
  assert.equal(a.exit_mode,undefined);g.connect(a.id,'b',b.id);
- a.handoff_schema={type:'object',properties:{ready:{type:'boolean'}},required:['ready']};
+ a.handoff_parameters={[b.id]:{enabled:true,schema:{type:'object',properties:{ready:{type:'boolean'}},required:['ready']}}};
  assert.doesNotThrow(()=>g.validateAgent(a));g.connect(a.id,'c',c.id);assert.doesNotThrow(()=>g.validateAgent(a));
  a.exit_mode='complete';assert.throws(()=>g.validateAgent(a),/旧交接/);
 });
@@ -161,4 +161,13 @@ test('API execution definition imports with an omitted default timeout and keeps
  const G=model(),g=new G();const node=g.add('execution',20,20);node.execution={mode:'mcp',server_id:'github',tool:'publish',arguments:{body:'literal $(no shell)'}};delete node.execution_timeout_seconds;
  const imported=G.import(JSON.stringify(g.value));assert.equal(imported.node(node.id).execution.arguments.body,'literal $(no shell)');
  node.execution_timeout_seconds=-1;assert.throws(()=>G.import(JSON.stringify(g.value)),/超时/);
+});
+
+test('target parameter contracts move with retargeting and disappear with removed targets',()=>{
+ const G=model(),g=new G(),a=g.add('agent',0,0),b=g.add('end',300,0),c=g.add('end',300,200);
+ g.connect(a.id,'b',b.id);a.handoff_parameters={[b.id]:{enabled:true,schema:{type:'object'}}};
+ g.updateEdge(0,{target:c.id});assert.equal(a.handoff_parameters[b.id],undefined);assert.equal(a.handoff_parameters[c.id].enabled,true);
+ assert.doesNotThrow(()=>g.validateAgent(a));g.removeEdge(0);assert.deepEqual(a.handoff_parameters,{});
+ g.connect(a.id,'c',c.id);a.handoff_parameters[c.id]={enabled:false,schema:{type:'object'}};g.remove(c.id);assert.deepEqual(a.handoff_parameters,{});
+ a.handoff_parameters.unknown={enabled:false};assert.throws(()=>g.validateAgent(a),/目标不存在/);
 });

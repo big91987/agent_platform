@@ -20,14 +20,18 @@ func configuredCompletion(t *testing.T, w Workflow, mode, schema string) Workflo
 	if mode != "" {
 		n["exit_mode"] = mode
 	}
-	n["handoff_instructions"] = "从真实验证结果生成 passed、count 和 files，不推测。"
 	if schema != "" {
 		var x any
 		if err := json.Unmarshal([]byte(schema), &x); err != nil {
 			t.Fatal(err)
 		}
-		n["handoff_schema"] = x
-		n["handoff_params"] = true
+		targets := map[string]any{}
+		for _, edge := range w.Edges {
+			if edge.Source == w.Nodes[0].ID {
+				targets[edge.Target] = map[string]any{"enabled": true, "schema": x, "instructions": "从真实验证结果生成 passed、count 和 files，不推测。"}
+			}
+		}
+		n["handoff_parameters"] = targets
 	}
 	raw, _ = json.Marshal(v)
 	if err := json.Unmarshal(raw, &w); err != nil {
@@ -136,7 +140,9 @@ func TestCompletionMCPFrozenContractAndCorrection(t *testing.T) {
 		t.Fatal("input did not include configured guidance")
 	}
 	// Editing the saved workflow must never change a running Agent's contract.
-	w.Nodes[0].HandoffSchema = json.RawMessage(`{"type":"object","required":["new_field"]}`)
+	p := w.Nodes[0].HandoffParameters["done"]
+	p.Schema = json.RawMessage(`{"type":"object","required":["new_field"]}`)
+	w.Nodes[0].HandoffParameters["done"] = p
 	if _, err = s.SaveWorkflow(c, w); err != nil {
 		t.Fatal(err)
 	}
@@ -230,14 +236,15 @@ func TestCompletionEmptyInputsAndUnrepresentableNumbers(t *testing.T) {
 			t.Fatalf("accepted lossy number: %s", raw)
 		}
 	}
-	n := WorkflowNode{HandoffSchema: json.RawMessage(`{"type":"object","properties":{"id":{"const":9007199254740993}}}`)}
+	n := HandoffParameters{Schema: json.RawMessage(`{"type":"object","properties":{"id":{"const":9007199254740993}}}`)}
 	if _, err := completionInputsSchema(n); err == nil {
 		t.Fatal("accepted lossy schema constraint")
 	}
 }
 
 func TestHandoffParamsToggleAndDescriptions(t *testing.T) {
-	n := WorkflowNode{ID: "a", Kind: "agent", HandoffSchema: json.RawMessage(completionTestSchema), HandoffInstructions: "根据实际执行结果填写；count为通过用例数。"}
+	p := HandoffParameters{Schema: json.RawMessage(completionTestSchema), Instructions: "根据实际执行结果填写；count为通过用例数。"}
+	n := WorkflowNode{ID: "a", Kind: "agent", HandoffParameters: map[string]HandoffParameters{"done": p}}
 	w := Workflow{Nodes: []WorkflowNode{n, {ID: "done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "a", Target: "done", Route: "next", Mode: "handoff"}}}
 	schema, err := handoffToolSchema(w, n)
 	if err != nil {
@@ -246,40 +253,39 @@ func TestHandoffParamsToggleAndDescriptions(t *testing.T) {
 	if schema.Properties["params"] != nil || schema.Properties["context"] != nil {
 		t.Fatal("disabled params exposed")
 	}
-	n.HandoffParams = true
-	w.Nodes[0] = n
+	p.Enabled = true
+	n.HandoffParameters["done"] = p
 	schema, err = handoffToolSchema(w, n)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if schema.Properties["params"] == nil || schema.Properties["context"] != nil {
-		t.Fatal("wrong public fields")
-	}
 	for _, key := range []string{"target", "message", "params", "artifacts"} {
-		if schema.Properties[key].Description == "" {
+		if schema.Properties[key] == nil || schema.Properties[key].Description == "" {
 			t.Fatal("missing description", key)
 		}
 	}
-	if !strings.Contains(completionGuidance(n), "count为通过用例数") || !strings.Contains(completionGuidance(n), "params") {
-		t.Fatal("missing guidance")
+	if !strings.Contains(completionGuidance(w, n), "count为通过用例数") {
+		t.Fatal("missing target guidance")
 	}
-	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{"passed": true, "count": 2, "files": []any{"proof.txt"}}}); err != nil {
+	if err := validateCompletionResult(n, "done", NodeResult{Params: map[string]any{"passed": true, "count": 2, "files": []any{"proof.txt"}}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{"passed": "true"}}); err == nil {
+	if err := validateCompletionResult(n, "done", NodeResult{Params: map[string]any{"passed": "true"}}); err == nil {
 		t.Fatal("invalid params accepted")
 	}
-	n.HandoffParams = false
-	if completionGuidance(n) != "" {
-		t.Fatal("disabled guidance leaked")
+	p.Enabled = false
+	n.HandoffParameters["done"] = p
+	if strings.Contains(completionGuidance(w, n), "count为通过用例数") {
+		t.Fatal("disabled instructions leaked")
 	}
-	if err := validateCompletionResult(n, NodeResult{Params: map[string]any{}}); err == nil {
+	if err := validateCompletionResult(n, "done", NodeResult{Params: map[string]any{}}); err == nil {
 		t.Fatal("disabled params accepted")
 	}
-	n.HandoffParams = true
-	n.HandoffSchema = nil
+	p.Enabled = true
+	p.Schema = nil
+	n.HandoffParameters["done"] = p
 	if err := validateCompletionConfig(w, n); err == nil {
-		t.Fatal("enabled params need a schema")
+		t.Fatal("enabled params need schema")
 	}
 }
 
@@ -294,10 +300,11 @@ func TestAgentParamsReachMCPAndNextAgent(t *testing.T) {
 	})
 	agent := testAgent(t, s)
 	w.Entry = "author"
-	w.Nodes = append(w.Nodes, WorkflowNode{ID: "author", Name: "Author", Kind: "agent", AgentID: agent.ID, HandoffParams: true, HandoffSchema: json.RawMessage(`{"type":"object","properties":{"commit":{"type":"string"}},"required":["commit"],"additionalProperties":false}`), HandoffInstructions: "commit填写实际提交，不填分支名。"}, WorkflowNode{ID: "review", Name: "Review", Kind: "agent", AgentID: agent.ID})
+	w.Nodes = append(w.Nodes, WorkflowNode{ID: "author", Name: "Author", Kind: "agent", AgentID: agent.ID, HandoffParameters: map[string]HandoffParameters{"call": {Enabled: true, Schema: json.RawMessage(`{"type":"object","properties":{"commit":{"type":"string"}},"required":["commit"],"additionalProperties":false}`), Instructions: "commit填写实际提交，不填分支名。"}}}, WorkflowNode{ID: "review", Name: "Review", Kind: "agent", AgentID: agent.ID})
+	w.Nodes[len(w.Nodes)-2].HandoffParameters["review"] = HandoffParameters{Enabled: true, Schema: json.RawMessage(`{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"],"additionalProperties":false}`)}
 	w.Nodes[0].RuleHandoff = executionTestRules("mcp", "review")
 	w.Nodes[0].Execution.Bindings = map[string]ExecutionBinding{"text": {Node: "author", Path: "/result/params/commit"}}
-	w.Edges = append(w.Edges, WorkflowEdge{Source: "author", Target: "call", Route: "next", Mode: "handoff"}, WorkflowEdge{Source: "review", Target: "done", Route: "next", Mode: "handoff"})
+	w.Edges = append(w.Edges, WorkflowEdge{Source: "author", Target: "review", Route: "direct", Mode: "handoff"}, WorkflowEdge{Source: "author", Target: "done", Route: "finish", Mode: "handoff"}, WorkflowEdge{Source: "author", Target: "call", Route: "next", Mode: "handoff"}, WorkflowEdge{Source: "review", Target: "done", Route: "next", Mode: "handoff"})
 	var err error
 	w, err = s.SaveWorkflow(c, w)
 	if err != nil {
@@ -323,7 +330,7 @@ func TestAgentParamsReachMCPAndNextAgent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer client.Close()
-	for _, args := range []string{`{"target":"call","message":"bad","params":{"commit":1}}`, `{"target":"call","message":"old","context":{"commit":"old"}}`} {
+	for _, args := range []string{`{"target":"review","message":"wrong branch schema","params":{"commit":"abc"}}`, `{"target":"done","message":"disabled branch","params":{}}`, `{"target":"call","message":"bad","params":{"commit":1}}`, `{"target":"call","message":"old","context":{"commit":"old"}}`} {
 		out, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "handoff", Arguments: json.RawMessage(args)})
 		if err == nil && !out.IsError {
 			t.Fatal("bad params accepted")
