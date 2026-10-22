@@ -1,5 +1,8 @@
 # 平台内 Workflow 验证记录
 
+当前状态（2026-10-22）：112:8795已通过标准Linux构建/安装升级至fdedb0a，正式工作流83f08f81f7040fcd0c12e6ff4e2acd2d/revision8，参数默认关闭。可选params、填写说明及Schema校验、节点应用/取消和执行配置留存已交付。真实Codex参数验证Run18a76ca18b9390ef2cb2c80c15e9ad67已4步completed，Agent→执行→独立Agent→结束通过，归档3文件在环境正式释放后仍可下载；临时工作流已删除，Run历史保留。测试仓标准模板PR56已精确合并main4eade601；产品PR49/55仍未合并部署。定时任务保持暂停；下文早期状态按历史保留。
+
+
 当前推进（2026-10-15）：用户确认进入真实功能开发验证，已创建 [Issue51：同模型上游低延迟优先路由](https://github.com/big91987/model-relay/issues/51)。范围是同模型合格候选间依据近期响应表现选路，并与现有权重策略做效果对照；保留权限、优先级、限额、预算和SSE/取消边界。产品规划、设计、实现、固定测试和独立QA由Pipeline承担，Builder只组织受支持入口、检查证据与平台可靠性。第一轮先产出计划并正式wait_for_input检查，再实现；不做人为缺章/返工。当前main cb2cb1e89b3f765f56a83bbbe5ed3c1b02041f99，112实际8ad9394，Workflow83f08f81f7040fcd0c12e6ff4e2acd2d/revision4。Issue请求github:big91987/model-relay:issue:5857969219；Actions38661019216/38661019331已自动触发，两次均因入口仅接受Harness验证标题而拒绝；维护源80df20d已修复并标准导出，133模板与11导出entry回归/独立复审通过，Harness PR52已精确合main84c000f8945d7532043f7aedd29e62dc4e86b866。原Issue正式dispatch38662167083已受理，目前queued，无Run；同标签he-full的预览prepare38662139638正在model-relay-local执行固定验证，不重复提交或取消无关任务。原小时检查已恢复，仅重要变化通知。M1保持完成；本轮止于真实功能同版草稿PR、效果和瓶颈报告，不自动合并/部署产品。
 
 历史里程碑状态（2026-10-14 21:30 UTC）：M1真实整链已完成。Issue48→唯一Run2b6a366cc7b3d48870e1b887757f229f（15步completed）→Pipeline自行发布草稿PR49，head a033eb20ea848d3aead77231da367703b1b43fb8。两轮完整冷make verify、独立QA实际缺章拒绝/返工/全量复核、共享工作区、原生gpt-6.1-sol角色交接和正式操作者确认均有原回执。GitHub 163源码991c79ca…、85交付文件、QA/正文/首拒绝及146冻结模板逐字节核验通过；86件最终本地归档4997769bytes。环境正式release请求响应超时后只读核对已released，未重复释放；入口已标准恢复main。草稿PR49未合并/部署，不代表全部产品、真实供应商或全部可靠性场景已通过。通用发布修复源a20c59b已开发分支提交推送，测试仓标准升级PR50精确合main cb2cb1e89b3f765f56a83bbbe5ed3c1b02041f99，原manifest将未来图升revision4，仅报告约定改变、当前冻结Run/私有配置不变；112二进制仍8ad9394。下一阶段M2/M3/M4待用户确认，不再自动启动新任务。 下文旧状态按历史保留。
@@ -3480,3 +3483,14 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 定向回归先红（未应用即修改、来源切回文件路径丢失）后绿；63项编辑器/模型/规则测试通过。标准scripts/verify.sh exit0：真实Chromium完整配置/保存刷新/实际MCP调用/环境释放14.787秒、133模板21.091秒、控制器/SDK/安装回归、Go vet及全race93.823秒、构建均通过。完整130192bytes/SHA256 f28eb3dbc429abcfa15604ce8d5aff1368fed57a2d4ab665bc5f39a2e21b1743私有留存。Mac链接器LC_DYSYMTAB warning保持为warning，不冒充无告警。浏览器验证中曾因仍使用旧自动生效断言、旧环境读取、空MCP输出及重复对话框处理失败，保留具体修正和最终完整绿，不将失败隐藏为通过。
 
 112本轮HTTP健康接口连接5秒超时，现有ds112 SSH pane发送只读检查及无副作用探针未返回，没有发送安装或配置写入。最后已核安装为9b03a30/主工作流revision7，此处只是上轮事实，不当成本轮现状。新源码尚未标准部署112，也尚未完成本轮真实原生Codex参数交接；升级包可从开发分支按标准build/install准备，连通后先核活跃任务再升级，并通过正式API升级保存的工作流，不改旧Run或DB。定时任务保持暂停。8897仅本机配置预览，直接复用正式web源码；配置原型不执行Agent/命令，不作为远端或产品验收结果。
+
+
+### 2026-10-22 · 112正式升级与真实原生params验证
+
+用户恢复112连接后先经正式API核实旧版9b03a30、主图revision7且无活跃会话。唯一维护源fdedb0a6649da873adff9edf339955e82cc48277的Git归档5457920bytes/SHA256 f9d5860b7962f96ed3925c47493b5fa9d4170fc8f887227ed30507f11062b5f3通过现有连接传输，标准deploy/platform/build.sh和install.py均exit0。实际health为fdedb0a，Linux二进制SHA256 77d3939c392bb88e567f072ce95b839d0a3f86ff28370371f62c4c2d60ad09e2；实际HTTP workflows.js与源码同SHA256 81ed353137c8a0f257d4d76600287a668db32c538e8a76187f42cee8e6881b51。旧等待/完成Run、Issue54完成Run及归档、私有配置/凭据和原工作流安装前后保持。随后正式PUT把主图7升8，所有普通Agent参数默认关闭，无原Schema需要转换，拓扑/执行权限不变；不改历史冻结Run。
+
+隔离原生验证经正式API唯一启动Run18a76ca18b9390ef2cb2c80c15e9ad67（08:10:41.360Z–08:13:44.911Z，约3.06分钟驻留，非Agent净耗时），重复相同请求返回同Run。两个独立Codex/gpt-6.1-sol会话完成：author开启params并按Schema/说明提交字符串、整数3、布尔true及proof.txt；Python执行节点从WORKFLOW_INPUT_FILE读取result.params和共享文件，严格核对原样字符串/类型/内容后生成receipt.json，真实exit0；review关闭params，独立读文件和完整执行日志，生成review.md并handoff(target=done)。原生事件中两次handoff均accepted，review真实参数未包含params；最后结束节点完成。不是受控Claim模拟，也不冒称产品测试/真实供应商联调或新一轮完整业务Pipeline验收。旧Issue54完整交付结论保持独立。
+
+执行完整日志587bytes、EOF=true/truncated=false，SHA256 1371bce3ece102c0f9690f340fe48f5e2315c4d0729a1c8f02ed97e844343839。最初Builder核验探针把完整日志误按单个JSON解析而报Extra data，原失败保留，未重跑节点；只读核实日志含OpenSandbox init/ping/execution_complete和stdout对象后，按全部连续JSON记录严格核对唯一业务对象与receipt.json一致。Agent读取seq1固定命令输出得到不存在，不作通过证据；Agent原生事件另行保留，不混同执行节点日志。3批3文件2621bytes经正式下载逐项SHA/bytes核验；正式请求释放后实查environment=released，再重读全部归档仍一致。临时工作流2820ad1e5e01d2f3457f3031ecfb2fb8经正式DELETE删除，完成Run和归档仍可查看。
+
+项目自有模板从同一维护源标准导出，147对象逐Git blob核对，无项目定制被覆盖。Harness PR56 https://github.com/big91987/model-relay/pull/56 head a7ae5948c4cc6ecddb9acb0a5b29dfe3ceca59cb，11文件仅模板/安装默认/角色说明与SOURCE；精确授权合并main4eade601b7a46c0cb62dc37f4ba0e7c4a8155675。该head无GitHub checks/status记录，不把无检查写成GitGuardian通过；验证依据为已记录维护源完整门禁、Linux标准构建安装、147对象和本轮原生实证。未改产品或合产品草稿PR49/55，平台仅开发分支提交推送。私有证据位于ignored handoff-params-editor目录及112部署证据目录；定时任务仍暂停。
