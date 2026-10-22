@@ -1093,10 +1093,10 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 用户已确认并授权实施：Agent 只使用 `handoff`，所有调用必填合法 `target`（包括单目标和结束节点）；删除固定/自主模式选择及 `complete_node` 工具。公共参数统一为 `target`、`message`、可选结构化 `context`、`artifacts`。交接信息 Schema 对所有目标数量一致生效，去重、用户输入竞争、原生退出、归档及执行次数门禁保留。执行节点规则与人工确认保持各自行为。
 
 本轮按 writing-plans 拆解并在当前会话实施：
-- [ ] 通用运行契约：以真实 MCP 回归先复现单目标仍需 target、旧参数拒绝、嵌套 context/Schema、越权目标、相同/冲突提交及原生未结束不可推进，再统一工具入口。旧历史只读保留，旧配置明确拒绝或经受支持配置入口显式升级，不保留第二套工具。
-- [ ] Agent 详情：目标卡片直接编辑，删除模式选择；交接信息格式独立配置，问号为简短独立弹窗；高级设置与执行节点风格一致。覆盖草稿、保存刷新、增删目标、结构化数据、窄屏与帮助。
-- [ ] 标准模板及说明同步，固定报告节点改为显式 target handoff；源完整 verify、代码审查、标准 build/install 112:8795，核历史/私有配置/留存产物保持，再通过 revision API 升级正式工作流。
-- [ ] 先核正式 API/GitHub 现状和重复请求，再通过项目自有 Issue 入口进行新版本完整 Pipeline 验证：共享工作区、原生 Agent、固定 make verify、独立 QA、正式确认、报告和草稿 PR。产品工作交 Pipeline，Builder 不代 QA；产物与源摘要核一致。若受阻记录实际原因及安全恢复路径，不把局部绿/受理当整链完成。
+- [x] 通用运行契约：以真实 MCP 回归先复现单目标仍需 target、旧参数拒绝、嵌套 context/Schema、越权目标、相同/冲突提交及原生未结束不可推进，再统一工具入口。旧历史只读保留，旧配置明确拒绝或经受支持配置入口显式升级，不保留第二套工具。
+- [x] Agent 详情：目标卡片直接编辑，删除模式选择；交接信息格式独立配置，问号为简短独立弹窗；高级设置与执行节点风格一致。覆盖草稿、保存刷新、增删目标、结构化数据、窄屏与帮助。
+- [x] 标准模板及说明同步，固定报告节点改为显式 target handoff；源完整 verify、代码审查、标准 build/install 112:8795，核历史/私有配置/留存产物保持，再通过 revision API 升级正式工作流。
+- [x] 先核正式 API/GitHub 现状和重复请求，再通过项目自有 Issue 入口进行新版本完整 Pipeline 验证：共享工作区、原生 Agent、固定 make verify、独立 QA、正式确认、报告和草稿 PR。产品工作交 Pipeline，Builder 不代 QA；产物与源摘要核一致。若受阻记录实际原因及安全恢复路径，不把局部绿/受理当整链完成。
 
 风险检查：遗漏 target 与空目标配置不能变成结束；多目标不能绕过流程授权；类型/Schema校验失败不写结果；待送达用户输入不能被交接越过；同一执行不能推进两次。停用的定时任务保持停用；平台仅独立开发分支提交推送，不合main。
 
@@ -1114,3 +1114,37 @@ API原405与浏览器缺按钮真实红→基本回归绿；独立复审查出�
 
 - 2026-10-22 01:04 UTC：统一交接实现提交9b03a305aa838f43b4db88e73ccdb9e15e8f608e，开发分支已推送；两处角色说明inputs→context补正63e06e592896248091cc3ba5c31190b198b86066，图契约3测试通过。112标准build/install成功，实际health revision9b03a30，binary SHA256602988ff44bff020077edc64cfabdca673fb8a763b6647c0ef19fd242dd32256。旧等待/完成Run、私有配置/凭据/工作流保持；3个已释放环境的归档及下载逐文件摘要保持。正式API保存工作流83f08f81f7040fcd0c12e6ff4e2acd2d由rev6升rev7，历史Issue51冻结Run不改。真实Chromium登录检查新版内联交接页、独立帮助窗口，截图output/playwright/unified-handoff-112.png（ignored）；未登录api/me401正常。
 - 标准导出模板PR53 https://github.com/big91987/model-relay/pull/53，147个导出对象（含SOURCE）逐字节匹配63e06e5，head c5720e69cf61631ac5b393153eb7744765379ce4/GitGuardian成功后精确合并main868530b3e5c15d65bee0ed4ff6af69e96d428b81。平台无PR/无main合并。独立整链Issue54 https://github.com/big91987/model-relay/issues/54，请求github:big91987/model-relay:issue:5971076683；自动入站39703355037 queued、另labeled39703356253 pending，共享Runner先执行push prepare39703323199。此时正式by-request404，没有Run，不重复dispatch。任务目标为真实工具交接/固定make verify/独立QA/正式确认/报告/草稿PR；尚无整链通过结论，不恢复Issue51，不合并旧PR49，不部署产品。
+
+- 2026-10-22 01:24 UTC：push prepare39703323199 success，deploy job skipped；不属于本次沙箱产品验收。Issue54 opened入站39703355037和labeled39703356253均success，同一真实Run197ab169bc1cad067466300038ab6fac（01:15:18Z，rev7），prepare1完成→development2/0d535a2e8561d11910495c0e0791f75a running；共享/workspace、原生Codex/gpt-6.1-sol、无待审批。入站排队约12分钟是共享Runner驻留，不是Agent净耗时。管理员by-request404受身份作用域影响，不能单独判未受理；采用Actions返回ID及直接Run API核验。平台机器人已回写prepare交接/研发启动。
+- 研发原生事件26688实际make verify exit2，2026-10-22T01:18:08Z–01:19:34Z；main868530b，报review historical HTTP rejected: unparsed baseline output。原生事件26986读取state证据：source/candidate unchanged、owned_group_absent true、candidate_removed，runner664425bytes/SHA c8e1374c55d9a71b5d13b3a378f2dbf57310154d4d7d8d44ab7ed8cc3c717bba。此为Pipeline研发阶段原门禁失败/诊断中，尚非固定tests节点通过，亦非handoff工具失败；协调者未代产品修改或QA放行。原始API事件和会话材料私有保存，待正式产物归档复核。
+
+- 2026-10-22 01:43 UTC：首个真实统一MCP handoff于01:29:37Z accepted，development2明确target=tests，message/context/artifacts均真实提交，context包含嵌套对象、数组、布尔和数字；01:29:47Z原生执行结束后归档，01:30:18Z才派发tests3。29个研发产物1411242bytes经正式下载API逐文件bytes/SHA核验。tests3完整输出1007152bytes/SHA3c317c58b3dae1c7cab8f8aa4531bf966a60b68cfbf9f4d5cbc8ecf2aecfe021已分页保存至EOF；exit2→rule_2→development4新会话3b6076fcd497d55585a946c3499ad23f。实际主失败TestRoutingRealHTTPSelectionFailoverAndRecovery冷却未排除上游，历史health红例有expected-red分类，不混为主故障。Pipeline正在修测试时间窗口，局部旧红新绿为原生自报，完整新测试/独立QA未完成。没有协调者代改产品或QA放行。
+- Builder一次正式User Input message9738/request_id issue54:builder:task-reference:1补足Issue54 URL/编号，返回duplicate=false；原因是原入站正文没有提供当前Issue编号，Agent明确拒绝猜测。此为任务信息补充，不是修改冻结定义或绕门禁；是否已消费以原生消息/交接为准，后续模板入口应直接带入业务关联信息，记录为一次Builder介入。旧PR49候选不在当前clone且匿名读取404，Pipeline如实记录不可读，未伪称比较或自动合并。
+
+- 2026-10-22 02:16 UTC：统一handoff的真实待输入门禁已复验：development4于01:44:36提交被拒，正常结束后同一会话收到User Input9738并处理，01:46:56再次提交accepted；01:47:05原生结束后再派发tests5，没有绕过排队或重复全测。正式归档API已下载seq2/4/6共164文件16167470bytes，全部bytes/SHA一致，旧归档未改变。
+- tests5实际exit2，完整33页输出1074530bytes/SHA e7c2bcd4cff176b3907b1135099516cd89811a9c96c61ee8ca399228d4b64700，EOF且truncated=false。1280路由浏览器通过，390恢复阶段随12分钟总门禁截止而终止；不能记为完整绿，历史预期红夹具与主失败分开。development6在原固定make verify中将项目验证器总时限12→25分钟，补父deadline/取消/过期边界测试，外层执行1800秒与Makefile/race/业务断言保持；此为Pipeline基于阶段耗时的一次有界调整，合理性待独立QA复核，非协调者代写或无限增限。
+- 新158源库存773ecb3d9f47655bfc3e1cf3c99f204e341f2a6b1559982c18c42c04d88a16d9；development6于02:10:22正式handoff(target=tests)受理，02:10:31原生执行结束，tests7于02:11:56启动。当前完整测试仍在运行，没有独立QA、正式确认、报告或新草稿PR完成结论。定时任务继续暂停。
+
+- 2026-10-22 02:34 UTC：tests7于02:27:36退出2，非25分钟截止；原API完整34页输出1090507bytes/SHA3bb3ed307415d790e0fbfde139a6e71d48ac4bf8209e8ccef94085f23c332f12，EOF/truncated=false。实际full-console在first-self-hosted 1440px的SSE/proxy-call失败，1280同旅程及1440管理旅程先通过，source摘要773ecb…前后相同、gate_exit2、原清理尾部保留。自动rule_2返回development8/273dda67cdbc6cc708ecd76619af26b2；原生02:32:40定点复现自报Chromium无法回读SSE响应体，拟改为同请求旁路观察且保留断言，尚未归档/完整复验/独立QA。平台bot已在Issue54回写失败和研发启动，没有隐去红例或提前进入发布。
+
+- 2026-10-22 02:45 UTC：development8真实handoff于02:40:30Z accepted、02:40:41原生结束，归档后02:42:49才启动tests9。新160源库存44107d4db03a944c27a7d9b36b03e1802a770b3219c9bae61b19f0d81d4795fd；本轮仅tests/browser/journeys.mjs及新增call-response模块/测试，原断言/生产代码/Makefile/race/预算保持。原生回执记录定点旧exit1 response-body不可读→同请求response.clone观察后三视口真实Go/受控HTTP exit0（56.623秒）、285前端测试绿，无第二请求或重试；完整tests9仍在执行，局部结果不代替门禁。诊断中间源码摘要缺失、按实际编辑重建的快照已明确标注，最终快照逐字节对应源码，不补造原始证据。四轮正式归档共284文件29073565bytes，下载API逐文件SHA/bytes相符，旧归档不变；独立QA/确认/PR未完成。
+
+- 2026-10-22 03:06 UTC：tests9正式exit0→rule_1→QA10；完整34页1093069bytes/SHA868edba207d2a972ce2c0b67c3ce5ec2485ed49f61334908d6a7cae30bf0e4ca保存至EOF，truncated=false。主attempt20261022T024249Z-1811890136，full-console 244090ms/ok=true，三视口首次自托管旅程通过，原Go/race七包通过；源160件44107d…前后相同，CLEAN_END gate_exit0，候选Playwright/core1.59.1与Chromium147.0.7727.15实际探针通过。QA10于02:59:55创建独立会话7b70d2cc1fa48416c05136d2fb144c89，实际原生事件32265执行observer/runner-history/HTTP/diff/source前后均exit0，32269核8最终源码快照与实际源码一致，并读三视口10页结果。此时QA仍在检查，尚无最终Go、确认或发布；不把局部QA命令冒充完整独立浏览器验收。
+
+- 2026-10-22 03:18 UTC：QA10正式No-Go/target=development，结论为技术验证通过但缺平台原生执行/会话/工具证据，非产品缺陷。其59个正式归档文件10399625bytes已通过下载API逐文件核验；报告明确未另跑整套浏览器或逐图视觉验收。03:08:54 handoff受理、03:09:15原生结束，03:10:18进入development11/90fae940c0e240b783d4381a2e826e73。首次补证脚本语法错误未执行，修正后旧QA轮次已交接而返回409，没有输入写入或状态绕行。
+- Builder经正式User Input向development11提交11016（平台配置/会话/thread/受理投影）和11328（development8完整原生MCP参数及返回对象，14434bytes/SHA b4dd0cc847bf73335cfe14f2e87fafd6a9b4dc4fe24d8a860b65cd80b2afee07），均duplicate=false；这是平台侧外部证据，非QA自行API采集。原生thread.started未存model字段，明确不补造；安装源9b03a30在thread/start返回与所选model不一致时禁止发送turn/start，可形成配置+真实执行+校验代码链，后续报告角色尚未发生。当前冻结development仅能交tests，补证后直接回QA缺少自然出口；记录模板效率缺口，待核支持的正式恢复路径，不修改冻结图或无故重跑同版测试。全链/PR仍未完成。
+
+- 2026-10-22 03:36 UTC：补证输入11016/11328/11625依次在development11原会话消费，期间两次handoff因待投递输入被正式拒绝，未派发测试。最终168文件/167摘要清单及源44107d…不变核验完成，03:30:11正式waiting，原生idle。一次正式stop异步进入stopping，初次采集断言预期立即stopped不成立，未执行return；核实际stopped（03:32:39）后只调用return，03:35:04成功创建QA12/bf5e04e20a37c7f1462fcbe16c50a8b7。未重复stop、改库/冻结图/预算或补造成功handoff；development11保留人工回退cancelled语义。QA12需独立复核原QA-10-E1，报告/批准/发布仍未完成。此轮实证揭示平台审计材料缺少直接交给QA的入口，以及模板仅补证返工缺少直接QA出口，不能写成无人干预整链。
+
+- 2026-10-22 03:50 UTC：QA12正式PASS_TO_APPROVAL，QA-10-E1按来源明确的平台外部证据关闭；原QA10 No-Go原字节保留。175个归档文件17136275bytes均经正式下载API逐项SHA/bytes核验；初次读取归档仍pending/0文件，未当成成功，等归档完成才确认。QA报告明确模型未持久化字段/未直接QA平台API/未供应商鉴定、未另跑全浏览器或逐图视觉，不扩大通过范围。03:46:23进入approval13，Builder依据用户既有授权经正式decision(route=next)确认，仅允许报告和真实草稿PR，不批准合并部署。报告14于03:49:09启动，独立会话928ff2c0ddd2110c301368452ab7d0a2；当前报告及发布尚未结束。没有恢复定时任务。
+
+
+### 2026-10-22 04:06 UTC · 统一 handoff 完整交付与释放后留存
+
+Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z–03:57:55.348Z，162.62分钟含等待、归档与人工恢复）。report14真实handoff(target=publish)于03:54:25.500Z accepted，原生03:54:33.439Z结束；179个报告阶段归档17236979bytes核验后，固定publish15于03:57:44–03:57:55 exit0，完整1688bytes回执确认draft PR55：https://github.com/big91987/model-relay/pull/55 。head32213cf63995f6e3b06488bd0ec48c4ed7bc1b24，base868530b3e5c15d65bee0ed4ff6af69e96d428b81；远端递归Git树仅12个文件变化，253526bytes的对象摘要全部匹配已QA锁定8个测试设施源文件、2个研发材料及固定复制的QA/报告。标题相同，正文去掉固定publisher署名后与原报告逐字节相同；GitGuardian success。首次正文直接SHA比较因该署名前缀不等，核唯一发布器源码后按实际契约重核，不将不等误记为报告损坏或悄悄忽略。
+
+真实报告与QA分别在PR的docs/harness/run-197ab169bc1c/report.md、qa.md；报告中提到完整RunID目录作为固定QA/报告目的地是文档路径误写，实际完整RunID目录仅存development.md及evidence-manifest.json。报告的“发布待完成”是report14生成时点，最终发布由publish15真实回执与远端对象证明；没有改写已锁定原报告。PR保持draft，未合并、未部署，不改变旧产品环境。
+
+04:04:56正式POST environment/release，04:04:57.536Z实际released；随后在沙箱已释放状态经正式下载API重读全部7批697文件/73846444bytes，每件bytes/SHA及既有副本一致，证明材料留存在平台而非依赖运行中的沙箱。没有手工删除容器或修改状态库。标准升级、Issue去重入口、原生交接、规则失败返工、排队输入门禁、独立QA No-Go/复核、正式人工确认、报告/草稿PR及产物留存链已实际闭合；终点target的运行时分支由隔离回归覆盖，本真实模板的结束节点来自publish规则流转，不能冒称Agent直交结束已在产品Run发生。
+
+效果与限制：4轮固定测试阶段驻留49.07分钟，最终完整make verify实际1024.360秒；3次测试失败返工、1次QA补证返工均保留。开发2/4/6/8驻留54.47分钟，QA10/12合计21.71分钟；development11补证与正式人工回退24.76分钟，approval2.77、report8.58、publish0.19分钟。驻留包含原生结束、等待和归档，不是Agent净耗时；没有可得token/费用，不估造。协调者通过正式输入补Issue关联、提供平台审计证据，并在仅补材料时使用正式停止/回退QA，不能称无人干预。后续需改善模板入口自动携带Issue关联、QA按权限获取完整平台审计材料、仅材料返工直接回QA的合法路径；本轮不修改冻结图掩盖缺口。独立QA执行了局部HTTP/race/观察器反向用例并审阅完整门禁，未另跑整套浏览器或逐图视觉验收；真实供应商仍未调用。定时任务保持暂停，平台仅开发分支提交推送。
