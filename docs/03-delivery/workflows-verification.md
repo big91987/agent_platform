@@ -1,5 +1,8 @@
 # 平台内 Workflow 验证记录
 
+当前完成（2026-10-23）：按交接目标独立参数已正式部署112:8795/6c7f960，主图83f08f81f7040fcd0c12e6ff4e2acd2d/revision9。相同定义的代码参数、Agent另一套参数、无参数Agent三条真实Codex分支全部完成，7次原生handoff和8件产物核验通过；3环境已释放，产物仍可下载，临时图已删除、Run历史保留。标准模板PR57已精确合并main91a50516。完整源门禁与独立复审保持，未把Harness验证当产品或供应商验收；产品PR49/55未合部署，定时任务仍暂停。下文“待连接/待部署”为历史。
+
+
 当前增量（2026-10-22）：按交接目标分别配置参数已实现并通过最终完整源码门禁与独立复审。节点 handoff_parameters 按 target 保存开关/Schema/说明；同一 handoff 工具按实际目标校验，界面按目标卡片配置，应用/取消与草稿保留。112 HTTP仍为fdedb0a/revision8；部署SSH被远端断开，直连22超时，当前未升级，也未启动本轮三分支原生验证，不能用前轮Run替代。已请求用户恢复ds112连接；标准部署/正式主图升级/原生验证/释放后留存/临时图清理待续。定时任务保持暂停。
 
 
@@ -3512,3 +3515,18 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 部署前只读检查时，ds112 SSH被jumpserver远端关闭；其他现有112会话也已退出，本机直连10.1.20.112:22五秒超时。HTTP健康仍200/fdedb0a。没有向本机shell误发安装、没有新112构建或配置写入，也没有重复任务。已通过异步输入请求用户恢复原连接；三条原生验证（代码目标独立版本参数、Agent目标独立审批参数、无参数Agent目标）脚本已准备但尚未启动，不预填结果。后续先核活跃任务，再标准build/install、正式API升级主图8→9、真实分支验证及归档释放/删除临时图。平台仅开发分支提交推送，未建平台PR或合main；测试仓同步PR待标准导出，产品PR49/55未动，自动检查仍暂停。
 
 - 本轮源码6c7f960e1415294a70ffe23212a1c4d1b97d020c已开发分支推送，GitHub Connector独立compare确认远端相同。标准导出147对象和5498880bytes源码包已准备，包SHA256 665732ec737ac23673e76da94ded69efe269d49bd119f1a42442c9ff5b7e96fb。测试仓同步首次读取main在任何写入前TLS握手超时；一次有界重试完成旧SOURCE/项目Git树核对，但创建Git tree请求再次TLS握手超时，仅保留tree_intent，未收到树对象回执，未执行后续commit/ref/PR创建，不盲重发未知写入。备用Connector读取测试仓该main返回404，单独记录权限可见性结果，不据此改写仓库或网络原因。模板尚未正式集成，112新安装及原生三分支验证仍待SSH恢复，不能标记交付闭环。
+
+
+### 2026-10-23 · 按目标参数正式部署与三分支闭环完成
+
+用户恢复tmux后先经正式API核对112旧版fdedb0a、主图revision8、无活跃会话，且本次包/构建/Run均不存在，未重复启动。精确6c7f960源码包5498880bytes/SHA256 665732ec737ac23673e76da94ded69efe269d49bd119f1a42442c9ff5b7e96fb传输核对后，标准Linux build/install均exit0。实际health为6c7f960e1415294a70ffe23212a1c4d1b97d020c，二进制SHA256 85515dc3beff6d65b5655c5cda705b99b174cfa3bbd19e8929eaa7ad535c62a8；112实际返回workflows.js与维护源同SHA256 5086fcb4ffbfd0693836aa1f526d632e8fcebd6cfe869a345bb3dde060891e7e。旧等待/完成Run、Issue54和上一参数验证Run及归档、配置/凭据保持。主图正式PUT由8升9，确认原参数为空后删除旧字段；无目标需求被推测、拓扑和权限不变，没有改历史冻结定义。
+
+临时Harness图7950d126852224dafe4229ea7ae07fe5的同一冻结定义，正式API各启动一次三条Run并实测同请求去重。所有角色仍为原生Codex/gpt-6.1-sol，不由Builder代交接或代QA：
+
+- execute / Run7081a0f7ddac2b8ba8eee2a18a831660：author→代码执行→独立review→结束，4步completed（06:42:49.886Z–06:45:52.235Z）。提交commit=fixture-commit、limit为整数3，代码从WORKFLOW_INPUT_FILE读取真实params和proof.txt，严格核对后真实exit0，生成receipt.json；review实际核验后直接handoff到done。3文件1135bytes。
+- peer / Runc70f3455b2e558d740896b435cc68f2e：author→另一个Agent→独立review→结束，4步completed（06:42:49.893Z–06:47:04.738Z）。该分支Schema要求topic=agent-branch、approved为布尔true，与代码分支格式不同；下游Agent真实读取参数和共享文件、写receipt.json再复核。3文件1287bytes。
+- review / Run80715f424e3a41483436807c6b20e72a：author→review→结束，3步completed（06:42:49.900Z–06:45:39.991Z）。只交message与proof.txt，真实工具参数中不含params，不要求执行回执文件。2文件947bytes。
+
+原生事件逐次核对共7次handoff、均唯一accepted；author的target与选择分支一致，前两分支参数内容及字符串/整数/布尔真实类型正确，后续非参数目标均不含params。不是只看Agent自报；平台结果、实际文件、原生工具arguments/result和执行退出码相互核对。三条Run各自proof内容、receipt run_id和参数一致；完整8件3369bytes归档经正式API逐项大小/SHA核验。正式请求释放3个环境，实际released后重读全部归档仍一致；临时图正式DELETE删除，完成Run和归档仍能读取。原生执行期间没有请求审批/重启/恢复/改冻结图或人工补输入。本轮是Harness能力验证，不是产品用户旅程、真实供应商测试或再跑完整业务研发Pipeline。
+
+前轮TLS中断只记录到tree_intent；恢复时先只读确认无模板分支/PR，重新核旧SOURCE和项目Git树，再重建确定性未引用Git树，逐步保存tree/commit/ref回执，没有盲重放PR或合并。标准导出147对象与远端逐Git blob匹配，8个Harness/安装/说明/SOURCE文件，唯一PR57 https://github.com/big91987/model-relay/pull/57 / headdb7756b62235a118c958c7ef22943c5d5b98f9e7；GitGuardian SUCCESS且mergeable clean后按精确head授权合main91a50516da2bc80b75a60f4b55b4f0a775f7fe8f。未创建平台PR/合平台main，未合产品草稿PR49/55或发起产品部署。私有运行与归档回执在ignored target-handoff-params目录及112部署证据目录保留；旧网络失败、源码红绿及复审整改记录不覆盖。定时任务仍暂停。
