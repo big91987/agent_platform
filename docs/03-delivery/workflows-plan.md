@@ -1862,4 +1862,3 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 - 通过精确源码归档5529600bytes/SHA256 `52445fb752df87becf3786afa9410649ae3662fc190b31e25dda403b889d0abe`，在112执行标准Linux CGO build和install，均exit0；二进制SHA256 `2dace2f24103629ec0c100b87e88ad4dd91056c2ad2496852c06f9ae48f93bbd`。实际health revision为ffcd93d。正式主图 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision9保持，原waiting/完成Run、最新三条分支Run及归档、账号/凭据/instance配置前后保持；不操作数据库或冻结状态。
 - 线上正式预览API核对development/qa/report分别642/587/758字符，完整角色均保留；临时草稿同时含原生开发者指令和角色、用户消息分离，正式图前后相同。实际 `/workflows.js` SHA256 `c15c171a49afeeadebd43373c1026360f592a52b323695c06918e000772ffc6f` 与已验维护源一致。线上回执私有保存于部署目录 `full-system-preview-live.json`。本机真实Chromium与部署后的API/字节核验分列；桌面浏览器连接一次30秒超时后停止，不声称本轮独立登录线上浏览器实测。
 - 仅平台开发分支提交/推送，无Platform PR/main合并；模板定义未变化，不重复测试仓升级PR或新建产品Run。既有产品PR49/55及产品/供应商验收结论不变，定时任务保持暂停。
-
