@@ -1,5 +1,7 @@
 # OpenSandbox 工作流改造实施计划
 
+当前完成（2026-10-24）：Agent 节点“输入预览”现展示完整的平台系统提示词（原生开发者指令、角色指令和平台追加约束），工作流用户消息单独展示。维护源 ffcd93d 已通过标准完整门禁、原生 start/resume 逐字核对和真实 Chromium，标准部署到112:8795；正式预览API核验3个Agent角色完整、草稿不落库，线上JS摘要与维护源一致。主图保持revision9、历史Run和产物/私有配置保持；定时任务仍暂停。下文旧状态保留为历史。
+
 当前完成（2026-10-23）：按交接目标独立参数已正式部署112:8795/6c7f960，主图83f08f81f7040fcd0c12e6ff4e2acd2d/revision9。相同定义的代码参数、Agent另一套参数、无参数Agent三条真实Codex分支全部完成，7次原生handoff和8件产物核验通过；3环境已释放，产物仍可下载，临时图已删除、Run历史保留。标准模板PR57已精确合并main91a50516。完整源门禁与独立复审保持，未把Harness验证当产品或供应商验收；产品PR49/55未合部署，定时任务仍暂停。下文“待连接/待部署”为历史。
 
 
@@ -1209,3 +1211,16 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 原生事件逐次核对共7次handoff、均唯一accepted；author的target与选择分支一致，前两分支参数内容及字符串/整数/布尔真实类型正确，后续非参数目标均不含params。不是只看Agent自报；平台结果、实际文件、原生工具arguments/result和执行退出码相互核对。三条Run各自proof内容、receipt run_id和参数一致；完整8件3369bytes归档经正式API逐项大小/SHA核验。正式请求释放3个环境，实际released后重读全部归档仍一致；临时图正式DELETE删除，完成Run和归档仍能读取。原生执行期间没有请求审批/重启/恢复/改冻结图或人工补输入。本轮是Harness能力验证，不是产品用户旅程、真实供应商测试或再跑完整业务研发Pipeline。
 
 前轮TLS中断只记录到tree_intent；恢复时先只读确认无模板分支/PR，重新核旧SOURCE和项目Git树，再重建确定性未引用Git树，逐步保存tree/commit/ref回执，没有盲重放PR或合并。标准导出147对象与远端逐Git blob匹配，8个Harness/安装/说明/SOURCE文件，唯一PR57 https://github.com/big91987/model-relay/pull/57 / headdb7756b62235a118c958c7ef22943c5d5b98f9e7；GitGuardian SUCCESS且mergeable clean后按精确head授权合main91a50516da2bc80b75a60f4b55b4f0a775f7fe8f。未创建平台PR/合平台main，未合产品草稿PR49/55或发起产品部署。私有运行与归档回执在ignored target-handoff-params目录及112部署证据目录保留；旧网络失败、源码红绿及复审整改记录不覆盖。定时任务仍暂停。
+
+### 2026-10-24 · 完整系统提示词预览正式交付
+
+用户反馈 Agent 输入预览只展示部分内容。根因是预览接口只生成工作流用户消息片段，没有读取角色指令，也没有展示原生配置中的开发者指令和平台追加约束。
+
+- 维护源 `ffcd93d106d15ad673297c1939133caa8e8d26bc`：`system_prompt` 由实际原生 `thread/start` / `thread/resume` 共用的组装函数生成；`input` 单独表示工作流用户消息示例。界面保留未应用草稿预览和过期请求隔离，问号说明两部分的来源和拼接顺序。不移动真实提示词的发送位置，不将原生内置提示词、项目指令、Skills、工具定义及历史会话冒称为配置预览中已加载的内容。
+- 普通用户按其获授权的已保存工作流生成完整预览，不使用 HTTP 返回的已删减执行配置；共享 Agent 仍检查调用权限，已知凭据脱敏，不返回整个私有原生配置。无运行材料的最初协议明确引导查看运行记录，不输出不完整的系统预览；移除预览中不再使用的 `session_prompt` 重复字段。
+- TDD 原始失败确认为系统预览缺失；修后原生新建/恢复和模型拒绝回退四种传输路径逐字核对通过，权限/凭据及前端草稿回归通过。真实 Chromium 最终门禁15.372s通过，完整 `bash scripts/verify.sh` exit0，含133模板测试22.637s、Go vet、Go race96.123s及构建。完整日志130491bytes，SHA256 `e357d7c4f4f3a026d16819fa51ff88373d112354c719882b7c012d56a932d155`，保存在忽略目录 `.data/opensandbox-verification/full-system-preview/verify-final.log`。
+- 新增浏览器用例最初漏展开高级配置，随后在未连入入口的节点上请求预览，分别留下失败/诊断日志；调整用例以使用合法已保存图，平台原图校验不放宽。独立复查发现普通用户预览缺角色和历史权限可能误当已发送内容两项P2：前者已修复并回归；后者撤回新增的历史系统提示词重建，保持原历史展示。复查无剩余Important/Critical。
+- 通过精确源码归档5529600bytes/SHA256 `52445fb752df87becf3786afa9410649ae3662fc190b31e25dda403b889d0abe`，在112执行标准Linux CGO build和install，均exit0；二进制SHA256 `2dace2f24103629ec0c100b87e88ad4dd91056c2ad2496852c06f9ae48f93bbd`。实际health revision为ffcd93d。正式主图 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision9保持，原waiting/完成Run、最新三条分支Run及归档、账号/凭据/instance配置前后保持；不操作数据库或冻结状态。
+- 线上正式预览API核对development/qa/report分别642/587/758字符，完整角色均保留；临时草稿同时含原生开发者指令和角色、用户消息分离，正式图前后相同。实际 `/workflows.js` SHA256 `c15c171a49afeeadebd43373c1026360f592a52b323695c06918e000772ffc6f` 与已验维护源一致。线上回执私有保存于部署目录 `full-system-preview-live.json`。本机真实Chromium与部署后的API/字节核验分列；桌面浏览器连接一次30秒超时后停止，不声称本轮独立登录线上浏览器实测。
+- 仅平台开发分支提交/推送，无Platform PR/main合并；模板定义未变化，不重复测试仓升级PR或新建产品Run。既有产品PR49/55及产品/供应商验收结论不变，定时任务保持暂停。
+
