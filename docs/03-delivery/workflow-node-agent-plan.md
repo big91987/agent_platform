@@ -1830,3 +1830,23 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 tests3真实固定make verify于15:09:44Z–15:22:01Z完成，exit2，正式API完整导出1076353bytes/SHA256 `f1e472420845c02b583fde48e3f67147e94f9f4a25d958f3b37ea6ad4af6b537`、EOF=true/truncated=false，规则自动返回development4/conversation `cc8c8c3675ea6937871f531115a8928a`，没有手改状态或提前QA。运行中完整output API因尚无最终receipt.Log返回404，维护者只读tail作为在途诊断，结束后以正式完整API为准，不混同证据。
 
 发现冻结仓AGENTS.md第15行仍将固定测试描述为host-only，研发据此误称将换宿主验证；实际Run是OpenSandbox、固定command=make verify/cwd默认同一/workspace。维护源全仓未找到这句旧项目规则，不把项目旧说明误当当前平台实现。Builder首次投递前置检查因节点已自然交接而拒绝，未写入；在返工Agent阶段通过正式User Input唯一request `issue59:builder:execution-boundary:1` 实际受理message13961、duplicate=false，供Pipeline修正项目规则/报告，保留真实失败且不据环境名称推断产品无缺陷。受理不等于原生已消费，后续核验消息/事件。Issue59具名评论6385850562已反馈具体影响，标记为Builder通知避免重复自动入站。此为一次平台事实澄清介入，不是代写修复/QA或改冻结图、权限、预算。当前整链仍未通过，QA/确认/报告/PR/释放后下载尚未完成。
+
+
+### 2026-10-25 · Issue59补充输入接续、拒绝路径及修正版本固定门禁
+
+UTC10-24 15:49:05研发4的wait_for_input被拒，原始工具只返回request conflicts with existing state；维护源waitWorkflowNode在有queued/steering/steered新输入时返回通用ErrConflict，提示未说明应结束当前回合先处理输入，记为平台提示P3待改，不冒称等待已受理。运行没有被错误改成waiting。15:50:05前回合结束后，15:50:06自动承接已排队message13961；两次真实turn属于同一原生thread `01a16e81-316e-7a91-b8f6-a3509b5c7adc`、同conversation cc8c…，两个输入均completed，无人工resume、新Run或冻结图改动。Builder只有一次已投递事实澄清；最初因阶段变化未投递的检查不计已送输入。
+
+研发处理澄清后修正项目AGENTS.md及本轮说明，区分同一OpenSandbox中的原生与固定命令通道。16:00:11最终handoff accepted；此前15:57:15含根AGENTS.md的69件交接被产物路径校验拒绝，未推进。保持根规则文件原位，按已有源码快照/原路径与字节摘要映射另存文本，70件有效文件交接成功，原生16:00:26停止，归档后16:01:41自动进入tests5。此处是正确拒绝与修正路径，不是取消限制。70件11027959bytes新增归档，连同seq2共95件15537354bytes逐文件size/SHA核对；两批清单规范JSON摘要12b7e71e9e42919b9908e923aefdd92e2ea12134c06bd3bb59bf008b4438c8f5，后续释放后下载仍待本Run完成再核。
+
+源码实质修复由Pipeline完成：历史输出流、已聚焦目标的键盘绕行、冷却HTTP测试时序及相应回归；不改网关实现。返工本地最终make verify仍exit2，原12分钟时限在console阶段终止，full-console未运行；源码4b4e4c07…的本地完整日志1055204bytes/SHA87de2528685e7897b722c4f400301e213a8f6f90e832ad46ecacfb85790a94ce为失败，不能以局部回归绿覆盖。当前tests5是这些实质改动后的首次正式固定评估；仍未进入独立QA/确认/报告/草稿PR，也未合并部署。
+
+原生usage按回合保留原始计数：seq2末totalTokens6775605（cachedInput6606208）；seq4第一回合5282536（cachedInput5097472）、接续回合2253495（cachedInput2215680）。同一thread接续后计数回落，不能拿最后值当整阶段累计，也不把cachedInput重复相加或推算费用。首次研发交接受理至tests3约38.53秒，返工交接受理至tests5约89.58秒，包含原生结束和文件留存；不是纯调度耗时。当前重大耗时仍在研发自检、完整门禁和返工。私有原生/工具/归档证据保留于full-delivery-current目录；定时任务继续暂停。
+
+
+#### Issue59 · 第二次正式固定测试仍超时，等待执行时限裁决
+
+UTC10-24 16:01:41Z–16:13:58Z的tests5真实exit2，正式API全文1081662bytes、SHA256 `9e5c0beb54ce930986e8616a1f87d607f135566570ab94a0ce5b23cb74890c39`、EOF=true/truncated=false。迁移15.951秒、旧界面和两种视口路由完成，路由238.951秒并于16:13:43Z结束，console仅获约十余秒，full-console未运行。自动返回development6/conversation `5d2fe210cdfe50d4156a8a31c5210114`；研发16:16:18Z原生说明归档证据、暂无已证修复且不改预算，不再次同版全套求绿。该结果为No-Go/整链受阻，不能把命令节点completed当门禁通过。
+
+维护者只读核对冻结main的tests/verify/main.go:179，12分钟由项目验证器硬编码；已挂载docs/workflow/requirements.md要求真实make verify及完整回执，没有12分钟整套性能AC。当前2CPU是容量线索，未证明唯一慢因；OpenSandbox当前SDK不提供原Run资源调整入口，未使用Docker热改、手改图/检查点、换环境或扩权。原Issue明确禁止改变原固定门禁，已向用户提出是否允许按实测制定显式有界时限的选择，未收到选择前不执行依赖动作；即使后续批准，也保留本次12分钟失败，不能改判历史或删弱断言。
+
+Issue59具名Builder阻塞通知已发布并取得远端回执 https://github.com/big91987/model-relay/issues/59#issuecomment-6386571212；本轮尚无独立QA、确认、同版报告/新草稿PR或释放后下载结果。归档95件保持，当前待处理材料仍在同Run环境，不能当成已归档或擅自释放。定时任务保持暂停。
