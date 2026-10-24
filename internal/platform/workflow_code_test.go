@@ -179,8 +179,8 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 	base = remote.URL
 	s.sandbox, _ = newOpenSandbox(base, "private-control-key", "python:3.12-slim", 600)
 	graph, err := s.SaveWorkflow(caller, Workflow{Name: "Run code then project command", Enabled: true, Environment: "opensandbox", ContextVersion: 2, MaxSteps: 10, Entry: "code", Nodes: []WorkflowNode{
-		{ID: "code", Name: "Write artifact", Kind: "execution", RuleHandoff: executionTestRules("code", "command"), Execution: &WorkflowExecution{Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "python", EnvRefs: map[string]string{"GITHUB_TOKEN": "PROJECT_GITHUB_TOKEN"}, Code: `import json,os; assert len(os.environ["GITHUB_TOKEN"])==25; assert "UNRELATED_SECRET" not in os.environ; print(os.environ["GITHUB_TOKEN"]); inputs=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert len(inputs['input'])==60000; assert len(inputs['parameters']['parameter_30'])==4096; print(inputs['parameters']['commit']); open('proof.txt','w').write('shared proof')`}},
-		{ID: "command", Name: "Read same artifact", Kind: "execution", RuleHandoff: &WorkflowRules{SchemaScope: "value", Rules: []WorkflowRule{{Title: "完成", When: "$ == 0", Target: "done"}, {Title: "失败", When: "$ != 0", Target: "review"}}, OnInvalid: WorkflowRuleFailure{Action: "stop"}, OnExpression: WorkflowRuleFailure{Action: "stop"}}, Execution: &WorkflowExecution{Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: `python3 -c "import os,json; v=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert v['previous_results'][0]['execution_receipt']['sandbox']['id']=='execution-1'" && cat proof.txt; exit 7`}},
+		{ID: "code", Name: "Write artifact", Kind: "execution", RuleHandoff: executionTestRules("code", "command"), Execution: &WorkflowExecution{Mode: "code", Output: &ExecutionOutput{Source: "exit_code"}, Language: "python", Env: map[string]string{"MODE": "ordinary-value"}, EnvRefs: map[string]string{"GITHUB_TOKEN": "PROJECT_GITHUB_TOKEN"}, Code: `import json,os; assert os.environ["MODE"]=="ordinary-value"; print(os.environ["MODE"]); assert len(os.environ["GITHUB_TOKEN"])==25; assert "UNRELATED_SECRET" not in os.environ; print(os.environ["GITHUB_TOKEN"]); inputs=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert len(inputs['input'])==60000; assert len(inputs['parameters']['parameter_30'])==4096; print(inputs['parameters']['commit']); open('proof.txt','w').write('shared proof')`}},
+		{ID: "command", Name: "Read same artifact", Kind: "execution", RuleHandoff: &WorkflowRules{SchemaScope: "value", Rules: []WorkflowRule{{Title: "完成", When: "$ == 0", Target: "done"}, {Title: "失败", When: "$ != 0", Target: "review"}}, OnInvalid: WorkflowRuleFailure{Action: "stop"}, OnExpression: WorkflowRuleFailure{Action: "stop"}}, Execution: &WorkflowExecution{Mode: "command", Output: &ExecutionOutput{Source: "exit_code"}, Command: `python3 -c "import os,json; assert 'MODE' not in os.environ; v=json.load(open(os.environ['WORKFLOW_INPUT_FILE'])); assert v['previous_results'][0]['execution_receipt']['sandbox']['id']=='execution-1'" && cat proof.txt; exit 7`}},
 		{ID: "review", Name: "Inspect nonzero result", Kind: "approval"}, {ID: "done", Name: "Done", Kind: "end"}}, Edges: []WorkflowEdge{{Source: "review", Route: "next", Target: "done"}}})
 	if err != nil {
 		t.Fatal(err)
@@ -202,12 +202,15 @@ func TestWorkflowSandboxCodeAndCommandShareEnvironmentAndRetainFailure(t *testin
 	if run.Steps[0].ExecutionReceipt.Sandbox.ID != "execution-1" || !strings.Contains(run.Steps[0].ExecutionReceipt.Output, "literal $(not executed)") {
 		t.Fatal("code input/receipt lost")
 	}
+	if run.Steps[0].ExecutionReceipt.Cwd != "/workspace" || len(run.Steps[0].ExecutionReceipt.EnvNames) != 3 {
+		t.Fatal("execution location metadata missing", run.Steps[0].ExecutionReceipt)
+	}
 	second := run.Steps[1].ExecutionReceipt
 	if second.ExitCode == nil || *second.ExitCode != 7 || !strings.Contains(second.Output, "shared proof") || second.Log == nil || second.Sandbox.ID != "execution-2" {
 		t.Fatal("original failure not retained", second)
 	}
 	firstLog, err := s.connectorOutput(run, 1, 0)
-	if err != nil || strings.Contains(firstLog.Output, "selected-\"private-fixture") || !strings.Contains(firstLog.Output, "[redacted]") {
+	if err != nil || strings.Contains(firstLog.Output, "selected-\"private-fixture") || !strings.Contains(firstLog.Output, "[redacted]") || !strings.Contains(firstLog.Output, "ordinary-value") {
 		t.Fatal("selected secret escaped retained log", err)
 	}
 	frozen, _ := json.Marshal(run)

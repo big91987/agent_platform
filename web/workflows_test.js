@@ -314,3 +314,35 @@ test('legal target and node names never read or modify inherited object properti
  assert.equal(vm.runInContext("Object.hasOwn(editor.nodeEditor.completionDrafts,'constructor')",ctx),true);
  assert.equal(vm.runInContext("Object.hasOwn(Object,'node_2')",ctx),false);
 });
+
+test('execution directory and variables are visible and retain drafts until Apply',()=>{
+ const {ctx,el}=editorPage();vm.runInContext("a.kind='execution';delete a.agent;a.execution={mode:'command',command:'pwd',output:{source:'exit_code'}};a.execution_timeout_seconds=60;graph.value.environment='opensandbox';a.rule_handoff=workflowRulePolicy('command');renderWorkflowInspector(editor)",ctx);
+ assert.match(el('#wf-inspector').innerHTML,/\/workspace/);
+ assert.match(el('#wf-inspector').innerHTML,/wf-execution-cwd/);
+ el('#wf-execution-cwd').value='services/api';el('#wf-execution-cwd').oninput();
+ el('#wf-execution-variables').value='{"MODE":"literal $(no shell)"}';el('#wf-execution-variables').oninput();
+ el('#wf-execution-mode').value='mcp';el('#wf-execution-mode').onchange();
+ assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-execution-cwd"/);
+ el('#wf-execution-mode').value='command';el('#wf-execution-mode').onchange();
+ assert.equal(el('#wf-execution-cwd').value,'services/api');assert.match(el('#wf-execution-variables').value,/literal/);
+ assert.equal(vm.runInContext('a.execution.cwd',ctx),undefined);
+ el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.execution.cwd',ctx),'services/api');assert.equal(vm.runInContext('a.execution.env.MODE',ctx),'literal $(no shell)');
+ vm.runInContext('editor.nodeEditor=null;editor.modeDrafts={};editor.graph=new WorkflowGraph(JSON.parse(JSON.stringify(editor.graph.value)));renderWorkflowInspector(editor)',ctx);
+ assert.equal(el('#wf-execution-cwd').value,'services/api');assert.match(el('#wf-execution-variables').value,/literal/);
+ el('#wf-execution-variables').value='{';el('#wf-execution-variables').oninput();el('#wf-node-apply').onclick();assert.match(el('#toast').textContent,/JSON/);assert.equal(vm.runInContext('a.execution.env.MODE',ctx),'literal $(no shell)');
+ el('#wf-node-cancel').onclick();assert.equal(vm.runInContext('a.execution.cwd',ctx),'services/api');
+});
+
+test('share export removes execution variable values from active and inactive configurations',()=>{
+ const {ctx,el}=editorPage();el('#wf-export-json').select=()=>{};
+ vm.runInContext("graph.value.environment='opensandbox';var x=graph.add('execution',0,0);x.execution={mode:'command',command:'pwd',cwd:'services/api',env:{VALUE:'PRIVATE_EXECUTION_MARKER'}};x.rule_handoff=workflowRulePolicy('command');x.execution_drafts={code:{execution:{mode:'code',language:'python',code:'print(1)',env:{VALUE:'PRIVATE_EXECUTION_MARKER'}},variables:'{\"VALUE\":\"PRIVATE_EXECUTION_MARKER\"}'}};before=JSON.stringify(graph.value);exportWorkflow(editor)",ctx);
+ assert.doesNotMatch(el('#wf-export-json').value,/PRIVATE_EXECUTION_MARKER/);assert.match(el('#wf-export-json').value,/services\/api/);assert.equal(vm.runInContext('JSON.stringify(graph.value)===before',ctx),true);
+});
+
+
+test('execution variable drafts support legal node IDs named constructor',()=>{
+ const {ctx,el}=editorPage();vm.runInContext("a.id='constructor';a.kind='execution';delete a.agent;graph.value.entry=a.id;graph.value.edges[0].source=a.id;graph.value.environment='opensandbox';editor.selected=a.id;a.execution={mode:'command',command:'pwd',output:{source:'exit_code'}};a.rule_handoff=workflowRulePolicy('command');renderWorkflowInspector(editor)",ctx);
+ assert.equal(el('#wf-execution-variables').value,'{}');assert.equal(el('#wf-execution-env').value,'{}');
+ el('#wf-execution-variables').value='{"constructor":"literal"}';el('#wf-execution-variables').oninput();el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.execution.env.constructor',ctx),'literal');
+ assert.equal(Object.hasOwn(Object,'command'),false);
+});

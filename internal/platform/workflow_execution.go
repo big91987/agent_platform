@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -32,6 +33,8 @@ type ExecutionRetry struct {
 	IntervalSeconds int `json:"interval_seconds"`
 }
 type WorkflowExecution struct {
+	Cwd       string                      `json:"cwd,omitempty"`
+	Env       map[string]string           `json:"env,omitempty"`
 	Retry     *ExecutionRetry             `json:"retry,omitempty"`
 	OnError   *WorkflowRuleFailure        `json:"on_error,omitempty"`
 	Artifacts []string                    `json:"artifacts,omitempty"`
@@ -97,7 +100,10 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 			return errors.New("unsupported execution result source")
 		}
 	}
-	if err := validateExecutionEnvRefs(v.EnvRefs); err != nil {
+	if err := validateExecutionDirectory(v.Cwd); err != nil {
+		return err
+	}
+	if err := validateExecutionVariables(v.Env, v.EnvRefs); err != nil {
 		return err
 	}
 	switch v.Mode {
@@ -119,7 +125,7 @@ func validateWorkflowExecution(v *WorkflowExecution) error {
 		}
 		return nil
 	case "mcp":
-		if v.Code != "" || v.Command != "" || v.Language != "" || len(v.EnvRefs) != 0 {
+		if v.Code != "" || v.Command != "" || v.Language != "" || len(v.EnvRefs) != 0 || len(v.Env) != 0 || v.Cwd != "" {
 			return errors.New("MCP execution cannot contain code or commands")
 		}
 		if !toolServerName.MatchString(v.ServerID) || strings.TrimSpace(v.Tool) == "" {
@@ -163,11 +169,14 @@ func validateExecutionEnvRefs(refs map[string]string) error {
 	}
 	return nil
 }
-func executionEnvironment(refs map[string]string) (map[string]string, error) {
-	if err := validateExecutionEnvRefs(refs); err != nil {
+func executionEnvironment(values, refs map[string]string) (map[string]string, error) {
+	if err := validateExecutionVariables(values, refs); err != nil {
 		return nil, err
 	}
-	out := make(map[string]string, len(refs)+1)
+	out := make(map[string]string, len(values)+len(refs)+1)
+	for name, value := range values {
+		out[name] = value
+	}
 	for name, ref := range refs {
 		value := os.Getenv(ref)
 		if value == "" || len(value) > 64000 || strings.ContainsRune(value, 0) {
@@ -293,7 +302,7 @@ func (e *WorkflowEngine) startExecution(ctx context.Context, r WorkflowRun, step
 	if err != nil {
 		return err
 	}
-	runtimeEnv, err := executionEnvironment(node.Execution.EnvRefs)
+	runtimeEnv, err := executionEnvironment(node.Execution.Env, node.Execution.EnvRefs)
 	if err != nil {
 		return err
 	}
@@ -446,7 +455,11 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	if err != nil {
 		return out, errors.New("cannot retain sandbox execution log before dispatch")
 	}
-	log := newBoundedConnectorLogValues(runtimeEnv)
+	secrets := map[string]string{}
+	for name := range node.Execution.EnvRefs {
+		secrets[name] = runtimeEnv[name]
+	}
+	log := newBoundedConnectorLogValues(secrets)
 	log.window.archive = archive
 	defer func() {
 		out.Log = log.finishArchive()
@@ -488,6 +501,12 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 	}
 	runtimeEnv["WORKFLOW_INPUT_FILE"] = inputPath
 	request := opensandbox.RunCommandRequest{Cwd: r.WorkspacePath, Envs: runtimeEnv, Command: command, Timeout: int64(seconds) * 1000}
+	configureExecutionDirectory(&request, node.Execution.Cwd)
+	out.Cwd = path.Join(r.WorkspacePath, node.Execution.Cwd)
+	for name := range runtimeEnv {
+		out.EnvNames = append(out.EnvNames, name)
+	}
+	sort.Strings(out.EnvNames)
 	var stdout bytes.Buffer
 	stdoutOverflow := false
 	result, commandErr := service.commandWithIntent(ctx, r.Environment.ID, r.ID, request, func(event opensandbox.StreamEvent) error {
@@ -527,14 +546,14 @@ func (e *WorkflowEngine) executeSandboxNode(ctx context.Context, r WorkflowRun, 
 			if stdoutOverflow {
 				out.ResultError = "selected stream exceeds 1 MiB"
 			} else {
-				setSelectedExecutionResult(node, &out, stdout.Bytes(), runtimeEnv)
+				setSelectedExecutionResult(node, &out, stdout.Bytes(), secrets)
 			}
 		case "file":
 			_, raw, err := e.store.sandboxArtifacts(ctx, r, node.Execution.Output.Path)
 			if err != nil {
 				out.ResultError = "cannot read result file: " + err.Error()
 			} else {
-				setSelectedExecutionResult(node, &out, raw, runtimeEnv)
+				setSelectedExecutionResult(node, &out, raw, secrets)
 			}
 		}
 	}

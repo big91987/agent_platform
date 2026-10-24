@@ -108,7 +108,7 @@ globalThis.WorkflowGraph = class WorkflowGraph {
       if(v.mode==='mcp'){
         if(typeof v.server_id!=='string'||!v.server_id||typeof v.tool!=='string'||!v.tool)throw new Error('请选择 MCP 服务和工具');
         if(!v.arguments||typeof v.arguments!=='object'||Array.isArray(v.arguments))throw new Error('工具参数须为 JSON 对象');
-        if(v.code||v.command||v.language||Object.keys(v.env_refs||{}).length)throw new Error('MCP 配置不能混入代码或命令');
+        if(v.code||v.command||v.language||v.cwd||Object.keys(v.env||{}).length||Object.keys(v.env_refs||{}).length)throw new Error('MCP 配置不能混入代码或命令');
         if(v.bindings!=null){
           if(typeof v.bindings!=='object'||Array.isArray(v.bindings)||Object.keys(v.bindings).length>64)throw new Error('参数引用须为最多 64 项的 JSON 对象');
           for(const [name,b] of Object.entries(v.bindings)){
@@ -122,6 +122,15 @@ globalThis.WorkflowGraph = class WorkflowGraph {
         if(v.server_id||v.tool||v.arguments!=null||Object.keys(v.bindings||{}).length)throw new Error('代码和命令不能混入 MCP 配置');
         if(v.mode==='code'&&(!['python','typescript'].includes(v.language)||v.command))throw new Error('请选择 Python 或 TypeScript；其他语言使用项目命令');
         if(v.mode==='command'&&(v.language||v.code))throw new Error('项目命令不能混入代码配置');
+        if(v.cwd!=null&&(typeof v.cwd!=='string'||v.cwd.length>1024||v.cwd.includes('\0')||v.cwd.startsWith('/')||v.cwd!==''&&v.cwd!=='.'&&v.cwd.split('/').some(p=>!p||p==='.'||p==='..')))throw new Error('工作目录须为工作区内的相对目录');
+        const variables=v.env??{},refs=v.env_refs??{};
+        if(!variables||typeof variables!=='object'||Array.isArray(variables)||Object.keys(variables).length+Object.keys(refs).length>32)throw new Error('环境变量和引用合计最多 32 项');
+        let size=0;
+        for(const [key,value]of Object.entries(variables)){
+         if(!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(key)||/^(CODEX_|AGENT_PLATFORM_|WORKFLOW_)/.test(key)||['HOME','PATH','LD_PRELOAD','LD_LIBRARY_PATH','NODE_OPTIONS','PYTHONPATH','PYTHONHOME','BASH_ENV','ENV'].includes(key)||typeof value!=='string'||value.includes('\0')||value.length>64000)throw new Error('环境变量须使用非保留名称及不含空字符的字符串值');
+         if(Object.hasOwn(refs,key))throw new Error('同名环境变量不能同时填写普通值和引用');size+=key.length+value.length;
+        }
+        if(size>64000)throw new Error('环境变量内容过长');
         if(v.env_refs!=null){
           if(typeof v.env_refs!=='object'||Array.isArray(v.env_refs)||Object.keys(v.env_refs).length>32)throw new Error('环境变量引用须为最多 32 项的 JSON 对象');
           const valid=name=>typeof name==='string'&&/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)&&! /^(CODEX_|AGENT_PLATFORM_|WORKFLOW_)/.test(name)&&!['HOME','PATH','LD_PRELOAD','LD_LIBRARY_PATH','NODE_OPTIONS','PYTHONPATH','PYTHONHOME','BASH_ENV','ENV'].includes(name);

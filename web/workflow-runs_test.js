@@ -154,3 +154,14 @@ test('unknown native process blocks continuation and preserves explicit environm
  const html=[...elements.values()].map(x=>x.innerHTML).join('');
  assert.match(html,/原生执行结果待核对/);assert.match(html,/核对环境/);assert.match(html,/释放环境/);assert.doesNotMatch(html,/id="wf-resume-form"|id="wf-return-form"/);
 });
+
+
+test('execution details show recorded directory and variable sources without resolving credentials',()=>{
+ const ctx=vm.createContext({esc:x=>String(x??'')});vm.runInContext(fs.readFileSync(__dirname+'/workflow-runs.js','utf8'),ctx);
+ ctx.run={workspace_path:'/workspace',definition:{environment:'opensandbox'}};
+ ctx.step={execution_receipt:{cwd:'/workspace/services/api',env_names:['APP_ENV','TOKEN','WORKFLOW_INPUT_FILE']}};
+ ctx.node={execution:{mode:'command',env:{APP_ENV:'test'},env_refs:{TOKEN:'PROJECT_TOKEN'}}};
+ const html=vm.runInContext('workflowExecutionLocationHTML(run,step,node)',ctx);
+ assert.match(html,/\/workspace\/services\/api/);assert.match(html,/APP_ENV · 节点配置/);assert.match(html,/TOKEN · 引用 PROJECT_TOKEN/);assert.match(html,/WORKFLOW_INPUT_FILE · 运行输入文件/);
+ ctx.node.execution.mode='mcp';assert.doesNotMatch(vm.runInContext('workflowExecutionLocationHTML(run,step,node)',ctx),/\/workspace/);
+});

@@ -491,12 +491,12 @@ func TestExecutionEnvironmentReferencesSurviveAndRejectOverrides(t *testing.T) {
 
 func TestExecutionEnvironmentCapturesSelectedValuesAndRedactsSplitWrites(t *testing.T) {
 	t.Setenv("PROJECT_MISSING_TOKEN", "")
-	if _, err := executionEnvironment(map[string]string{"GITHUB_TOKEN": "PROJECT_MISSING_TOKEN"}); err == nil {
+	if _, err := executionEnvironment(nil, map[string]string{"GITHUB_TOKEN": "PROJECT_MISSING_TOKEN"}); err == nil {
 		t.Fatal("missing credential accepted")
 	}
 	// A captured value is immutable for dispatch/redaction even after rotation.
 	t.Setenv("PROJECT_TOKEN", "captured-private")
-	values, err := executionEnvironment(map[string]string{"GITHUB_TOKEN": "PROJECT_TOKEN"})
+	values, err := executionEnvironment(nil, map[string]string{"GITHUB_TOKEN": "PROJECT_TOKEN"})
 	if err != nil {
 		t.Fatal(err)
 	}

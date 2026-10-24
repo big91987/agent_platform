@@ -45,6 +45,8 @@ type ConnectorInput struct {
 	IssueNumber    int    `json:"issue_number,omitempty"`
 }
 type ConnectorReceipt struct {
+	Cwd            string                `json:"cwd,omitempty"`
+	EnvNames       []string              `json:"env_names,omitempty"`
 	RetrySafe      bool                  `json:"retry_safe,omitempty"`
 	Result         json.RawMessage       `json:"structured_result,omitempty"`
 	ResultError    string                `json:"result_error,omitempty"`
