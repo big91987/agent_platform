@@ -319,18 +319,24 @@ test('execution directory and variables are visible and retain drafts until Appl
  const {ctx,el}=editorPage();vm.runInContext("a.kind='execution';delete a.agent;a.execution={mode:'command',command:'pwd',output:{source:'exit_code'}};a.execution_timeout_seconds=60;graph.value.environment='opensandbox';a.rule_handoff=workflowRulePolicy('command');renderWorkflowInspector(editor)",ctx);
  assert.match(el('#wf-inspector').innerHTML,/\/workspace/);
  assert.match(el('#wf-inspector').innerHTML,/wf-execution-cwd/);
- el('#wf-execution-cwd').value='services/api';el('#wf-execution-cwd').oninput();
+ el('#wf-execution-cwd').value='/workspace/services/api';el('#wf-execution-cwd').oninput();
  el('#wf-execution-variables').value='{"MODE":"literal $(no shell)"}';el('#wf-execution-variables').oninput();
  el('#wf-execution-mode').value='mcp';el('#wf-execution-mode').onchange();
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-execution-cwd"/);
  el('#wf-execution-mode').value='command';el('#wf-execution-mode').onchange();
- assert.equal(el('#wf-execution-cwd').value,'services/api');assert.match(el('#wf-execution-variables').value,/literal/);
+ assert.equal(el('#wf-execution-cwd').value,'/workspace/services/api');assert.match(el('#wf-execution-variables').value,/literal/);
  assert.equal(vm.runInContext('a.execution.cwd',ctx),undefined);
  el('#wf-node-apply').onclick();assert.equal(vm.runInContext('a.execution.cwd',ctx),'services/api');assert.equal(vm.runInContext('a.execution.env.MODE',ctx),'literal $(no shell)');
  vm.runInContext('editor.nodeEditor=null;editor.modeDrafts={};editor.graph=new WorkflowGraph(JSON.parse(JSON.stringify(editor.graph.value)));renderWorkflowInspector(editor)',ctx);
- assert.equal(el('#wf-execution-cwd').value,'services/api');assert.match(el('#wf-execution-variables').value,/literal/);
+ assert.equal(el('#wf-execution-cwd').value,'/workspace/services/api');assert.match(el('#wf-execution-variables').value,/literal/);
  el('#wf-execution-variables').value='{';el('#wf-execution-variables').oninput();el('#wf-node-apply').onclick();assert.match(el('#toast').textContent,/JSON/);assert.equal(vm.runInContext('a.execution.env.MODE',ctx),'literal $(no shell)');
  el('#wf-node-cancel').onclick();assert.equal(vm.runInContext('a.execution.cwd',ctx),'services/api');
+ vm.runInContext('editor.selected=a.id;renderWorkflowInspector(editor)',ctx);
+ el('#wf-execution-cwd').value='/tmp';el('#wf-execution-cwd').oninput();
+ el('#wf-node-apply').onclick();assert.match(el('#toast').textContent,/工作目录/);assert.equal(vm.runInContext('a.execution.cwd',ctx),'services/api');
+ el('#wf-execution-mode').value='mcp';el('#wf-execution-mode').onchange();el('#wf-execution-mode').value='command';el('#wf-execution-mode').onchange();
+ assert.equal(el('#wf-execution-cwd').value,'/tmp');el('#wf-node-cancel').onclick();
+
 });
 
 test('share export removes execution variable values from active and inactive configurations',()=>{

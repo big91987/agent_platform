@@ -435,7 +435,7 @@ function workflowNodeDraft(editor,n,validate=true){
    if(validate){applyExecutionDraft(next,raw);applyExecutionBindings(next,refs)}else{try{applyExecutionDraft(next,raw)}catch{}try{applyExecutionBindings(next,refs)}catch{}}
   }else if(mode==='code'){next.execution.language=$('#wf-execution-language').value;next.execution.code=$('#wf-execution-code').value}
   else{next.execution.command=$('#wf-execution-command').value}
-  if(mode!=='mcp'){const cwd=$('#wf-execution-cwd').value.trim();if(cwd&&cwd!=='.')next.execution.cwd=cwd;const values=$('#wf-execution-variables').value;(editor.executionVariableDrafts||=Object.create(null))[n.id]=values;if(validate)applyExecutionVariables(next,values);else{try{applyExecutionVariables(next,values)}catch{}}next.execution.artifacts=($('#wf-execution-artifacts')?.value||'').split('\n').map(v=>v.trim()).filter(Boolean);const raw=$('#wf-execution-env').value;(editor.executionEnvDrafts||=Object.create(null))[n.id]=raw;if(validate)applyExecutionEnvRefs(next,raw);else{try{applyExecutionEnvRefs(next,raw)}catch{}}}
+  if(mode!=='mcp'){const cwd=$('#wf-execution-cwd').value.trim();(editor.executionCwdDrafts||=Object.create(null))[n.id]=cwd;if(validate&&cwd!=='/workspace'&&!cwd.startsWith('/workspace/'))throw new Error('工作目录须为 /workspace 或其子目录');if(cwd!=='/workspace')next.execution.cwd=cwd.startsWith('/workspace/')?cwd.slice('/workspace/'.length):cwd;const values=$('#wf-execution-variables').value;(editor.executionVariableDrafts||=Object.create(null))[n.id]=values;if(validate)applyExecutionVariables(next,values);else{try{applyExecutionVariables(next,values)}catch{}}next.execution.artifacts=($('#wf-execution-artifacts')?.value||'').split('\n').map(v=>v.trim()).filter(Boolean);const raw=$('#wf-execution-env').value;(editor.executionEnvDrafts||=Object.create(null))[n.id]=raw;if(validate)applyExecutionEnvRefs(next,raw);else{try{applyExecutionEnvRefs(next,raw)}catch{}}}
  }
  if(n.kind==='approval')next.prompt=$('#wf-node-prompt').value;
  if(n.kind==='agent')delete next.prompt;
@@ -466,6 +466,7 @@ function workflowContextHelp(editor){
 }
 function workflowArtifactHelp(){
  dialog(`<div class="dialog-head"><h2 id="wf-artifact-help-title">产物保存策略</h2><button type="button" data-close aria-label="关闭产物保存说明">关闭</button></div><div class="dialog-body wf-context-explanation">
+ <h3>工作目录</h3><p>默认在沙箱内的 <code>/workspace</code> 执行，可填写其下已有子目录的完整路径。同一 Run 共享工作区，不同 Run 相互隔离。当前未挂载宿主机目录。</p>
  <h3>保存哪些内容</h3><p>代码和项目命令通过“留存产物”的文件清单指定要保存的文件，每行填写一个工作区相对路径，例如 <code>reports/result.json</code>。用于交接判断的结果文件，也需要加入清单才会留存。未列出的文件、进程内存和环境变量不会随产物保存；MCP 工具返回的外部链接不会自动下载归档。</p>
  <h3>何时保存，如何隔离</h3><p>执行结束并接受交接后，平台先复制文件，再进入下一节点。文件保存在平台的持久存储中，按运行和节点执行次数分别留存。同一次运行共享工作区，但返工或重复执行产生的同名文件会保存为各次执行的独立副本，不覆盖先前产物。</p>
  <h3>保存失败怎么办</h3><p>文件缺失、无法读取、超过限制或存储失败时，交接停止，下一节点不会开始。处理问题后，可在运行记录的“留存产物”中重试保存；此操作只重新保存文件，不重新执行命令。正式释放环境前会核验已声明产物，缺失或损坏会阻止释放。</p>
@@ -546,7 +547,7 @@ function renderWorkflowInspector(editor){
     $('#wf-execution-server').onchange=()=>{syncDraft();n.execution.tool='';workflowChanged(editor);renderWorkflowInspector(editor)};
    }else if(n.execution.mode==='code'){$('#wf-execution-language').onchange=syncDraft;$('#wf-execution-code').oninput=syncDraft}
    else{$('#wf-execution-command').oninput=syncDraft}
-   if(n.execution.mode!=='mcp'){$('#wf-execution-cwd').oninput=()=>{syncDraft();$('#wf-execution-directory').textContent=workflowExecutionDirectory(editor,$('#wf-execution-cwd').value.trim());};$('#wf-execution-variables').oninput=syncDraft;$('#wf-execution-env').oninput=syncDraft;$('#wf-execution-artifacts').oninput=syncDraft;}
+   if(n.execution.mode!=='mcp'){$('#wf-execution-cwd').oninput=syncDraft;$('#wf-execution-variables').oninput=syncDraft;$('#wf-execution-env').oninput=syncDraft;$('#wf-execution-artifacts').oninput=syncDraft;}
   }
   if(n.kind==='connector')$('#wf-node-form').querySelectorAll('input,textarea,select').forEach(field=>field.oninput=syncDraft);
   for(const selector of ['#wf-node-x','#wf-node-y',...(n.kind==='approval'?['#wf-node-prompt']:[]),...(n.kind==='agent'?['#wf-allow-user-input','#wf-continuation','#wf-timeout']:[])])$(selector).oninput=syncDraft;
@@ -651,13 +652,10 @@ function applyExecutionVariables(node,raw){
  if(!values||typeof values!=='object'||Array.isArray(values)||Object.values(values).some(v=>typeof v!=='string'))throw new Error('环境变量须为字符串键值的 JSON 对象');
  node.execution={...node.execution};if(Object.keys(values).length)node.execution.env=values;else delete node.execution.env;
 }
-function workflowExecutionDirectory(editor,cwd){
- const root=editor.graph.value.environment==='opensandbox'?'/workspace':'本次 Run 工作区';
- return !cwd||cwd==='.'?root:root+'/'+cwd;
-}
 function workflowExecutionLocationFields(editor,node){
  if(node.execution?.mode==='mcp')return '<p class="hint">执行位置和环境变量由所选 MCP 工具服务管理。</p>';
- return `<dl class="wf-detail-facts"><dt>执行环境</dt><dd>${editor.graph.value.environment==='opensandbox'?'OpenSandbox · 本次 Run':'未配置，请在流程设置中选择 OpenSandbox'}</dd><dt>工作区根目录</dt><dd><code>${editor.graph.value.environment==='opensandbox'?'/workspace':'由本次 Run 指定'}</code></dd></dl><p class="hint">同一 Run 的节点共享工作区，不同 Run 使用独立环境。</p><div class="field"><label for="wf-execution-cwd">工作目录（cwd）</label><input id="wf-execution-cwd" value="${esc(node.execution?.cwd||'')}" placeholder=".（工作区根目录）" maxlength="1024" spellcheck="false"><p class="hint">留空使用根目录；子目录填写相对路径，例如 services/api。</p><p>执行目录：<code id="wf-execution-directory">${esc(workflowExecutionDirectory(editor,node.execution?.cwd))}</code></p></div>`;
+ const cwd=Object.hasOwn(editor.executionCwdDrafts||{},node.id)?editor.executionCwdDrafts[node.id]:node.execution?.cwd&&node.execution.cwd!=='.'?'/workspace/'+node.execution.cwd:'/workspace';
+ return `<div class="field"><label for="wf-execution-cwd">工作目录</label><input id="wf-execution-cwd" value="${esc(cwd)}" maxlength="1035" spellcheck="false" required></div>`;
 }
 function applyExecutionEnvRefs(node,raw){
  let refs;try{refs=WorkflowGraph.parseJSON(raw.trim()||'{}')}catch(error){throw new Error('环境变量引用 JSON 无效：'+error.message)}
@@ -692,10 +690,10 @@ function switchWorkflowExecutionMode(editor,node,mode){
  rememberWorkflowNodeDraft(editor);
  const modes=(editor.modeDrafts||={})[node.id]||={};
  const old=node.execution.mode;
- modes[old]={execution:JSON.parse(JSON.stringify(node.execution)),rules:JSON.parse(JSON.stringify(node.rule_handoff)),raw:editor.executionDrafts?.[node.id],bindings:editor.bindingDrafts?.[node.id],env:editor.executionEnvDrafts?.[node.id],variables:editor.executionVariableDrafts?.[node.id],schema:editor.ruleSchemaDrafts?.[node.id],sources:editor.resultDrafts?.[node.id]};
+ modes[old]={execution:JSON.parse(JSON.stringify(node.execution)),rules:JSON.parse(JSON.stringify(node.rule_handoff)),raw:editor.executionDrafts?.[node.id],bindings:editor.bindingDrafts?.[node.id],env:editor.executionEnvDrafts?.[node.id],variables:editor.executionVariableDrafts?.[node.id],cwd:editor.executionCwdDrafts?.[node.id],schema:editor.ruleSchemaDrafts?.[node.id],sources:editor.resultDrafts?.[node.id]};
  const selected=modes[mode];
  node.execution=selected?JSON.parse(JSON.stringify(selected.execution)):mode==='mcp'?{mode,server_id:'',tool:'',arguments:{}}:mode==='code'?{mode,language:'python',code:'',output:{source:'exit_code'}}:{mode,command:'',output:{source:'exit_code'}};
  if(selected)node.rule_handoff=JSON.parse(JSON.stringify(selected.rules));else if(old!=='mcp'&&mode!=='mcp'){node.rule_handoff=JSON.parse(JSON.stringify(modes[old].rules));node.execution.output=JSON.parse(JSON.stringify(modes[old].execution.output||{source:'exit_code'}));node.execution.artifacts=modes[old].execution.artifacts;node.execution.env_refs=modes[old].execution.env_refs;node.execution.cwd=modes[old].execution.cwd;node.execution.env=modes[old].execution.env;}else node.rule_handoff=workflowRulePolicy(mode);
- for(const [key,value] of [['executionDrafts',selected?.raw],['bindingDrafts',selected?.bindings],['executionEnvDrafts',selected?.env],['executionVariableDrafts',selected?.variables],['ruleSchemaDrafts',selected?.schema],['resultDrafts',selected?.sources]]){editor[key]||=Object.create(null);if(value===undefined)delete editor[key][node.id];else editor[key][node.id]=value;}
+ for(const [key,value] of [['executionDrafts',selected?.raw],['bindingDrafts',selected?.bindings],['executionEnvDrafts',selected?.env],['executionVariableDrafts',selected?.variables],['executionCwdDrafts',selected?.cwd],['ruleSchemaDrafts',selected?.schema],['resultDrafts',selected?.sources]]){editor[key]||=Object.create(null);if(value===undefined)delete editor[key][node.id];else editor[key][node.id]=value;}
  editor.graph.syncRuleEdges();node.execution_drafts=JSON.parse(JSON.stringify(modes));workflowChanged(editor);renderWorkflowInspector(editor);
 }
