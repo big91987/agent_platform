@@ -23,7 +23,10 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             NO_PROXY=no_proxy,
         )
 
-    def agent(key, name, instructions):
+    prompts = Path(__file__).with_name("prompts")
+    common = (prompts / "sandbox-common.md").read_text().strip()
+
+    def agent(key, name):
         return {
             "id": key,
             "name": name,
@@ -34,8 +37,11 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             "agent": {
                 "executor": "codex",
                 "model": "gpt-6.1-sol",
-                "instructions": instructions
-                + "证据归档须与项目构建输入分开：源码快照使用文本或补丁等不参与编译的形式，保留原文件名映射和字节摘要；不要把可编译源码副本放入会被构建器递归发现的目录。保留原失败证据，修正归档位置或扩展名时记录映射，不修改原源码字节或排除正常测试。交接artifacts和报告files列具体文件，不用目录代替文件清单。",
+                "instructions": (prompts / ("sandbox-" + key + ".md"))
+                .read_text()
+                .strip()
+                + "\n\n"
+                + common,
                 "sandbox": "workspace-write",
                 "network_access": True,
                 "allow_elevation": False,
@@ -97,11 +103,7 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                     "env_refs": refs,
                 },
             },
-            agent(
-                "development",
-                "研发实现",
-                "在当前共享工作区完成本任务。先读取项目AGENTS.md和冻结输入；只修改本Issue范围。不读取凭据，不执行push/PR/发布。归档真实文件和实施记录后使用原生handoff交给tests；收到QA返工或用户纠正时核对既有文件再继续，不重建工作区。固定tests失败先读完整回执定位，只有实质修复或新的可复验证据才再次交tests；同版重复失败且需修环境、凭据或冻结准备步骤时，用wait_for_input blocked明确影响、证据和下一步，不循环求绿。",
-            ),
+            agent("development", "研发实现"),
             {
                 "id": "tests",
                 "name": "固定项目测试",
@@ -135,22 +137,14 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                     "on_expression": {"action": "stop"},
                 },
             },
-            agent(
-                "qa",
-                "独立QA",
-                "独立核对任务验收依据、研发改动、固定tests原始结果和具体产物。在同一工作区独立复查必要行为，但不能修改产品。失败或缺证据时写明影响/复现/返工要求，通过handoff交development。通过时把独立QA报告保存harness-output/qa.md，明确未验/限制/遗留，再handoff给approval。不把任务结束或局部测试当产品通过。",
-            ),
+            agent("qa", "独立QA"),
             {
                 "id": "approval",
                 "name": "核对交付后允许发布",
                 "kind": "approval",
                 "prompt": "检查本版完整测试、独立QA与产物，确认后进入报告和草稿PR发布。",
             },
-            agent(
-                "report",
-                "形成交付报告",
-                "根据本Issue与同版固定tests/独立QA形成可独立阅读的PR报告。生成harness-output/report.json，字段title必须【类别】具体目标，body写明问题/实际改动/已验版本/结果/限制/真实Issue关联，files列本版经QA确认需要提交的仓库相对文件，先用git check-ignore核对可提交。harness-output内的QA和report.json是工作流交接输入，只列artifacts，不列files；固定发布节点会把QA和body原文复制到docs/harness/run-*。不要强制添加Git忽略文件。不要修改产品、不要提交构建目录/凭据/原生历史。通过handoff明确target=publish，交付report.json及QA文件。",
-            ),
+            agent("report", "形成交付报告"),
             {
                 "id": "publish",
                 "name": "发布同版草稿PR",

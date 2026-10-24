@@ -446,6 +446,8 @@ python3 <platform-source>/examples/platform-workflows/install_github_entry.py \
 
 ## OpenSandbox 研发示例
 
+三个 Agent 的角色指令分别维护在 `prompts/sandbox-development.md`、`prompts/sandbox-qa.md` 和 `prompts/sandbox-report.md`，公共归档要求放在 `prompts/sandbox-common.md`。使用 Markdown 标题、步骤和列表说明职责、证据要求及交接条件；生成工作流时读取并写入节点角色指令。修改模板后通过正式工作流 API 更新定义，新 Run 使用新版本，已有 Run 保留冻结配置。
+
 `sandbox_delivery.py` 生成只使用 Agent、执行、人工确认和结束的图：固定仓库准备→研发→项目 make verify→独立QA→人工确认→报告→草稿PR。失败测试和QA返工回研发，同Run共享 `/workspace`；每次节点执行有独立持久会话，执行中的补充输入/恢复保留原生身份，显式返工进入新step，不宣称跨step复用同thread。模型及联网策略沿用本示例的Codex/gpt-6.1-sol和外层隔离入口。
 
 ```sh
