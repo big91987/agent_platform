@@ -1890,3 +1890,12 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 用户指出根目录、相对工作目录和完整执行目录重复展示。维护源 `d9a9564050d825b02c3ae00e2364d94b94828681` 删除这组重复事实与提示，只保留“工作目录”输入框，默认值 `/workspace`，直接编辑沙箱内完整路径；目录共享/隔离说明放入现有问号帮助。界面保存时转换为原有工作区相对cwd，执行边界和归档基准不变；不增加新配置格式或兼容分支。非法路径不能应用，模式切换保留未完成的输入，取消不影响已保存配置。
 
 75项前端回归及真实Chromium15.325s通过，截图已检查；112标准build/install与实际health均为d9a9564，主图revision10及历史/配置保持。正式API隔离Run `b2857346f804bd017dd104938ab47f33` 7步completed：子目录真实执行，两个错误目录预期exit1，4件377bytes产物释放环境后仍可下载且摘要一致；临时图已删除，历史保留。线上前端与精确源码逐字一致。源码仅开发分支提交推送，未发产品PR/部署或改变产品QA结论，定时任务继续暂停。详细证据见workflows-verification.md本节。
+
+
+### 2026-10-24 · Issue59新版完整研发流水线复验（进行中）
+
+用户要求从头到尾测试当前流程。先核112实际health `d9a9564050d825b02c3ae00e2364d94b94828681`、正式图revision10、无执行中会话；旧Issue54 Run已completed，Issue51旧Run仍waiting，未复活或改写。测试仓最新main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`，旧PR49/55仍draft未合。
+
+独立关联Issue59 https://github.com/big91987/model-relay/issues/59 经项目自有opened/labeled Actions40103846715/40103846692均success，去重为唯一Run `09ce99d8fe8bf76d8e4f5024ab74e293`，入口冻结同一main。14:44:58Z创建→14:46:02Z准备完成（约64秒阶段驻留，非净Agent耗时），共享/workspace内准备成功；development2原生conversation `ca82a9c5057ede55b26f5b8fdcd30ebe` running，模型Codex/gpt-6.1-sol，无待审批。受理及running不是完成。
+
+验收范围为本轮真实prepare→development→固定make verify（自然失败按规则返研发）→独立QA（真实缺陷才返工）→正式确认→report→固定publish草稿PR，核对原生handoff arguments/受理、完整测试EOF及同版源码、QA实际材料、发布Git对象与报告一致；最后正式release并下载核对归档。Builder只检查Harness证据，不代产品/QA，不人为注入缺章，不合旧草稿或部署产品。不将本轮正常链当作已覆盖全部并发/停止恢复/真实供应商场景；此前隔离证据保留其范围。当前结果为进行中，私有回执在ignored full-delivery-current目录及112部署证据目录，原定时任务继续暂停。

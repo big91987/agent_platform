@@ -3580,3 +3580,12 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 精确源码包5591040bytes/SHA256 `ba12b575896e52ebd61e53e11116cccb01003c1eccc779d5c8283e01e1f4f989`；标准Linux构建、安装exit0，二进制SHA256 `bea76ca51a0e4dbc2a7ad94b958b5be98abad2f6cb1d443ee1245941eb981246`。正式主图revision10、旧waiting及完成Run、前轮72238948及三条原生分支Run/归档和私有配置前后相同。线上workflows.js SHA256 `0f6119d808cff7aae562f47a6e9ead3e000d9080a85c3b4fbbf98430617de2dc`；其余两份资源与原维护源一致。
 
 本轮唯一临时图 `7f208fc56757f8d529640cf340c26f06`，唯一Run如上：四个正向进程exit0，链接cwd与缺失cwd两步exit1，最终确认项目副作用标记不存在。普通变量按原文、管理员引用非空、下一节点不继承选定变量、根目录产物均经真实沙箱验证。四文件逐内容/size/SHA核对后正式release，释放后再次核对下载，DELETE临时图后Run及归档保持。证据存于忽略目录 `.data/opensandbox-verification/execution-directory-simple/` 及112原部署目录。本机浏览器与线上API/资源验证分列，不声称新增线上独立浏览器实操或产品验收。
+
+
+### 2026-10-24 · Issue59新版完整研发流水线复验（进行中）
+
+用户要求从头到尾测试当前流程。先核112实际health `d9a9564050d825b02c3ae00e2364d94b94828681`、正式图revision10、无执行中会话；旧Issue54 Run已completed，Issue51旧Run仍waiting，未复活或改写。测试仓最新main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`，旧PR49/55仍draft未合。
+
+独立关联Issue59 https://github.com/big91987/model-relay/issues/59 经项目自有opened/labeled Actions40103846715/40103846692均success，去重为唯一Run `09ce99d8fe8bf76d8e4f5024ab74e293`，入口冻结同一main。14:44:58Z创建→14:46:02Z准备完成（约64秒阶段驻留，非净Agent耗时），共享/workspace内准备成功；development2原生conversation `ca82a9c5057ede55b26f5b8fdcd30ebe` running，模型Codex/gpt-6.1-sol，无待审批。受理及running不是完成。
+
+验收范围为本轮真实prepare→development→固定make verify（自然失败按规则返研发）→独立QA（真实缺陷才返工）→正式确认→report→固定publish草稿PR，核对原生handoff arguments/受理、完整测试EOF及同版源码、QA实际材料、发布Git对象与报告一致；最后正式release并下载核对归档。Builder只检查Harness证据，不代产品/QA，不人为注入缺章，不合旧草稿或部署产品。不将本轮正常链当作已覆盖全部并发/停止恢复/真实供应商场景；此前隔离证据保留其范围。当前结果为进行中，私有回执在ignored full-delivery-current目录及112部署证据目录，原定时任务继续暂停。
