@@ -3589,3 +3589,12 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 独立关联Issue59 https://github.com/big91987/model-relay/issues/59 经项目自有opened/labeled Actions40103846715/40103846692均success，去重为唯一Run `09ce99d8fe8bf76d8e4f5024ab74e293`，入口冻结同一main。14:44:58Z创建→14:46:02Z准备完成（约64秒阶段驻留，非净Agent耗时），共享/workspace内准备成功；development2原生conversation `ca82a9c5057ede55b26f5b8fdcd30ebe` running，模型Codex/gpt-6.1-sol，无待审批。受理及running不是完成。
 
 验收范围为本轮真实prepare→development→固定make verify（自然失败按规则返研发）→独立QA（真实缺陷才返工）→正式确认→report→固定publish草稿PR，核对原生handoff arguments/受理、完整测试EOF及同版源码、QA实际材料、发布Git对象与报告一致；最后正式release并下载核对归档。Builder只检查Harness证据，不代产品/QA，不人为注入缺章，不合旧草稿或部署产品。不将本轮正常链当作已覆盖全部并发/停止恢复/真实供应商场景；此前隔离证据保留其范围。当前结果为进行中，私有回执在ignored full-delivery-current目录及112部署证据目录，原定时任务继续暂停。
+
+
+#### Issue59 · 首次真实返工与执行位置澄清
+
+研发2于15:09:05Z真实handoff(target=tests) accepted，参数中无关闭目标不需要的params；原生15:09:17Z结束/停止，25件4509395bytes归档后15:09:44Z自动进入tests3。研发阶段驻留约23.70分钟（含自检、文档和归档，非净推理耗时）。全部25件逐size/SHA下载匹配；归档的研发完整自检日志1052318bytes/SHA256 `111b87a33790134f22fb7bc633a40c567aa389bf7f7e7635934e3e7260abc15a` 与state逐值匹配：make2/gate-1/runner1，12分钟预算超时，源码前后同 `82162f6b3dbd02ffc24858c119f8cca3542458bcc6748721e9e3e66ba5a6d54a`，candidate_removed及owned_group_absent真实记录；不能把局部278Node/race/build/部分浏览器绿写成完整通过。
+
+tests3真实固定make verify于15:09:44Z–15:22:01Z完成，exit2，正式API完整导出1076353bytes/SHA256 `f1e472420845c02b583fde48e3f67147e94f9f4a25d958f3b37ea6ad4af6b537`、EOF=true/truncated=false，规则自动返回development4/conversation `cc8c8c3675ea6937871f531115a8928a`，没有手改状态或提前QA。运行中完整output API因尚无最终receipt.Log返回404，维护者只读tail作为在途诊断，结束后以正式完整API为准，不混同证据。
+
+发现冻结仓AGENTS.md第15行仍将固定测试描述为host-only，研发据此误称将换宿主验证；实际Run是OpenSandbox、固定command=make verify/cwd默认同一/workspace。维护源全仓未找到这句旧项目规则，不把项目旧说明误当当前平台实现。Builder首次投递前置检查因节点已自然交接而拒绝，未写入；在返工Agent阶段通过正式User Input唯一request `issue59:builder:execution-boundary:1` 实际受理message13961、duplicate=false，供Pipeline修正项目规则/报告，保留真实失败且不据环境名称推断产品无缺陷。受理不等于原生已消费，后续核验消息/事件。Issue59具名评论6385850562已反馈具体影响，标记为Builder通知避免重复自动入站。此为一次平台事实澄清介入，不是代写修复/QA或改冻结图、权限、预算。当前整链仍未通过，QA/确认/报告/PR/释放后下载尚未完成。
