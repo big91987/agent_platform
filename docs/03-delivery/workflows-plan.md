@@ -1,5 +1,7 @@
 # 平台内 Workflow 交付计划
 
+当前完成（2026-10-24）：正式工作流的研发、独立QA和交付报告三个Agent已采用分节Markdown提示词，职责、步骤、产物、交接和阻塞处理可逐项阅读。维护源3c0a601通过模板回归并标准导出151对象，测试仓模板PR58精确合并main12df9eb7；112正式配置已升revision10，完整预览与保存后重新读取均同源，六条既有Run保持。平台二进制仍ffcd93d，未启动新产品Run或改变权限；定时任务继续暂停。
+
 当前完成（2026-10-24）：Agent 节点“输入预览”现展示完整的平台系统提示词（原生开发者指令、角色指令和平台追加约束），工作流用户消息单独展示。维护源 ffcd93d 已通过标准完整门禁、原生 start/resume 逐字核对和真实 Chromium，标准部署到112:8795；正式预览API核验3个Agent角色完整、草稿不落库，线上JS摘要与维护源一致。主图保持revision9、历史Run和产物/私有配置保持；定时任务仍暂停。下文旧状态保留为历史。
 
 当前完成（2026-10-23）：按交接目标独立参数已正式部署112:8795/6c7f960，主图83f08f81f7040fcd0c12e6ff4e2acd2d/revision9。相同定义的代码参数、Agent另一套参数、无参数Agent三条真实Codex分支全部完成，7次原生handoff和8件产物核验通过；3环境已释放，产物仍可下载，临时图已删除、Run历史保留。标准模板PR57已精确合并main91a50516。完整源门禁与独立复审保持，未把Harness验证当产品或供应商验收；产品PR49/55未合部署，定时任务仍暂停。下文“待连接/待部署”为历史。
@@ -1862,3 +1864,13 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 - 通过精确源码归档5529600bytes/SHA256 `52445fb752df87becf3786afa9410649ae3662fc190b31e25dda403b889d0abe`，在112执行标准Linux CGO build和install，均exit0；二进制SHA256 `2dace2f24103629ec0c100b87e88ad4dd91056c2ad2496852c06f9ae48f93bbd`。实际health revision为ffcd93d。正式主图 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision9保持，原waiting/完成Run、最新三条分支Run及归档、账号/凭据/instance配置前后保持；不操作数据库或冻结状态。
 - 线上正式预览API核对development/qa/report分别642/587/758字符，完整角色均保留；临时草稿同时含原生开发者指令和角色、用户消息分离，正式图前后相同。实际 `/workflows.js` SHA256 `c15c171a49afeeadebd43373c1026360f592a52b323695c06918e000772ffc6f` 与已验维护源一致。线上回执私有保存于部署目录 `full-system-preview-live.json`。本机真实Chromium与部署后的API/字节核验分列；桌面浏览器连接一次30秒超时后停止，不声称本轮独立登录线上浏览器实测。
 - 仅平台开发分支提交/推送，无Platform PR/main合并；模板定义未变化，不重复测试仓升级PR或新建产品Run。既有产品PR49/55及产品/供应商验收结论不变，定时任务保持暂停。
+
+### 2026-10-24 · 三个Agent角色提示词改为可维护Markdown
+
+用户指出当前维护工作流的提示词是一整段，不便阅读。维护源 `3c0a601cabc187ea25308839def30ff18d6e8a77` 把研发、独立QA和交付报告的角色指令分别放入 `prompts/sandbox-development.md`、`sandbox-qa.md`、`sandbox-report.md`，公共归档要求放入 `sandbox-common.md`。生成器读取正文并写入节点角色指令；职责、步骤、失败处理、产物清单、报告字段和交接目标通过标题及列表组织，不引入新阶段或配置层。
+
+- 按原指令逐项核对语义；独立复查指出QA应继续禁止修改全部产品，已将“不修改产品代码”恢复为“不修改产品”。模型、权限、工具、代码和连线均不改。
+- 现有133项工作流模板回归24.379s、25项沙箱相关回归5.817s及最终生成/导出2项1.665s均通过，ruff检查/格式通过。日志保存在忽略目录 `.data/opensandbox-verification/markdown-agent-prompts/`：模板日志34721bytes/SHA256 `c14a9ead114762f2b1531d9feae111ff1f62a4d447d18a86a21ef8f78a439d7d`；沙箱日志8940bytes/SHA256 `2fa6c50a7a7cc9607fade64f31b44a19da9f5c0bcdeab2d3018039d50365de8b`；最终日志477bytes/SHA256 `f4b9ea304d60187ab676000136df52b20ce47eae8906d8d54d44b3c7b6d57cfb`。本次未改平台Go/前端，不把前轮完整门禁当本轮新执行。
+- 先核112正式图revision9的三份原指令摘要与维护源一致、没有执行中会话，再通过正式PUT更新为revision10；只改三份 `agent.instructions`。研发/QA/报告正文分别604/472/693字符，完整系统预览均包含原文及平台约束。再次GET逐字核对已保存Markdown标题、换行和列表；6条旧Run完整快照前后相同。平台实际health仍为 `ffcd93d106d15ad673297c1939133caa8e8d26bc`，未重启或修改数据库。私有升级/预览回执留在112部署目录 `markdown-agent-prompts-upgrade.json`。
+- 唯一维护源标准导出151对象，新增四份Markdown文件；逐项检查旧SOURCE/项目Git对象，未覆盖测试仓定制。[模板PR58](https://github.com/big91987/model-relay/pull/58) head `eaf370f87ceb7c875eb39a00eddbb3f3b183e1a5`、7文件，GitGuardian SUCCESS，已按Harness升级授权精确合并为 `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。源仓仅开发分支提交/推送，无Platform PR或main合并。
+- 这是提示词结构整理、模板装载和正式配置预览核验，没有新增产品Pipeline运行、产品验收或供应商实测结论；旧产品PR49/55及冻结任务状态不变，定时任务保持暂停。
