@@ -84,6 +84,26 @@ func TestCodexTransportResumesIdentityAndKeepsInteractiveApproval(t *testing.T) 
 }
 
 func TestNativeTransportUsesRequestedModelAndRefusesFallbackBeforeTurn(t *testing.T) {
+	s := testStore(t)
+	s.initAuth("password")
+	token, err := s.UserToken("admin", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent := Agent{Executor: "codex", Model: "gpt-6.1-sol", Instructions: "Role from visible draft", NativeConfig: "developer_instructions='Native guidance'"}
+	w := independentWorkflow(t, map[string]any{"executor": agent.Executor, "instructions": agent.Instructions, "native_config": agent.NativeConfig})
+	w.ContextVersion = 2
+	w.Nodes[0].Prompt = ""
+	response := requestJSON(t, NewServer(s, nil, nil, "password", "http://localhost"), "POST", "/api/workflows/preview", token, map[string]any{"workflow": w, "node_id": "worker"})
+	if response.Code != 200 {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	var preview struct {
+		System string `json:"system_prompt"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &preview); err != nil || preview.System == "" {
+		t.Fatal(err, response.Body.String())
+	}
 	for _, resumed := range []bool{false, true} {
 		for _, actualModel := range []string{"gpt-6.1-sol", "different-model"} {
 			t.Run(fmt.Sprintf("%s/resume=%t", actualModel, resumed), func(t *testing.T) {
@@ -111,6 +131,9 @@ func TestNativeTransportUsesRequestedModelAndRefusesFallbackBeforeTurn(t *testin
 						case "initialize":
 							encoder.Encode(map[string]any{"id": packet.ID, "result": map[string]any{}})
 						case "thread/start", "thread/resume":
+							if packet.Params["developerInstructions"] != preview.System {
+								t.Error("native instructions differ from complete preview", packet.Params["developerInstructions"], preview.System)
+							}
 							if packet.Params["model"] != "gpt-6.1-sol" || (!resumed && packet.Params["allowProviderModelFallback"] != false) || (resumed && packet.Params["threadId"] != "new-stable-thread") {
 								t.Error("requested model could be replaced by project/default configuration", packet.Params)
 							}
@@ -126,7 +149,7 @@ func TestNativeTransportUsesRequestedModelAndRefusesFallbackBeforeTurn(t *testin
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				persistedThread := ""
-				conversation := Conversation{ID: "model-binding", Snapshot: Agent{Executor: "codex", Model: "gpt-6.1-sol"}}
+				conversation := Conversation{ID: "model-binding", Snapshot: agent}
 				if resumed {
 					conversation.ThreadID = "new-stable-thread"
 				}

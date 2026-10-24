@@ -24,10 +24,12 @@ func (h *Server) workflowContextRoutes() {
 				fail(w, ErrForbidden)
 				return
 			}
-			if _, err := h.store.Workflow(c, in.Workflow.ID); err != nil {
+			saved, err := h.store.Workflow(c, in.Workflow.ID)
+			if err != nil {
 				fail(w, err)
 				return
 			}
+			in.Workflow = saved
 		}
 		if err := validateWorkflow(in.Workflow); err != nil {
 			fail(w, err)
@@ -38,15 +40,40 @@ func (h *Server) workflowContextRoutes() {
 			fail(w, errors.New("preview requires an Agent node"))
 			return
 		}
+		if in.Workflow.ContextVersion == 0 {
+			fail(w, errors.New("此工作流的系统提示词包含运行时任务，请在运行记录中查看实际系统提示词"))
+			return
+		}
+		if !nodeAgentAllowed(c, n) {
+			fail(w, ErrForbidden)
+			return
+		}
+		var agent Agent
+		if n.Agent != nil {
+			agent = *n.Agent
+		} else {
+			var err error
+			agent, err = h.store.Agent(n.AgentID)
+			if err != nil {
+				fail(w, err)
+				return
+			}
+		}
+		system, err := codexSystemPrompt(agent, false)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		redact := func(text string) string { return text }
+		if h.codex != nil {
+			redact = h.codex.redactor(agent)
+		}
 		prompt, err := workflowNodeInstructions(in.Workflow, n)
 		if err != nil {
 			fail(w, err)
 			return
 		}
-		preview := map[string]any{"input": prompt + "\n\n## 当前任务\n运行时追加用户任务、修正及必要上游回执。", "context_version": in.Workflow.ContextVersion}
-		if in.Workflow.ContextVersion < 2 {
-			preview["session_prompt"] = prompt
-		}
+		preview := map[string]any{"system_prompt": redact(system), "input": redact(prompt + "\n\n## 当前任务\n运行时追加用户任务、修正及必要上游回执。"), "context_version": in.Workflow.ContextVersion}
 		respond(w, 200, preview)
 	}))
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}/steps/{seq}/context", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {

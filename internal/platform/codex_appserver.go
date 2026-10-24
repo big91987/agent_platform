@@ -183,12 +183,10 @@ func (x *Codex) executeAppServerTransport(ctx context.Context, c Conversation, m
 			return e
 		}
 		options := map[string]any{"cwd": workspace, "approvalPolicy": nativeConversationApprovalPolicy(c), "sandbox": nativeSandboxMode(c), "approvalsReviewer": nativeApprovalReviewer(c.Snapshot)}
-		guidance, _ := config["developer_instructions"].(string)
 		if c.ReadOnly {
 			options["sandbox"] = "read-only"
-			guidance += "\nCurrent workspace access is read-only. Do not modify workspace files. Use registered management tools to pass corrections or stop/redirect delegated work."
 		}
-		options["developerInstructions"] = strings.TrimSpace(guidance + "\n\nThis turn is a conversation with the user in Agent Platform. Reply in natural language/Markdown unless the current user input explicitly requests a structured format. Do not apply an output envelope from a different integration context to this conversation.")
+		options["developerInstructions"] = codexDeveloperInstructions(config, c.ReadOnly)
 		if c.Snapshot.TrustHooks {
 			options["config"] = map[string]any{"bypass_hook_trust": true}
 		}

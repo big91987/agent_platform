@@ -21,13 +21,14 @@ test('clicking an Agent edge opens its inline target settings without a second d
 test('preview uses unsaved visible role instructions without mutating or saving the graph',async()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
  el('#wf-node-name').value='研究';el('#wf-agent-instructions').value='实时职责草稿';el('#wf-node-x').value='0';el('#wf-node-y').value='0';el('#wf-continuation').value='3';el('#wf-timeout').value='14400';
- ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push({path,method,body});return {session_prompt:'展开后的工作说明',input:'预览输入'}}",ctx);
+ ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push({path,method,body});return {system_prompt:'原生开发者指令\\n角色职责\\n平台约束',input:'预览输入'}}",ctx);
  await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
  assert.equal(ctx.requests.length,1);
  assert.equal(ctx.requests[0].path,'/api/workflows/preview');
  assert.equal(ctx.requests[0].body.workflow.nodes[0].agent.instructions,'实时职责草稿');
  assert.equal(vm.runInContext('a.agent.instructions',ctx),'');
- assert.match(el('#wf-preview-content').innerHTML,/预览输入/);
+ assert.equal(el('#wf-preview-system').value,'原生开发者指令\n角色职责\n平台约束');
+ assert.equal(el('#wf-preview-input').value,'预览输入');
  assert.match(el('#wf-preview-content').innerHTML,/readonly/);
  assert.equal(vm.runInContext('editor.panelTab',ctx),'preview');
 });
@@ -57,7 +58,7 @@ test('node user input permission is visible and unsaved preview respects disabli
  assert.match(el('#wf-inspector').innerHTML,/wf-allow-user-input/);
  for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  el('#wf-allow-user-input').checked=false;
- ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push(body);return {session_prompt:'预览',input:'输入'}}",ctx);
+ ctx.requests=[];vm.runInContext("api=async(path,method,body)=>{requests.push(body);return {system_prompt:'预览',input:'输入'}}",ctx);
  await vm.runInContext('previewWorkflowNode(editor,a)',ctx);
  assert.equal(ctx.requests[0].workflow.nodes[0].allow_user_input,false);
 });
@@ -73,7 +74,7 @@ test('closing a dirty node can continue editing or explicitly discard changes',(
  for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  ctx.resolvePreview=null;vm.runInContext("api=()=>new Promise(resolve=>resolvePreview=resolve);pending=previewWorkflowNode(editor,a)",ctx);
  vm.runInContext('editor.selected=c.id;renderWorkflowInspector(editor)',ctx);
- ctx.resolvePreview({session_prompt:'上一个节点过期预览',input:'过期输入'});await vm.runInContext('pending',ctx);
+ ctx.resolvePreview({system_prompt:'上一个节点过期预览',input:'过期输入'});await vm.runInContext('pending',ctx);
  assert.doesNotMatch(el('#wf-preview-content').innerHTML,/过期预览/);
 });
 test('Connector parameters update only on Apply',()=>{
@@ -84,7 +85,7 @@ test('Connector parameters update only on Apply',()=>{
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
  for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  ctx.requests=[];vm.runInContext("api=()=>new Promise((resolve,reject)=>requests.push({resolve,reject}));old=previewWorkflowNode(editor,a);fresh=previewWorkflowNode(editor,a)",ctx);
- ctx.requests[1].resolve({input:'NEW SUCCESS'});await vm.runInContext('fresh',ctx);
+ ctx.requests[1].resolve({system_prompt:'NEW SYSTEM',input:'NEW SUCCESS'});await vm.runInContext('fresh',ctx);
  ctx.requests[0].reject(new Error('OLD ERROR'));await vm.runInContext('old',ctx);
  assert.match(el('#wf-preview-content').innerHTML,/NEW SUCCESS/);assert.doesNotMatch(el('#wf-preview-content').innerHTML,/OLD ERROR/);
 });
@@ -92,7 +93,7 @@ test('changing the same node outgoing paths invalidates its in-flight preview',a
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
  for(const [id,value]of Object.entries({'#wf-node-name':'Agent','#wf-node-prompt':'{{handoff}}','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  ctx.resolveOld=null;vm.runInContext("api=()=>new Promise(resolve=>resolveOld=resolve);old=previewWorkflowNode(editor,a);graph.removeEdge(0);workflowChanged(editor);renderWorkflowInspector(editor)",ctx);
- ctx.resolveOld({session_prompt:'REMOVED TARGET',input:'old'});await vm.runInContext('old',ctx);
+ ctx.resolveOld({system_prompt:'REMOVED TARGET',input:'old'});await vm.runInContext('old',ctx);
  assert.doesNotMatch(el('#wf-preview-content').innerHTML,/REMOVED TARGET/);
 });
 test('save submits the visible independent execution settings and migrates unopened legacy nodes',async()=>{

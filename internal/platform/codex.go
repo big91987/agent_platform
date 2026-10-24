@@ -88,6 +88,28 @@ func executorEnv(a Agent, home string) ([]string, error) {
 	sort.Strings(out)
 	return out, nil
 }
+
+// Shared by thread start/resume and prompt inspection. Keep the wire value identical.
+func codexDeveloperInstructions(config map[string]any, readOnly bool) string {
+	guidance, _ := config["developer_instructions"].(string)
+	if readOnly {
+		guidance += "\nCurrent workspace access is read-only. Do not modify workspace files. Use registered management tools to pass corrections or stop/redirect delegated work."
+	}
+	return strings.TrimSpace(guidance + "\n\nThis turn is a conversation with the user in Agent Platform. Reply in natural language/Markdown unless the current user input explicitly requests a structured format. Do not apply an output envelope from a different integration context to this conversation.")
+}
+
+func codexSystemPrompt(a Agent, readOnly bool) (string, error) {
+	raw, err := nativeConfig(a)
+	if err != nil {
+		return "", err
+	}
+	var config map[string]any
+	if err := toml.Unmarshal(raw, &config); err != nil {
+		return "", err
+	}
+	return codexDeveloperInstructions(config, readOnly), nil
+}
+
 func nativeConfig(a Agent) ([]byte, error) {
 	cfg := map[string]any{}
 	if a.NativeConfig != "" {
