@@ -3567,3 +3567,16 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 - **标准交付：** 5580800bytes精确源码归档，SHA256 `9959919a7cf304bc71318dafef16be877616f9d791000791f5459e38ea353351`；112标准Linux build/install均exit0，二进制SHA256 `16a51de32b3d742b0d84fa878974dc133220918f0a8aaf6408b85f47541b7ae5`。实际health为4d466cb；正式主图revision10逐值保持，旧waiting/完成Run、既有三条原生分支Run/归档、账号/私有配置/instance均保持。线上workflows.js、workflow-runs.js、workflow-model.js分别SHA256 `790bc2c2518635633b788ef0e56fb937178578f010d82e7d98d7fc8fb3678f38`、`4b84129925f8fc946a201ca2822c732509061384b8e91fe39f1f18a8f816d9ac`、`57ea3f058613deeb7551c9ea5d3656275a73e9df67eef1b883c92edeabeb2900`，与精确源码逐字一致。本机浏览器验证与线上API/资源核验分列，未声称新增线上独立浏览器实操。
 - **真实受支持入口：** 初次隔离诊断脚本误用了不存在的per-workflow启动URL，HTTP405；已保存原错误，核对原request_id仍404、临时图已创建但没有Run，再用正式POST /api/workflow-runs启动同图，未重复创建/重放。唯一Run `72238948c5937bce4fc7172c394a2126`，临时图 `f74f167039e968601cbca13a733bd960`。保存前另以../outside确认400拒绝。7步completed：prepare/next/verify在/workspace exit0，child在/workspace/services/api exit0，普通shell文本未执行、引用仅记录非空布尔、WORKFLOW_INPUT_FILE可读；下节点不继承3个选定变量。linked/missing目录分别exit1，规则按预期非零交接；最终确认MUST_NOT_RUN未产生，不能描述为全部命令exit0。
 - **留存与清理：** proof.json、services/api/relative.txt、isolation.json、final.json共4件377bytes，实际内容/size/SHA逐个匹配。通过正式release后environment=released，四文件再次下载匹配；通过DELETE清理临时图，Run完整记录与归档保持，正式图不变。安全回执保存于忽略目录 `.data/opensandbox-verification/execution-workspace/` 及112原部署目录；无产品修改/供应商调用/产品QA新结论。平台仅开发分支提交推送，没有Platform PR或main合并；现有模板无需新字段即可继续使用，不重复测试仓升级PR。定时任务保持暂停。
+
+
+### 2026-10-24 · 工作目录收敛为一个可编辑路径框
+
+用户指出根目录、相对工作目录和完整执行目录重复展示。维护源 `d9a9564050d825b02c3ae00e2364d94b94828681` 删除这组重复事实与提示，只保留“工作目录”输入框，默认值 `/workspace`，直接编辑沙箱内完整路径；目录共享/隔离说明放入现有问号帮助。界面保存时转换为原有工作区相对cwd，执行边界和归档基准不变；不增加新配置格式或兼容分支。非法路径不能应用，模式切换保留未完成的输入，取消不影响已保存配置。
+
+75项前端回归及真实Chromium15.325s通过，截图已检查；112标准build/install与实际health均为d9a9564，主图revision10及历史/配置保持。正式API隔离Run `b2857346f804bd017dd104938ab47f33` 7步completed：子目录真实执行，两个错误目录预期exit1，4件377bytes产物释放环境后仍可下载且摘要一致；临时图已删除，历史保留。线上前端与精确源码逐字一致。源码仅开发分支提交推送，未发产品PR/部署或改变产品QA结论，定时任务继续暂停。详细证据见workflows-verification.md本节。
+
+本轮只改前端目录输入和既有帮助文案，未改Go执行实现，未将前轮完整verify当本轮新执行。最终前端日志7351bytes/SHA256 `043d41ceccae756cb10621c9d5197a0882386a83d7ced942679bcd789de2ff67`；Chromium日志45bytes/SHA256 `6dcdb2e7697a250950f813acd59f1fd5e4e61ee8a6eac83c59f63d5f9e921edb`。首次浏览器启动受本机端口沙箱限制，获得执行权限后同一测试真实通过；新增草稿用例最初错误地切到新code模式而非原command模式，修正用例后保留原断言并通过，不作为产品缺陷。
+
+精确源码包5591040bytes/SHA256 `ba12b575896e52ebd61e53e11116cccb01003c1eccc779d5c8283e01e1f4f989`；标准Linux构建、安装exit0，二进制SHA256 `bea76ca51a0e4dbc2a7ad94b958b5be98abad2f6cb1d443ee1245941eb981246`。正式主图revision10、旧waiting及完成Run、前轮72238948及三条原生分支Run/归档和私有配置前后相同。线上workflows.js SHA256 `0f6119d808cff7aae562f47a6e9ead3e000d9080a85c3b4fbbf98430617de2dc`；其余两份资源与原维护源一致。
+
+本轮唯一临时图 `7f208fc56757f8d529640cf340c26f06`，唯一Run如上：四个正向进程exit0，链接cwd与缺失cwd两步exit1，最终确认项目副作用标记不存在。普通变量按原文、管理员引用非空、下一节点不继承选定变量、根目录产物均经真实沙箱验证。四文件逐内容/size/SHA核对后正式release，释放后再次核对下载，DELETE临时图后Run及归档保持。证据存于忽略目录 `.data/opensandbox-verification/execution-directory-simple/` 及112原部署目录。本机浏览器与线上API/资源验证分列，不声称新增线上独立浏览器实操或产品验收。
