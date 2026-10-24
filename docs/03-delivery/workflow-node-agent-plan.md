@@ -1796,3 +1796,12 @@ Issue54 / Run197ab169bc1cad067466300038ab6fac已16步completed（01:15:18.392Z�
 - 先核112正式图revision9的三份原指令摘要与维护源一致、没有执行中会话，再通过正式PUT更新为revision10；只改三份 `agent.instructions`。研发/QA/报告正文分别604/472/693字符，完整系统预览均包含原文及平台约束。再次GET逐字核对已保存Markdown标题、换行和列表；6条旧Run完整快照前后相同。平台实际health仍为 `ffcd93d106d15ad673297c1939133caa8e8d26bc`，未重启或修改数据库。私有升级/预览回执留在112部署目录 `markdown-agent-prompts-upgrade.json`。
 - 唯一维护源标准导出151对象，新增四份Markdown文件；逐项检查旧SOURCE/项目Git对象，未覆盖测试仓定制。[模板PR58](https://github.com/big91987/model-relay/pull/58) head `eaf370f87ceb7c875eb39a00eddbb3f3b183e1a5`、7文件，GitGuardian SUCCESS，已按Harness升级授权精确合并为 `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。源仓仅开发分支提交/推送，无Platform PR或main合并。
 - 这是提示词结构整理、模板装载和正式配置预览核验，没有新增产品Pipeline运行、产品验收或供应商实测结论；旧产品PR49/55及冻结任务状态不变，定时任务保持暂停。
+
+
+### 2026-10-24 · 执行位置与节点环境正式交付
+
+执行节点现在直接展示执行环境、Run工作区根目录、可编辑的工作区相对cwd及完整执行路径；普通变量和管理员引用分开配置。`execution.cwd`、`env`、`env_refs`在保存/重载、应用/取消和模式切换中保持，MCP明确由工具服务管理位置与环境。运行记录展示本次派发目录及变量名/来源，不返回引用的值。结果文件与归档仍以Run工作区根目录为基准。
+
+维护源 `4d466cbb42093624e87ee997b95d8da586f7f3c8` 已推送独立开发分支并标准构建安装至112:8795，实际health与三份前端资源逐字一致；正式主图revision10、旧waiting/完成Run、归档和私有配置保持。通过正式API创建唯一隔离Harness Run `72238948c5937bce4fc7172c394a2126`：7步completed，真实子目录执行、普通值原文传入、引用存在、下一节点回根目录且不继承变量；缺失/链接目录两步预期exit1并证实未运行项目命令。4件377bytes产物逐文件核对内容及SHA，正式释放环境后再次下载一致，临时工作流已删除、Run和归档历史保留。
+
+本轮完整标准门禁通过；末尾前端草稿键处理增量又单独通过75项前端及真实Chromium16.060s，独立复查无剩余Important/Critical。完整测试与部署细节见 `workflows-verification.md` 同日记录。本轮是平台执行能力回归，没有新增产品或供应商验收，没有Platform PR/main合并，定时任务保持暂停。
