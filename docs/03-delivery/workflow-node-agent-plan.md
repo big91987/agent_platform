@@ -1850,3 +1850,8 @@ UTC10-24 16:01:41Z–16:13:58Z的tests5真实exit2，正式API全文1081662bytes
 维护者只读核对冻结main的tests/verify/main.go:179，12分钟由项目验证器硬编码；已挂载docs/workflow/requirements.md要求真实make verify及完整回执，没有12分钟整套性能AC。当前2CPU是容量线索，未证明唯一慢因；OpenSandbox当前SDK不提供原Run资源调整入口，未使用Docker热改、手改图/检查点、换环境或扩权。原Issue明确禁止改变原固定门禁，已向用户提出是否允许按实测制定显式有界时限的选择，未收到选择前不执行依赖动作；即使后续批准，也保留本次12分钟失败，不能改判历史或删弱断言。
 
 Issue59具名Builder阻塞通知已发布并取得远端回执 https://github.com/big91987/model-relay/issues/59#issuecomment-6386571212；本轮尚无独立QA、确认、同版报告/新草稿PR或释放后下载结果。归档95件保持，当前待处理材料仍在同Run环境，不能当成已归档或擅自释放。定时任务保持暂停。
+
+
+16:20:04Z研发6的wait_for_input(kind=blocked)真实accepted，16:20:14回合结束、16:20:15原生停止，Run/step6正式waiting、会话idle、无待审批；这次等待与此前有queued输入时的拒绝分别保留。平台机器人于16:20:17Z将原生阻塞回复写至Issue59评论6386569189，并附原会话入口；Builder说明评论6386571212已远端核验。没有新增resume/同版全套重跑。
+
+经正式conversation文件API另行读取本节点6件2170347bytes原始材料，与Agent自带inventory逐size/SHA匹配（清单SHA42260dfb010050e9054da0170bdea82a0256565cb70e9016177f1fd80b4c6003），另存私有维护诊断目录。第二次固定runner日志1060657bytes/SHA40d85c22fd8e1f9f5a067488e2c13fc63dbc151dd23eff88eaa7451ebdb2a885与state完全匹配，source_before=after=4b4e4c07…，source/candidate_unchanged、owned_group_absent为真，candidate_removed；gate-1/runner1/make2保持。此为维护者只读保存，**不是**本节点handoff归档或释放后下载；等待阶段没有Result.artifacts，现有正式archive仅覆盖此前95件，未释放仍待接续的环境。当前结论整链Blocked/固定门禁未过，后续QA/确认/PR不可跳过；需先获得执行时限选择再继续依赖动作。
