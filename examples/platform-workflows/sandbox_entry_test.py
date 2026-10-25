@@ -164,7 +164,10 @@ class SandboxEntryTest(unittest.TestCase):
                 first = forward(self.config, self.client, 7, github_call=self.github)
                 args = self.client.start_workflow.call_args
                 self.assertEqual(
-                    args.args[1], self.issue["title"] + "\n\n" + self.issue["body"]
+                    args.args[1],
+                    self.issue["title"]
+                    + "\n\nIssue：https://github.com/owner/repo/issues/7\n\n"
+                    + self.issue["body"],
                 )
                 self.assertEqual(
                     args.kwargs["request_id"], "github:owner/repo:issue:123"

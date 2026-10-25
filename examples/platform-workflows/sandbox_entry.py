@@ -94,7 +94,9 @@ def forward(config, client, number, comment_id=0, *, github_call=None):
         print("Sandbox entry: submit original Issue to platform", flush=True)
         run = client.start_workflow(
             config["workflow_id"],
-            issue["title"] + "\n\n" + (issue.get("body") or ""),
+            issue["title"]
+            + f"\n\nIssue：https://github.com/{repo}/issues/{number}\n\n"
+            + (issue.get("body") or ""),
             workspace_path="",
             request_id=key,
             parameters=parameters,
