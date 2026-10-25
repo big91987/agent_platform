@@ -10,7 +10,7 @@ from sandbox_publish import publish
 
 
 class PublicationBoundaryTest(unittest.TestCase):
-    def fixture(self, root):
+    def fixture(self, root, project_files=()):
         def git(*args):
             return subprocess.check_output(
                 ["git", "-C", str(root), *args], stderr=subprocess.DEVNULL, text=True
@@ -21,6 +21,10 @@ class PublicationBoundaryTest(unittest.TestCase):
         git("config", "user.email", "fixture@example.invalid")
         (root / "reviewed.txt").write_text("base")
         (root / "unreviewed.txt").write_text("base")
+        for name in project_files:
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("base project rules\n")
         git("add", ".")
         git("commit", "--quiet", "-m", "base")
         head = git("rev-parse", "HEAD")
@@ -44,6 +48,94 @@ class PublicationBoundaryTest(unittest.TestCase):
             )
         )
         return git, report
+
+    def test_reviewed_project_dotfiles_are_published_with_exact_bytes(self):
+        for name in (".gitignore", ".project/contracts.md"):
+            with self.subTest(path=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                git, report = self.fixture(root, (name,))
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("Reviewed project rules\n")
+                value = json.loads(report.read_text())
+                value["files"] = [name]
+                report.write_text(json.dumps(value))
+                original = subprocess.run
+
+                def stop_before_network(args, **kwargs):
+                    if "push" in args:
+                        raise RuntimeError("fixture network boundary")
+                    return original(args, **kwargs)
+
+                with (
+                    patch("sandbox_publish.Path.cwd", return_value=root),
+                    patch(
+                        "sandbox_publish.subprocess.run",
+                        side_effect=stop_before_network,
+                    ),
+                ):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "fixture network boundary"
+                    ):
+                        publish("owner/project", report)
+                self.assertEqual(
+                    b"Reviewed project rules\n",
+                    subprocess.check_output(
+                        ["git", "-C", str(root), "show", "HEAD:" + name]
+                    ),
+                )
+                self.assertEqual("", git("diff", "--cached", "--name-only"))
+
+    def test_reviewed_hidden_credentials_remain_rejected_before_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root, (".env",))
+            (root / ".env").write_text("private-fixture")
+            value = json.loads(report.read_text())
+            value["files"] = [".env"]
+            report.write_text(json.dumps(value))
+            index = (root / ".git/index").read_bytes()
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                with self.assertRaisesRegex(ValueError, "credentials/cache"):
+                    publish("owner/project", report)
+            self.assertEqual(index, (root / ".git/index").read_bytes())
+            self.assertFalse((root / "docs/harness").exists())
+
+    def test_hidden_files_added_after_frozen_baseline_are_rejected_before_writes(self):
+        for name, committed in ((".env.local", False), ("config/.netrc", True)):
+            with self.subTest(path=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                git, report = self.fixture(root)
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("private-fixture")
+                if committed:
+                    git("add", "--", name)
+                    git("commit", "--quiet", "-m", "post-baseline hidden file")
+                value = json.loads(report.read_text())
+                value["files"] = [name]
+                report.write_text(json.dumps(value))
+                index = (root / ".git/index").read_bytes()
+                head = git("rev-parse", "HEAD")
+                original = subprocess.run
+
+                def stop_before_network(args, **kwargs):
+                    if "push" in args:
+                        raise AssertionError("hidden input reached network boundary")
+                    return original(args, **kwargs)
+
+                with (
+                    patch("sandbox_publish.Path.cwd", return_value=root),
+                    patch(
+                        "sandbox_publish.subprocess.run",
+                        side_effect=stop_before_network,
+                    ),
+                ):
+                    with self.assertRaisesRegex(ValueError, "fixed baseline"):
+                        publish("owner/project", report)
+                self.assertEqual(index, (root / ".git/index").read_bytes())
+                self.assertEqual(head, git("rev-parse", "HEAD"))
+                self.assertFalse((root / "docs/harness").exists())
 
     def test_precommitted_unreviewed_change_is_rejected_before_network(self):
         with tempfile.TemporaryDirectory() as directory:

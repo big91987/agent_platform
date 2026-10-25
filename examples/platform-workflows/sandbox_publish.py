@@ -37,7 +37,7 @@ def publish(repository, report):
     for name in files:
         if (
             not isinstance(name, str)
-            or name.startswith((".", "/"))
+            or name.startswith("/")
             or ".." in Path(name).parts
         ):
             raise ValueError("invalid reviewed file")
@@ -74,6 +74,22 @@ def publish(repository, report):
         r"[0-9a-f]{40}", identity["commit"]
     ):
         raise ValueError("publication lacks pinned repository identity")
+    for name in files:
+        if (
+            any(part.startswith(".") for part in Path(name).parts)
+            and git(
+                "ls-tree",
+                "-r",
+                "--name-only",
+                identity["commit"],
+                "--",
+                ":(literal)" + name,
+            )
+            != name
+        ):
+            raise ValueError(
+                "hidden publication file is not in the fixed baseline: " + name
+            )
     subprocess.run(
         ["git", "merge-base", "--is-ancestor", identity["commit"], "HEAD"],
         cwd=root,

@@ -2,7 +2,7 @@
 
 ## 当前进度
 
-最新（2026-10-25 14:20UTC）：Issue63原Run已研发7→tests8，14:18:35.799Z新固定门禁启动。本轮仅改旧冷却测试为受控时钟，产品/断言不变，171源6316a232…6a7e0；152件交接归档后接续。新完整结果/独立QA/产品PR待定，首轮QA No-Go、tests6真实失败不覆盖。
+最新（2026-10-25 14:48UTC）：Issue63 tests8完整冷make verify exit0/20分42.747秒节点驻留，171源6316a232…同版，独立QA9正在复验。Builder发布前发现冻结发布器拒绝已跟踪点文件的通用缺口；唯一维护源已红绿修复、13边界回归和独立复审通过，完整源验证exit0（136模板/Go race96.160秒等）。旧Run工具包未替换，产品PR仍待；QA结论与Harness发布阻塞分开。
 
 更新：2026-10-25。112:8795平台实际版本 `d9a9564050d825b02c3ae00e2364d94b94828681`、正式Workflow `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11。定时任务保持暂停；本轮由用户直接授权试验真实产品功能，从仓库Issue到功能PR，评估耗时/质量并留存QA证据。
 
@@ -36,6 +36,8 @@ GitHub bot big91987-agent-platform-bot[bot]已原样反馈No-Go评论6398235975�
 
 13:44:11.914Z研发正式wait_for_input预算阻塞、13:44:24.112Z原生stopped。严格旧v2公式1577.2881≥1500而停止，不是新完整门禁实际失败。rework-qa63-01.md SHA7eb1717b1f8a6a2166ba4a532b5dcd412a51874dd66d9a4013ec55a0e187a6be、budget.json SHAfaead4fe00634faba2ab9d2ef40c8578141ee1b8734f373a2b1baa1a514e6e41保留原blocked记录。Pipeline提出改用本Run tests3实际主gate成本；Builder核原计时/六文件前提及冻结v2原SHA，正式User Input18223（issue63:builder:budget-review:1、duplicate=false）确认仅成本估计更新：保守(1215.138100+46.759+91.440)×1.10＝1488.670810秒，余11.329190，连两个含旧成本完整命令也重复入账且全额加10%；不是功能通过或运行保证。要求保留旧原件、另记补充口径、原25/30分钟与2480规模/效果阈值/全部阶段不变，满足前提则原入口交测，不预热/弱断言/盲求绿。新源必须真实新门禁及QA，不能借旧绿色放行。
 
+2026-10-25 14:24UTC补充：研发7正式归档152件后，2/4/5/7共459件92430454bytes全部下载核size/SHA，manifest SHAacbfb59c4f0a3792c759956e1120c8574a874d635362a1ae1ae2a0daca38b235。第7轮handoff149引用全核；source-snapshot按原路径和精确字节长度还原171件并独立复算全源6316a232…6a7e0，将唯一routing_test.go替回归档before原字节即还原tests6全源7f98fee…f69e0，证明唯一新差异，无需相信Agent自报。原两次红与预算阻塞仍保留，tests8尚无终态；这些是证据完整性核验，不代QA验收。
+
 维护观察：正式工作区全清单API本轮返回400“workspace file is unavailable, changed during reading, or exceeds the size limit”，未确定是扫描上限或其他边界；按原生明确路径的正式文件API可读取全部上述证据。未绕目录权限/改运行副本；后续平台文件清单可用性需定位，独立归档/已保留179件下载未受影响。
 
 旧Issue51/Run6f3f26…仍waiting/seq2，快照environment.ready，但正式文件读取已返回OpenSandbox lookup404。停止该旧Run的动作被自动审批以缺少明确授权/可能影响接续拒绝，未执行；已放弃停止并保留旧记录。本轮用独立新Issue/环境关联接续，不偷偷重建、恢复或改库；旧等待TTL状态缺口仍未修。新任务不携带历史真实供应商密钥，真实供应商和生产性能与受控实验分开。
@@ -44,7 +46,15 @@ GitHub bot big91987-agent-platform-bot[bot]已原样反馈No-Go评论6398235975�
 
 2026-10-25 14:20UTC：研发7于14:15:43.756Z正式handoff→tests接受152件，14:15:52.378Z原生停止，14:18:35.799Z归档后tests8启动；研发7阶段驻留898.256秒，含163.421秒停止后归档等待。新候选171源6316a232322de48fdce31a4420a872495f9e7ea2237c36e9e2742a4e3566a7e0，原生静态核对仅routing_test.go新增变化，保留故障期间不选中/到期恢复断言；10次race及相关Go、限额、迟到/健康、局部vet定向均exit0，不代完整门禁。tests6唯一runner原日志1069973bytes/SHA7d5029d2addda20056a3a3d8cbaf3ff62f1054e33dab729772fdcd3b918e08fe与state严格匹配；gate_exit2与runner exit_code1分别记录，正式节点exit2，冷node_modules/npm_cache false、source/candidate不变、ownedgroup absent/candidate removed。维护观察器初次误将两个失败退出码都断言2，读原字段后纠正，未改原回执或重跑门禁。研发5handoff127引用逐bytes/SHA核验，QA4原报告在4/5归档中SHA同为f9dd5aec…6a80de。
 
+2026-10-25 14:48UTC：tests8于14:39:18.545Z完成exit0，QA9/conversationa045680d26cee2debfd12284eee0f657同Run自动启动。正式输出1169995bytes/SHA219242268d200152d7c7dc9503bf20bbc570d67b590f278f23f382de6ff32af3至EOF；原runner1133068bytes/SHAf24391a7c9b4194da1b35f3c2e32c5bbc13ee092a12c9fae493bfd037a03764d与state逐字节匹配，主gate14:18:51.403Z–14:39:16.399Z＝1224.995491秒；源码171件6316a232…前后不变，冷node_modules/npm_cache false，未取消/ownedgroup absent/candidate removed。本版完整绿不覆盖tests6红或QA4 No-Go，QA9尚待签署。
+
+发布前通用缺口：冻结main f06上的sandbox_publish.py用name.startswith((".","/"))将实际已跟踪的.trellis项目契约拒绝，GitHub正式读取及真实Git夹具复现；尚未执行发布，不虚称已发布失败。维护源先红后修：点路径必须由固定prepared基线精确跟踪，Git literal路径核对在任何写入前执行；仍拒绝新增隐藏输入、基线后先提交的隐藏输入，保留凭据/链接/忽略规则/索引/完整历史检查。初版去掉点限制被独立复审发现.env.local等秘密暴露风险，未提交/部署该版；收窄后13真实Git边界测试和独立复审无C/I/M，原字节断言已纠正。完整源验证正在运行。最终维护源scripts/verify.sh真实exit0，131917bytes/SHAd0ad4d85aa3278a1c6e611ecd4a6af6c04426d44ea291504c4234de5378b4490；136模板26.064秒、浏览器/SDK/供应链/Go vet-race96.160秒-build全过。此前局部模板suite真实失败仅export子进程写默认Go缓存被本机文件沙箱拒绝，原日志保留；完整命令按测试所需权限运行后取得真实绿，不弱化测试。项目README现有标准路径要求工具包版本经项目评审合入Git，不替换在途冻结脚本；本Run未手改.harness/图/回执，需先保留真实QA证据，再通过标准模板升级及受支持入口接续交付。该归属Harness，不新造产品缺陷。原Issue已Builder具名评论6399053396说明影响、证据、已做和后续。
+
 ## 历史记录
+
+2026-10-25 14:48UTC：tests8于14:39:18.545Z完成exit0，QA9/conversationa045680d26cee2debfd12284eee0f657同Run自动启动。正式输出1169995bytes/SHA219242268d200152d7c7dc9503bf20bbc570d67b590f278f23f382de6ff32af3至EOF；原runner1133068bytes/SHAf24391a7c9b4194da1b35f3c2e32c5bbc13ee092a12c9fae493bfd037a03764d与state逐字节匹配，主gate14:18:51.403Z–14:39:16.399Z＝1224.995491秒；源码171件6316a232…前后不变，冷node_modules/npm_cache false，未取消/ownedgroup absent/candidate removed。本版完整绿不覆盖tests6红或QA4 No-Go，QA9尚待签署。
+
+发布前通用缺口：冻结main f06上的sandbox_publish.py用name.startswith((".","/"))将实际已跟踪的.trellis项目契约拒绝，GitHub正式读取及真实Git夹具复现；尚未执行发布，不虚称已发布失败。维护源先红后修：点路径必须由固定prepared基线精确跟踪，Git literal路径核对在任何写入前执行；仍拒绝新增隐藏输入、基线后先提交的隐藏输入，保留凭据/链接/忽略规则/索引/完整历史检查。初版去掉点限制被独立复审发现.env.local等秘密暴露风险，未提交/部署该版；收窄后13真实Git边界测试和独立复审无C/I/M，原字节断言已纠正。完整源验证正在运行。项目README现有标准路径要求工具包版本经项目评审合入Git，不替换在途冻结脚本；本Run未手改.harness/图/回执，需先保留真实QA证据，再通过标准模板升级及受支持入口接续交付。该归属Harness，不新造产品缺陷。原Issue已Builder具名评论6399053396说明影响、证据、已做和后续。
 
 2026-10-25 14:20UTC：研发7于14:15:43.756Z正式handoff→tests接受152件，14:15:52.378Z原生停止，14:18:35.799Z归档后tests8启动；研发7阶段驻留898.256秒，含163.421秒停止后归档等待。新候选171源6316a232322de48fdce31a4420a872495f9e7ea2237c36e9e2742a4e3566a7e0，原生静态核对仅routing_test.go新增变化，保留故障期间不选中/到期恢复断言；10次race及相关Go、限额、迟到/健康、局部vet定向均exit0，不代完整门禁。tests6唯一runner原日志1069973bytes/SHA7d5029d2addda20056a3a3d8cbaf3ff62f1054e33dab729772fdcd3b918e08fe与state严格匹配；gate_exit2与runner exit_code1分别记录，正式节点exit2，冷node_modules/npm_cache false、source/candidate不变、ownedgroup absent/candidate removed。维护观察器初次误将两个失败退出码都断言2，读原字段后纠正，未改原回执或重跑门禁。研发5handoff127引用逐bytes/SHA核验，QA4原报告在4/5归档中SHA同为f9dd5aec…6a80de。
 
