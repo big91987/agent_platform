@@ -6,7 +6,7 @@
 
 当前任务为 [Issue60](https://github.com/big91987/model-relay/issues/60) / [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275)，基于main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。Pipeline已完成初轮用例/驱动检查和必要设施修正，项目验证器总时限由12改25分钟、外层仍30分钟，原断言/全部阶段保持。19件研发产物已归档并逐摘要核验。
 
-首次正式tests3已完整执行、exit2，实际Gate取消标记false：迁移、旧界面、路由和console通过，完整自托管旅程在1280px的self-hosted-sse阶段失败；这次不是总时限中断，尚不能判断为产品或环境根因。当前已自动返回development4，由Pipeline定位与实质修复；未进入独立QA、正式确认、报告或本轮草稿PR，不称整链通过。
+首次tests3的非超时SSE采集失败保留，Pipeline修复三个测试文件后，tests5正式完整make verify已exit0：160源码3864d081…、正式全文1103560bytes/e01f395f…、主gate16分20秒、源码/候选前后一致且清理完成。当前qa6/f15cee7b…正在独立复核；尚无QA通过、Owner确认、报告或本轮草稿PR结论。
 
 旧Issue59 Run已stopped，环境经正式释放/核对收敛released；旧95件归档释放后重新下载摘要一致。等待超过4小时TTL后环境消失而平台仍显示ready，是尚未修复的平台生命周期缺口，不能以本轮重新开始冒充永久修复；旧失败保留。旧PR49/55未合并部署，旧业务Issue51状态未改。本阶段继续目标为同版全量门禁、独立QA、正式确认、报告/真实draft PR及释放后留存；不合并或部署产品。
 
@@ -1901,3 +1901,23 @@ Issue60研发00:18:50Z handoff(target=tests)真实accepted、无params、19件�
 完整输出及源码前后摘要fab5f6…保留，自动失败规则返回development4/conversation8ce1db8f0af8abcb1bb28c1ad1a6b781，无手改、重复同版或继续增时限。25分钟确让后段用例执行到原12分钟之后，但不是全量通过或已修复性能；后续由Pipeline定位驱动/产品/环境归属，实质变化后再进入固定门禁。现阶段无QA/确认/报告/新PR。
 
 旧Run正式release→reconcile收敛后再次从归档API全新下载95件15537354bytes，逐size/SHA仍完全一致，清单摘要12b7e71e…不变。此为旧Run释放后留存证据，本轮新Run的释放后校验仍待流程完成。
+
+
+#### Issue60 · SSE采集原层红绿复验与第二次固定门禁
+
+首红原回执已独立核对SSE HTTP200/dispatch_delta1，研发在隔离临时副本真实Go/HTTP/Chromium复现，补足原安全日志未保留的错误：response.text / Network.getResponseBody 无resource数据；不能把补充诊断当原正式回执自带详情。只修改journeys.mjs并新增stream-capture及其回归，共三个增量测试文件；读取原fetch响应clone，保持一次请求和同Request ID、真实UI/流内容/用量费用等断言，不从额外请求或CDP补造结果。5项负向/清理与成功回归、285Node、相关HTTP race及1280/1440/390每视口12步真实自托管旅程原始exit0已核；临时rework_test.go包装只存为go.txt证据，未留编译目录，隔离目录/浏览器已清理，正式根node_modules/npm cache仍absent。针对性绿不等于完整门禁或独立QA通过。
+
+00:46:38Z真实handoff tests accepted、45件、无params；00:46:47回合结束、00:46:48原生停止，归档后00:47:36Z正式tests5启动。返工阶段约14.28分钟驻留，含定位/定向测试/材料，不是净推理。两批64件5786772bytes逐size/SHA核对，清单766b0d9da3f0c1d63628dd7fbe5e97cadd49935bcb2cd6520d61ad3f6971750e；本轮160源码摘要3864d081e13800056ea0f849c598373c1eac8c03443990453752cd70b4be7c4d，旧158/fab5版及失败文件保持。
+
+已核首红runner1071019bytes/SHAf38e0e3bd4f3fc08f1575d4146e275e5f67c0842a4489deaebd2092d520d993d与state匹配、source_before=after、source/candidate_unchanged、owned_group_absent及candidate_removed均真。tests5在途GATE_START00:47:50Z/1500000ms已核，当前只是正式全量复验进行中，不能提前交QA。重新查询实际API health revision仍d9a9564，当前正式图和冻结Run均revision10，研发/QA/report均Codex gpt-6.1-sol，没有热改图、权限、再增时限、重放失败请求或Builder代产品修复。
+
+
+#### Issue60 · 第二次正式固定全量exit0，进入独立QA
+
+tests5实际make verify exit0，完整正式输出1103560bytes/SHAe01f395f0276bba35df538064d762ba7aea68c4edaf806a32b1fc484dfdf4f35，逐页EOF/truncated=false。从正式conversation文件API只读取得主attempt state及verify.log，独立核对runner日志1074290bytes/SHAda15351c27805125c035937e9ab438a17da5f764fb0e9a822245fefe92c31b40与state匹配，gate_exit=runner_exit=0、gate_cancelled=false；160源码3864d081…前后相同，source/candidate_unchanged、owned_group_absent及candidate_removed为真，node_modules/npm cache起点false。该证据为真实完成回执，不是仅看Agent自报；Go模块缓存仍不称全冷。
+
+主gate00:47:50.951Z–01:04:11.032Z约980.081秒（16分20秒），runner00:47:36.911Z–01:04:12.046Z；平台节点还含派发与落盘。浏览器migration15.802、legacy178.558、routing240.367、console36.175、full-console243.808秒均ok=true。由此说明原720秒不足以容纳这套当前实测门禁；没有做跨CPU资源因果对照，不把修改执行预算写成产品性能优化。网关自身超时、限额、费用等业务断言未放宽。
+
+运行自动进入qa6/conversation f15cee7b1902da8d4f5a3e9b04001948，原生真实承接并开始核源码、回执和独立针对性复验，审批0。全量绿色是技术门禁结果；QA、人工确认、同版报告、真实draft PR和新Run释放后下载仍未完成。
+
+另由Builder只读GitHub API核对旧draft PR55的head32213cf63995f6e3b06488bd0ec48c4ed7bc1b24（2026-10-22创建后未更新、open/draft/未合）：已有25分钟verificationGateContext和同fetch响应clone的SSE采集改动，尚未进main。本轮未在起跑前把具体材料准备给Agent，导致重复定位，属于Builder输入准备效率遗漏，不能归为新产品故障或全是环境原因。没有把旧草稿测试结果替代本轮，未合旧PR、未指示Agent抄整包；当前160源码独立实现/重新实测事实保持。计划在正式Owner确认summary向report提供来源事实，不另外投递迟到UserInput打断QA，不改历史“当时未取得”记录或当前Go结论。
