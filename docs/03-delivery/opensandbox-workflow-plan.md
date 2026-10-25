@@ -2,6 +2,8 @@
 
 ## 当前进度
 
+最新（2026-10-25 13:53UTC）：Issue63/唯一Run原地继续。QA4正式Fail后研发5已修复并定向验证，因冻结成本估计触线正式等待；Builder以18223正式输入批准用本Run实测成本补充预算估计，未改25/30分钟硬限制/覆盖/阈值/冻结图。13:52/13:53Z同一原生会话已实际承接；新候选仍待新完整门禁及独立QA，尚无产品PR。
+
 更新：2026-10-25。112:8795平台实际版本 `d9a9564050d825b02c3ae00e2364d94b94828681`、正式Workflow `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11。定时任务保持暂停；本轮由用户直接授权试验真实产品功能，从仓库Issue到功能PR，评估耗时/质量并留存QA证据。
 
 当前任务 [Issue63：同模型上游低延迟优先路由与选择诊断](https://github.com/big91987/model-relay/issues/63)，2026-10-25T11:14:20Z创建（北京时间19:14:20）。用户已在本轮选择中明确确认沿用低延迟优先路由，保持原Issue/Run，不重复启动；需求/设计/预注册测试及性能对照由Pipeline形成并wait_for_input检查，再实现。固定make verify、独立QA关键行为实操、正式确认、报告和同版draft PR闭合；业务PR不自动合并部署。QA报告/真实命令、截图、样本、缺陷和返工记录需归档，释放后再全新下载核验，不能只有QA通过摘要。
@@ -16,17 +18,33 @@ Pipeline v2于11:43:05.507Z正式wait，11:43:17.301Z原生停止。Builder通�
 
 研发定向阶段已产生真实候选和回执：公开管理准备夹具、实验统计计算、现有HTTP/SSE取消不重放及失败恢复、新冷却恢复定向回归有exit0。首次1280px新UI旅程12:15:47Z退出1，三个检查点后TimeoutError；原生12:18:04Z说明驱动使用不存在“概览”导航而实际为“工作台”，属研发测试驱动错误，未据此归为产品缺陷。首次安全回执360bytes/SHA db02484c2cf9160544a92de10ba98375f8e1c1ac0acf5d09764959e19c9c9791经正式文件API只读维护副本保存（不是正式归档）。修正后定向命令exit0，已读390px原回执包含策略保存/重入、普通与SSE同请求日志费用、重启保留/切回、无根溢出和4截图路径；截图尚未由Builder核存。raw trace为隐私Not Run，不伪称脱敏trace。上述均为研发定向验证，不是完整固定门禁或独立QA。
 
-研发2已完成，12:50:23.764Z原生handoff→tests接受104产物；12:50:34.737Z所属进程停止；12:52:25.539Z正式归档完成后tests3启动，13:13:05.037Z完成exit0；独立QA4/conversationf6a5296c28b068cc0a281f44b9609e1e running。研发阶段驻留93分23秒（含设计/等待/恢复/归档），Issue→固定测试启动98分05.54秒，不是Agent净耗时。研发首次完整预注册实验12:32:51Z开始，回执EXPERIMENT_END samples2480/failures0/elapsed195001ms、命令exit0；核心普通/SSE两轮权重快端0.5、均值约60.8–61.0ms，低延迟快端0.9、均值约28.8–28.9ms，心跳陷阱同向；这是受控研发试跑，原始样本尚待正式归档核验，不是供应商或生产收益保证。固定make verify须同版重新执行，独立QA/PR尚未发生。交接后已读取budget.json：新增Go命令28.147秒，按每项max(冻结规划,实测)合1389.228秒，加历史10%漂移98.0081＝1487.2361秒，余12.7639秒；预算估算不当作门禁通过。12:20:27.443Z–12:22:50.543Z原生contextCompaction完成（143.100秒），12:22:57Z同一会话后续命令真实执行；未替换原会话/工作区或重放。原生计数接续后重新起算，按轮保留原值，未估造费用。
+研发2已完成，12:50:23.764Z原生handoff→tests接受104产物；12:50:34.737Z所属进程停止；12:52:25.539Z正式归档完成后tests3启动，13:13:05.037Z完成exit0；独立QA4/conversationf6a5296c28b068cc0a281f44b9609e1e已正式Fail并退回研发5。研发阶段驻留93分23秒（含设计/等待/恢复/归档），Issue→固定测试启动98分05.54秒，不是Agent净耗时。研发首次完整预注册实验12:32:51Z开始，回执EXPERIMENT_END samples2480/failures0/elapsed195001ms、命令exit0；核心普通/SSE两轮权重快端0.5、均值约60.8–61.0ms，低延迟快端0.9、均值约28.8–28.9ms，心跳陷阱同向；这是受控研发试跑，原始样本尚待正式归档核验，不是供应商或生产收益保证。固定make verify须同版重新执行，独立QA/PR尚未发生。交接后已读取budget.json：新增Go命令28.147秒，按每项max(冻结规划,实测)合1389.228秒，加历史10%漂移98.0081＝1487.2361秒，余12.7639秒；预算估算不当作门禁通过。12:20:27.443Z–12:22:50.543Z原生contextCompaction完成（143.100秒），12:22:57Z同一会话后续命令真实执行；未替换原会话/工作区或重放。原生计数接续后重新起算，按轮保留原值，未估造费用。
 
 正式归档104件8140067bytes逐size/SHA全部核对，manifest SHA a22cf93b89d6ecb216b9d5d5fa8ef8f61ae0f93793308392e4df2b0548cdc509；证据manifest103引用、两版29源码文本快照/原路径bytes/SHA、冻结计划9引用逐字节复算。隐藏.trellis契约按明确文本快照保留，不因未单列隐藏文件误报丢失；初次复算脚本直接取隐藏原路径失败，改为按快照记录长度还原后全部匹配，只读探针未影响候选。首轮UI失败原JSON db02484…已在ui-initial-failed.json正式留存，含当时策略截图引用。最终29源摘要5607062a855ff7151718973ed5762ac5a83cc49fdbde2ba9be791f7847214420；研发实验当时50827f37eb32171d27311a3304e92147fe6f89f67c2662140fe547ebc978f097，独立核对仅routing_latency_test.go和latency-journey.mjs变化，生产网关/fixture/runner未变；不假称两全源摘要相同，固定门禁须在最终候选重验。另独立解析14份JSONL共2480条、2480个不同Request ID；正式归档含17PNG（初始失败策略图1+双屏最终16），仅核存未代QA判视觉通过。完整固定门禁已绿，但独立QA尚未签署、产品PR未生成。
 
 运行中尝试正式steps/3/output API返回404；源码connectorOutput要求最终receipt.Log后才可读取，属于实时输出能力限制，不是门禁失败或测试完成。未重复执行make或绕路改运行副本；等待终态后通过正式分页完整读取至EOF；运行中只读所属执行日志观察进度，明确非正式最终回执。正式tests3全文1161962bytes/SHA6874c61c65293a345b0608617949a0e5ae2e21fceb46b8a8c57f165a3b2420cf，API分页至EOF无truncated。唯一主gate12:52:47.680Z–13:13:02.818Z（1215.138秒）exit0/未取消，runner1230.959秒，节点1239.498秒是不同口径；原runner1125044bytes/SHA0572e51d7ec3eae3e94b6ee5999c9cb454a1a3649c5b9b9e15019e79af4a7586与state字节匹配。冷前node_modules/npm_cache均false，clean_start_measured=true/manual_preinstall="none"，源码/candidate前后不变、owned group absent/candidate removed；初次维护断言误把manual_preinstall当bool，读取原类型后纠正，不算门禁红。170源码完整摘要9f7a656a749ef67af8604af68a04cced5fdc31d368ac2e61005dd4bf9ffcfd66、head f06f05de；Go1.25.6/Node22.22/npm10.9.4。实际285Node全绿、原全Go/race及五浏览器阶段全绿；固定候选唯一2480实验194187ms/failures0。QA实际结论仍单列。
 
-13:18:08Z独立QA新真实负例TestQA63LateSuccessAfterNewerFailure失败：较新请求502后，旧在途成功acceptance=accepted、池样本1，断言“pre-failure in-flight observation repopulated cleared recovery pool”。13:21:09Z QA原生progress已确认真实缺陷：冷却清池丢失序列水位，迟到旧成功被重新采纳；原native日志/退出1保持，待正式QA结论/产物交接，Builder不代定级或修产品、不因门禁绿覆盖独立红。等待原生QA正式handoff返工及同版材料，当前不能功能通过或发布。
+独立QA4已正式Fail/No-Go：QA63-01/P2阻断AC03/05。13:18:08Z TestQA63LateSuccessAfterNewerFailure及13:19:57Z更强序列反例均真实HTTP/race exit1：R2较新成功accepted→R3临时失败池0→R1旧在途成功仍accepted重建评分池；未观察绕过冷却或权限/计费泄漏，不扩大结论。13:21:09Z QA原生确认清池丢失序列水位；13:27:31.659Z正式handoff→development accepted/75件，13:27:43.392Z所属进程停止，13:29:05.141Z归档后研发5/conversation14158f9d5cf4d2c10274d870fae16615真实启动，13:31:15Z确认承接根因/修复目标。原Run共享workspace、不新建Issue或Run、不代产品修复。QA4阶段驻留960.103秒（含归档），不是净Agent时间。
+
+首轮QA报告15956bytes/SHA f9dd5aec198f2c8ace47136cddab2533f997e59013d3bcf07127b6e0146a80de；17PNG研发与独立双屏UI16PNG分别留存，原初始失败JSON随glob带入后明确标为preexisting-development并保留原字节/provenance，不能算QA新UI失败。QA通过真实Go/race准入/TTL/迁移/存储负例、双屏页面及原2480样本独立复算，但明确未独立再跑全2480，不能抵消新迟到缺陷。QA overlay复现不修改产品，source-before/after完全等于tests3的170源9f7a656a…；当前候选不允许approval/publish。修复必须保留失效/序列边界及准确拒绝诊断，补普通/SSE同跨池/新请求恢复回归，再新完整门禁/独立QA；旧绿不能签新源。
+
+正式归档目前2+4共179件33864540bytes，均独立下载核size/SHA；manifest SHA9c57ea6beca3166f9b5045ffd297a28463a254382d9681689fb68d62295a6877。QA manifest74引用全匹配；8份无损tar内378原件44121948bytes全部独立核bytes/SHA、无额外/缺失/危险成员；两份原完整门禁log逐字节匹配Owner先前API导出，两份失败log分别514/553bytes与native event58014/58221的真实exit1 stdout逐字节相同。此为留存完整性核验，不代QA判产品通过；释放后下载尚待整链终态。
+
+GitHub bot big91987-agent-platform-bot[bot]已原样反馈No-Go评论6398235975、返工交接6398249302及研发启动6398249703；当前Issue可见卡点和实际后续，无临时权限/状态补丁、无新PR或部署。
+
+研发5候选171全源7f98fee14c6ca5337d981b66b0d7dd1ed88579123c492674c7ed1ed3da8f69e0，原29→新31改动清单独立比较仅6路径变化：routing.go/routing_latency.go、中文拒绝标签、两相关测试及契约；Makefile/固定runner/原journeys/实验runner未变。研发实质修复InvalidatedThrough失效水位，8组真实HTTP同/跨池/恢复正例及原QA两个反例通过；前端286/vet/build通过仍不代表QA复验。46.759秒首次下载/回归及91.440秒静态/vet/build原完整日志已按manifest bytes/SHA读取；后者含旧阶段冷编译，不冒称产品纯增量。/usr/bin/time缺失exit127保留且未启动Go，不当产品红；Bash time后真实回执单列，未手装依赖或扩大权限。
+
+13:44:11.914Z研发正式wait_for_input预算阻塞、13:44:24.112Z原生stopped。严格旧v2公式1577.2881≥1500而停止，不是新完整门禁实际失败。rework-qa63-01.md SHA7eb1717b1f8a6a2166ba4a532b5dcd412a51874dd66d9a4013ec55a0e187a6be、budget.json SHAfaead4fe00634faba2ab9d2ef40c8578141ee1b8734f373a2b1baa1a514e6e41保留原blocked记录。Pipeline提出改用本Run tests3实际主gate成本；Builder核原计时/六文件前提及冻结v2原SHA，正式User Input18223（issue63:builder:budget-review:1、duplicate=false）确认仅成本估计更新：保守(1215.138100+46.759+91.440)×1.10＝1488.670810秒，余11.329190，连两个含旧成本完整命令也重复入账且全额加10%；不是功能通过或运行保证。要求保留旧原件、另记补充口径、原25/30分钟与2480规模/效果阈值/全部阶段不变，满足前提则原入口交测，不预热/弱断言/盲求绿。新源必须真实新门禁及QA，不能借旧绿色放行。
+
+维护观察：正式工作区全清单API本轮返回400“workspace file is unavailable, changed during reading, or exceeds the size limit”，未确定是扫描上限或其他边界；按原生明确路径的正式文件API可读取全部上述证据。未绕目录权限/改运行副本；后续平台文件清单可用性需定位，独立归档/已保留179件下载未受影响。
 
 旧Issue51/Run6f3f26…仍waiting/seq2，快照environment.ready，但正式文件读取已返回OpenSandbox lookup404。停止该旧Run的动作被自动审批以缺少明确授权/可能影响接续拒绝，未执行；已放弃停止并保留旧记录。本轮用独立新Issue/环境关联接续，不偷偷重建、恢复或改库；旧等待TTL状态缺口仍未修。新任务不携带历史真实供应商密钥，真实供应商和生产性能与受控实验分开。
 
 ## 历史记录
+
+2026-10-25 13:53UTC：研发5真实定向修复后因原预算公式1577.2881停止，Builder正式18223据同Run实测确认补充1488.670810成本口径；保持全部25/30限制、原规模/阈值/覆盖与冻结原件。非产品通过，新完整门禁/QA仍待。
+
+2026-10-25 13:29UTC：独立QA4正式Fail QA63-01/P2，75件归档后原Run进入研发5修复；Owner核179外层文件、QA8分片378内层文件及两份原生真实失败日志全部字节/SHA一致。首轮绿门禁与No-Go并列保留，新源仍须完整重验。
 
 2026-10-25 13:18UTC：tests3正式完整冷make verify exit0/1215.138秒主gate，但独立QA4新增迟到成功/较新失败负例已实测失败；当前不判产品通过，等QA正式结论/返工。完整日志、170源绑定、冷起点/清理闭合已独立核验，不能用技术门禁绿覆盖QA红。
 
