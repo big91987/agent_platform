@@ -2081,3 +2081,13 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 2026-10-26正式集成：维护源dfecd925…已开发分支提交/推送；冻结后scripts/verify.sh真实exit0，完整132929bytes/SHA1638749814b5537a2143e1c378eca67685f30ba6a41e200904c7a81cb14e3d23，平台race101.698秒。112通过标准Linux CGO build/install升级同revision，binarySHA b4fc4ed3…，等待Run、旧released Run/归档、主图、私有配置和凭据逐值不变。首次Mac直连POST连接reset，未重发；正式读文件17件全404、服务无panic/health正常，持久化helper只读诊断quiet1后，改由112本机请求同一正式授权API一次。17件2290013bytes已导入，55.959秒，全部从正式文件API重读SHA与源归档一致，Run仍waiting5未推进。首reset及零文件证据保留，网络根因未证，不能写成已修网络。独立QA最终补件复核、确认/报告/产品PR仍待完成。
 
 补件闭环推进：正式Stop使研发5在17:19:30Z stopped；正式Owner Return(target=qa)随后创建QA6。当前同一Run/冻结revision11/源码171件不变。研发5保留人工回退cancelled语义，既有tests3绿和QA4 No-Go不改，不把Owner操作写成Agent自然handoff或无人介入。17件原件路径/来源/bytes/SHA已随正式Return summary交QA6，待其独立裁定QA65-E01；未先批准或生成产品PR。观察Stop响应时因未裁剪整Run导致本地观察器起点丢失，已通过正式API确认真实stopped，没有重复Stop，原响应观察缺陷计入Builder干预。
+
+2026-10-26 QA正式通过：QA6在17:27:36.715635511Z实际handoff(approval) accepted，96件具体产物、params未启用；原生17:27:45Z结束，17:29:28.404242213Z归档完成并进入approval7。Builder从正式API累计核183件21864472bytes全部size/SHA匹配，清单SHA33d0b2b50fe6c528fb5f54059f07f9a376d56aefc1270dfdf5a854670a90782a。最终QA17664bytes/SHA488d8806…，源码1716316…不变；只补历史材料，未重跑全量实操。QA最终编号E01为原负例脚本、E02为旧红原件，两者关闭；前记录将旧红笼统称E01，当前以最终QA区分为准，保留此前文字和真实No-Go。122条历史清单按映射验证，原QA4 No-Go两版保留。正式确认由Builder依据普通选择委托调用decision7(route next)，只准报告/草稿PR，不能写用户亲点或产品已合并/部署。
+
+### 2026-10-26：Issue63真实功能至草稿PR已完成
+
+产品PR68 https://github.com/big91987/model-relay/pull/68 已由固定publisher实际创建（17:37:42Z），精确head736a928e…；171源码6316a232…、55白名单及实际57件差异、QA/报告Git对象逐项匹配，GitGuardian SUCCESS。接续Run e11d82e7…10步completed，正式release后禁缓存全新下载197件22126288bytes，大小/SHA全部一致，原No-Go与最终QA不变。QA/报告/静态SVG看板与证据索引已在PR可见；静态附件不称在线部署。Issue65交付维护已关闭，主Issue63和产品draftPR保持待评审；未产品合并/部署，未复活旧Run。
+
+总墙钟按原Issue63创建到真实PR创建：6小时23分22秒，含返工、排队、平台修复及Builder人工接续。实际产品完整门禁和独立QA通过，QA发现P2后真实修复、原红证据保留；受控快端占比50%→90%、均值改善52.57%–52.77%，p95基本不变，真实供应商/生产性能未验。流程主要瓶颈为固定测试、QA/取证、跨Run材料及交付恢复；接续阶段补件等待37.25分、测试23.80分、两次QA26.61分、report6.07分、实际publish约10秒，不能声称无人值守或不同任务提效百分比。两Run14个原生归零段total49773014（含缓存输入；不含Builder/平台费用），金额不可得不估造。
+
+原始报告保留发布前快照，PR顶部及Issue63原评论6399053396已补实际发布/留存核验。完整head/归档/阶段时间/人工干预/费用口径详见opensandbox-workflow-plan.md“本轮真实功能验证已闭合”。平台仅开发分支提交推送，安装代码dfecd925…，既有定时任务未恢复；本轮止于产品草稿PR等待用户评估。

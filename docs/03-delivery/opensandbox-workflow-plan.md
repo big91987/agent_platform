@@ -1545,3 +1545,26 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 2026-10-26正式集成：维护源dfecd925…已开发分支提交/推送；冻结后scripts/verify.sh真实exit0，完整132929bytes/SHA1638749814b5537a2143e1c378eca67685f30ba6a41e200904c7a81cb14e3d23，平台race101.698秒。112通过标准Linux CGO build/install升级同revision，binarySHA b4fc4ed3…，等待Run、旧released Run/归档、主图、私有配置和凭据逐值不变。首次Mac直连POST连接reset，未重发；正式读文件17件全404、服务无panic/health正常，持久化helper只读诊断quiet1后，改由112本机请求同一正式授权API一次。17件2290013bytes已导入，55.959秒，全部从正式文件API重读SHA与源归档一致，Run仍waiting5未推进。首reset及零文件证据保留，网络根因未证，不能写成已修网络。独立QA最终补件复核、确认/报告/产品PR仍待完成。
 
 补件闭环推进：正式Stop使研发5在17:19:30Z stopped；正式Owner Return(target=qa)随后创建QA6。当前同一Run/冻结revision11/源码171件不变。研发5保留人工回退cancelled语义，既有tests3绿和QA4 No-Go不改，不把Owner操作写成Agent自然handoff或无人介入。17件原件路径/来源/bytes/SHA已随正式Return summary交QA6，待其独立裁定QA65-E01；未先批准或生成产品PR。观察Stop响应时因未裁剪整Run导致本地观察器起点丢失，已通过正式API确认真实stopped，没有重复Stop，原响应观察缺陷计入Builder干预。
+
+2026-10-26 QA正式通过：QA6在17:27:36.715635511Z实际handoff(approval) accepted，96件具体产物、params未启用；原生17:27:45Z结束，17:29:28.404242213Z归档完成并进入approval7。Builder从正式API累计核183件21864472bytes全部size/SHA匹配，清单SHA33d0b2b50fe6c528fb5f54059f07f9a376d56aefc1270dfdf5a854670a90782a。最终QA17664bytes/SHA488d8806…，源码1716316…不变；只补历史材料，未重跑全量实操。QA最终编号E01为原负例脚本、E02为旧红原件，两者关闭；前记录将旧红笼统称E01，当前以最终QA区分为准，保留此前文字和真实No-Go。122条历史清单按映射验证，原QA4 No-Go两版保留。正式确认由Builder依据普通选择委托调用decision7(route next)，只准报告/草稿PR，不能写用户亲点或产品已合并/部署。
+
+## 本轮真实功能验证已闭合（2026-10-26）
+
+当前交付为Model Relay同模型低延迟优先路由与选择诊断：主Issue63 → 草稿PR68 https://github.com/big91987/model-relay/pull/68 ，Issue65只是同版交付接续，已关闭completed；Issue63保持open待评审。PR仍draft/open，未合并、未部署。GitHub作者为big91987，逻辑执行者为固定publisher，不误称独立机器人登录身份。
+
+- 精确head736a928e0666a7002d9736a54f5a05de5d31be1c/tree9e90bb8afa7c5dd29249e4fb616b6f8e18a34a92；base a68bc2ca…、共同祖先7709fe27…。维护者逐Git对象重算：171件产品/测试/契约源码摘要6316a232…匹配已验候选，55件白名单+2件固定QA/报告=57件实际PR差异全部同版。原QA全文与报告body字节一致；GitGuardian SUCCESS、mergeable，未将检查通过当成合并或部署。PR顶部新增Builder发布后实际回执，以下Pipeline发布前报告原文保持不改，明确其“尚无PR”属于生成时快照。
+- 唯一接续Run e11d82e7…已10步completed。report8真实handoff(publish)17:37:11Z、14件产物，固定publish9实际exit0/1969bytes/完整EOF/SHA2ba4cec1…，实际创建PR17:37:42Z，done10在17:37:44.903313535Z。原ba434…仍stopped/released，不复活、不改称completed。
+- 197件22126288bytes全部retained，清单SHA2b732023786718b28c4a89c19efbf6f86fd5e32a2c9e00c406d8f23a8ced8328。随后正式environment/release，原步骤/定义/清单不变；新建下载目录、禁缓存重新从正式API读取全部197件，逐size/SHA全匹配，原QA4 No-Go SHA56d12a…及最终QA6 Pass SHA488d8806…保持。证据不依赖沙箱继续存活。QA报告、完整报告、静态SVG看板及索引均已在PR的docs/harness/run-e11d82e7f5d2及docs/workflow/runs/e11…/delivery可查看；是仓库静态附件，不冒称部署在线Dashboard。原生消息/工具失败回执仍保存在平台。
+- 产品质量：独立QA确实发现并关闭迟到成功在较新失败后污染恢复池P2；后续冷却边界测试墙钟竞态改为9/10ms受控时钟，严格断言不弱化。新同版完整make verify、独立30+6 Go、1280/390旅程、原负例正例重放、17件历史原件核验均通过。QA6仅补件核验，不写成又一次全量实操。2480受控请求实际由tests发送，QA复算原数据；快端占比50%→90%，四组均值改善52.5718%–52.7667%，p95约101ms基本不变，普通first-body/SSE首有效delta分别报告；真实供应商、生产性能/线上账单、原始浏览器trace未验。
+
+### 时间、成本和瓶颈
+
+总墙钟用官方Issue63创建11:14:20Z至PR创建17:37:42Z：23002秒，**6小时23分22秒**，包含真实返工/等待/平台修复/人工接续，不以Issue65重起表。不同任务不能与Issue48的119.45分钟直接算提效百分比。本轮证明实际产品可交付及QA可抓实质缺陷，尚不能证明无人值守或相对裸Agent提效。
+
+接续Run阶段驻留（含工具/等待/归档，分钟）：prepare1.07、development2材料绑定5.96、tests3 23.80、QA4 18.18、development5等待平台补件37.25、QA6材料复核8.43、approval2.04、report6.07、publish0.17。入站单Runner排队另有728秒；原Run研发及QA/返工时间见此前真实表。瓶颈主要为完整固定门禁、独立QA材料/反复取证及跨Run材料与发布衔接；发布动作本身约10秒。通用产物引用API已正式修复当前缺口，下一轮是否减少人工还需复验；未自动化整个跨Run恢复，不增加通用刷新/变量框架。报告自检曾因evidence-index链接断言真实exit1，后续修正自检exit0，保留事件，不混作产品失败。
+
+原生计数经全部事件与runtime归零段交叉核对：旧Run8段input40078725/cache38891136/output214330(reasoning58969)/total40293055；新Run6段input9411575/cache8635648/output68384(reasoning8804)/total9479959；合计14段total49773014。cache是input子集、reasoning是output子集；同thread重启会归零，不能只取最后thread累计值，也不重复加子集。仅Pipeline计数，不含Builder/平台计算费用；货币对账不可得，不估造。
+
+本轮存在明确Builder干预：源码通用修复与标准升级、已验分支准备、入口修复PR64/66/67、四脚本UserInput补件、17原件正式引用、Stop/Return QA及受托Owner确认；自动审批还曾拒绝一次诊断中误带的重复dispatch，整条未执行，核无副作用并修入口后才正式再次受理。没有绕过审批、复活旧Run、手改数据库/冻结回执或重复创建产品任务。平台代码保持开发分支（安装dfecd925…）；定时任务未恢复。本次止于已验草稿PR，等待用户评估后再讨论下一轮。
+
+证据：ignored feature-delivery-continuation 下product-pr-integrity-proof.json、feature-eval-final-metrics.json、material-frozen-standard-receipt.json、direct/feature-eval-post-release-fresh.json；它们为私有核验回执，当前人读进度仍以本文件和三份既有计划/验证文档为准。
