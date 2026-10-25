@@ -1,5 +1,19 @@
 # 平台内 Workflow 交付计划
 
+## 当前进度
+
+更新：2026-10-25。112:8795实际平台版本仍为 `d9a9564050d825b02c3ae00e2364d94b94828681`，正式工作流 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision10。定时任务保持暂停，当前工作来自用户明确接续授权。
+
+当前任务为 [Issue60](https://github.com/big91987/model-relay/issues/60) / [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275)，基于main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。Pipeline已完成初轮用例/驱动检查和必要设施修正，项目验证器总时限由12改25分钟、外层仍30分钟，原断言/全部阶段保持。19件研发产物已归档并逐摘要核验。
+
+首次正式tests3已完整执行、exit2，实际Gate取消标记false：迁移、旧界面、路由和console通过，完整自托管旅程在1280px的self-hosted-sse阶段失败；这次不是总时限中断，尚不能判断为产品或环境根因。当前已自动返回development4，由Pipeline定位与实质修复；未进入独立QA、正式确认、报告或本轮草稿PR，不称整链通过。
+
+旧Issue59 Run已stopped，环境经正式释放/核对收敛released；旧95件归档释放后重新下载摘要一致。等待超过4小时TTL后环境消失而平台仍显示ready，是尚未修复的平台生命周期缺口，不能以本轮重新开始冒充永久修复；旧失败保留。旧PR49/55未合并部署，旧业务Issue51状态未改。本阶段继续目标为同版全量门禁、独立QA、正式确认、报告/真实draft PR及释放后留存；不合并或部署产品。
+
+## 历史记录
+
+以下保留各日期的原始证据；其中“当前/最新”指记录当时，实时现状以本页上方当前进度为准。
+
 当前完成（2026-10-24）：正式工作流的研发、独立QA和交付报告三个Agent已采用分节Markdown提示词，职责、步骤、产物、交接和阻塞处理可逐项阅读。维护源3c0a601通过模板回归并标准导出151对象，测试仓模板PR58精确合并main12df9eb7；112正式配置已升revision10，完整预览与保存后重新读取均同源，六条既有Run保持。平台二进制仍ffcd93d，未启动新产品Run或改变权限；定时任务继续暂停。
 
 当前完成（2026-10-24）：Agent 节点“输入预览”现展示完整的平台系统提示词（原生开发者指令、角色指令和平台追加约束），工作流用户消息单独展示。维护源 ffcd93d 已通过标准完整门禁、原生 start/resume 逐字核对和真实 Chromium，标准部署到112:8795；正式预览API核验3个Agent角色完整、草稿不落库，线上JS摘要与维护源一致。主图保持revision9、历史Run和产物/私有配置保持；定时任务仍暂停。下文旧状态保留为历史。
@@ -1949,3 +1963,19 @@ Builder只读核对冻结Makefile、验证器与浏览器驱动：全量门禁�
 
 
 Issue60 opened/labeled Actions40145433959/40145434298均success，两个GitHub日志逐值给出同一Run91bc74…，去重真实成立。原Issue59沙箱lookup404后，从正式归档API重新下载全部95件15537354bytes（新目录、不用原缓存），逐size/SHA一致，清单摘要仍12b7e71e9e42919b9908e923aefdd92e2ea12134c06bd3bb59bf008b4438c8f5。此证明确认归档不依赖已消失沙箱；不是本轮新Run的正式release或QA完成证据。
+
+
+Issue60研发00:18:50Z handoff(target=tests)真实accepted、无params、19件实际产物；原生结束和归档后00:19:18Z正式tests3启动。研发阶段00:08:14Z–00:19:18Z约11.07分钟驻留，包含阅读、修正、针对性回归和材料，不是净推理耗时。19件393456bytes已逐size/SHA核对，平台清单摘要2e96c8a06245fd77977c5bec62b2978a62542abfbdc97794016badceb83ecc25；源码158件工作树摘要fab5f6d957c7a269a55b41689c43916ff1301382260242ca45240c0efc376ded，基于原main12df9eb。仅README、真实HTTP路由夹具、journey/UI回归、review-history及verify/回归共8个维护文件实质修改，无产品业务变化。
+
+已读取原始针对性回执：runner/history race、门禁成功/取消/200ms期限的真实子进程及候选目录删除、13Node键盘回归、真实HTTP路由race/count3、格式/vet及依赖失败即停均exit0；这些不等于全量产品通过。Pipeline保留受控上游身份、31秒自然冷却、focus trap、正负断言及原依赖/历史门槛；没有提前重复全量自测。25分钟为项目入口明确固定预算，无新增运行时绕过开关，回执增加预算与gate起止/取消字段；平台外层1800秒不变。实际固定在途GATE_START已核timeout_ms=1500000、00:19:40Z，不只根据README或Agent自报认定生效。迁移浏览器15.921秒、旧界面178.582秒已结束，后续路由/console/full-console仍在执行；无独立QA或PR结论。
+
+旧Issue59在stopped且95件归档核对后，正式release因原环境已不存在返回lookup404并记录release_unconfirmed；随后正式reconcile再次确认缺失，成功收敛released。没有重复Delete、重建环境、改历史失败或DB；不把这种消失后的核对写成正常主动释放成功。环境过期时快照仍ready、等待材料未自动归档/续期的根因缺口仍未修；当前测试继续使用新Run，不热改运行平台。
+
+
+#### Issue60 · 25分钟条件下首次固定结果：非超时真实失败
+
+00:19:18Z启动的tests3正式输出逐页读至EOF、truncated=false，1095386bytes/SHA2563380efc701bc204e26de2b38d304f0a89ebfe90dcf41d30675fa9ba4d83b0983；实际make exit2。主GATE_START00:19:40.480Z，GATE_END00:33:17.868Z为exit2/cancelled=false，区别于Issue59的gate-1/期限终止。migration15.921秒、legacy178.582秒、routing241.328秒、console36.347秒均ok=true；full-console75.878秒后ok=false，安全诊断明确stage=self-hosted-sse、width1280/error_kindother。secret_present仅诊断输入状态，不据此冒称秘密泄漏或产品根因；本轮未查看含秘密页面或代产品QA。
+
+完整输出及源码前后摘要fab5f6…保留，自动失败规则返回development4/conversation8ce1db8f0af8abcb1bb28c1ad1a6b781，无手改、重复同版或继续增时限。25分钟确让后段用例执行到原12分钟之后，但不是全量通过或已修复性能；后续由Pipeline定位驱动/产品/环境归属，实质变化后再进入固定门禁。现阶段无QA/确认/报告/新PR。
+
+旧Run正式release→reconcile收敛后再次从归档API全新下载95件15537354bytes，逐size/SHA仍完全一致，清单摘要12b7e71e…不变。此为旧Run释放后留存证据，本轮新Run的释放后校验仍待流程完成。
