@@ -2,6 +2,9 @@
 
 ## 当前进度
 
+最新（2026-10-25 15:43UTC）：PR66/head045d42…精确合mainc538b29…、152导出对象及9文件匹配/GitGuardian绿，但GitHub实际YAML校验在job启动前拒绝（40207649983/40207649253），没有SDK或Run。已用固定actionlint1.7.12复现：env键不区分大小写，HTTP_PROXY/http_proxy重复；前次隔离测试和review漏此限制，不能称正式入口修复成功。唯一源改为两个小写checkout环境变量，继承lower优先/upper兜底的有效代理，SDK环境保持；新增本地同故障红→绿及完整模板复验。actionlint对原有GitHub已接受queue:max新字段、自定义he-full标签仅做精确ignore，env语法错误没有忽略。15:35一次dispatch CLI返回1、无Run；原因未取回不编造422。随后一条诊断误带重复dispatch被自动审批拒绝，未执行；已移除，不借改命令绕行。修复实际集成并确认无副作用之前不再触发。原Issue65/base65cc仍保持待接单，产品PR未生成，所有驻留计入原11:14:20Z墙钟。
+
+
 最新（2026-10-25 15:36UTC）：checkout代理修复已完成唯一源码红→绿及独立复审，无遗留C/I/M；使用GITHUB_OUTPUT只向checkout单步传四个独立输出键，原Runner环境保留，SDK/平台API环境不变，控制字符/认证代理拒绝、百分号掩码转义。初版GITHUB_ENV会让SDK也走代理的问题经review发现并在交付前移除。完整scripts/verify.sh真实exit0（140模板25.866s/真实浏览器/SDK/供应链/vet/race/build，Go race复用明确非新冷测试）；132601bytes/SHA9052f094269b000ffb8d824e255134489e9b5de59dca1bb35dba71f19c4fdb38。输出键最后收敛后追加全模板复验，随后仅通过标准export及installer --upgrade同步项目YAML/来源清单，不改Runner全局配置、不加时限、不重试到绿；实际Actions/唯一Run尚待集成，不把源码绿当接单完成。
 
 

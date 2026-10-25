@@ -48,7 +48,7 @@ jobs:
                   parsed.port
           except (OSError, ValueError, TypeError, KeyError, AttributeError):
               raise SystemExit("Invalid private GitHub transport configuration")
-          values = {key: proxy or os.environ.get(name, "") for key, name in (("http_lower", "http_proxy"), ("https_lower", "https_proxy"), ("http_upper", "HTTP_PROXY"), ("https_upper", "HTTPS_PROXY"))}
+          values = {name: proxy or os.environ.get(name) or os.environ.get(name.upper(), "") for name in ("http_proxy", "https_proxy")}
           if any(any(ord(c) <= 32 or ord(c) == 127 for c in value) for value in values.values()):
               raise SystemExit("Invalid Runner proxy environment")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
@@ -59,10 +59,8 @@ jobs:
           PYTHON
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         env:
-          http_proxy: ${{ steps.github_transport.outputs.http_lower }}
-          https_proxy: ${{ steps.github_transport.outputs.https_lower }}
-          HTTP_PROXY: ${{ steps.github_transport.outputs.http_upper }}
-          HTTPS_PROXY: ${{ steps.github_transport.outputs.https_upper }}
+          http_proxy: ${{ steps.github_transport.outputs.http_proxy }}
+          https_proxy: ${{ steps.github_transport.outputs.https_proxy }}
         with:
           persist-credentials: false
       - name: Submit event through Workflow SDK

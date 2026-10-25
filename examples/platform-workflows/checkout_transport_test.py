@@ -40,6 +40,21 @@ class CheckoutTransportTest(unittest.TestCase):
             )
             return result, environment.read_text()
 
+    def test_actions_environment_keys_are_unique_ignoring_case(self):
+        # GitHub rejects case-only duplicate env keys before a job can start.
+        for template in ("sandbox-entry.yml", "github-entry.yml"):
+            with self.subTest(template=template):
+                keys = None
+                for line in Path(__file__).with_name(template).read_text().splitlines():
+                    if line == "        env:":
+                        keys = set()
+                    elif keys is not None and line.startswith("          "):
+                        key = line.strip().split(":", 1)[0].casefold()
+                        self.assertNotIn(key, keys)
+                        keys.add(key)
+                    else:
+                        keys = None
+
     def test_proxy_reaches_checkout_without_exporting_private_config(self):
         for template in ("sandbox-entry.yml", "github-entry.yml"):
             with self.subTest(template=template):
@@ -51,11 +66,11 @@ class CheckoutTransportTest(unittest.TestCase):
                 self.assertEqual(
                     dict(line.split("=", 1) for line in environment.splitlines()),
                     dict.fromkeys(
-                        ("http_lower", "https_lower", "http_upper", "https_upper"),
+                        ("http_proxy", "https_proxy"),
                         proxy,
                     ),
                 )
-                self.assertEqual(result.stdout, ("::add-mask::" + proxy + "\n") * 4)
+                self.assertEqual(result.stdout, ("::add-mask::" + proxy + "\n") * 2)
                 self.assertEqual(result.stderr, "")
                 self.assertNotIn(
                     "private-token", environment + result.stdout + result.stderr
@@ -66,11 +81,11 @@ class CheckoutTransportTest(unittest.TestCase):
         result, environment = self.run_step("sandbox-entry.yml", {"git_proxy": proxy})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
-            result.stdout, ("::add-mask::" + proxy.replace("%", "%25") + "\n") * 4
+            result.stdout, ("::add-mask::" + proxy.replace("%", "%25") + "\n") * 2
         )
         self.assertEqual(
             dict(line.split("=", 1) for line in environment.splitlines())[
-                "https_upper"
+                "https_proxy"
             ],
             proxy,
         )
@@ -82,10 +97,8 @@ class CheckoutTransportTest(unittest.TestCase):
             self.assertEqual(
                 dict(line.split("=", 1) for line in environment.splitlines()),
                 {
-                    "http_lower": "http://runner-http.example:1",
-                    "https_lower": "http://runner-https.example:2",
-                    "http_upper": "http://RUNNER-http.example:3",
-                    "https_upper": "http://RUNNER-https.example:4",
+                    "http_proxy": "http://runner-http.example:1",
+                    "https_proxy": "http://runner-https.example:2",
                 },
             )
 
