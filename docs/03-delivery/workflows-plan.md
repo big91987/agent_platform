@@ -2,7 +2,7 @@
 
 ## 当前进度
 
-最新（2026-10-25 14:11UTC）：Issue63原Run研发5归档128件后，tests6完整固定入口4分23.748秒exit2，已自动进入研发7。真实失败为TestRoutingPassiveCooldown的10毫秒墙钟假设，非25分钟超时；研发正以受控时钟保留原冷却/恢复断言修复并定向验证，尚未新完整绿/QA/PR。旧QA63-01/P2 No-Go及原失败均保留。
+最新（2026-10-25 14:20UTC）：Issue63原Run已研发7→tests8，14:18:35.799Z新固定门禁启动。本轮仅改旧冷却测试为受控时钟，产品/断言不变，171源6316a232…6a7e0；152件交接归档后接续。新完整结果/独立QA/产品PR待定，首轮QA No-Go、tests6真实失败不覆盖。
 
 更新：2026-10-25。112:8795平台实际版本 `d9a9564050d825b02c3ae00e2364d94b94828681`、正式Workflow `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11。定时任务保持暂停；本轮由用户直接授权试验真实产品功能，从仓库Issue到功能PR，评估耗时/质量并留存QA证据。
 
@@ -42,7 +42,11 @@ GitHub bot big91987-agent-platform-bot[bot]已原样反馈No-Go评论6398235975�
 
 2026-10-25 14:11UTC：研发5于13:56:45.491Z正式handoff128件，13:56:56.177Z原生停止；13:59:13.794Z归档后tests6开始，14:03:37.542Z真实exit2，驻留263.748秒。2/4/5归档共307件60882750bytes逐size/SHA核验，manifest SHA26d3acde020418a376378043e6d6b841e684057999a63dda128ca9d98722c952。tests6正式全文1074864bytes/SHA225937af5544c5c6014e2891642dd324d3cd798451e172cc79ba92adb7c143b5，分页至EOF；171源7f98fee…前后相同。主失败TestRoutingPassiveCooldown/routing_test.go:190 cooling candidate visited，历史health负例红字不当新失败；原门禁未运行至后续浏览器阶段，不称完整覆盖通过。自动failed→研发7/conversation2c8b06979ede86c16375a2bd30fd2225于14:03:37.543Z启动。14:05原生定位原10ms冷却墙钟窗口受机器/DB开销影响，14:09报告受控时钟版连续10次及原相关定向回归通过；该自报须后续原回执/新完整固定门禁/独立QA复核，不以调大时间、删断言或盲重跑替代。平台源码/图/25及30分钟限制不变，产品PR仍未生成。
 
+2026-10-25 14:20UTC：研发7于14:15:43.756Z正式handoff→tests接受152件，14:15:52.378Z原生停止，14:18:35.799Z归档后tests8启动；研发7阶段驻留898.256秒，含163.421秒停止后归档等待。新候选171源6316a232322de48fdce31a4420a872495f9e7ea2237c36e9e2742a4e3566a7e0，原生静态核对仅routing_test.go新增变化，保留故障期间不选中/到期恢复断言；10次race及相关Go、限额、迟到/健康、局部vet定向均exit0，不代完整门禁。tests6唯一runner原日志1069973bytes/SHA7d5029d2addda20056a3a3d8cbaf3ff62f1054e33dab729772fdcd3b918e08fe与state严格匹配；gate_exit2与runner exit_code1分别记录，正式节点exit2，冷node_modules/npm_cache false、source/candidate不变、ownedgroup absent/candidate removed。维护观察器初次误将两个失败退出码都断言2，读原字段后纠正，未改原回执或重跑门禁。研发5handoff127引用逐bytes/SHA核验，QA4原报告在4/5归档中SHA同为f9dd5aec…6a80de。
+
 ## 历史记录
+
+2026-10-25 14:20UTC：研发7于14:15:43.756Z正式handoff→tests接受152件，14:15:52.378Z原生停止，14:18:35.799Z归档后tests8启动；研发7阶段驻留898.256秒，含163.421秒停止后归档等待。新候选171源6316a232322de48fdce31a4420a872495f9e7ea2237c36e9e2742a4e3566a7e0，原生静态核对仅routing_test.go新增变化，保留故障期间不选中/到期恢复断言；10次race及相关Go、限额、迟到/健康、局部vet定向均exit0，不代完整门禁。tests6唯一runner原日志1069973bytes/SHA7d5029d2addda20056a3a3d8cbaf3ff62f1054e33dab729772fdcd3b918e08fe与state严格匹配；gate_exit2与runner exit_code1分别记录，正式节点exit2，冷node_modules/npm_cache false、source/candidate不变、ownedgroup absent/candidate removed。维护观察器初次误将两个失败退出码都断言2，读原字段后纠正，未改原回执或重跑门禁。研发5handoff127引用逐bytes/SHA核验，QA4原报告在4/5归档中SHA同为f9dd5aec…6a80de。
 
 2026-10-25 14:11UTC：研发5于13:56:45.491Z正式handoff128件，13:56:56.177Z原生停止；13:59:13.794Z归档后tests6开始，14:03:37.542Z真实exit2，驻留263.748秒。2/4/5归档共307件60882750bytes逐size/SHA核验，manifest SHA26d3acde020418a376378043e6d6b841e684057999a63dda128ca9d98722c952。tests6正式全文1074864bytes/SHA225937af5544c5c6014e2891642dd324d3cd798451e172cc79ba92adb7c143b5，分页至EOF；171源7f98fee…前后相同。主失败TestRoutingPassiveCooldown/routing_test.go:190 cooling candidate visited，历史health负例红字不当新失败；原门禁未运行至后续浏览器阶段，不称完整覆盖通过。自动failed→研发7/conversation2c8b06979ede86c16375a2bd30fd2225于14:03:37.543Z启动。14:05原生定位原10ms冷却墙钟窗口受机器/DB开销影响，14:09报告受控时钟版连续10次及原相关定向回归通过；该自报须后续原回执/新完整固定门禁/独立QA复核，不以调大时间、删断言或盲重跑替代。平台源码/图/25及30分钟限制不变，产品PR仍未生成。
 
