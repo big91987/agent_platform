@@ -8,7 +8,7 @@
 
 测试设施基线PR62 head0525d83245e38207cd417917e0a13917c9403581已按既有测试仓Harness构建合并授权设ready并精确合main `f06f05de20ffac5b8c8e772958c808379001f0e3`，安全检查成功；旧PR49/55不合。上一轮Issue60/Run91bc74已12步completed/released，139件留存及完整测试/QA证据保持，不当作新功能通过。平台源无PR/main合并、未发起Owner部署。
 
-当前GitHub opened/labeled入口Actions40188019710/40188020080 queued/pending；共享model-relay-local Runner正执行push prepare40187805174（Verify and prepare exact main commit），正式API未有Issue63 Run。不重复dispatch或取消其他任务，队列等待计入Issue→PR总时长，和Agent执行分开；真实Run受理后更新新锚点。
+原opened入口Actions40188019710已success，正式日志与API均给出唯一Run `ba434da8039cca16f6829481112e3d68`，11:17:27.847Z创建，冻结main f06f05de/revision11。Issue→Run187.848秒（包含Runner队列）；prepare11:17:27.847Z–11:19:02.534Z真实exit0/94.686秒；development2/conversation03d91bdea8a1b9570ced063ac3db5375已产出v1计划并于11:26:21Z正式wait_for_input，原生结束/停止后waiting。Builder只读核计划原件后通过正式User Input16636要求修订SSE指标/样本年龄和接近总预算的实验编排；11:30:48Z同一会话已实际承接。尚不批准产品实现，未运行实验或固定门禁，暂无待审批；这计为设计评审返工，不是产品测试失败。
 
 旧Issue51/Run6f3f26…仍waiting/seq2，快照environment.ready，但正式文件读取已返回OpenSandbox lookup404。停止该旧Run的动作被自动审批以缺少明确授权/可能影响接续拒绝，未执行；已放弃停止并保留旧记录。本轮用独立新Issue/环境关联接续，不偷偷重建、恢复或改库；旧等待TTL状态缺口仍未修。新任务不携带历史真实供应商密钥，真实供应商和生产性能与受控实验分开。
 
@@ -2046,3 +2046,13 @@ Builder独立从GitHub exact head逐Git blob读取并重算160件source，3864d0
 Issue63正文先写用户能力，再写先计划/冻结实验后实现、真实Go/HTTP/SSE和桌面/390px连续UI、权限/限额/非零RPM/TPM/预算/取消/迟到状态边界、独立QA实际执行/原始回执/可视化对照和同版产物。产品实现与验收交Pipeline；Builder核完整性和正式证据，不代写实现或代QA过关。原make verify25分钟/外层30分钟保持；若覆盖预计超限先说明，不删覆盖或静默增限。QA记录类型、归档路径与PR可访问报告有明确要求，原始大文件遵守标准publisher/归档限制。
 
 自动入口opened40188019710/label40188020080已真实queued/pending，旧通用入口40188019708 skipped，正式API目前未有新Run；共享he-full/model-relay-local Runner正执行基线push prepare40187805174。此为入口/供应链队列候选效率瓶颈，不是Agent开始研发，后续自然受理后核唯一Run和冻结版本。已准备以Harness Builder具名/标准平台输出标记在Issue回写，不把评论当新用户输入。
+
+
+Issue63原入口Actions40188019710成功：19:17:16（北京时间）获得Runner，19:17:27.847（UTC11:17:27.847Z）创建唯一Run ba434da8039cca16f6829481112e3d68，正式GitHub日志和管理员Run列表按issue_number63一致。原默认入口skipped，未重复dispatch。prepare实际94.686秒后development2/03d91bdea8a1b9570ced063ac3db5375在11:19:02Z启动，原生实际读取材料/源码，pending approvals0。正文当前Issue链接由标准入口提供，冻结source f06f05de/revision11及14,400秒环境TTL已核；旧Run不改。已从Git对象核对基线11个已验设施文件与PR62同字节，151个模板对象与维护源ea38d07一致。队列/prepare独立记录，计划完成后再正式设计检查，不提前判功能或QA通过。Issue队列说明评论6396949643使用标准平台输出标记以免误作新UserInput。
+
+
+Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合结束/11:26:30.171Z原生停止，正式waiting/idle。Pipeline真实生成frozen-input.md9050bytes/48822df0…、plan.md12104bytes/72d3a2a3a73a440f7e5b013c1a1a918000d6e59a407d8f5e11e472f72f403b13、experiment.md5714bytes/dfaa3d34c9887d4581aa9678a3d27530dd3acf4e4ea53b2e6d023052348a562f、execution.md3493bytes/792a22d1…及manifest1026bytes/79fe8572…；Builder从正式conversation文件API只读保存5件31387bytes并逐manifest核对。该保存为维护检查副本，不冒称等待阶段已经完成handoff/平台归档。原生git status仅新增本Run文档，明确产品未改、实验未跑。
+
+第一轮设计完整性检查要求修订：SSE以首传输字节评分可能偏爱早心跳而非早内容；2240顺序请求加150ms SSE尾部及新旅程/回归使既有980.081秒门禁接近1500秒、余量不足；长流测量时刻与完成采纳/TTL起点需要一致。Builder不代写算法或调整产品阈值，要求Pipeline保留v1、给有据的新版本及反例/预算后再正式检查，不改源码/权限/25或30分钟、不观察后降门槛。这是设计审查返工，不是独立QA结论或已证产品Bug。
+
+通过正式workflow messages的request_id issue63:builder:design-review:1一次保存User Input16636/duplicate=false，仍同conversation03d91b…，11:30:48原生progress已承接核v1与门禁阶段，未用resume或改库/冻结图。opened40188019710和labeled40188020080日志逐值同一Run，二者success；本轮入口去重真实成立。后续计划修订、产品实现、完整测试、独立QA、正式确认、报告/草稿PR及留存均待实际发生。
