@@ -8,11 +8,17 @@
 
 测试设施基线PR62 head0525d83245e38207cd417917e0a13917c9403581已按既有测试仓Harness构建合并授权设ready并精确合main `f06f05de20ffac5b8c8e772958c808379001f0e3`，安全检查成功；旧PR49/55不合。上一轮Issue60/Run91bc74已12步completed/released，139件留存及完整测试/QA证据保持，不当作新功能通过。平台源无PR/main合并、未发起Owner部署。
 
-原opened入口Actions40188019710已success，正式日志与API均给出唯一Run `ba434da8039cca16f6829481112e3d68`，11:17:27.847Z创建，冻结main f06f05de/revision11。Issue→Run187.848秒（包含Runner队列）；prepare11:17:27.847Z–11:19:02.534Z真实exit0/94.686秒；development2/conversation03d91bdea8a1b9570ced063ac3db5375已产出v1计划并于11:26:21Z正式wait_for_input，原生结束/停止后waiting。Builder只读核计划原件后通过正式User Input16636要求修订SSE指标/样本年龄和接近总预算的实验编排；11:30:48Z同一会话已实际承接。尚不批准产品实现，未运行实验或固定门禁，暂无待审批；这计为设计评审返工，不是产品测试失败。
+原opened入口Actions40188019710已success，正式日志/API给出唯一Run `ba434da8039cca16f6829481112e3d68`，11:17:27.847Z创建，冻结main f06f05de/revision11。Issue→Run187.848秒（含Runner队列）；prepare11:17:27.847Z–11:19:02.534Z真实exit0/94.686秒；development2/conversation03d91bdea8a1b9570ced063ac3db5375产出v1后，Builder正式User Input16636要求修订SSE指标/样本年龄/实验预算，计设计评审返工。
+
+Pipeline v2于11:43:05.507Z正式wait，11:43:17.301Z原生停止。Builder通过正式文件API逐字读取10件68416bytes，核对manifest9项及v1原件不变，认可v2完整性：SSE首有效输出增量/普通首body分池、实测时间逐样本TTL、2240核心+160心跳陷阱+80长尾、原效果阈值/完整固定覆盖/独立QA保留；1386.081秒预算及漂移余量只是估计，须定向实测核算，超限正式阻塞、不裁覆盖。plan-v2 SHA0944af31943b26633e3813280dfe84efc5120f13dfc340221dcd67356be80a2f，experiment-v2 SHA4f72f2061bc9c61c7b1f33e3ca1d8f2ab86667c7ea5743d1ed716d5b04727675，manifest-v2 SHA64b550ad798e248ad96cbaa1a463a5e7822f4e4ac7ee9cc3db44b24f55af0544。维护者读取副本不等于正式handoff归档，当前仍不能声称释放后留存通过。
+
+11:45:53Z正式批准输入17020在原生握手前失败，Run failed/seq2；error明确no task was sent，实际所属进程独立确认stopped/exit0，无原生turn/start或产品命令副作用。已核完整原生事件及输入failed状态，Issue评论6397264790反馈具体用户影响、未知根因和下一步。监听启动竞争/瞬态网络/错误分类遗漏是候选而非结论，现安全摘要缺底层分类；未宣称永久修复。正式resume一次已202受理，11:51:05.764Z同Run/seq2恢复running，11:51:14.777Z同一原生会话实际progress确认承接v2并开始实现检查，无待审批。恢复成功不等于根因修复；尚无产品实验/固定门禁/QA结论，无新产品PR。
 
 旧Issue51/Run6f3f26…仍waiting/seq2，快照environment.ready，但正式文件读取已返回OpenSandbox lookup404。停止该旧Run的动作被自动审批以缺少明确授权/可能影响接续拒绝，未执行；已放弃停止并保留旧记录。本轮用独立新Issue/环境关联接续，不偷偷重建、恢复或改库；旧等待TTL状态缺口仍未修。新任务不携带历史真实供应商密钥，真实供应商和生产性能与受控实验分开。
 
 ## 历史记录
+
+2026-10-25本轮真实研发设计阶段：v1计划提出SSE首body会受心跳影响、样本完成时续期和门禁预算紧张，正式输入16636要求修订；v2计划完整性通过，批准输入17020于11:45:53Z握手前失败，进程停止/未发送任务证据完整。该故障计Harness可靠性与整体耗时，尚无产品实现/测试结果。首次恢复前置诊断脚本因只读事件分页未覆盖停止事件而终止，未调用resume，修正分页后再检查；不冒称Pipeline失败或副作用。
 
 以下保留各日期的原始证据；其中“当前/最新”指记录当时，实时现状以本页上方当前进度为准。
 
