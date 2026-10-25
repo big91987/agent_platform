@@ -2,15 +2,15 @@
 
 ## 当前进度
 
-更新：2026-10-25。112:8795实际平台版本仍为 `d9a9564050d825b02c3ae00e2364d94b94828681`，正式工作流 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11（当前Run冻结revision10）。定时任务保持暂停，当前工作来自用户明确接续授权。
+更新：2026-10-25。112:8795平台实际版本 `d9a9564050d825b02c3ae00e2364d94b94828681`、正式Workflow `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11。定时任务保持暂停；本轮由用户直接授权试验真实产品功能，从仓库Issue到功能PR，评估耗时/质量并留存QA证据。
 
-当前任务 [Issue60](https://github.com/big91987/model-relay/issues/60) 的唯一 [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275) 已12步completed。Pipeline完成测试设施检查/最小修正，固定完整make verify真实exit0、主gate980.081秒（16分20秒）；项目总预算12→25分钟、平台外层30分钟，全部原断言/阶段保持。独立QA6通过、Owner代理正式确认、报告及固定publisher已形成真实 [draft PR62](https://github.com/big91987/model-relay/pull/62)，未合并部署。
+当前任务 [Issue63：同模型上游低延迟优先路由与选择诊断](https://github.com/big91987/model-relay/issues/63)，2026-10-25T11:14:20Z创建（北京时间19:14:20）。先按用户此前明确的低延迟方向推进，用户若另定功能则正式调整；需求/设计/预注册测试及性能对照由Pipeline形成并wait_for_input检查，再实现。固定make verify、独立QA关键行为实操、正式确认、报告和同版draft PR闭合；业务PR不自动合并部署。QA报告/真实命令、截图、样本、缺陷和返工记录需归档，释放后再全新下载核验，不能只有QA通过摘要。
 
-PR62 head `0525d83245e38207cd417917e0a13917c9403581`：160件源码逐Git对象独立重算 `3864d081e13800056ea0f849c598373c1eac8c03443990453752cd70b4be7c4d`，与正式tests5/QA完全同版；13项实际变化为11项QA确认文件加QA/报告原文，GitGuardian SUCCESS。沙箱已通过正式入口released、原生进程均停止；释放后从持久API全新下载139件80922540bytes，全部size/SHA一致，清单986925532264f5e0aef15af1feaa48ba8084a92751084ea29797ff44a9dee51e。
+测试设施基线PR62 head0525d83245e38207cd417917e0a13917c9403581已按既有测试仓Harness构建合并授权设ready并精确合main `f06f05de20ffac5b8c8e772958c808379001f0e3`，安全检查成功；旧PR49/55不合。上一轮Issue60/Run91bc74已12步completed/released，139件留存及完整测试/QA证据保持，不当作新功能通过。平台源无PR/main合并、未发起Owner部署。
 
-本轮保留tests3非超时SSE驱动失败及publish9类别拒绝；一次正式stop→return(report10)后发布成功，不能称无人干预或首次全绿。通用模板修复维护源ea38d07已133回归通过并标准同步 [PR61](https://github.com/big91987/model-relay/pull/61) 精确合main a1230fd4；正式图revision11，当前Run冻结revision10不变。新入口携带真实Issue链接、报告明确六类约束，不靠运行副本补丁；新revision11未来新Run自然全链仍待单独实证。
+当前GitHub opened/labeled入口Actions40188019710/40188020080 queued/pending；共享model-relay-local Runner正执行push prepare40187805174（Verify and prepare exact main commit），正式API未有Issue63 Run。不重复dispatch或取消其他任务，队列等待计入Issue→PR总时长，和Agent执行分开；真实Run受理后更新新锚点。
 
-旧Issue59已停止/环境核对released，95件归档释放后下载一致；旧环境TTL到期而快照ready的生命周期缺口仍未修。真实供应商/生产性能未验证；QA独立定向动态回归和可视抽查与固定完整浏览器分别报告。旧PR49/55未合、业务Issue51未恢复。源只开发分支提交推送，定时任务仍暂停。本轮止于草稿PR与证据/瓶颈报告，不自动进入新阶段。
+旧Issue51/Run6f3f26…仍waiting/seq2，快照environment.ready，但正式文件读取已返回OpenSandbox lookup404。停止该旧Run的动作被自动审批以缺少明确授权/可能影响接续拒绝，未执行；已放弃停止并保留旧记录。本轮用独立新Issue/环境关联接续，不偷偷重建、恢复或改库；旧等待TTL状态缺口仍未修。新任务不携带历史真实供应商密钥，真实供应商和生产性能与受控实验分开。
 
 ## 历史记录
 
@@ -1412,3 +1412,14 @@ Builder独立从GitHub exact head逐Git blob读取并重算160件source，3864d0
 阶段驻留（分钟，含阅读/结束/归档/等待及人工诊断）：prepare0.98、development2 11.07、tests3失败14.02、development4返工14.28、tests5成功16.61、QA6 7.67、approval7 6.62、report8 3.65、publish9失败至回退3.99、report10修订4.24、publish11 0.15；总83.29分钟。不能称Agent净耗时或与Issue48不同任务直接换算提效。主要可证开销是两次全量测试、测试驱动重新定位、报告合约返工与Owner核对；2CPU/8GiB无资源因果对照。旧草稿材料未前置造成重复定位已明确为Builder准备不足。原生token累计计数已私有保留（含缓存，不能把cached输入再重复相加），无可得费用，不估造金额。
 
 当前源码回归与模板升级、实际Pipeline验证、独立QA、人工恢复、草稿PR、平台部署版本分别报告。完整链有显式人工回退与Builder输入补充，不宣称全部可靠性或自主交付通过；旧失败/供应商NotRun保持。四权威docs同步当前事实，停止本阶段继续加任务，定时任务仍暂停。
+
+
+### 2026-10-25 · 真实功能研发/QA留存评测 Issue63启动
+
+用户新授权从repo Issue开始直至功能PR，评估实际总时长和质量，特别要求QA记录留存。已核所有打开Issue/PR和正式Run，既有同目标Issue51只有2026-10-15设计等待，无产品修改/测试/PR；当前file API HTTP400、OpenSandbox lookup404，不能沿原现场恢复。未另指定功能时沿用此前低延迟优先路由方向，形成明确替代关联的新评测Issue63/id6023793493，不重复恢复旧请求键。自动审批拒绝了旧Run stop（理由：未明确授权停止该具体Run、可能损失接续环境）；该命令整个未执行，安全替代为旧Run原样保留，新环境继续，不绕拒绝。
+
+已验测试设施PR62精确head0525d83245e38207cd417917e0a13917c9403581重读open/draft/mergeable clean、GitGuardian SUCCESS，按用户既有测试仓Harness构建合并授权ready并精确合main f06f05de20ffac5b8c8e772958c808379001f0e3。它仅是新功能的正常测试设施基线；不将过去绿色作为本轮验收、不合旧PR49/55或产品候选、不发Owner部署。新Issue从11:14:20Z开始计时；基线准备另列，不能从用户总体等待中隐去。
+
+Issue63正文先写用户能力，再写先计划/冻结实验后实现、真实Go/HTTP/SSE和桌面/390px连续UI、权限/限额/非零RPM/TPM/预算/取消/迟到状态边界、独立QA实际执行/原始回执/可视化对照和同版产物。产品实现与验收交Pipeline；Builder核完整性和正式证据，不代写实现或代QA过关。原make verify25分钟/外层30分钟保持；若覆盖预计超限先说明，不删覆盖或静默增限。QA记录类型、归档路径与PR可访问报告有明确要求，原始大文件遵守标准publisher/归档限制。
+
+自动入口opened40188019710/label40188020080已真实queued/pending，旧通用入口40188019708 skipped，正式API目前未有新Run；共享he-full/model-relay-local Runner正执行基线push prepare40187805174。此为入口/供应链队列候选效率瓶颈，不是Agent开始研发，后续自然受理后核唯一Run和冻结版本。已准备以Harness Builder具名/标准平台输出标记在Issue回写，不把评论当新用户输入。
