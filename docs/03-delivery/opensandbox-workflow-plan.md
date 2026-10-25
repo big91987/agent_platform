@@ -1310,3 +1310,19 @@ Issue59具名Builder阻塞通知已发布并取得远端回执 https://github.co
 16:20:04Z研发6的wait_for_input(kind=blocked)真实accepted，16:20:14回合结束、16:20:15原生停止，Run/step6正式waiting、会话idle、无待审批；这次等待与此前有queued输入时的拒绝分别保留。平台机器人于16:20:17Z将原生阻塞回复写至Issue59评论6386569189，并附原会话入口；Builder说明评论6386571212已远端核验。没有新增resume/同版全套重跑。
 
 经正式conversation文件API另行读取本节点6件2170347bytes原始材料，与Agent自带inventory逐size/SHA匹配（清单SHA42260dfb010050e9054da0170bdea82a0256565cb70e9016177f1fd80b4c6003），另存私有维护诊断目录。第二次固定runner日志1060657bytes/SHA40d85c22fd8e1f9f5a067488e2c13fc63dbc151dd23eff88eaa7451ebdb2a885与state完全匹配，source_before=after=4b4e4c07…，source/candidate_unchanged、owned_group_absent为真，candidate_removed；gate-1/runner1/make2保持。此为维护者只读保存，**不是**本节点handoff归档或释放后下载；等待阶段没有Result.artifacts，现有正式archive仅覆盖此前95件，未释放仍待接续的环境。当前结论整链Blocked/固定门禁未过，后续QA/确认/PR不可跳过；需先获得执行时限选择再继续依赖动作。
+
+
+### 2026-10-25 · 用户授权分开审查用例/环境并调整串流程时限，Issue60接续
+
+用户要求两方面并行处理：确认用例合理性或环境原因；为验证整链可以调大执行超时。已复核平台固定节点原本1800秒，真正先触发的是项目验证器内层12分钟；新任务明确授权Pipeline将项目全量执行时限调整为25分钟并记录生效值，外层30分钟及断言、完整阶段、权限、隔离和清理要求保持。25分钟是有界执行条件变更，不是已证明性能改善，不改判Issue59原失败；若仍红先定位，不继续逐次增限。本轮要求研发做针对性检查后交固定测试，避免在同一环境先自跑完整门禁再同版重复固定全套。
+
+接续前正式文件API返回OpenSandbox environment lookup HTTP404，旧环境TTL14400秒且等待已超过此期，而Run快照仍为ready；这不是产品用例失败，记录为平台环境有效性/等待保存缺口，尚未修复。未偷偷重建旧环境、复制修改DB或恢复旧会话。Issue59原Run09ce…通过正式stop入口停止，API已确认stopped/seq6；旧完整日志与归档保持，等待材料仍只算维护者私有只读保存。停止诊断曾过量打印完整响应，观察封装未能确认结束；随后只读API核实停止结果，未重发停止请求。
+
+已核现有Issue/PR和main12df9eb7a8522a679e3ccf98ca4e22b019774c5d，新建明确替代Issue60 https://github.com/big91987/model-relay/issues/60，经项目opened/labeled正式入口。Actions40145433959成功回执给出唯一Run91bc74a22a9f2c71662a6b9ee832b275，00:07:15Z创建；平台API核对issue_number60及原工作流revision10，prepare完成，development2/conversation d568a1dcbf4a0630b0ab3d554ae07ef2真实running、无待审批。初次管理员by-request404不能证明其他Owner任务不存在，已使用成功入口给出的RunID核实，未重复dispatch。Issue59正文已明确用户新授权和Issue60接续关系，旧Run不能写为completed。
+
+Builder只读核对冻结Makefile、验证器与浏览器驱动：全量门禁有真实Go/HTTP/页面、迁移、路由权重、切换、SSE取消等实质行为；journey键盘驱动先Tab即使已有焦点，旧轮实质修正方向有据。上次进入浏览器前267秒、migration15.951、legacy185.691、routing238.951，console开始前已约707.6秒，原720秒只能留约12秒。2CPU/8GiB是容量事实，尚无因果对照；全量键盘操作和多次npm依赖准备是需Pipeline核对的开销，不据静态代码删除覆盖。本轮初步不是“所有用例不合理”或“全是环境问题”，最终用例与同版结果由独立QA审查；现在只有Agent已开始修正的进展，不是已实现/已测/已QA/PR完成。
+
+平台二进制仍d9a9564、正式图revision10未热改，无Platform PR/main合并，无产品合并部署。当前四权威docs继续作为唯一维护进度源，原定时任务保持暂停。
+
+
+Issue60 opened/labeled Actions40145433959/40145434298均success，两个GitHub日志逐值给出同一Run91bc74…，去重真实成立。原Issue59沙箱lookup404后，从正式归档API重新下载全部95件15537354bytes（新目录、不用原缓存），逐size/SHA一致，清单摘要仍12b7e71e9e42919b9908e923aefdd92e2ea12134c06bd3bb59bf008b4438c8f5。此证明确认归档不依赖已消失沙箱；不是本轮新Run的正式release或QA完成证据。
