@@ -2155,3 +2155,7 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 根因归属为平台任务材料衔接：已归档产物只有读取入口，缺少受控复制至新Run的入口。正在维护源实现POST artifacts/import及SDK，双Run授权/同所有者、原件摘要核验、当前可写Agent、固定harness-output/imports路径且加.artifact保留字节防代码自动发现；复用原有追踪/停止/核对的传输进程，不改冻结图/回执、不自动恢复/推进、不扩大Agent权限。原日志导出回归保留。源码测试/独立评审/标准升级及真实导入尚在进行，不能算产品QA通过、PR交付或无人干预整链成功。原Issue63时间继续累计，不重起表；Issue原评论6399053396已同步具体卡点。
 
 补件接口源码复核：新增跨所有者/摘要篡改/只读/过期seq/停止节点拒绝和等待节点导入回归。双端Go/Python写入器对精确内部双链接中断恢复首红后绿，外部链接/错摘要保持拒绝；独立评审两项Important均关闭，无剩余C/I/M。首轮标准检查前端/浏览器/SDK/模板/控制器绿，race阶段编译了整改中间版而保留恢复负例红；冻结后完整Go vet/race-count1/build成功，platform102.171秒。当前仍未升级112或导入原件，不冒称QA放行。
+
+2026-10-26正式集成：维护源dfecd925…已开发分支提交/推送；冻结后scripts/verify.sh真实exit0，完整132929bytes/SHA1638749814b5537a2143e1c378eca67685f30ba6a41e200904c7a81cb14e3d23，平台race101.698秒。112通过标准Linux CGO build/install升级同revision，binarySHA b4fc4ed3…，等待Run、旧released Run/归档、主图、私有配置和凭据逐值不变。首次Mac直连POST连接reset，未重发；正式读文件17件全404、服务无panic/health正常，持久化helper只读诊断quiet1后，改由112本机请求同一正式授权API一次。17件2290013bytes已导入，55.959秒，全部从正式文件API重读SHA与源归档一致，Run仍waiting5未推进。首reset及零文件证据保留，网络根因未证，不能写成已修网络。独立QA最终补件复核、确认/报告/产品PR仍待完成。
+
+补件闭环推进：正式Stop使研发5在17:19:30Z stopped；正式Owner Return(target=qa)随后创建QA6。当前同一Run/冻结revision11/源码171件不变。研发5保留人工回退cancelled语义，既有tests3绿和QA4 No-Go不改，不把Owner操作写成Agent自然handoff或无人介入。17件原件路径/来源/bytes/SHA已随正式Return summary交QA6，待其独立裁定QA65-E01；未先批准或生成产品PR。观察Stop响应时因未裁剪整Run导致本地观察器起点丢失，已通过正式API确认真实stopped，没有重复Stop，原响应观察缺陷计入Builder干预。
