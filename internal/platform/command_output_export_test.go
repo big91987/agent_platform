@@ -32,8 +32,8 @@ func TestCommandLogWritersResumeWithoutOverwritingOrFollowingLinks(t *testing.T)
 				if !remote {
 					return writeCommandLogChunk(workspace, run, 3, offset, b, len(raw), digest)
 				}
-				meta, _ := json.Marshal(map[string]any{"run": run, "seq": 3, "offset": offset, "total": len(raw), "sha256": digest})
-				script := strings.Replace(sandboxCommandLogWriter, "'/workspace'", fmt.Sprintf("%q", workspace), 1)
+				meta, _ := json.Marshal(map[string]any{"run": run, "path": "workflow-output/" + run + "/command-3.log", "offset": offset, "total": len(raw), "sha256": digest})
+				script := strings.Replace(sandboxWorkspaceExportWriter, "'/workspace'", fmt.Sprintf("%q", workspace), 1)
 				cmd := exec.Command("python3", "-I", "-S", "-c", script, string(meta), base64.StdEncoding.EncodeToString(b))
 				cmd.Dir = workspace
 				cmd.Env = append(os.Environ(), "PYTHONPATH="+workspace, "PYTHONOPTIMIZE=1")
@@ -47,6 +47,7 @@ func TestCommandLogWritersResumeWithoutOverwritingOrFollowingLinks(t *testing.T)
 				t.Fatal(err)
 			}
 			target := filepath.Join(workspace, "workflow-output", run, "command-3.log")
+			partial := filepath.Join(filepath.Dir(target), ".command-3.log.partial")
 			if _, err := os.Stat(target); !os.IsNotExist(err) {
 				t.Fatal("partial export presented as complete", err)
 			}
@@ -70,6 +71,14 @@ func TestCommandLogWritersResumeWithoutOverwritingOrFollowingLinks(t *testing.T)
 			if err := write(0, raw[:65536]); err != nil {
 				t.Fatal("repeat complete export", err)
 			}
+			linked := filepath.Join(t.TempDir(), "linked-evidence")
+			if err := os.Link(target, linked); err != nil {
+				t.Fatal(err)
+			}
+			if err := write(0, raw[:65536]); err == nil {
+				t.Fatal("completed hardlink accepted")
+			}
+			os.Remove(linked)
 			os.WriteFile(target, []byte("other evidence"), 0600)
 			if err := write(0, raw[:65536]); err == nil {
 				t.Fatal("conflicting file overwritten")
@@ -86,16 +95,16 @@ func TestCommandLogWritersResumeWithoutOverwritingOrFollowingLinks(t *testing.T)
 				t.Fatal("final symlink followed")
 			}
 			os.Remove(target)
-			os.Symlink(outside, target+".partial")
+			os.Symlink(outside, partial)
 			if err := write(0, raw[:65536]); err == nil {
 				t.Fatal("partial symlink followed")
 			}
-			os.Remove(target + ".partial")
-			os.Link(outside, target+".partial")
+			os.Remove(partial)
+			os.Link(outside, partial)
 			if err := write(0, raw[:65536]); err == nil {
 				t.Fatal("partial hardlink written")
 			}
-			os.Remove(target + ".partial")
+			os.Remove(partial)
 			os.Remove(filepath.Dir(target))
 			os.Symlink(filepath.Dir(outside), filepath.Dir(target))
 			if err := write(0, raw[:65536]); err == nil {

@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	opensandbox "github.com/alibaba/OpenSandbox/sdks/sandbox/go"
@@ -67,26 +70,31 @@ func (s *Store) exportCommandOutput(ctx context.Context, r WorkflowRun, seq int,
 	out.Path = path.Join("workflow-output", r.ID, fmt.Sprintf("command-%d.log", seq))
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
+	err = transferWorkspaceBytes(ctx, r, out.Path, raw, out.SHA256, dispatch)
+	return out, err
+}
+
+func transferWorkspaceBytes(ctx context.Context, r WorkflowRun, relativePath string, raw []byte, digest string, dispatch logExportCommand) error {
 	if r.Definition.Environment != "opensandbox" {
-		if err = ctx.Err(); err == nil {
-			err = writeCommandLogChunk(r.WorkspacePath, r.ID, seq, 0, raw, len(raw), out.SHA256)
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-		return out, err
+		return writeWorkspaceExportChunk(r.WorkspacePath, relativePath, 0, raw, len(raw), digest)
 	}
 	if r.Environment == nil || r.Environment.Status != "ready" {
-		return out, errors.New("Run environment is not ready for log export")
+		return errors.New("Run environment is not ready for log export")
 	}
 	if dispatch == nil {
-		return out, errors.New("log export requires tracked execution")
+		return errors.New("log export requires tracked execution")
 	}
 	for offset := 0; ; {
-		if err = ctx.Err(); err != nil {
-			return out, err
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 		end := min(offset+64*1024, len(raw))
-		meta, _ := json.Marshal(map[string]any{"run": r.ID, "seq": seq, "offset": offset, "total": len(raw), "sha256": out.SHA256})
+		meta, _ := json.Marshal(map[string]any{"run": r.ID, "path": relativePath, "offset": offset, "total": len(raw), "sha256": digest})
 		var stdout bytes.Buffer
-		result, e := dispatch(ctx, opensandbox.RunCommandRequest{Argv: []string{"python3", "-I", "-S", "-c", sandboxCommandLogWriter, string(meta), base64.StdEncoding.EncodeToString(raw[offset:end])}, Cwd: "/workspace", Timeout: 30000}, func(event opensandbox.StreamEvent) error {
+		result, e := dispatch(ctx, opensandbox.RunCommandRequest{Argv: []string{"python3", "-I", "-S", "-c", sandboxWorkspaceExportWriter, string(meta), base64.StdEncoding.EncodeToString(raw[offset:end])}, Cwd: "/workspace", Timeout: 30000}, func(event opensandbox.StreamEvent) error {
 			var v struct{ Type, Text string }
 			if e := json.Unmarshal([]byte(event.Data), &v); e != nil {
 				return e
@@ -100,30 +108,46 @@ func (s *Store) exportCommandOutput(ctx context.Context, r WorkflowRun, seq int,
 			return nil
 		})
 		if e != nil {
-			return out, e
+			return e
 		}
 		var ack struct {
 			Complete bool `json:"complete"`
 		}
 		if !result.Stopped || result.ExitCode == nil || *result.ExitCode != 0 || json.Unmarshal(stdout.Bytes(), &ack) != nil {
-			return out, errors.New("log export not confirmed; inspect the same export before retrying")
+			return errors.New("log export not confirmed; inspect the same export before retrying")
 		}
 		if ack.Complete {
-			return out, nil
+			return nil
 		}
 		if end == len(raw) {
-			return out, errors.New("log export incomplete")
+			return errors.New("log export incomplete")
 		}
 		offset = end
 	}
 }
 
-func commandLogDirectory(workspace, run string) (int, error) {
+func validWorkspaceExportPath(relativePath string) bool {
+	if !validArchivePath(relativePath) {
+		return false
+	}
+	parts := strings.Split(relativePath, "/")
+	positive := func(v string) bool {
+		n, err := strconv.Atoi(v)
+		return err == nil && n > 0 && strconv.Itoa(n) == v
+	}
+	if len(parts) == 3 && parts[0] == "workflow-output" && validSandboxRun(parts[1]) {
+		name := parts[2]
+		return strings.HasPrefix(name, "command-") && strings.HasSuffix(name, ".log") && positive(strings.TrimSuffix(strings.TrimPrefix(name, "command-"), ".log"))
+	}
+	return len(parts) >= 5 && parts[0] == "harness-output" && parts[1] == "imports" && validSandboxRun(parts[2]) && positive(parts[3]) && validArchivePath(strings.Join(parts[4:], "/"))
+}
+
+func workspaceExportDirectory(workspace, relativePath string) (int, error) {
 	fd, err := unix.Open(workspace, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return -1, err
 	}
-	for _, part := range []string{"workflow-output", run} {
+	for _, part := range strings.Split(path.Dir(relativePath), "/") {
 		if err = unix.Mkdirat(fd, part, 0700); err != nil && !errors.Is(err, unix.EEXIST) {
 			unix.Close(fd)
 			return -1, err
@@ -138,7 +162,7 @@ func commandLogDirectory(workspace, run string) (int, error) {
 	return fd, nil
 }
 
-func readLogAt(fd int, name string, total int, digest string) error {
+func verifyWorkspaceExportAt(fd int, name string, total int, digest, partial string) error {
 	n, err := unix.Openat(fd, name, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return err
@@ -146,37 +170,67 @@ func readLogAt(fd int, name string, total int, digest string) error {
 	f := os.NewFile(uintptr(n), name)
 	defer f.Close()
 	st, err := f.Stat()
-	if err != nil || !st.Mode().IsRegular() || st.Size() != int64(total) {
-		return errors.New("existing log export conflicts")
+	var links unix.Stat_t
+	if err != nil || !st.Mode().IsRegular() || st.Size() != int64(total) || unix.Fstat(n, &links) != nil || (links.Nlink != 1 && (partial == "" || links.Nlink != 2)) {
+		return errors.New("existing workspace export conflicts")
+	}
+	if links.Nlink == 2 {
+		if err = unix.Flock(n, unix.LOCK_EX|unix.LOCK_NB); err != nil {
+			return err
+		}
 	}
 	h := sha256.New()
 	if _, err = io.Copy(h, io.LimitReader(f, int64(total)+1)); err != nil {
 		return err
 	}
 	if fmt.Sprintf("%x", h.Sum(nil)) != digest {
-		return errors.New("existing log export conflicts")
+		return errors.New("existing workspace export conflicts")
+	}
+	if links.Nlink == 2 {
+		// Link publication may have completed before the process stopped while
+		// removing its private staging name. Only that exact pair can recover.
+		var staged, current unix.Stat_t
+		if unix.Fstat(n, &current) != nil || unix.Fstatat(fd, partial, &staged, unix.AT_SYMLINK_NOFOLLOW) != nil || staged.Mode&unix.S_IFMT != unix.S_IFREG || staged.Dev != current.Dev || staged.Ino != current.Ino || staged.Nlink != 2 || current.Nlink != 2 || staged.Size != int64(total) || current.Size != int64(total) {
+			return errors.New("existing workspace export conflicts")
+		}
+		if err = unix.Unlinkat(fd, partial, 0); err != nil {
+			return err
+		}
+		if err = unix.Fsync(fd); err != nil {
+			return err
+		}
+		return verifyWorkspaceExportAt(fd, name, total, digest, "")
 	}
 	return nil
 }
 
-// A verified prefix can resume an interrupted export. File descriptors keep
-// symlinks out of both parent traversal and writes; a final file is never replaced.
+// Log destinations are platform-owned; callers cannot choose a path.
 func writeCommandLogChunk(workspace, run string, seq, offset int, data []byte, total int, digest string) error {
-	if !validSandboxRun(run) || seq < 1 || offset < 0 || total > connectorArchiveLimit || offset+len(data) > total {
+	if !validSandboxRun(run) || seq < 1 {
 		return ErrForbidden
 	}
-	dir, err := commandLogDirectory(workspace, run)
+	return writeWorkspaceExportChunk(workspace, path.Join("workflow-output", run, fmt.Sprintf("command-%d.log", seq)), offset, data, total, digest)
+}
+
+// A verified prefix can resume an interrupted export. File descriptors keep
+// symlinks out of parent traversal and writes; a final file is never replaced.
+func writeWorkspaceExportChunk(workspace, relativePath string, offset int, data []byte, total int, digest string) error {
+	hash, err := hex.DecodeString(digest)
+	if !validWorkspaceExportPath(relativePath) || offset < 0 || total < 0 || total > archiveFileLimit || offset > total || len(data) > total-offset || err != nil || len(hash) != sha256.Size || strings.ToLower(digest) != digest {
+		return ErrForbidden
+	}
+	dir, err := workspaceExportDirectory(workspace, relativePath)
 	if err != nil {
 		return err
 	}
 	defer unix.Close(dir)
-	name := fmt.Sprintf("command-%d.log", seq)
-	if err = readLogAt(dir, name, total, digest); err == nil {
+	name := path.Base(relativePath)
+	partial := "." + name + ".partial"
+	if err = verifyWorkspaceExportAt(dir, name, total, digest, partial); err == nil {
 		return nil
 	} else if !errors.Is(err, unix.ENOENT) {
 		return err
 	}
-	partial := name + ".partial"
 	fd, err := unix.Openat(dir, partial, unix.O_RDWR|unix.O_CREAT|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0600)
 	if err != nil {
 		return err
@@ -191,7 +245,7 @@ func writeCommandLogChunk(workspace, run string, seq, offset int, data []byte, t
 		return err
 	}
 	if st.Mode&unix.S_IFMT != unix.S_IFREG || st.Nlink != 1 || st.Size < int64(offset) || st.Size > int64(total) {
-		return errors.New("partial log export conflicts")
+		return errors.New("partial workspace export conflicts")
 	}
 	overlap := min(len(data), int(st.Size)-offset)
 	prior := make([]byte, overlap)
@@ -199,7 +253,7 @@ func writeCommandLogChunk(workspace, run string, seq, offset int, data []byte, t
 		return err
 	}
 	if !bytes.Equal(prior, data[:overlap]) {
-		return errors.New("partial log export conflicts")
+		return errors.New("partial workspace export conflicts")
 	}
 	if _, err = f.WriteAt(data[overlap:], int64(offset+overlap)); err != nil {
 		return err
@@ -214,7 +268,7 @@ func writeCommandLogChunk(workspace, run string, seq, offset int, data []byte, t
 	if final.Size() != int64(total) {
 		return nil
 	}
-	if err = readLogAt(dir, partial, total, digest); err != nil {
+	if err = verifyWorkspaceExportAt(dir, partial, total, digest, ""); err != nil {
 		return err
 	}
 	if err = unix.Linkat(dir, partial, dir, name, 0); err != nil {
@@ -226,31 +280,46 @@ func writeCommandLogChunk(workspace, run string, seq, offset int, data []byte, t
 	return unix.Fsync(dir)
 }
 
-const sandboxCommandLogWriter = `import os,sys,json,base64,stat,hashlib,fcntl
+const sandboxWorkspaceExportWriter = `import os,sys,json,base64,stat,hashlib,fcntl,posixpath
 m=json.loads(sys.argv[1]);data=base64.b64decode(sys.argv[2],validate=True)
-run=m['run'];seq=m['seq'];offset=m['offset'];total=m['total'];digest=m['sha256']
-assert len(run)==32 and all(c in '0123456789abcdef' for c in run)
-assert seq>0 and 0<=offset<=total<=8*1024*1024 and offset+len(data)<=total
+run=m['run'];p=m['path'];offset=m['offset'];total=m['total'];digest=m['sha256']
+def valid_run(v):return isinstance(v,str) and len(v)==32 and all(c in '0123456789abcdef' for c in v)
+def positive(v):return v.isascii() and v.isdigit() and int(v)>0 and str(int(v))==v and int(v)<=sys.maxsize
+def valid_path(v):return isinstance(v,str) and 0<len(v.encode())<=4096 and not v.startswith('/') and posixpath.normpath(v)==v and not any(x.startswith('.') or x=='node_modules' for x in v.split('/')) and not any(c in v for c in ('\\','\x00'))
+assert valid_run(run) and valid_path(p)
+parts=p.split('/')
+log=len(parts)==3 and parts[0]=='workflow-output' and valid_run(parts[1]) and parts[2].startswith('command-') and parts[2].endswith('.log') and positive(parts[2][8:-4])
+imp=len(parts)>=5 and parts[:2]==['harness-output','imports'] and valid_run(parts[2]) and positive(parts[3]) and '/'.join(parts[4:])!='AGENTS.md'
+assert log or imp
+assert type(offset)==int and type(total)==int and 0<=offset<=total<=8*1024*1024 and len(data)<=total-offset
+assert isinstance(digest,str) and len(digest)==64 and all(c in '0123456789abcdef' for c in digest)
 flags=os.O_RDONLY|os.O_NOFOLLOW|os.O_DIRECTORY
 fd=os.open('/workspace',flags)
 try:
- for part in ('workflow-output',run):
+ for part in parts[:-1]:
   try:os.mkdir(part,0o700,dir_fd=fd)
   except FileExistsError:pass
   child=os.open(part,flags,dir_fd=fd);os.close(fd);fd=child
- name='command-%d.log'%seq;partial=name+'.partial'
- def verify(name):
+ name=parts[-1];partial='.'+name+'.partial'
+ def verify(name,recover=None):
   x=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)
   with os.fdopen(x,'rb') as f:
-   s=os.fstat(f.fileno());assert stat.S_ISREG(s.st_mode) and s.st_size==total,'log export conflict'
-   assert hashlib.sha256(f.read(total+1)).hexdigest()==digest,'log export conflict'
- try:verify(name);complete=True
+   s=os.fstat(f.fileno());assert stat.S_ISREG(s.st_mode) and s.st_size==total and (s.st_nlink==1 or recover is not None and s.st_nlink==2),'workspace export conflict'
+   if s.st_nlink==2:fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   assert hashlib.sha256(f.read(total+1)).hexdigest()==digest,'workspace export conflict'
+   if s.st_nlink==2:
+    try:t=os.stat(recover,dir_fd=fd,follow_symlinks=False)
+    except FileNotFoundError:raise ValueError('workspace export conflict')
+    current=os.fstat(f.fileno())
+    assert stat.S_ISREG(t.st_mode) and (t.st_dev,t.st_ino)==(current.st_dev,current.st_ino) and t.st_nlink==current.st_nlink==2 and t.st_size==current.st_size==total,'workspace export conflict'
+    os.unlink(recover,dir_fd=fd);os.fsync(fd);verify(name)
+ try:verify(name,partial);complete=True
  except FileNotFoundError:
   x=os.open(partial,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=fd)
   with os.fdopen(x,'r+b') as f:
    fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB);s=os.fstat(f.fileno())
-   assert stat.S_ISREG(s.st_mode) and s.st_nlink==1 and offset<=s.st_size<=total,'partial log conflict'
-   overlap=min(len(data),s.st_size-offset);f.seek(offset);assert f.read(overlap)==data[:overlap],'partial log conflict'
+   assert stat.S_ISREG(s.st_mode) and s.st_nlink==1 and offset<=s.st_size<=total,'partial workspace export conflict'
+   overlap=min(len(data),s.st_size-offset);f.seek(offset);assert f.read(overlap)==data[:overlap],'partial workspace export conflict'
    f.seek(offset+overlap);f.write(data[overlap:]);f.flush();os.fsync(f.fileno())
    complete=os.fstat(f.fileno()).st_size==total
    if complete:

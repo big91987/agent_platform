@@ -27,16 +27,29 @@ func (s *Store) logExportReady(run string) error {
 	return nil
 }
 
-func (s *Store) logExportAccess(id string, seq int) (WorkflowRun, error) {
+func (s *Store) workspaceExportAccess(id string, seq int) (WorkflowRun, error) {
 	r, err := s.WorkflowRun(Caller{Admin: true}, id)
 	if err != nil {
 		return r, err
 	}
-	if r.Status != "running" || r.Seq != seq || len(r.Steps) == 0 {
+	if (r.Status != "running" && r.Status != "waiting") || r.Seq != seq || len(r.Steps) == 0 {
 		return r, ErrConflict
 	}
 	step := r.Steps[len(r.Steps)-1]
-	if step.Status != "running" || step.Result != nil {
+	if (step.Status != "running" && step.Status != "waiting") || step.Result != nil || r.Definition.node(step.NodeID).Kind != "agent" {
+		return r, ErrConflict
+	}
+	owner, err := s.workflowCaller(r)
+	if err != nil {
+		return r, err
+	}
+	if _, err = s.Workflow(owner, r.WorkflowID); err != nil {
+		return r, err
+	}
+	if !nodeAgentAllowed(owner, r.Definition.node(step.NodeID)) {
+		return r, ErrForbidden
+	}
+	if r.Definition.Environment == "opensandbox" && (r.Environment == nil || r.Environment.Status != "ready") {
 		return r, ErrConflict
 	}
 	c, err := s.Conversation(step.ConversationID)
@@ -50,9 +63,22 @@ func (s *Store) logExportAccess(id string, seq int) (WorkflowRun, error) {
 }
 
 func (e *WorkflowEngine) exportCommandOutput(ctx context.Context, id string, seq, logSeq int) (commandOutputExport, error) {
+	var out commandOutputExport
+	if logSeq >= seq {
+		return out, ErrConflict
+	}
+	err := e.withWorkspaceExport(ctx, id, seq, func(ctx context.Context, r WorkflowRun, dispatch logExportCommand) error {
+		var err error
+		out, err = e.store.exportCommandOutput(ctx, r, logSeq, dispatch)
+		return err
+	})
+	return out, err
+}
+
+func (e *WorkflowEngine) withWorkspaceExport(ctx context.Context, id string, seq int, perform func(context.Context, WorkflowRun, logExportCommand) error) error {
 	e.mu.Lock()
-	r, err := e.store.logExportAccess(id, seq)
-	if err == nil && (logSeq >= seq || !e.connectorQuiet(id)) {
+	r, err := e.store.workspaceExportAccess(id, seq)
+	if err == nil && !e.connectorQuiet(id) {
 		err = ErrConflict
 	}
 	if err == nil {
@@ -60,7 +86,7 @@ func (e *WorkflowEngine) exportCommandOutput(ctx context.Context, id string, seq
 	}
 	if err != nil {
 		e.mu.Unlock()
-		return commandOutputExport{}, err
+		return err
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	e.connectorJobs[id] = workflowConnectorJob{seq: seq, cancel: cancel}
@@ -70,7 +96,7 @@ func (e *WorkflowEngine) exportCommandOutput(ctx context.Context, id string, seq
 	if r.Definition.Environment == "opensandbox" {
 		client, err := e.store.sandboxFor(r)
 		if err != nil {
-			return commandOutputExport{}, err
+			return err
 		}
 		dispatch = func(ctx context.Context, in opensandbox.RunCommandRequest, onEvent opensandbox.EventHandler) (SandboxCommandResult, error) {
 			var observed SandboxCommandResult
@@ -92,7 +118,7 @@ func (e *WorkflowEngine) exportCommandOutput(ctx context.Context, id string, seq
 				if err := ctx.Err(); err != nil {
 					return err
 				}
-				if _, err := e.store.logExportAccess(id, seq); err != nil {
+				if _, err := e.store.workspaceExportAccess(id, seq); err != nil {
 					return err
 				}
 				if err := e.store.logExportReady(id); err != nil {
@@ -107,7 +133,7 @@ func (e *WorkflowEngine) exportCommandOutput(ctx context.Context, id string, seq
 			return result, commandErr
 		}
 	}
-	return e.store.exportCommandOutput(ctx, r, logSeq, dispatch)
+	return perform(ctx, r, dispatch)
 }
 
 func (s *Store) recordLogExportProcess(run, id string, quiet bool) error {

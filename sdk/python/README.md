@@ -160,3 +160,21 @@ SDK只传递参数；支持来源、安全下载、ZIP和manifest校验、输入
 
 
 Workflow 入站可以在 `start_workflow(..., expected_environment="opensandbox", workspace_path="", ...)` 指定环境预期。平台在创建或返回原 Run 时核对冻结流程环境；不匹配会拒绝，不回退到本机。省略参数保持原调用格式和去重指纹；此字段不配置镜像、权限或新的环境类型。沙箱入站需要支持该字段的平台版本，旧服务器会拒绝未知字段而非忽略要求。
+
+已留存的文件可由同一所有者明确引用到另一个 Run。大文件导入时创建客户端可设置 `timeout=600`：
+
+```python
+receipt = client.workflow_import_artifacts(
+    target_run_id,
+    seq=5,
+    source_run=previous_run_id,
+    source_seq=4,
+    paths=["harness-output/qa/failure.log"],
+)
+```
+
+接口仅复制已归档且摘要一致的原件，固定保存为
+`harness-output/imports/<source_run>/<source_seq>/<原路径>.artifact`，并返回原路径、目标路径、字节数和 SHA-256。
+`.artifact` 保留原始字节，避免导入代码进入项目的自动测试发现。按用途读取这些文件，不会自动解压或执行。
+目标须为正在执行或等待中的当前可写 Agent 节点；已停止的 Run 先通过正式入口恢复。导入不恢复或推进流程。完成后通过 User Input 提供返回的路径和来源。
+相同内容可重复引用，冲突不覆盖；响应未知时先检查当前状态，未知执行进程须经正式停止/核对入口处理。

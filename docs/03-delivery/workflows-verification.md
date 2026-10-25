@@ -2,6 +2,12 @@
 
 ## 当前进度
 
+最新（2026-10-25 16:28UTC）：接续tests3完整固定门禁真实exit0，16:01:49.287761562–16:25:37.286428446Z阶段1427.998667s；唯一主gate16:02:11.804811898–16:25:34.979822047Z/1403.175010s，在原1500000ms内、非cancel。正式全文1177020bytes/SHAb72250062fb68152890bc018d374a4c1bbd282f975b9a80182bda0dc0351df82，原verify.log1133897bytes/SHA12bb512d518da7e5a3feb86d86af9443ef1258dda286faf437b7f705c8284c50，Owner逐字节/state/EOF核验；171源before/after仍6316a232…、候选不变/自有group absent/candidate removed，node/npm冷起点实测、不泛称所有Go缓存冷。2480实验及五browser阶段均绿；进入qa4/f7ee56c58bf24d7a7f92af97aeb4c7dd独立实操，尚无结论/产品PR。与原1224.995491s相比约178s差额主要出现在browser前，同码不能直接归为产品退化或Go缓存唯一原因。独立main预览prepare40208165686于15:54:20 success仅为预备，不部署；历史c538固定receipt失败原log仍保留，不因后绿关闭未知根因。
+
+
+最新（2026-10-25 16:17UTC）：接续development2正式handoff于16:01:16.055643568Z accepted→tests，target显式tests/params未启用/19件artifact；native已停止，19件正式retained（2335660bytes/归档清单SHAa0383e1a…）。Builder独立解析文本源快照并逐件重算171文件及Git blob，仍6316a232…、与65cc全部对象一致，不冒充产品QA。tests3于16:01:49.287761562Z开始，唯一主gate16:02:11.804811898Z/1500000ms；在途只读日志表明2480样本实验failures0/200008ms，migration/legacy-ui已绿、routing执行中。此为阶段观测，非完整verify或独立QA通过；最终仍须正式EOF/状态/原文件摘要。归档旧原始文件不在新工作区的限制已由Agent明确交接，旧671件平台留存不被新Run覆盖。
+
+
 最新（2026-10-25 15:56UTC）：正式Actions40208199095 success，proxy配置步骤绿、checkout仅3s/SDK4s；唯一Issue65 Run e11d82e7f5d28afd80f64477377f1c63于15:54:47.854135889Z受理，冻结revision11/65cc0ad候选，不重复Run。prepare1于15:55:51.784464294Z exit0（完整2536bytes/SHA0c9f8773a29901b6a4ec3178fa183ae5c38f8f7b4785c6fa9c1f32f166f77e26），development2/bbfcf5528742c481127e6302cc503519原生运行、无pending审批。原入口base配置已在精确Run核验后CAS恢复main，原私有字节摘要89883952…一致，其余字段未变；沙箱/候选以Run冻结值执行。Actions队列728s与setup/SDK分列，完整Issue63→PR墙钟仍从11:14:20Z算；原QA通过/671归档释放复验保持，新Run完整门禁/QA/正式确认/产品草稿PR尚未完成，不把正式入口恢复冒充产品完成。
 
 
@@ -3831,3 +3837,11 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 第一轮设计完整性检查要求修订：SSE以首传输字节评分可能偏爱早心跳而非早内容；2240顺序请求加150ms SSE尾部及新旅程/回归使既有980.081秒门禁接近1500秒、余量不足；长流测量时刻与完成采纳/TTL起点需要一致。Builder不代写算法或调整产品阈值，要求Pipeline保留v1、给有据的新版本及反例/预算后再正式检查，不改源码/权限/25或30分钟、不观察后降门槛。这是设计审查返工，不是独立QA结论或已证产品Bug。
 
 通过正式workflow messages的request_id issue63:builder:design-review:1一次保存User Input16636/duplicate=false，仍同conversation03d91b…，11:30:48原生progress已承接核v1与门禁阶段，未用resume或改库/冻结图。opened40188019710和labeled40188020080日志逐值同一Run，二者success；本轮入口去重真实成立。后续计划修订、产品实现、完整测试、独立QA、正式确认、报告/草稿PR及留存均待实际发生。
+
+### 2026-10-26：Issue65 QA补件与可复用产物引用（进行中）
+
+当前Run e11d82e7f5d28afd80f64477377f1c63 的tests3完整固定门禁exit0（1427.998667秒节点驻留，原日志1133897bytes/12bb512d…；全输出1177020bytes/b7225006…）；QA4实操30+6 Go、1280/390旅程与2480原数据复算通过，未新增产品缺陷，但QA65-E01仍No-Go：旧QA4两份失败日志、tests6原verify/state/完整Connector输出没有完整进入新工作区。4个原负例脚本通过正式User Input19459补送并由同一QA实际复验；它们的绿不替代历史红原件。QA曾意外并发执行两次局部UI（合计8请求，首截图被覆盖），两份命令日志与该限制保留。研发5于16:45Z原生wait_for_input，源码171件6316a232…不变，不重跑完整门禁。
+
+根因归属为平台任务材料衔接：已归档产物只有读取入口，缺少受控复制至新Run的入口。正在维护源实现POST artifacts/import及SDK，双Run授权/同所有者、原件摘要核验、当前可写Agent、固定harness-output/imports路径且加.artifact保留字节防代码自动发现；复用原有追踪/停止/核对的传输进程，不改冻结图/回执、不自动恢复/推进、不扩大Agent权限。原日志导出回归保留。源码测试/独立评审/标准升级及真实导入尚在进行，不能算产品QA通过、PR交付或无人干预整链成功。原Issue63时间继续累计，不重起表；Issue原评论6399053396已同步具体卡点。
+
+补件接口源码复核：新增跨所有者/摘要篡改/只读/过期seq/停止节点拒绝和等待节点导入回归。双端Go/Python写入器对精确内部双链接中断恢复首红后绿，外部链接/错摘要保持拒绝；独立评审两项Important均关闭，无剩余C/I/M。首轮标准检查前端/浏览器/SDK/模板/控制器绿，race阶段编译了整改中间版而保留恢复负例红；冻结后完整Go vet/race-count1/build成功，platform102.171秒。当前仍未升级112或导入原件，不冒称QA放行。

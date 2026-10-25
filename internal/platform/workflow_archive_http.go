@@ -9,6 +9,20 @@ import (
 )
 
 func (h *Server) workflowArchiveRoutes() {
+	h.mux.HandleFunc("POST /api/workflow-runs/{id}/artifacts/import", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
+		var in artifactImport
+		if err := decode(w, r, &in); err != nil {
+			fail(w, err)
+			return
+		}
+		result, err := h.workflows.importArtifacts(r.Context(), c, r.PathValue("id"), in)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, result)
+	}))
+
 	h.mux.HandleFunc("GET /api/workflow-runs/{id}/artifacts", h.protect(false, func(w http.ResponseWriter, r *http.Request, c Caller) {
 		run, err := h.store.WorkflowRun(c, r.PathValue("id"))
 		if err != nil {

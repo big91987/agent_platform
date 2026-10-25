@@ -347,6 +347,35 @@ class Client:
             self._workflow_path(run_id) + f"/steps/{seq}/output?offset={offset}"
         )
 
+    def workflow_import_artifacts(self, run_id, *, seq, source_run, source_seq, paths):
+        """Copy retained originals into fixed opaque workspace files, without resume.
+
+        Both runs must have the same owner. A conflict never overwrites another
+        file; after an uncertain response inspect the run before retrying.
+        """
+        if (
+            type(seq) is not int
+            or seq < 1
+            or type(source_seq) is not int
+            or source_seq < 1
+            or not source_run
+            or not isinstance(paths, list)
+            or not 1 <= len(paths) <= 256
+            or any(not isinstance(p, str) or not p for p in paths)
+        ):
+            raise ValueError(
+                "positive steps, source_run and 1 to 256 paths are required"
+            )
+        return self._json(
+            self._workflow_path(run_id) + "/artifacts/import",
+            {
+                "seq": seq,
+                "source_run": source_run,
+                "source_seq": source_seq,
+                "paths": paths,
+            },
+        )
+
     def workflow_runs(self, *, workflow_id="", before=""):
         """One page, at most 200 runs. Pass the last ID as before for the next."""
         return self._json(

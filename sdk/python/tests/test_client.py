@@ -51,6 +51,40 @@ class ClientTest(unittest.TestCase):
     def respond(self, data, status=200):
         self.response = (status, "application/json", json.dumps(data).encode())
 
+    def test_import_retained_originals_uses_explicit_target_and_source_steps(self):
+        receipt = {
+            "source_run": "old",
+            "source_seq": 4,
+            "files": [
+                {
+                    "source_path": "failure.log",
+                    "path": "harness-output/imports/old/4/failure.log.artifact",
+                }
+            ],
+        }
+        self.respond(receipt)
+        self.assertEqual(
+            self.client.workflow_import_artifacts(
+                "run", seq=5, source_run="old", source_seq=4, paths=["failure.log"]
+            ),
+            receipt,
+        )
+        self.assertEqual(self.calls[-1][1], "/api/workflow-runs/run/artifacts/import")
+        self.assertEqual(
+            json.loads(self.calls[-1][3]),
+            {"seq": 5, "source_run": "old", "source_seq": 4, "paths": ["failure.log"]},
+        )
+        for values in (
+            {"seq": True},
+            {"source_seq": 0},
+            {"paths": []},
+            {"paths": "failure.log"},
+        ):
+            args = dict(seq=5, source_run="old", source_seq=4, paths=["failure.log"])
+            args.update(values)
+            with self.assertRaises(ValueError):
+                self.client.workflow_import_artifacts("run", **args)
+
     def test_workflow_entry_and_feedback_use_stable_event_keys(self):
         self.respond({"id": "run", "status": "running"}, 201)
         result = self.client.start_workflow(
