@@ -6,7 +6,7 @@
 
 当前任务为 [Issue60](https://github.com/big91987/model-relay/issues/60) / [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275)，基于main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。Pipeline已完成初轮用例/驱动检查和必要设施修正，项目验证器总时限由12改25分钟、外层仍30分钟，原断言/全部阶段保持。19件研发产物已归档并逐摘要核验。
 
-首次tests3的非超时SSE采集失败保留，Pipeline修复三个测试文件后，tests5正式完整make verify已exit0：160源码3864d081…、正式全文1103560bytes/e01f395f…、主gate16分20秒、源码/候选前后一致且清理完成。当前qa6/f15cee7b…正在独立复核；尚无QA通过、Owner确认、报告或本轮草稿PR结论。
+首次tests3的非超时SSE采集失败保留，Pipeline修复三个测试文件后，tests5正式完整make verify已exit0：160源码3864d081…、正式全文1103560bytes/e01f395f…、主gate16分20秒、源码/候选前后一致且清理完成。QA6已正式approved并交approval7；Builder依据已有授权完成正式Owner代理确认，仅批准报告及draft PR。当前report8/a367d60e…已真实承接，尚无本轮草稿PR或新Run释放结论。
 
 旧Issue59 Run已stopped，环境经正式释放/核对收敛released；旧95件归档释放后重新下载摘要一致。等待超过4小时TTL后环境消失而平台仍显示ready，是尚未修复的平台生命周期缺口，不能以本轮重新开始冒充永久修复；旧失败保留。旧PR49/55未合并部署，旧业务Issue51状态未改。本阶段继续目标为同版全量门禁、独立QA、正式确认、报告/真实draft PR及释放后留存；不合并或部署产品。
 
@@ -1921,3 +1921,12 @@ tests5实际make verify exit0，完整正式输出1103560bytes/SHAe01f395f0276bb
 运行自动进入qa6/conversation f15cee7b1902da8d4f5a3e9b04001948，原生真实承接并开始核源码、回执和独立针对性复验，审批0。全量绿色是技术门禁结果；QA、人工确认、同版报告、真实draft PR和新Run释放后下载仍未完成。
 
 另由Builder只读GitHub API核对旧draft PR55的head32213cf63995f6e3b06488bd0ec48c4ed7bc1b24（2026-10-22创建后未更新、open/draft/未合）：已有25分钟verificationGateContext和同fetch响应clone的SSE采集改动，尚未进main。本轮未在起跑前把具体材料准备给Agent，导致重复定位，属于Builder输入准备效率遗漏，不能归为新产品故障或全是环境原因。没有把旧草稿测试结果替代本轮，未合旧PR、未指示Agent抄整包；当前160源码独立实现/重新实测事实保持。计划在正式Owner确认summary向report提供来源事实，不另外投递迟到UserInput打断QA，不改历史“当时未取得”记录或当前Go结论。
+
+
+#### Issue60 · 独立QA通过并正式进入交付报告
+
+QA6于01:11:17.561Z实际handoff(target=approval) accepted，result.route=approved、23件产物，原生结束/停止及归档后进入approval7。QA独立读完整固定输出、160源码摘要、11个修改代码和22件开发材料；实际执行runner/history race、真实HTTP路由race、126项Node及diff检查。首次组合命令因login PATH缺Go导致两条Go命令未执行，虽然末尾Node exit0，QA保留首日志并明确不将其当Go通过；使用已安装Go正确PATH和fail-fast后针对性重跑成功，未重跑整套make verify。QA复核固定浏览器原始JSON/PNG并抽查窄屏同请求SSE详情，没有声称独立重复全套浏览器实操。原失败、真实供应商/生产性能未验和旧等待TTL问题保留。
+
+Builder通过正式归档API核对3阶段87件30818063bytes逐size/SHA匹配，清单SHA6f6b1c147891de9b4de4b66f2ce2db734428ca85787f9dbb6baa261801975c6d；并独立重组3片20403005bytes的原浏览器包，342个原始成员37700340bytes逐size/SHA与QA清单一致，含路径/类型/重复检查。包SHA68218942c1997db4f118daf65423c86d2e28f9b47d0e926d1027f62927c9c81c。此为留存完整性核验，不替代产品QA。
+
+正式decision(seq7,route=next)已accepted，summary SHA df90670fb427a2c5fd8e36c5a15d5d69ac273841b1537b457cb58d34164d02e8，随后API确认approval7 completed、report8/conversation a367d60e36c94774928dacb4dd27e6c1 running。确认明确为Builder按用户既有授权代Owner，不是用户本人点击；只进入报告/草稿PR，不批准合并部署。旧PR55来源核对通过标准decision summary传给report，Agent原生进展确认将保留来源边界；没有另发迟到UserInput、修改冻结图或代产品实现。报告、实际PR及新Run释放后全新下载尚待完成。
