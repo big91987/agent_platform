@@ -2,13 +2,15 @@
 
 ## 当前进度
 
-更新：2026-10-25。112:8795实际平台版本仍为 `d9a9564050d825b02c3ae00e2364d94b94828681`，正式工作流 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision10。定时任务保持暂停，当前工作来自用户明确接续授权。
+更新：2026-10-25。112:8795实际平台版本仍为 `d9a9564050d825b02c3ae00e2364d94b94828681`，正式工作流 `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11（当前Run冻结revision10）。定时任务保持暂停，当前工作来自用户明确接续授权。
 
-当前任务为 [Issue60](https://github.com/big91987/model-relay/issues/60) / [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275)，基于main `12df9eb7a8522a679e3ccf98ca4e22b019774c5d`。Pipeline已完成初轮用例/驱动检查和必要设施修正，项目验证器总时限由12改25分钟、外层仍30分钟，原断言/全部阶段保持。19件研发产物已归档并逐摘要核验。
+当前任务 [Issue60](https://github.com/big91987/model-relay/issues/60) 的唯一 [Run91bc74](http://10.1.20.112:8795/workflow-runs/91bc74a22a9f2c71662a6b9ee832b275) 已12步completed。Pipeline完成测试设施检查/最小修正，固定完整make verify真实exit0、主gate980.081秒（16分20秒）；项目总预算12→25分钟、平台外层30分钟，全部原断言/阶段保持。独立QA6通过、Owner代理正式确认、报告及固定publisher已形成真实 [draft PR62](https://github.com/big91987/model-relay/pull/62)，未合并部署。
 
-首次tests3的非超时SSE采集失败保留，Pipeline修复三个测试文件后，tests5正式完整make verify已exit0：160源码3864d081…、正式全文1103560bytes/e01f395f…、主gate16分20秒、源码/候选前后一致且清理完成。QA6已正式approved并交approval7；Builder依据已有授权完成正式Owner代理确认，仅批准报告及draft PR。当前report8/a367d60e…已真实承接，尚无本轮草稿PR或新Run释放结论。
+PR62 head `0525d83245e38207cd417917e0a13917c9403581`：160件源码逐Git对象独立重算 `3864d081e13800056ea0f849c598373c1eac8c03443990453752cd70b4be7c4d`，与正式tests5/QA完全同版；13项实际变化为11项QA确认文件加QA/报告原文，GitGuardian SUCCESS。沙箱已通过正式入口released、原生进程均停止；释放后从持久API全新下载139件80922540bytes，全部size/SHA一致，清单986925532264f5e0aef15af1feaa48ba8084a92751084ea29797ff44a9dee51e。
 
-旧Issue59 Run已stopped，环境经正式释放/核对收敛released；旧95件归档释放后重新下载摘要一致。等待超过4小时TTL后环境消失而平台仍显示ready，是尚未修复的平台生命周期缺口，不能以本轮重新开始冒充永久修复；旧失败保留。旧PR49/55未合并部署，旧业务Issue51状态未改。本阶段继续目标为同版全量门禁、独立QA、正式确认、报告/真实draft PR及释放后留存；不合并或部署产品。
+本轮保留tests3非超时SSE驱动失败及publish9类别拒绝；一次正式stop→return(report10)后发布成功，不能称无人干预或首次全绿。通用模板修复维护源ea38d07已133回归通过并标准同步 [PR61](https://github.com/big91987/model-relay/pull/61) 精确合main a1230fd4；正式图revision11，当前Run冻结revision10不变。新入口携带真实Issue链接、报告明确六类约束，不靠运行副本补丁；新revision11未来新Run自然全链仍待单独实证。
+
+旧Issue59已停止/环境核对released，95件归档释放后下载一致；旧环境TTL到期而快照ready的生命周期缺口仍未修。真实供应商/生产性能未验证；QA独立定向动态回归和可视抽查与固定完整浏览器分别报告。旧PR49/55未合、业务Issue51未恢复。源只开发分支提交推送，定时任务仍暂停。本轮止于草稿PR与证据/瓶颈报告，不自动进入新阶段。
 
 ## 历史记录
 
@@ -1385,3 +1387,28 @@ QA6于01:11:17.561Z实际handoff(target=approval) accepted，result.route=approv
 Builder通过正式归档API核对3阶段87件30818063bytes逐size/SHA匹配，清单SHA6f6b1c147891de9b4de4b66f2ce2db734428ca85787f9dbb6baa261801975c6d；并独立重组3片20403005bytes的原浏览器包，342个原始成员37700340bytes逐size/SHA与QA清单一致，含路径/类型/重复检查。包SHA68218942c1997db4f118daf65423c86d2e28f9b47d0e926d1027f62927c9c81c。此为留存完整性核验，不替代产品QA。
 
 正式decision(seq7,route=next)已accepted，summary SHA df90670fb427a2c5fd8e36c5a15d5d69ac273841b1537b457cb58d34164d02e8，随后API确认approval7 completed、report8/conversation a367d60e36c94774928dacb4dd27e6c1 running。确认明确为Builder按用户既有授权代Owner，不是用户本人点击；只进入报告/草稿PR，不批准合并部署。旧PR55来源核对通过标准decision summary传给report，Agent原生进展确认将保留来源边界；没有另发迟到UserInput、修改冻结图或代产品实现。报告、实际PR及新Run释放后全新下载尚待完成。
+
+
+#### Issue60 · 固定发布拒绝与通用模板修复
+
+report8于01:21:34.979Z正式handoff(target=publish) accepted、24件，01:21:42原生结束/停止。全部111件55858492bytes归档size/SHA核验通过，清单4866d467d340372037060674de8eb805ca5a9759b0467959dfa8e8ea1aff68b5。固定publish9未通过字段校验，exit1/843bytes/truncated=false，错误report must describe the actual change and evidence；报告标题用了不受支持的【测试设施】，且正文因未拿到当前Issue链接而未关联#60。错误位于Git写入/提交/推送/PR前，GitHub正式读取无codex/run-91bc74a22a9f匹配PR。不是产品/测试/QA失败，也不是权限或超时，不盲重跑发布。
+
+根因是通用报告模板只写【类别】未列允许值，入口消息仅title/body、当前Issue虽然保存为参数却未写进Agent可见任务输入。维护源ea38d07d8c296ea4d4af16799ea9e12b7ceea67d补入受信当前Issue链接、六类标准及缺关联先澄清的要求。入口可见链接回归先红，修后133模板测试21.731秒exit0，ruff检查/格式通过；首次运行遗漏SDK PYTHONPATH仅是测试启动错误，正确环境后取得真实六类缺链接的红。标准导出151对象、4个模板差异，不改平台二进制或产品候选。
+
+112正式API将主图revision10升11，只改report指令；保存重读/完整预览一致、当前冻结Run逐值不变。第一次升级前置断言误用了旧记录中的角色摘要而拒绝，在任何写入前停止；只读核实当前角色实际逐字等于旧维护源（245b91ec…）后才正式应用，未覆盖自定义。当前Run仍冻结revision10，通过用户既有授权正式stop9，核stopped后return(report)创建10；旧publish9保留失败回执、取消/人工回退语义，前8步及测试/QA/确认不变。回退反馈给出Issue60真实关联和同源报告约束，仅准修材料后再交固定publisher；不热改图、手改文件/回执/DB或重跑已绿全测。此为显式人工恢复，不能称无人干预或首次发布通过。
+
+
+维护源ea38d07已开发分支推送；标准Harness PR61 https://github.com/big91987/model-relay/pull/61 的head586e6c76cd67a4eead0287d4a7b9135e984976af，4文件/151对象逐Git blob一致、GitGuardian SUCCESS，按既有Harness构建授权精确合为main a1230fd470faf6ed0e6a16e7a4bf03e21b58d359。测试仓新入口以后自动携带当前Issue链接，当前冻结Run不追溯修改，产品/测试候选仍基于12df9eb。没有Platform PR或main合并、没有产品合并部署。Issue60评论6391948472已以Harness Builder身份反馈发布卡点及处理；原平台机器人失败/重启回调真实存在且身份独立。
+
+
+#### Issue60 · 真实草稿PR、正式释放及释放后留存闭合
+
+report10于01:29:45.389Z handoff publish真实accepted、28件，01:29:52原生结束/停止；固定publish11实际exit0，完整1413bytes/SHA08f30cf37e406165d2d086236ce85c2b98c922f64ee53fcf6f5860eb21a67a9c，EOF/truncated=false。真实PR62 https://github.com/big91987/model-relay/pull/62，head0525d83245e38207cd417917e0a13917c9403581、open/draft、未合；运行01:30:33.046Z进入done12/completed。原publish9仍cancelled且真实exit1/843bytes/SHA13641f4829a4e71c3682c900d323324bfe3b76915e0f5d5b0d098b6ec45eee4f，旧报告8原字节另存；人工回退不改判第一次发布。
+
+Builder独立从GitHub exact head逐Git blob读取并重算160件source，3864d081e13800056ea0f849c598373c1eac8c03443990453752cd70b4be7c4d同tests5/QA；相对冻结main12df9eb只有11项QA确认变更加docs/harness/run-91bc74a22a9f/qa.md与report.md共13件。11项bytes/SHA全部匹配development4/QA清单，PR正文逐字同报告10body（SHA3c33b545d6f588ffc1e1d2ceba7f33fbd46ed383f2d34500d4626e138591c336），QA原文64298f8fb73dd5a2270ce218aab76f00c2e87d7b7c8eb691d6d1da3c3f440f55；GitGuardian SUCCESS。PR当前base因独立模板升级为a1230fd4，候选仍冻结12df9eb，不把模板main合并当产品草稿合并；两PR均已附当前聊天。
+
+139件80922540bytes均正式retained、清单SHA986925532264f5e0aef15af1feaa48ba8084a92751084ea29797ff44a9dee51e。核对后仅一次正式environment/release，当前completed/seq12保持、环境released、原生进程全stopped；再从正式artifact文件API全新下载所有139件（不读缓存），逐size/SHA完全匹配。342浏览器成员原始完整性核验已记上文，不把释放后普通文件核验重复描述成另一次视觉QA。此闭合当前真实整链和持久留存，不证明旧TTL等待缺口已修或新revision11已无人介入全程跑过。
+
+阶段驻留（分钟，含阅读/结束/归档/等待及人工诊断）：prepare0.98、development2 11.07、tests3失败14.02、development4返工14.28、tests5成功16.61、QA6 7.67、approval7 6.62、report8 3.65、publish9失败至回退3.99、report10修订4.24、publish11 0.15；总83.29分钟。不能称Agent净耗时或与Issue48不同任务直接换算提效。主要可证开销是两次全量测试、测试驱动重新定位、报告合约返工与Owner核对；2CPU/8GiB无资源因果对照。旧草稿材料未前置造成重复定位已明确为Builder准备不足。原生token累计计数已私有保留（含缓存，不能把cached输入再重复相加），无可得费用，不估造金额。
+
+当前源码回归与模板升级、实际Pipeline验证、独立QA、人工恢复、草稿PR、平台部署版本分别报告。完整链有显式人工回退与Builder输入补充，不宣称全部可靠性或自主交付通过；旧失败/供应商NotRun保持。四权威docs同步当前事实，停止本阶段继续加任务，定时任务仍暂停。
