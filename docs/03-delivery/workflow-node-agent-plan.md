@@ -2,6 +2,12 @@
 
 ## 当前进度
 
+最新（2026-10-25 15:56UTC）：正式Actions40208199095 success，proxy配置步骤绿、checkout仅3s/SDK4s；唯一Issue65 Run e11d82e7f5d28afd80f64477377f1c63于15:54:47.854135889Z受理，冻结revision11/65cc0ad候选，不重复Run。prepare1于15:55:51.784464294Z exit0（完整2536bytes/SHA0c9f8773a29901b6a4ec3178fa183ae5c38f8f7b4785c6fa9c1f32f166f77e26），development2/bbfcf5528742c481127e6302cc503519原生运行、无pending审批。原入口base配置已在精确Run核验后CAS恢复main，原私有字节摘要89883952…一致，其余字段未变；沙箱/候选以Run冻结值执行。Actions队列728s与setup/SDK分列，完整Issue63→PR墙钟仍从11:14:20Z算；原QA通过/671归档释放复验保持，新Run完整门禁/QA/正式确认/产品草稿PR尚未完成，不把正式入口恢复冒充产品完成。
+
+
+最新（2026-10-25 15:47UTC）：唯一源f5b43d2经全141模板27.816s、actionlint/5项回归和独立复审后，通过标准export+installer upgrade/reentry同步。PR67/head51c09a28…精确合maina68bc2ca…，152对象和8文件远端字节一致，GitGuardian SUCCESS。前次dispatch CLI失败已由GitHub列表核实无新dispatch（此前最近10月15）且admin API无Issue65Run；修复根因后仅一次正式dispatch受理204，Actions40208199095/15:42:19Z排队。唯一model-relay-local Runner online/busy，被独立自动预览prepare40208165686占用；不取消、不重跑其他任务，排队不算Agent净开发。另有c538自动预览prepare40207651151实际verify失败（非本轮产品候选），私有原log974208bytes/SHAbdc7e802be4bc1bd58ef39ad23e350841c55eb437fffbbb98a3c1e2d46321050，失败TestFixedRunnerReceipts；未归因为本轮产品回归或对旧main强行修补。当前仍无产品PR或新Run，base65cc待精确接单后恢复。
+
+
 最新（2026-10-25 15:43UTC）：PR66/head045d42…精确合mainc538b29…、152导出对象及9文件匹配/GitGuardian绿，但GitHub实际YAML校验在job启动前拒绝（40207649983/40207649253），没有SDK或Run。已用固定actionlint1.7.12复现：env键不区分大小写，HTTP_PROXY/http_proxy重复；前次隔离测试和review漏此限制，不能称正式入口修复成功。唯一源改为两个小写checkout环境变量，继承lower优先/upper兜底的有效代理，SDK环境保持；新增本地同故障红→绿及完整模板复验。actionlint对原有GitHub已接受queue:max新字段、自定义he-full标签仅做精确ignore，env语法错误没有忽略。15:35一次dispatch CLI返回1、无Run；原因未取回不编造422。随后一条诊断误带重复dispatch被自动审批拒绝，未执行；已移除，不借改命令绕行。修复实际集成并确认无副作用之前不再触发。原Issue65/base65cc仍保持待接单，产品PR未生成，所有驻留计入原11:14:20Z墙钟。
 
 
