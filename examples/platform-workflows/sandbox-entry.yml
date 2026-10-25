@@ -27,7 +27,42 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 5
     steps:
+      - name: Configure GitHub transport
+        id: github_transport
+        env:
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_SANDBOX_CONFIG }}
+        run: |
+          python3 -I - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          try:
+              config = json.loads(Path(os.environ["AGENT_PLATFORM_CONFIG"]).read_text())
+              proxy = config.get("git_proxy", "")
+              if not isinstance(proxy, str) or any(ord(c) <= 32 or ord(c) == 127 for c in proxy):
+                  raise ValueError()
+              if proxy:
+                  parsed = urlsplit(proxy)
+                  if parsed.scheme not in ("http", "https", "socks5", "socks5h") or not parsed.hostname or parsed.username is not None or parsed.password is not None:
+                      raise ValueError()
+                  parsed.port
+          except (OSError, ValueError, TypeError, KeyError, AttributeError):
+              raise SystemExit("Invalid private GitHub transport configuration")
+          values = {key: proxy or os.environ.get(name, "") for key, name in (("http_lower", "http_proxy"), ("https_lower", "https_proxy"), ("http_upper", "HTTP_PROXY"), ("https_upper", "HTTPS_PROXY"))}
+          if any(any(ord(c) <= 32 or ord(c) == 127 for c in value) for value in values.values()):
+              raise SystemExit("Invalid Runner proxy environment")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for name, value in values.items():
+                  if value:
+                      print("::add-mask::" + value.replace("%", "%25"))
+                  output.write(name + "=" + value + "\n")
+          PYTHON
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          http_proxy: ${{ steps.github_transport.outputs.http_lower }}
+          https_proxy: ${{ steps.github_transport.outputs.https_lower }}
+          HTTP_PROXY: ${{ steps.github_transport.outputs.http_upper }}
+          HTTPS_PROXY: ${{ steps.github_transport.outputs.https_upper }}
         with:
           persist-credentials: false
       - name: Submit sandbox task through repository-owned SDK

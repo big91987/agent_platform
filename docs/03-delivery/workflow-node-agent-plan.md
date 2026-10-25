@@ -2,7 +2,13 @@
 
 ## 当前进度
 
-最新（2026-10-25 14:48UTC）：Issue63 tests8完整冷make verify exit0/20分42.747秒节点驻留，171源6316a232…同版，独立QA9正在复验。Builder发布前发现冻结发布器拒绝已跟踪点文件的通用缺口；唯一维护源已红绿修复、13边界回归和独立复审通过，完整源验证exit0（136模板/Go race96.160秒等）。旧Run工具包未替换，产品PR仍待；QA结论与Harness发布阻塞分开。
+最新（2026-10-25 15:36UTC）：checkout代理修复已完成唯一源码红→绿及独立复审，无遗留C/I/M；使用GITHUB_OUTPUT只向checkout单步传四个独立输出键，原Runner环境保留，SDK/平台API环境不变，控制字符/认证代理拒绝、百分号掩码转义。初版GITHUB_ENV会让SDK也走代理的问题经review发现并在交付前移除。完整scripts/verify.sh真实exit0（140模板25.866s/真实浏览器/SDK/供应链/vet/race/build，Go race复用明确非新冷测试）；132601bytes/SHA9052f094269b000ffb8d824e255134489e9b5de59dca1bb35dba71f19c4fdb38。输出键最后收敛后追加全模板复验，随后仅通过标准export及installer --upgrade同步项目YAML/来源清单，不改Runner全局配置、不加时限、不重试到绿；实际Actions/唯一Run尚待集成，不把源码绿当接单完成。
+
+
+最新（2026-10-25 15:23UTC）：Issue65入口尚无Run，canonical Action40206041604 checkout于15:18:27–15:23:07取消、SDK skipped；此前generic40205859049两次直连github.com:443 curl28/75s失败且SDK skipped。私有git_proxy已配置但旧YAML的checkout先于SDK代理应用，是标准入口网络覆盖缺口；不把全部慢因归为仓库体积，也不臆测取消原因。正在唯一源模板做checkout单步代理，原权限/平台API/去重保持，红→绿及独立review后标准升级，再核无Run/无SDK副作用才retry原Issue65。当前base仍pin65cc候选，收到精确Run后CAS恢复原main配置；原Run已stop/release及671件新下载验证事实不变。
+
+
+最新（2026-10-25 15:16UTC）：Issue63产品同版tests8/独立QA9已Pass，QA63-01关闭；旧冻结发布器存在通用点路径阻塞，未放行报告/发布，原Run10已正式stopped/released。671件149149552bytes释放后全新下载全部SHA一致。源643c128经标准Harness PR64精确合main7709fe；候选171源6316…原字节准备为65cc0ad输入分支，交付维护Issue65已从唯一label入口接续，尚待受理/重新完整门禁、QA和产品draft PR。
 
 更新：2026-10-25。112:8795平台实际版本 `d9a9564050d825b02c3ae00e2364d94b94828681`、正式Workflow `83f08f81f7040fcd0c12e6ff4e2acd2d` revision11。定时任务保持暂停；本轮由用户直接授权试验真实产品功能，从仓库Issue到功能PR，评估耗时/质量并留存QA证据。
 
@@ -50,7 +56,19 @@ GitHub bot big91987-agent-platform-bot[bot]已原样反馈No-Go评论6398235975�
 
 发布前通用缺口：冻结main f06上的sandbox_publish.py用name.startswith((".","/"))将实际已跟踪的.trellis项目契约拒绝，GitHub正式读取及真实Git夹具复现；尚未执行发布，不虚称已发布失败。维护源先红后修：点路径必须由固定prepared基线精确跟踪，Git literal路径核对在任何写入前执行；仍拒绝新增隐藏输入、基线后先提交的隐藏输入，保留凭据/链接/忽略规则/索引/完整历史检查。初版去掉点限制被独立复审发现.env.local等秘密暴露风险，未提交/部署该版；收窄后13真实Git边界测试和独立复审无C/I/M，原字节断言已纠正。完整源验证正在运行。最终维护源scripts/verify.sh真实exit0，131917bytes/SHAd0ad4d85aa3278a1c6e611ecd4a6af6c04426d44ea291504c4234de5378b4490；136模板26.064秒、浏览器/SDK/供应链/Go vet-race96.160秒-build全过。此前局部模板suite真实失败仅export子进程写默认Go缓存被本机文件沙箱拒绝，原日志保留；完整命令按测试所需权限运行后取得真实绿，不弱化测试。项目README现有标准路径要求工具包版本经项目评审合入Git，不替换在途冻结脚本；本Run未手改.harness/图/回执，需先保留真实QA证据，再通过标准模板升级及受支持入口接续交付。该归属Harness，不新造产品缺陷。原Issue已Builder具名评论6399053396说明影响、证据、已做和后续。
 
+2026-10-25 15:16UTC：独立QA9于14:58:17.113Z正式handoff→approval/212件，14:58:31.805Z原生停止，15:02:20.553Z归档后approval10；QA9阶段驻留1382.007秒，含执行、冷编译、审阅与228.748秒停止后归档，不是Agent净耗时。最终qa.md19621bytes/SHA7c76af462396e657b9921489eac461588f687ffa1aacc015a5f38f2480b1f6ca，Owner逐209清单引用核验，并复核两套8分片各378内层原件（旧44121948bytes/新44272250bytes），原QA4 No-Go原文f9dd…不变；原tests8正式及runner全文与Owner前API导出逐字节相同。QA实际原两overlay负例、21延迟/限额等顶层组、额外9安全组及1280/390真实Go页面通过；2480原样本独立复算达标但未重发全2480，报告明确区分动态、复算、静态与NotRun。真实供应商/生产性能/原始trace仍NotRun。
+
+已按既有Harness构建授权精确合PR64/headd7cb24a1f2dd2ca37b071be2df233acae1023716→main7709fe2734c370238a49bbb98efac9eddba81c7a，GitGuardian SUCCESS；151标准导出对象逐Git blob匹配维护源643c128。仅项目工具包升级，无112二进制/图/权限变化。在途原Run仍绑定旧源码/工具，未手改脚本或伪造发布失败；Builder因此未批准实际publisher，15:05:47.043Z通过正式stop保留现场，随后正式release。停止API先返回异步状态，维护断言提前期望stopped而终止；只读确认已stopped后记录已受理，没有重复stop。释放后新目录并发完整GET 671件149149552bytes，全size/SHA匹配、旧QA Fail与新Pass同原文，未复用旧缓存。原Run未完成整链、无产品PR/合并/部署。
+
+Builder仅做分支准备：将Pipeline已验输出原字节保存codex/issue63-reviewed-candidate/head65cc0ad786123a7e38c6118ea450db42b7bc7ddf（非PR），远端171源Git对象全部匹配6316…、49件产品差异/冻结材料/前后QA报告绑定；未代写产品或验收。标准入口已有base选项固定该commit，其他配置/权限/凭据不变，唯一Run受理并核pin后恢复main默认；不声称跨Run自动恢复或在途工具包升级已支持。[Issue65](https://github.com/big91987/model-relay/issues/65)为交付维护接续，15:12:42Z创建，明确继承Issue63而非新功能，已核无Run后仅一次加harness-opensandbox标签。未来产品PR仍以Issue63实际功能为主，完整重验/独立QA/正式确认/报告/固定publisher及释放后核验仍待；总墙钟从原11:14:20Z计，不能用新Issue起点缩短耗时。原8个完成turn原生末计数Owner核reset与轮内单调后input40078725/cache38891136/output214330（reasoning58969）/total40293055；cache和reasoning为子集，非货币费用。共享Runner新push prepare40204208376仍需实时核队列，不重复dispatch或取消其他工作。
+
 ## 历史记录
+
+2026-10-25 15:16UTC：独立QA9于14:58:17.113Z正式handoff→approval/212件，14:58:31.805Z原生停止，15:02:20.553Z归档后approval10；QA9阶段驻留1382.007秒，含执行、冷编译、审阅与228.748秒停止后归档，不是Agent净耗时。最终qa.md19621bytes/SHA7c76af462396e657b9921489eac461588f687ffa1aacc015a5f38f2480b1f6ca，Owner逐209清单引用核验，并复核两套8分片各378内层原件（旧44121948bytes/新44272250bytes），原QA4 No-Go原文f9dd…不变；原tests8正式及runner全文与Owner前API导出逐字节相同。QA实际原两overlay负例、21延迟/限额等顶层组、额外9安全组及1280/390真实Go页面通过；2480原样本独立复算达标但未重发全2480，报告明确区分动态、复算、静态与NotRun。真实供应商/生产性能/原始trace仍NotRun。
+
+已按既有Harness构建授权精确合PR64/headd7cb24a1f2dd2ca37b071be2df233acae1023716→main7709fe2734c370238a49bbb98efac9eddba81c7a，GitGuardian SUCCESS；151标准导出对象逐Git blob匹配维护源643c128。仅项目工具包升级，无112二进制/图/权限变化。在途原Run仍绑定旧源码/工具，未手改脚本或伪造发布失败；Builder因此未批准实际publisher，15:05:47.043Z通过正式stop保留现场，随后正式release。停止API先返回异步状态，维护断言提前期望stopped而终止；只读确认已stopped后记录已受理，没有重复stop。释放后新目录并发完整GET 671件149149552bytes，全size/SHA匹配、旧QA Fail与新Pass同原文，未复用旧缓存。原Run未完成整链、无产品PR/合并/部署。
+
+Builder仅做分支准备：将Pipeline已验输出原字节保存codex/issue63-reviewed-candidate/head65cc0ad786123a7e38c6118ea450db42b7bc7ddf（非PR），远端171源Git对象全部匹配6316…、49件产品差异/冻结材料/前后QA报告绑定；未代写产品或验收。标准入口已有base选项固定该commit，其他配置/权限/凭据不变，唯一Run受理并核pin后恢复main默认；不声称跨Run自动恢复或在途工具包升级已支持。[Issue65](https://github.com/big91987/model-relay/issues/65)为交付维护接续，15:12:42Z创建，明确继承Issue63而非新功能，已核无Run后仅一次加harness-opensandbox标签。未来产品PR仍以Issue63实际功能为主，完整重验/独立QA/正式确认/报告/固定publisher及释放后核验仍待；总墙钟从原11:14:20Z计，不能用新Issue起点缩短耗时。原8个完成turn原生末计数Owner核reset与轮内单调后input40078725/cache38891136/output214330（reasoning58969）/total40293055；cache和reasoning为子集，非货币费用。共享Runner新push prepare40204208376仍需实时核队列，不重复dispatch或取消其他工作。
 
 2026-10-25 14:48UTC：tests8于14:39:18.545Z完成exit0，QA9/conversationa045680d26cee2debfd12284eee0f657同Run自动启动。正式输出1169995bytes/SHA219242268d200152d7c7dc9503bf20bbc570d67b590f278f23f382de6ff32af3至EOF；原runner1133068bytes/SHAf24391a7c9b4194da1b35f3c2e32c5bbc13ee092a12c9fae493bfd037a03764d与state逐字节匹配，主gate14:18:51.403Z–14:39:16.399Z＝1224.995491秒；源码171件6316a232…前后不变，冷node_modules/npm_cache false，未取消/ownedgroup absent/candidate removed。本版完整绿不覆盖tests6红或QA4 No-Go，QA9尚待签署。
 
