@@ -10,6 +10,7 @@ on:
         type: string
 permissions:
   contents: read
+  pull-requests: read
   statuses: write
 concurrency:
   group: code-review-${{ github.repository }}-${{ github.event.pull_request.number || inputs.pr }}

@@ -57,3 +57,25 @@ class PullReviewEntryTest(unittest.TestCase):
             self.assertRaises(ValueError),
         ):
             submit(self.config, client, self.pr, "cli")
+
+    def test_permission_failure_reports_http_status_without_raw_response(self):
+        import contextlib
+        import io
+        import subprocess
+        from unittest.mock import patch
+
+        from pr_entry import run
+
+        failure = subprocess.CalledProcessError(
+            1,
+            ["gh", "api", "repos/owner/project/pulls/12"],
+            stderr="private diagnostic\ngh: Resource not accessible by integration (HTTP 403)\n",
+        )
+        out = io.StringIO()
+        with (
+            patch("pr_entry.main", side_effect=failure),
+            contextlib.redirect_stderr(out),
+        ):
+            self.assertEqual(run(), 2)
+        self.assertIn("HTTP 403", out.getvalue())
+        self.assertNotIn("private diagnostic", out.getvalue())

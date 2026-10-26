@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -15,8 +16,13 @@ sys.path[:0] = [
     str(HERE.parents[1] / "sdk/python"),
     str(HERE.parent / "platform-workflows"),
 ]
-from agent_platform_client import Client  # noqa: E402
-from github_entry import accepted_run, configured_github_call, github  # noqa: E402
+from agent_platform_client import APIError, Client  # noqa: E402
+from github_entry import (  # noqa: E402
+    accepted_run,
+    configured_github_call,
+    failure_diagnostic,
+    github,
+)
 
 
 def request(config, pr, engine):
@@ -191,5 +197,30 @@ def main():
     return 0 if state == "success" else 1
 
 
+def run():
+    try:
+        return main()
+    except APIError as error:
+        print(
+            f"Code Review entry blocked: platform HTTP {error.status_code}; inspect original Run before retry",
+            file=sys.stderr,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        print(
+            "Code Review entry blocked: " + failure_diagnostic(error), file=sys.stderr
+        )
+    except ConnectionError:
+        print(
+            "Code Review entry blocked: platform connection failed; submission outcome must be checked",
+            file=sys.stderr,
+        )
+    except (ValueError, KeyError, OSError):
+        print(
+            "Code Review entry blocked: invalid or unavailable configuration/report; inspect retained evidence",
+            file=sys.stderr,
+        )
+    return 2
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())
