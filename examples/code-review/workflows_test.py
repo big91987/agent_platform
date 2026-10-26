@@ -60,3 +60,36 @@ class ReviewWorkflowTest(unittest.TestCase):
             [("$ == 0", "qa"), ("$ == 10", "development")],
         )
         compile(nodes["code_review"]["execution"]["code"], "embedded-review", "exec")
+
+    def test_cli_inherits_only_explicit_proxy_refs_from_preparation(self):
+        from sandbox_delivery import definition as delivery
+        from workflows import add_cli_review
+
+        refs = {
+            key: "REVIEW_" + key
+            for key in (
+                "OCR_LLM_URL",
+                "OCR_LLM_MODEL",
+                "OCR_LLM_PROTOCOL",
+                "OCR_LLM_TOKEN",
+            )
+        }
+        for graph in (
+            definition(
+                "owner/project",
+                "GIT_TOKEN",
+                "cli",
+                model_refs=refs,
+                proxy="http://proxy:7890",
+            ),
+            add_cli_review(
+                delivery("owner/project", "GIT_TOKEN", proxy="http://proxy:7890"), refs
+            ),
+        ):
+            node = next(
+                n for n in graph["nodes"] if n["id"] in ("review", "code_review")
+            )
+            actual = node["execution"]["env_refs"]
+            self.assertEqual(actual["https_proxy"], "PIPELINE_HTTPS_PROXY")
+            self.assertEqual(actual["OCR_LLM_TOKEN"], refs["OCR_LLM_TOKEN"])
+            self.assertNotIn("GITHUB_TOKEN", actual)

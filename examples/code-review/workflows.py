@@ -101,7 +101,14 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
         review = execution(
             "review",
             program("raise SystemExit(cli_review())"),
-            refs=model_refs,
+            refs={
+                **{
+                    key: value
+                    for key, value in prepare["execution"]["env_refs"].items()
+                    if key != "GITHUB_TOKEN"
+                },
+                **model_refs,
+            },
             artifacts=True,
         )
     else:
@@ -190,7 +197,19 @@ def add_cli_review(graph, model_refs):
         "preview(base,head)\n"
         "raise SystemExit(cli_review())"
     )
-    node = execution("code_review", code, refs=model_refs, artifacts=True)
+    node = execution(
+        "code_review",
+        code,
+        refs={
+            **{
+                key: value
+                for key, value in nodes["prepare"]["execution"]["env_refs"].items()
+                if key != "GITHUB_TOKEN"
+            },
+            **model_refs,
+        },
+        artifacts=True,
+    )
     node.update(name="独立代码审查", x=nodes["qa"].get("x", 1000) - 120, y=340)
     node["rule_handoff"] = {
         **rule("qa"),
