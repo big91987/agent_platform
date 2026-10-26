@@ -1,6 +1,6 @@
 # 平台内 Workflow 验证记录
 
-> 当前（2026-10-26 03:39UTC）：独立代码审查接入尚未通过完整验收。源328dee78已标准升级（CLI3/Delegate4/研发13，旧Run不变），PR71仍draft。CLI真实审查触及预算、覆盖3/7，报告已留存；Delegate新Run2db0e54e…准备成功后原生报模型网络重连，未开始代码审查。已补模板代理并通过20项测试/独立复审，尚未应用在途会话。正式stop被自动审批拒绝，已向用户询问，等待期间不改变该Run。
+> 当前（2026-10-26 06:01UTC）：已按用户授权停止/释放旧网络阻塞Run，并标准升级源b2a40590（Delegate5/CLI3/研发13）。新Delegate Run72d28bd9完成、13/13清单核验且源码未改，正式Actions40276343113与精确head的commit status均SUCCESS；八件原件释放后复取、GitHub三件附件均摘要一致。PR71仍draft未合并，旧main自动检查红保留；CLI较早head仍partial/3-of-7，不称双路均通过，研发图新增审查阶段尚无整链实证。
 
 ## 当前进度
 
@@ -3906,3 +3906,21 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 2026-10-26 03:39UTC：Delegate Run2db0e54e…原生事件71409于03:35:59Z报告Connection failed / responseStreamDisconnected，willRetry=true；此前仅启动及UserInput事件，没有代码读取或报告。模板遗漏原项目显式proxy、只给PATH；CLI及既有研发角色均保留proxy，二者差异已用失败回归复现。维护源Delegate只复用模板显式HTTP(S)/NO_PROXY变量，inherit_env仍false，不带Git/模型密钥；20项审查测试和独立6项workflow复审绿，无新增Important。该配置遗漏与网络失败相符，因果仍待新正式任务实测，不称已恢复。OCR预算阈值按轮检查可超出，README已按真实537137记录，不能宣称500000硬上限。
 
 当前Run仍运行。正式stop请求被自动审批拒绝（未明确授权中止该在途Run），未执行；已通过用户确认选项申请停止/释放再正式安装复验。用户尚未回复前不改冻结图、权限或环境，不换模型，不连续resume，不在宿主代跑审查。其余源码修复/评审/交付准备继续，原网络事件及首轮不完整报告保留。是否允许停止与复验需以用户实际答复为准。
+
+
+2026-10-26 05:51UTC：用户确认“允许停止并复验”后，先核Run2db0e54e…仍running/seq2，再正式stop→stopping，核stopped后release→released，原网络错误和冻结revision4不变。源b2a4059011c708683028265e8aaf7c36c7f730de经代理Git推送成功；166件标准导出校验/安装器升级Delegate图至5，主研发图仍13，独立CLI仍3。非管理员Agent.env响应是脱敏null，监控脚本误对其get报错已纠正，不能当运行配置缺失。项目PR71更新head1cbd3c9240421c04beffa763420eb41c0009064d/treea1803e7879dac15506fdfe7380c203a4d9ae6009；仅代理/测试/README及来源清单，产品不改。只一次正式branch dispatch选择delegate，Actions40276343113/05:49:47Z pending，等旧base自动检查40276276554，不重复触发。真实网络恢复和新报告尚待。
+
+新增平台限制实证：旧Agent review从03:32:39Z驻留到用户授权停止05:46:38Z，约134分钟，配置execution_timeout_seconds1800没有中断该原生轮次。CI观察40分钟后于04:11:45Z失败也没有停止后端。源码workflow_control.go仅在会话idle后的自动接续检查该值，且ContinuationLimit0先分支；它不是正在运行Agent的硬超时。此为平台执行治理缺口，不能把模板1800称硬时限或把CI停止当Agent停止。当前先修既有代理并取正式审查结果，保留此缺口后续通用整改；没有通过改DB/原回执或延长限制掩盖。明确执行节点的真实命令timeout、Agent接续窗口、CI观察和沙箱TTL是不同控制。
+
+
+### 2026-10-26 · 用户授权后的Delegate正式复验结论
+
+唯一Run `72d28bd9700af3bb5265ff2acfdc3510`，冻结Delegate图revision5/head `1cbd3c9240421c04beffa763420eb41c0009064d`、base `a1cbbb862714346a77a24c96b2bf5d5672c6be1a`。prepare05:53:26.938–05:54:52.985＝86.047秒；原生review至06:00:13.739＝320.754秒（含工具、推理与归档）；validate至06:00:23.867＝10.127秒；Run合计416.929秒。正式[Actions40276343113](https://github.com/big91987/model-relay/actions/runs/40276343113)于06:00:43Z SUCCESS，dispatch05:49:47Z→完成约10分56秒，其中Runner/并发队列到job05:53:08Z约201秒；不能称全部为Agent计算时间。原生634事件全部分页导出，有24次command_execution完成、一次正式MCP handoff(target=validate) accepted，原生会话closed；不是只看progress。环境代理修复后已有真实模型响应及源码读取，旧网络错误不改写。
+
+Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别读取全部13个选择文件，另有OCR默认排除的README 1件，不算已审查。固定后处理独立核清单/精确range/全部源码摘要未变，生成clean/exit0；这是静态审查及机器完整性校验，不是动态产品QA、无缺陷证明或批准合并。原生单thread单turn累计input2054581/cache1928832/output5120(reasoning1312)/total2059701，cache与reasoning分别为子集；货币费用不可得，不估造。
+
+8件1104788bytes正式原件已逐件size/SHA核验；正式release回复reset后只读查实released，没有重放释放；在全新目录重新下载8件全部一致。GitHub实际附件12630817340/code-review-delegate-40276343113已下载，其中result.json231bytes/SHA f4ebf775252899708ca9655721170b407541dfe963cc482bcfc7008aee470ae5、report.md386bytes/SHA373a1705ece77726a11ae41b1f06f26f15f8781e3f7ab2873726acc6e63f0e62、preview.json2757bytes/SHAe6770691b245b753daf8ffd6745d05a9d463c772bb6a91d314264dc3ce7e9d52，与平台释放后原件逐字节相同。GitHub精确head的Code Review/delegate SUCCESS，旧main配置自动40276276554红仍保留；PR71仍draft，不将手动修复分支通过称为main自动入口已修复。独立CLI图3及研发图13已配置，但本轮没有新的完整研发Run或新head完整CLI结论。
+
+结论与局限：Codex＋官方Skill这一独立PR审查路径完成真实闭环；完整OCR＋GLM此前真实PR为预算partial，7件/较早head与本次13件不是受控同版对比，不能直接算提效、准确率或认定模型优劣。基础服务连通不代表大PR能完整审查。保留CLI500000阈值和未完成失败，不无限加预算。未做已知缺陷集的误报/漏报基准，未做跨仓fresh install及长期并发可靠性验证。产品代码与部署未改。
+
+下一步建议按证据排序：①给Agent正在运行轮次增加真正硬超时，并区分CI观察/接续窗口/沙箱TTL；②模型持续网络重试应由平台生命周期及时反馈到关联Issue，本轮仍依赖Builder具名反馈；③默认读取source.json的base/head/expected而非整份约1MiB摘要库存，减少上下文重复，2.06M总token大部份cached仍不能称免费；④按完全相同代码范围/规则比较两种模型Loop，改善CLI分组及预算内完成率后再决定默认CI策略。当前保留可审草稿，不虚构用户对这些限制的风险接受。
