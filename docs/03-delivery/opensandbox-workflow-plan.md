@@ -1572,3 +1572,10 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 本轮存在明确Builder干预：源码通用修复与标准升级、已验分支准备、入口修复PR64/66/67、四脚本UserInput补件、17原件正式引用、Stop/Return QA及受托Owner确认；自动审批还曾拒绝一次诊断中误带的重复dispatch，整条未执行，核无副作用并修入口后才正式再次受理。没有绕过审批、复活旧Run、手改数据库/冻结回执或重复创建产品任务。平台代码保持开发分支（安装dfecd925…）；定时任务未恢复。本次止于已验草稿PR，等待用户评估后再讨论下一轮。
 
 证据：ignored feature-delivery-continuation 下product-pr-integrity-proof.json、feature-eval-final-metrics.json、material-frozen-standard-receipt.json、direct/feature-eval-post-release-fresh.json；它们为私有核验回执，当前人读进度仍以本文件和三份既有计划/验证文档为准。
+
+
+### 2026-10-26 · 独立代码审查接入（实施中）
+
+用户授权并行试用完整 OCR CLI 与 Codex＋官方 Delegate Skill，使用既有执行/Agent 节点及独立 PR 入口；具体计划在 qa-review-pipeline.md。CLI 固定官方 v1.13.3，模型使用用户指定的 GLM OpenAI 兼容服务，凭据只私有引用。首次连接 HTTP200；隔离认证缺陷样例中真实 OCR Loop 91.275秒、20375 token，捕获预埋 null/null 放行及一条原先已存在的低级建议，不能按两条发现冒称两个新增缺陷，也不是产品 QA 或真实 PR 审查完成。
+
+初版独立审查发现首次目录初始化、升级缺 revision、Agent 可改覆盖基线三项 Important，已在维护源整改并补回归；覆盖基线改用平台捕获的准备节点stdout摘要核验。新源码/新图/CI尚待正式安装与真实入口验证；旧产品PR68实时为merged，不能继续称draft，旧Run及部署结论不改。首次完整平台检查因当前工具沙箱禁止回环监听 EPERM 中止，保留日志，已用正常授权网络权限执行标准检查；结果后续补实际回执。

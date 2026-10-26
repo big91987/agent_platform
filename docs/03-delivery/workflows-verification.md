@@ -3869,3 +3869,10 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 ### 2026-10-26：评估主目标明确为Harness工程
 
 评估范围纠偏：已重新只读核Example sandbox_delivery/entry/prepare、角色指令和平台workflow_delivery。已发生的通用问题与项目测试设施问题分开；旧Connector交付视图能否接入新Execution发布仅为静态候选，尚未线上复现，不列确认故障。没有新增测试/恢复/部署。完整两层分析及实证见[Harness工程评估](model-relay-engineering-assessment-2026-10-26.md)，上一轮产品视角保留历史，不作为当前优先级。
+
+
+### 2026-10-26 · 独立代码审查接入（实施中）
+
+用户授权并行试用完整 OCR CLI 与 Codex＋官方 Delegate Skill，使用既有执行/Agent 节点及独立 PR 入口；具体计划在 qa-review-pipeline.md。CLI 固定官方 v1.13.3，模型使用用户指定的 GLM OpenAI 兼容服务，凭据只私有引用。首次连接 HTTP200；隔离认证缺陷样例中真实 OCR Loop 91.275秒、20375 token，捕获预埋 null/null 放行及一条原先已存在的低级建议，不能按两条发现冒称两个新增缺陷，也不是产品 QA 或真实 PR 审查完成。
+
+初版独立审查发现首次目录初始化、升级缺 revision、Agent 可改覆盖基线三项 Important，已在维护源整改并补回归；覆盖基线改用平台捕获的准备节点stdout摘要核验。新源码/新图/CI尚待正式安装与真实入口验证；旧产品PR68实时为merged，不能继续称draft，旧Run及部署结论不改。首次完整平台检查因当前工具沙箱禁止回环监听 EPERM 中止，保留日志，已用正常授权网络权限执行标准检查；结果后续补实际回执。

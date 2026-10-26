@@ -13,11 +13,13 @@ from pathlib import Path
 def prepare(context, repository, workspace=Path("/workspace")):
     parameters = context["parameters"]
     commit = parameters["repository_commit"]
+    base = parameters.get("review_base_commit", "")
     run = context["run_id"]
     if (
         not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository)
         or parameters["repository"] != repository
         or not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or (base and not re.fullmatch(r"[0-9a-f]{40}", base))
         or not re.fullmatch(r"[0-9a-f]{32}", run)
     ):
         raise ValueError("repository, pinned commit or Run does not match this entry")
@@ -25,6 +27,8 @@ def prepare(context, repository, workspace=Path("/workspace")):
     if not token or "\x00" in token:
         raise ValueError("repository credential is unavailable")
     identity = {"repository": repository, "commit": commit, "run_id": run}
+    if base:
+        identity["review_base_commit"] = base
     marker = workspace / ".git/agent-platform-prepared.json"
     if any(workspace.iterdir()):
         if (
@@ -74,10 +78,13 @@ def prepare(context, repository, workspace=Path("/workspace")):
         git("init", "--quiet")
         git("remote", "add", "origin", "https://github.com/" + repository + ".git")
         # Fixed HEAD still needs reachable history for project regression gates.
-        git("fetch", "--quiet", "origin", commit)
+        git("fetch", "--quiet", "origin", commit, *([base] if base else []))
         actual = (
             subprocess.check_output(
-                ["git", "rev-parse", "FETCH_HEAD"], cwd=workspace, env=env, timeout=5
+                ["git", "rev-parse", commit + "^{commit}"],
+                cwd=workspace,
+                env=env,
+                timeout=5,
             )
             .decode()
             .strip()

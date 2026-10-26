@@ -179,3 +179,20 @@ setup.py refreshed the standard stage configurations and tool discovery. Existin
 conversations preserve their instruction snapshots; new configurations apply to
 new conversations, while the shared tool binary is used on later invocations.
 This is not a claim of a real Agent-selected failure/repair/QA cycle.
+# 2026-10-26 · 独立代码审查接入实施计划
+
+目标：以同一代码范围比较完整 Open Code Review CLI 与 Codex＋官方 Delegate Skill；研发图复用执行节点，PR 提交后由独立 GitHub Workflow 触发。人工合并保留，先不更改分支保护。
+
+采用既有执行节点/Agent 节点与 OpenSandbox；不增加平台节点类型或业务调度器。CLI 固定官方 v1.13.3，二进制校验 SHA256；Skill 来自同一标签并保留许可证。审查使用受信模板的规则，显式包含测试文件。输入固定 repository/base/head；研发尚未提交的候选先以文件快照记录，审查前后验证来源不变。报告与原始输出按 Run 保存。完整、发现问题、不完整和执行错误分别处理；exit0、无评论、部分审查均不能直接当业务验收。
+
+CLI 使用用户指定的 OpenAI 兼容模型服务 glm-5.3-flash；密钥仅私有引用且只进入 CLI 节点。Delegate 使用现有 Codex/gpt-6.1-sol，不继承 Git 或 OCR 凭据。PR 入口仅读可信基线中的适配器，不执行 PR 中的代码、工作流、安装脚本；拒绝跨仓及不受信作者。请求以 PR/base/head/审查方式去重，旧 head 不可证明新 head 通过。
+
+## 任务与验证
+
+- [ ] `examples/code-review/runtime.py`、`runtime_test.py`：版本安装、候选准备与范围核对、CLI 报告规范化、覆盖/警告/未知严重度拒绝通过、原始输出和报告保存。先写失败回归，再实现；真实二进制验证其 JSON 契约。
+- [ ] `examples/code-review/workflows.py`、官方 Skill 与规则：生成独立 CLI/Delegate 两张图；可在研发图 tests→review→QA 复用 CLI 节点。Agent 只写报告；固定后处理核覆盖、版本和源文件未改。
+- [ ] `examples/code-review/github_entry.py`、`code-review.yml`：可信 PR 入口、精确 SHA、幂等提交、终态检查与 GitHub 可查看结果。正常、旧 head、fork/非授权、运行失败、部分审查和重复请求回归。
+- [ ] 标准导出/项目内复制及112正式 API 安装新图；现有冻结 Run 不改。用真实 PR 触发 CLI 与 Delegate，核原生消息、同版报告、执行时间和释放后产物留存。真实调用失败保留首回执，不造通过、不盲重试。
+- [ ] 比较可复核发现、误报/漏报边界、覆盖、耗时与可得 token；未验项目单列。将入口、配置与升级文档纳入模板，不依赖开发者临时脚本。
+
+当前：实施中。已有产品 PR68 实时为 merged，不沿用旧 draft 快照；不得把后续审查称为合并前已执行的检查。

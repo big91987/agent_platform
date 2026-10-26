@@ -1,0 +1,83 @@
+name: Independent Code Review
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Open pull request number
+        required: true
+        type: string
+permissions:
+  contents: read
+  statuses: write
+concurrency:
+  group: code-review-${{ github.repository }}-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+jobs:
+  review:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [cli, delegate]
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 50
+    steps:
+      - name: Configure GitHub transport
+        id: github_transport
+        env:
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CODE_REVIEW_CONFIG }}
+        run: |
+          python3 -I - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          try:
+              config = json.loads(Path(os.environ["AGENT_PLATFORM_CONFIG"]).read_text())
+              proxy = config.get("git_proxy", "")
+              if not isinstance(proxy, str) or any(ord(c) <= 32 or ord(c) == 127 for c in proxy):
+                  raise ValueError()
+              if proxy:
+                  parsed = urlsplit(proxy)
+                  if parsed.scheme not in ("http", "https", "socks5", "socks5h") or not parsed.hostname or parsed.username is not None or parsed.password is not None:
+                      raise ValueError()
+                  parsed.port
+          except (OSError, ValueError, TypeError, KeyError, AttributeError):
+              raise SystemExit("Invalid private GitHub transport configuration")
+          values = {name: proxy or os.environ.get(name) or os.environ.get(name.upper(), "") for name in ("http_proxy", "https_proxy")}
+          if any(any(ord(c) <= 32 or ord(c) == 127 for c in value) for value in values.values()):
+              raise SystemExit("Invalid Runner proxy environment")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for name, value in values.items():
+                  if value:
+                      print("::add-mask::" + value.replace("%", "%25"))
+                  output.write(name + "=" + value + "\n")
+          PYTHON
+      - name: Checkout trusted base workflow only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          http_proxy: ${{ steps.github_transport.outputs.http_proxy }}
+          https_proxy: ${{ steps.github_transport.outputs.https_proxy }}
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - name: Run independent review through platform
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CODE_REVIEW_CONFIG }}
+          REVIEW_PR: ${{ github.event.pull_request.number || inputs.pr }}
+          REVIEW_ENGINE: ${{ matrix.engine }}
+          REVIEW_RESULTS_DIR: ${{ runner.temp }}/code-review/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.engine }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          python3 -I .harness/agent-platform/examples/code-review/pr_entry.py \
+            --config "$AGENT_PLATFORM_CONFIG" --pr "$REVIEW_PR" --engine "$REVIEW_ENGINE"
+      - name: Retain version-bound review reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: code-review-${{ matrix.engine }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/code-review/${{ github.run_id }}-${{ github.run_attempt }}/${{ matrix.engine }}
+          if-no-files-found: ignore
+          retention-days: 30

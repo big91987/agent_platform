@@ -1,0 +1,9 @@
+{
+  "repository": "alibaba/open-code-review",
+  "tag": "v1.13.3",
+  "files": {
+    "LICENSE": "1945665fdb6968a66ea29438ddee0aee23035365c862e5c4a75b62b303340acf",
+    "SKILL.md": "1ad19cca0a584e3175e171616a314ee8de5d4fb90c31971a40eff9bb2fb1f2f8"
+  },
+  "commit": "375f64cd6f67a48a135da83cfcf59c52669a09cb"
+}
