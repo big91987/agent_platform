@@ -55,6 +55,59 @@ class ReviewResultTest(unittest.TestCase):
         value["manifest"]["coverage"]["completed"] *= 2
         self.assertEqual(assess(value, 0, ["app.go"])["status"], "incomplete")
 
+    def test_null_comments_produces_a_report_without_accepting_partial_review(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        import runtime
+
+        value = self.envelope()
+        value["comments"] = None
+        for status, exit_code, expected_code in (
+            ("complete", 0, 0),
+            ("partial", 0, 20),
+            ("failed", 1, 30),
+        ):
+            value["status"] = status
+            value["manifest"]["terminal_state"] = value["status"]
+            with tempfile.TemporaryDirectory() as folder:
+                output = Path(folder)
+                source = {
+                    "base": "b" * 40,
+                    "head": "a" * 40,
+                    "expected": ["app.go"],
+                    "files": {"app.go": "digest"},
+                }
+                (output / "source.json").write_text(json.dumps(source))
+                with (
+                    patch.object(runtime, "OUTPUT", output),
+                    patch.object(runtime, "trusted_source", return_value=source),
+                    patch.object(
+                        runtime, "candidate_snapshot", return_value=source["files"]
+                    ),
+                ):
+                    code = runtime.finish("ocr-cli", value, exit_code)
+                self.assertEqual(code, expected_code)
+                self.assertTrue((output / "report.md").is_file())
+                self.assertEqual(
+                    json.loads((output / "result.json").read_text())["comments"], []
+                )
+
+    def test_malformed_findings_stay_incomplete_and_can_be_presented(self):
+        for comments in ("", "invalid", {}, [None], ["invalid"]):
+            value = self.envelope()
+            value["comments"] = comments
+            for status, exit_code in (("complete", 0), ("partial", 0), ("failed", 1)):
+                value["status"] = status
+                value["manifest"]["terminal_state"] = status
+                result = assess(value, exit_code, ["app.go"])
+                self.assertEqual(
+                    result["status"], "error" if exit_code else "incomplete"
+                )
+                self.assertEqual(result["comments"], [])
+
     def test_worktree_change_without_head_change_is_detected(self):
         import subprocess
         import tempfile

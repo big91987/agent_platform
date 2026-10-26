@@ -244,3 +244,11 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 结论与局限：Codex＋官方Skill这一独立PR审查路径完成真实闭环；完整OCR＋GLM此前真实PR为预算partial，7件/较早head与本次13件不是受控同版对比，不能直接算提效、准确率或认定模型优劣。基础服务连通不代表大PR能完整审查。保留CLI500000阈值和未完成失败，不无限加预算。未做已知缺陷集的误报/漏报基准，未做跨仓fresh install及长期并发可靠性验证。产品代码与部署未改。
 
 下一步建议按证据排序：①给Agent正在运行轮次增加真正硬超时，并区分CI观察/接续窗口/沙箱TTL；②模型持续网络重试应由平台生命周期及时反馈到关联Issue，本轮仍依赖Builder具名反馈；③默认读取source.json的base/head/expected而非整份约1MiB摘要库存，减少上下文重复，2.06M总token大部份cached仍不能称免费；④按完全相同代码范围/规则比较两种模型Loop，改善CLI分组及预算内完成率后再决定默认CI策略。当前保留可审草稿，不虚构用户对这些限制的风险接受。
+
+
+2026-10-26 06:20UTC执行节点补验：用户指出不能只闭环Delegate。通过项目workflow_dispatch engine=cli唯一Actions40279068795，当前PR71精确basea1cbbb86/head1cbd3c92生成Run23f8a9c1705f686933889c09c16cdd41，CLI图revision3；prepare1实际70.572秒，review2普通执行节点已启动。保留同预算500000、相同规则与覆盖约束，对照此前同版Delegate13/13；不拿旧head7件与新head13件直接算优劣，不改main旧自动失败事实，不把独立CLI试验当主研发新阶段整链完成。Issue69评论6409623841明确边界，等待终态后核报告、原件与释放后读取。
+
+
+补验更新（2026-10-26 06:36UTC）：同版CLI Run23f8a9c1真实failed；OCR命令976.015秒、474570总token（input443375/output31195/cache333888为input子集），13件选中但0件完成，失败包括请求/分组超时与上下文压缩阈值，不是本轮token预算耗尽。comments:null触发维护源报告器TypeError，report.md缺失导致归档失败；原Run不改写。六件1123685bytes仅作为只读诊断私有保存且逐SHA核对，不冒称正式归档。用户要求先放宽时间再同版比较：源码请求300秒/分组20分/进程30分/执行35分/CI50分/job60分，500000阈值和严格覆盖保持；null/畸形finding红→绿、22审查回归/141模板回归/Go契约/vet及独立复审通过。标准升级与新同版双路尚待实际入口回执。
+
+原始raw SHA f17aa24b9ccfaf3f1f029edb363a359030635ef5a1dee35c6e8f672a49c82569，summary.files_reviewed=13不是completed=13；必须读manifest覆盖。实际Run23f8在06:36:50.463Z以report缺失failed，冻结revision3及原始receipt保持；Builder只读docker取文件是诊断恢复，不是平台正式留存。新维护源assess先正规化null/畸形comments，原错误仍error，不因报告生成修复改变模型失败。独立review首轮发现partial/failed早返回绕过坏成员验证，补跨状态失败回归后修正，最终无C/I；141模板19.519秒、Go契约0.796秒、22审查0.572秒、vet exit0。

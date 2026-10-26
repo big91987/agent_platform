@@ -1,5 +1,9 @@
 # 平台内 Workflow 验证记录
 
+> 补验更新（2026-10-26 06:36UTC）：同版CLI Run23f8a9c1真实failed；OCR命令976.015秒、474570总token（input443375/output31195/cache333888为input子集），13件选中但0件完成，失败包括请求/分组超时与上下文压缩阈值，不是本轮token预算耗尽。comments:null触发维护源报告器TypeError，report.md缺失导致归档失败；原Run不改写。六件1123685bytes仅作为只读诊断私有保存且逐SHA核对，不冒称正式归档。用户要求先放宽时间再同版比较：源码请求300秒/分组20分/进程30分/执行35分/CI50分/job60分，500000阈值和严格覆盖保持；null/畸形finding红→绿、22审查回归/141模板回归/Go契约/vet及独立复审通过。标准升级与新同版双路尚待实际入口回执。
+
+> 当前补验（2026-10-26 06:20UTC）：用户指出执行节点路径未闭环，已通过原项目入口唯一dispatch CLI Actions40279068795 / Run23f8a9c1705f686933889c09c16cdd41，精确basea1cbbb86→head1cbd3c92，与Delegate成功样本同版；prepare70.572秒已完成，普通execution节点review实际运行OCR＋GLM，保留500000阈值/严格覆盖判断。旧CLI较早head3/7 incomplete仍保留。研发主图新增code_review阶段尚无新整链实证，不能由独立路径成功代替；Issue69机器人评论6409623841已明确告知。
+
 > 当前（2026-10-26 06:01UTC）：已按用户授权停止/释放旧网络阻塞Run，并标准升级源b2a40590（Delegate5/CLI3/研发13）。新Delegate Run72d28bd9完成、13/13清单核验且源码未改，正式Actions40276343113与精确head的commit status均SUCCESS；八件原件释放后复取、GitHub三件附件均摘要一致。PR71仍draft未合并，旧main自动检查红保留；CLI较早head仍partial/3-of-7，不称双路均通过，研发图新增审查阶段尚无整链实证。
 
 ## 当前进度
