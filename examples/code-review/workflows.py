@@ -132,7 +132,8 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
                 "approvals_reviewer": "auto_review",
                 "inherit_env": False,
                 "env": {
-                    "PATH": "/workspace/.git/agent-platform-review:/opt/agent-runtime/node_modules/.bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin"
+                    **original["nodes"][1]["agent"]["env"],
+                    "PATH": "/workspace/.git/agent-platform-review:/opt/agent-runtime/node_modules/.bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin",
                 },
             },
         }

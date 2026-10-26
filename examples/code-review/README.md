@@ -32,7 +32,7 @@ python3 .harness/agent-platform/examples/code-review/install.py \
 
 ## 结果与边界
 
-OCR 固定 `v1.13.3`、官方发布二进制 SHA256；完整模式 low effort、并发2、总 token 预算500000、整条命令最多1200秒。独立审查准备节点最多600秒，其中固定base/head历史拉取最多480秒；不会自动重试失败拉取。OCR需要merge-base，保留真实历史。Agent/执行节点另有平台时限。凭据不会进入模型报告，OCR 进程不继承 Git 认证。可信准备、审查及报告校验以 `python3 -I` 启动，避免从PR工作区加载同名Python模块或启动钩子；这不改变用户代码节点的导入方式。
+OCR 固定 `v1.13.3`、官方发布二进制 SHA256；完整模式 low effort、并发2、总 token 预算阈值500000（OCR按回合检查，实际可能超出）、整条命令最多1200秒。独立审查准备节点最多600秒，其中固定base/head历史拉取最多480秒；不会自动重试失败拉取。OCR需要merge-base，保留真实历史。Agent/执行节点另有平台时限。凭据不会进入模型报告，OCR 进程不继承 Git 认证。可信准备、审查及报告校验以 `python3 -I` 启动，避免从PR工作区加载同名Python模块或启动钩子；这不改变用户代码节点的导入方式。
 
 `rules.json` 显式纳入测试，叠加系统规则；排除的历史大报告列在 preview，不能当已审查。PR 内的 OCR 配置不会替换受信规则。报告保留严重度、位置和依据；默认所有已报告发现均需人工核实。**clean** 表示覆盖完整且没有报告发现，**findings** 表示有待核实的问题，**incomplete** 表示漏项/警告/无法分类，**error** 表示执行或源文件变动。CLI exit0 或空 comments 均不能独立判通过。Codex 报告使用宿主自己的文件覆盖表，不伪造 OCR 原生清单。
 

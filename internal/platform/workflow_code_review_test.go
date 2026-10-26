@@ -18,7 +18,7 @@ func TestCodeReviewTemplatesRespectExternalSandboxContract(t *testing.T) {
 sys.path.insert(0,sys.argv[1])
 from workflows import definition
 refs={key:'REVIEW_'+key for key in ['OCR_LLM_URL','OCR_LLM_TOKEN','OCR_LLM_MODEL','OCR_LLM_PROTOCOL']}
-print(json.dumps(definition('owner/project','GIT_REF',sys.argv[2],sys.argv[1]+'/skill',refs)))`
+print(json.dumps(definition('owner/project','GIT_REF',sys.argv[2],sys.argv[1]+'/skill',refs,proxy='http://proxy:7890')))`
 			raw, err := exec.Command("python3", "-c", script, source, engine).CombinedOutput()
 			if err != nil {
 				t.Fatalf("template: %v %s", err, raw)

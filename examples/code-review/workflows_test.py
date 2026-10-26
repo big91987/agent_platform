@@ -165,3 +165,18 @@ class ReviewWorkflowTest(unittest.TestCase):
             )
             self.assertEqual(result.stdout.strip(), text)
             self.assertFalse((root / "shell-executed").exists())
+
+    def test_delegate_keeps_explicit_proxy_without_git_or_model_secrets(self):
+        graph = definition(
+            "owner/project",
+            "TOKEN",
+            "delegate",
+            skill="/official/skill",
+            proxy="http://proxy:7890",
+        )
+        agent = next(node for node in graph["nodes"] if node["id"] == "review")["agent"]
+        self.assertEqual(agent["env"]["https_proxy"], "http://proxy:7890")
+        self.assertEqual(agent["env"]["HTTPS_PROXY"], "http://proxy:7890")
+        self.assertNotIn("GITHUB_TOKEN", agent["env"])
+        self.assertNotIn("OCR_LLM_TOKEN", agent["env"])
+        self.assertFalse(agent["inherit_env"])

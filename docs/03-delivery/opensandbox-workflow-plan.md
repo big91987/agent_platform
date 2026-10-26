@@ -1,5 +1,7 @@
 # OpenSandbox 工作流改造实施计划
 
+> 当前（2026-10-26 03:39UTC）：独立代码审查接入尚未通过完整验收。源328dee78已标准升级（CLI3/Delegate4/研发13，旧Run不变），PR71仍draft。CLI真实审查触及预算、覆盖3/7，报告已留存；Delegate新Run2db0e54e…准备成功后原生报模型网络重连，未开始代码审查。已补模板代理并通过20项测试/独立复审，尚未应用在途会话。正式stop被自动审批拒绝，已向用户询问，等待期间不改变该Run。
+
 ## 当前进度
 
 2026-10-26：Issue63已交付待审草稿PR68（head736a928e…），接续Run e11d82e7…completed且环境released；原Run保留stopped/released。产品PR未合并/部署，定时任务保持暂停。用户已明确评估主目标为Harness工程能力，按项目Harness与通用平台/工具链/Example两层查短板，网关是实证载体；本次结论与优先级见[Harness工程评估](model-relay-engineering-assessment-2026-10-26.md)。优先稳定项目适配/预检、材料消费、QA执行/采证、入口调度及成本呈现，再做跨仓复用验证，不转成网关商用成熟度建设。本次没有新产品实操或实现任务。
@@ -1597,3 +1599,13 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 独立复审另发现可信Python以-c在PR目录启动，可执行同名hashlib.py，且sitecustomize在代码前启动；此为Harness安全缺口，不是Model Relay产品缺陷。最终修复在标准可信模板使用普通command执行正确shell引用的python3 -I -c，覆盖准备、CLI、Delegate校验和研发审查；平台自由代码节点不强制隔离。真实恶意同名模块/启动钩子及$()/反引号/引号回归红→绿，19审查测试、28sandbox定向经独立复审通过，无剩余Important。可信摘要另按实际ConnectorReceipt.output混合日志读取唯一64位摘要、exit0且日志未截断；原stdout字段不存在，已用真实捕获的无换行拼接形式复现再修，不保留旧兼容分支。
 
 最终scripts/verify.sh真实exit0，136271bytes/SHA9bd524f128e4e612f34aa63d1c52cb19b76753ae3d5c2f0ad38ef95f618c74f4，Go部分缓存如实保留；中途ruff导入排序失败日志保留。新增手动engine选择用于单独验证一种方式，自动PR仍双路，不为单路诊断重复消耗另一模型；YAML实际校验另列。上述新修复尚待精确版本标准安装/新head入口，不能称最终整链已绿。[机器人Issue反馈6407484385](https://github.com/big91987/model-relay/issues/69#issuecomment-6407484385)明确报告原始阻塞与结论。旧冻结Run不改，安全风险未因当前PR无同名模块而泛称已消除。
+
+
+2026-10-26 03:35UTC：安全修复328dee78通过标准导出166件应用，正式API核CLI3/Delegate4；主图仅未来Run升级至13，prepare/code_review均python3 -I。脚本曾停在历史waiting检查，自动审批拒绝忽略在途任务；只读查明该Run始终冻结revision4而主图已12，针对冻结设置回归真实0.735秒Pass，补管理员全量精确摘要后获准正式升级，十条旧定义全部保持。中间非管理员脱敏摘要与管理员全量摘要不一致造成检查停止，未PUT/未改旧Run；风险核验不能记为Agent净审查。两条旧审查环境均released，CLI七件1115521bytes释放后新目录下载全size/SHA一致；释放回复一次reset后先查实已released，没有盲重发。
+
+项目PR71新headd398a4908f63f8e4ac4677acf11f93293d9bcd16/tree79370b59dac31048018e4c5aaa9a6787b090500c，168远端Git blob与源328dee78标准副本逐字节相符，GitGuardian success。旧base自动40264270036仍失败，保留。仅一次选delegate正式dispatch [40264483828](https://github.com/big91987/model-relay/actions/runs/40264483828)→唯一Run [2db0e54e3cf8084c39e2d5bd10257df0](http://10.1.20.112:8795/workflow-runs/2db0e54e3cf8084c39e2d5bd10257df0)，03:31:33Z创建，prepare65.928秒exit0；03:32:39Z启动原生Codex/gpt-6.1-sol独立审查，未见待审批。原生提示模型metadata fallback/bundled bubblewrap警告保留，不擅换模型/权限。当前未完结，不把会话运行或Skill加载当审查通过。新增手动engine选择已由Actionlint1.7.12真实exit0校验，source push HTTP2失败后HTTP1.1推送成功。定时任务仍暂停；PR未合并、无产品部署。
+
+
+2026-10-26 03:39UTC：Delegate Run2db0e54e…原生事件71409于03:35:59Z报告Connection failed / responseStreamDisconnected，willRetry=true；此前仅启动及UserInput事件，没有代码读取或报告。模板遗漏原项目显式proxy、只给PATH；CLI及既有研发角色均保留proxy，二者差异已用失败回归复现。维护源Delegate只复用模板显式HTTP(S)/NO_PROXY变量，inherit_env仍false，不带Git/模型密钥；20项审查测试和独立6项workflow复审绿，无新增Important。该配置遗漏与网络失败相符，因果仍待新正式任务实测，不称已恢复。OCR预算阈值按轮检查可超出，README已按真实537137记录，不能宣称500000硬上限。
+
+当前Run仍运行。正式stop请求被自动审批拒绝（未明确授权中止该在途Run），未执行；已通过用户确认选项申请停止/释放再正式安装复验。用户尚未回复前不改冻结图、权限或环境，不换模型，不连续resume，不在宿主代跑审查。其余源码修复/评审/交付准备继续，原网络事件及首轮不完整报告保留。是否允许停止与复验需以用户实际答复为准。
