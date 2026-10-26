@@ -63,6 +63,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
           persist-credentials: false
+          sparse-checkout: .harness/agent-platform
       - name: Run independent review through platform
         env:
           GH_TOKEN: ${{ github.token }}

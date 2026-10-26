@@ -123,7 +123,7 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
                 "instructions": (HERE / "delegate.md").read_text(),
                 "skills": [skill],
                 "sandbox": "workspace-write",
-                "network_access": False,
+                "network_access": True,
                 "allow_elevation": False,
                 "approvals_reviewer": "auto_review",
                 "inherit_env": False,
