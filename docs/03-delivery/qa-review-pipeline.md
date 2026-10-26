@@ -1,6 +1,6 @@
 # QA feedback loop and independent code review
 
-> 当前（2026-10-26 06:01UTC）：已按用户授权停止/释放旧网络阻塞Run，并标准升级源b2a40590（Delegate5/CLI3/研发13）。新Delegate Run72d28bd9完成、13/13清单核验且源码未改，正式Actions40276343113与精确head的commit status均SUCCESS；八件原件释放后复取、GitHub三件附件均摘要一致。PR71仍draft未合并，旧main自动检查红保留；CLI较早head仍partial/3-of-7，不称双路均通过，研发图新增审查阶段尚无整链实证。
+> 当前（2026-10-26 10:10UTC）：用户授权的长窗口CLI补验cb5547cf已complete/13-of-13/0发现，命令16分51秒、2641841 token；7件原件释放后复取一致。原PR71版本不变，旧四候选此次未复现，两处已确认基线弱点仍未修复；完整执行不等于审查质量已证明。详见文末长窗口结果。
 
 ## Agreed behavior
 
@@ -315,3 +315,18 @@ CLI在时间放宽后确实得到更多输出，但仍未完成。500000只是�
 用户要求 CLI 至少获得30分钟或更长时间。实时核对PR71仍为open/draft、base a1cbbb862714346a77a24c96b2bf5d5672c6be1a / head a6e77d582039b4c91e979a528e0b78c88c6dcb80；旧CLI89dc1f4e及Delegate275829a3均completed，最近Actions均已结束。上一轮整命令30分钟未耗尽，约18分29秒因预算和请求限制提前结束，因此只改外层超时不足。
 
 唯一模板源码将单请求放宽600秒、分组30分钟、OCR进程45分钟、执行节点50分钟；软token阈值500000→3000000（不是硬费用上限，可能超出），CI观察60分钟/job75分钟。模型、low effort、并发2、规则及被审PR版本保持。本轮仅重跑CLI，以新用户授权事件的稳定request_id通过正式API新建隔离Run；不恢复完成Run、不重跑Codex、不改变PR71 head或既有结论。不把这轮Harness代码审查描述成产品功能质量评测。先标准导出/安装、冻结旧Run核对，再单次提交和完整留存；尚未获得新审查结果。
+
+
+### 长窗口 CLI 补验结果（2026-10-26 10:10UTC完成）
+
+用户授权的新Run [cb5547cf](http://10.1.20.112:8795/workflow-runs/cb5547cfa116d5e163eb994faea92fcc)已正式completed，CLI图revision5。标准导出源35a4cbda2a8241a451a8752c50da82aa25c21763/166件，安装同时把独立Delegate图更新到7；只新跑CLI，研发主图没有由本次安装修改。PR71 base a1cbbb862714346a77a24c96b2bf5d5672c6be1a / head a6e77d582039b4c91e979a528e0b78c88c6dcb80保持draft/open，未改候选代码、未合并或部署。该Run由本轮用户授权事件通过正式API启动，不是新增GitHub Actions执行；原Actions失败及旧Run历史保留。
+
+实际结果：原生complete、manifest selected13/completed13/reused0/failed0/waived0，raw.comments及result.comments都为空，固定exit0/clean。准备113.386秒，审查阶段1021.003秒，OCR命令1010.783秒（16分51秒），全Run1134.390秒（18分54秒）。无需为凑30分钟强行保持运行；配置是单请求600秒/分组30分钟/OCR45分钟/执行50分钟。原生63次工具调用（34search、23read、5diff、1find）零工具失败；本轮无预算耗尽或请求超时记录。stderr仍有Git2.39.5低于OCR建议最低2.41.0的环境告警，不能称环境版本已完全符合其建议。
+
+实际input2572183/output69658/total2641841，cache_read500544为输入子集；软阈值3000000，实际费用不可得。上一CLI为5/13、4候选、18分29秒、1678348 token；Codex为13/13、0发现、审查阶段419.637秒、2081249 token。输入源码清单SHA98fb4021169fe6268f840026b11e80897785de1e6fcfc39302a85ecc70360d33与rules SHA329b379966e1b1397dc167251bf9c63e5742a73504821fa4011ca9664d17c1ad均逐字节同前两路，候选源码不变。这次同时改时间和预算，单样本不能把完成率变化单独归因于时间，不能据不同缓存/模型token宣布费用优劣。
+
+本轮四条旧候选均未再报告，OCR原始comments就是0，并非平台删除。三组日志均Round1/1 added no new findings，仍low effort；没有逐条解释为什么排除旧候选。之前复核的两处基线健壮性/诊断缺口仍未修，不因新clean关闭。结论是完整执行已获实证，问题发现质量未获证明；结果随运行变化，不能从0发现推导无缺陷或模型优劣。后续应以真实产品功能PR、已知缺陷样本及明确新增/历史问题范围评价，不能继续仅加时间求发现数。
+
+正式留存7件1120242bytes，释放后从新目录重新下载全部bytes/SHA一致，environment=released。report.md379bytes/SHAfa20e637da701050ecec6437285f779e3f476ad649ee8f974af03a49493ac85e；result SHA7c560823d282ea9ea2bf59ff20e700178b21b741018a7c062feb2c7d5522c9d7。完整正文与版本信息已发布到[既有Issue69](https://github.com/big91987/model-relay/issues/69#issuecomment-6413542887)，平台原件需登录，不冒称GitHub Actions附件或部署看板。
+
+工程记录：22审查相关回归、141模板回归20.374s与ruff通过；首次额外模板调用缺sdk/python导致导入错误，正确PYTHONPATH后完整通过，属于测试调用问题。直连push超时先核远端未更新，再用既有代理推送35a4cbd成功。CLI适配器subprocess.run使用PIPE，结束后才写原始报告/日志，长任务在途缺少文件级进度，是后续可观测性改进点。本轮没有更改在途配置、旧冻结回执或定时任务。
