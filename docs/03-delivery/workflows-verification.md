@@ -1,5 +1,11 @@
 # 平台内 Workflow 验证记录
 
+> 同版对照结论（2026-10-26）：放宽CLI至请求5分钟/分组20分钟/整命令30分钟后，精确heada6e77d58、13件及全源/解析规则逐字节相同。Codex＋官方Skill：13/13、0发现、审查阶段419.637秒、固定校验clean；GLM＋OCR CLI：命令1108.908秒、5/13完成/8预算失败、4候选、strict exit20/incomplete，GitHub正确失败。独立静态复核4候选为2误报/契约不成立、2历史缺陷/诊断加固，0确认当前PR新增缺陷；不能推断漏报率或模型胜负。两Run均正式released，15原件及两份GitHub三件附件重新下载全摘要一致。详情见[对照记录](qa-review-pipeline.md#放宽时间后的同版对照2026-10-26)。PR71仍draft/未合部署，研发新审查阶段尚无整链实证，定时任务仍暂停。
+
+> 对照执行中（2026-10-26）：当前同版heada6e77d58的Delegate Run275829a3已completed/released，13/13、0发现、固定校验clean；审查419.637秒，八件1104789bytes释放后全新下载摘要全部一致，GitHub作业SUCCESS。首次双路Actions40284625015的CLI因checkout三次直连443/75秒失败而未建Run，不能归模型；仅在项目标准git_proxy字段设置用户已有代理后核无Run，再正式一次engine=cli，Actions40288396722 / Run89dc1f4e6bb8b742ee604b56f2d7467d，CLI4冻结新时限，prepare80.622秒已完成，review07:53:20Z真实运行。旧失败/取消保留，非无限重试；完整结论仍待CLI回执。
+
+> 正式升级（2026-10-26）：维护源639bbe8已提交/推送，标准166件导出核SHA安装；CLI revision4、Delegate6、研发14，十条旧冻结Run逐一不变。PR71新精确heada6e77d582039b4c91e979a528e0b78c88c6dcb80的168远端Git对象与导出匹配；API确认该范围两路均无Run后，原GitHub入口一次engine=both补验延长时限后的两路结论。模型/规则/500000阈值保持，未合并/部署，等待实际Actions与Run回执；Issue69评论6410386755已记录旧失败与新对照边界。
+
 > 补验更新（2026-10-26 06:36UTC）：同版CLI Run23f8a9c1真实failed；OCR命令976.015秒、474570总token（input443375/output31195/cache333888为input子集），13件选中但0件完成，失败包括请求/分组超时与上下文压缩阈值，不是本轮token预算耗尽。comments:null触发维护源报告器TypeError，report.md缺失导致归档失败；原Run不改写。六件1123685bytes仅作为只读诊断私有保存且逐SHA核对，不冒称正式归档。用户要求先放宽时间再同版比较：源码请求300秒/分组20分/进程30分/执行35分/CI50分/job60分，500000阈值和严格覆盖保持；null/畸形finding红→绿、22审查回归/141模板回归/Go契约/vet及独立复审通过。标准升级与新同版双路尚待实际入口回执。
 
 > 当前补验（2026-10-26 06:20UTC）：用户指出执行节点路径未闭环，已通过原项目入口唯一dispatch CLI Actions40279068795 / Run23f8a9c1705f686933889c09c16cdd41，精确basea1cbbb86→head1cbd3c92，与Delegate成功样本同版；prepare70.572秒已完成，普通execution节点review实际运行OCR＋GLM，保留500000阈值/严格覆盖判断。旧CLI较早head3/7 incomplete仍保留。研发主图新增code_review阶段尚无新整链实证，不能由独立路径成功代替；Issue69机器人评论6409623841已明确告知。

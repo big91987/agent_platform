@@ -252,3 +252,59 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 补验更新（2026-10-26 06:36UTC）：同版CLI Run23f8a9c1真实failed；OCR命令976.015秒、474570总token（input443375/output31195/cache333888为input子集），13件选中但0件完成，失败包括请求/分组超时与上下文压缩阈值，不是本轮token预算耗尽。comments:null触发维护源报告器TypeError，report.md缺失导致归档失败；原Run不改写。六件1123685bytes仅作为只读诊断私有保存且逐SHA核对，不冒称正式归档。用户要求先放宽时间再同版比较：源码请求300秒/分组20分/进程30分/执行35分/CI50分/job60分，500000阈值和严格覆盖保持；null/畸形finding红→绿、22审查回归/141模板回归/Go契约/vet及独立复审通过。标准升级与新同版双路尚待实际入口回执。
 
 原始raw SHA f17aa24b9ccfaf3f1f029edb363a359030635ef5a1dee35c6e8f672a49c82569，summary.files_reviewed=13不是completed=13；必须读manifest覆盖。实际Run23f8在06:36:50.463Z以report缺失failed，冻结revision3及原始receipt保持；Builder只读docker取文件是诊断恢复，不是平台正式留存。新维护源assess先正规化null/畸形comments，原错误仍error，不因报告生成修复改变模型失败。独立review首轮发现partial/failed早返回绕过坏成员验证，补跨状态失败回归后修正，最终无C/I；141模板19.519秒、Go契约0.796秒、22审查0.572秒、vet exit0。
+
+正式升级（2026-10-26）：维护源639bbe8已提交/推送，标准166件导出核SHA安装；CLI revision4、Delegate6、研发14，十条旧冻结Run逐一不变。PR71新精确heada6e77d582039b4c91e979a528e0b78c88c6dcb80的168远端Git对象与导出匹配；API确认该范围两路均无Run后，原GitHub入口一次engine=both补验延长时限后的两路结论。模型/规则/500000阈值保持，未合并/部署，等待实际Actions与Run回执；Issue69评论6410386755已记录旧失败与新对照边界。
+
+
+对照执行中（2026-10-26）：当前同版heada6e77d58的Delegate Run275829a3已completed/released，13/13、0发现、固定校验clean；审查419.637秒，八件1104789bytes释放后全新下载摘要全部一致，GitHub作业SUCCESS。首次双路Actions40284625015的CLI因checkout三次直连443/75秒失败而未建Run，不能归模型；仅在项目标准git_proxy字段设置用户已有代理后核无Run，再正式一次engine=cli，Actions40288396722 / Run89dc1f4e6bb8b742ee604b56f2d7467d，CLI4冻结新时限，prepare80.622秒已完成，review07:53:20Z真实运行。旧失败/取消保留，非无限重试；完整结论仍待CLI回执。
+
+补充：delegate原生完整902事件读到EOF，总input2076291/cache1953408/output4958/reasoning1157（output子集）、total2081249，费用不可得。初步曾把旧null报告器缺陷称作Codex漏检，随后核base a1cbbb86的Git blob ccd0f8b0f332285ddd30e31e91ea2c79cd15e9f4（13325bytes/SHA7562ac055756c98eca163e646d9e68ccc88f4525601249740b0feb83484ca4be）确认同一缺陷基线已存在。本轮规则只审新增差异，不能据此判本PR漏检；应表述为差异审查无法替代全库检查或实际执行验证。两边预算/模型不同，因此本轮对照集成方式实际结果，不作等算力模型排名。项目代理配置0600，仅git_proxy值变化，其他字段/凭据不变；公开Git探针直连/代理均一度成功，不把瞬时探针当真实checkout三次失败的反证。
+
+
+## 放宽时间后的同版对照（2026-10-26）
+
+本轮先放宽执行时间，再比较两个真实集成方式的覆盖、问题及消耗。源代码在比较期间冻结，未为某一侧改断言或删审查范围。测试对象为 Harness 自身的真实 PR71；这不是 Model Relay 产品 QA，也不是等算力的模型准确率测评。
+
+- PR71 base `a1cbbb862714346a77a24c96b2bf5d5672c6be1a` → head `a6e77d582039b4c91e979a528e0b78c88c6dcb80`，tree `1d0fb66d1c831101d9d35314046a134bb0d1df65`，168远端对象与维护源639bbe8标准导出一致。
+- Git实际变更14件；OCR默认排除README，明确选择13件。两路source.json完全相同（5667文件库存，SHA `98fb4021169fe6268f840026b11e80897785de1e6fcfc39302a85ecc70360d33`），解析后rules逐字节相同（SHA `329b379966e1b1397dc167251bf9c63e5742a73504821fa4011ca9664d17c1ad`）。两侧候选源码未改。
+- OCR固定v1.13.3。CLI请求180→300秒、分组10→20分钟、进程1200→1800秒、执行节点1500→2100秒、CI观察2400→3000秒、GitHub job50→60分钟；模型及500000聚合token阈值保持。Codex使用gpt-6.1-sol与官方Delegate Skill，角色和审批配置未变。
+
+| 项目 | Codex＋官方 Delegate Skill | GLM＋完整 OCR CLI |
+|---|---|---|
+| 实际 Run | [275829a3](http://10.1.20.112:8795/workflow-runs/275829a3cd7d892c636a0fb2b02aff1c)，图revision6 | [89dc1f4e](http://10.1.20.112:8795/workflow-runs/89dc1f4e6bb8b742ee604b56f2d7467d)，图revision4 |
+| 结果 | clean，13/13，0跳过，0确认发现 | incomplete，5/13完成、8失败，4候选；原生partial、固定exit20 |
+| 准备阶段 | 69.273秒 | 80.622秒 |
+| 审查阶段驻留（含工具/启动/归档） | 419.637秒 | 1118.861秒；OCR命令本身1108.908秒 |
+| 固定结果校验 | 独立执行节点9.863秒 | 在同一CLI执行程序中完成，未把partial exit0当通过 |
+| Run墙钟 | 498.774秒 | 1199.484秒 |
+| 累计输入/输出token | 2076291 / 4958，总2081249 | 1627422 / 50926，总1678348 |
+| 缓存输入（输入子集） | 1953408 | 115904 |
+| GitHub回执与报告 | [成功作业](https://github.com/big91987/model-relay/actions/runs/40284625015/job/121446116876)；附件`code-review-delegate-40284625015` | [失败作业](https://github.com/big91987/model-relay/actions/runs/40288396722/job/121457440221)；附件`code-review-cli-40288396722` |
+| 沙箱与原件 | released，8件1104789bytes | released，7件1428783bytes |
+
+GitHub附件均为可下载文件，不是已部署在线页面。两侧释放后均在新目录完整下载原件、逐bytes/SHA核对；GitHub每侧result.json/report.md/preview.json亦实际下载，与平台原件逐字节相同。CLI report.md为3192bytes/SHA `f842098c02e2a3732d3f72ebfdcdd50408529192bdb53f3eb8dc2b4d0ab6055b`；Delegate report.md为386bytes/SHA `73120277b1df047c4a8c491aafe82b62790c6575d22f51634b59040c401b50be`。结果可用不依赖继续保留沙箱。
+
+CLI在时间放宽后确实得到更多输出，但仍未完成。500000只是上游软阈值，实际1678348（约3.36倍），不能描述成500000硬限额。日志首个预算停止已1187807，其后仍有其他分组和grace回合，最后一个grace请求还发生300秒超时；精确的每请求/压缩/分组记账顺序仍待上游进一步诊断，不能把全部超额归为并发或单一模型原因。summary.files_reviewed=13表示尝试数，完成数必须读取manifest（5）。费用不可得；token口径、缓存与预算不同，不能直接推算费用或宣布模型胜负。
+
+### 四项候选的独立静态复核
+
+下表依据实际GitHub文件清单、基线与当前源码、Go类型契约及隔离探针核验，未运行产品测试、未让协调者代产品QA。只读取候选content，不以模型思考文本作为证据。
+
+| 候选 | 结论 | 可复核依据 |
+|---|---|---|
+| README清单摘要未随文件更新（low） | 误报 | GitHub files明确README modified/+2/-2，blob `d219bd51f134df55ba7bae698ce30376e7c2f666` 与导出一致；5605bytes/SHA `3da66c244ab2c9d57509560716991abd61163fd0d470b8cc047880de537eb914` 匹配SOURCE。被OCR排除不等于Git没有修改。 |
+| Delegate的畸形comments/files导致异常（medium） | 基线已有缺陷/加固项 | base与639bbe8的assess_delegate逐字相同；两版对comments:[null]或files:[null]均可复现AttributeError。不能算当前PR新引入。 |
+| 私有配置null/[]漏捕TypeError（low） | 诊断分类加固项 | 两版同样TypeError，当前新增run包装未覆盖此类型，但未新增失败行为，不会提交审查或误判通过。 |
+| 平台Receipt output/log显式null（low） | 受支持接口契约下误报 | Go的output是string,omitempty，log为*ConnectorLogInfo,omitempty；previous_results直接marshal类型化回执，空值缺省，不产生该候选的显式null。仅人工构造不符合契约输入可触发。 |
+
+因此是 **4候选、0确认当前PR新增缺陷**，不是发现4个新bug。Codex零发现与CLI候选未证实，均不能证明代码无缺陷或计算漏报率；本次缺少含已知新增缺陷的受控评测集，且CLI只完成5/13。此前将旧空comments报告器崩溃称为Codex漏检不准确：同一缺陷在base已存在，原GitHub评论已更正。
+
+### 观察到的瓶颈与后续改进
+
+1. **先控制审查输入。** Codex首条命令读入约1MB source库存，5667项中5216为历史Run材料；还两次因jq/python不存在退出127。完整库存继续留给固定校验，给Agent的读取说明应只取base/head/expected，并明确使用已有python3；不为模型随意尝试就安装额外工具。需要下一轮实测后才能量化节省。
+2. **CLI先解决完成性与预算语义。** 单纯延时没有获得完整审查。应独立排查分组/上下文压缩与聚合预算记账，显式区分Git实际变更和筛选清单，避免README类误报；本轮不再加时间、加token或弱化覆盖求绿。实际费用保护不能只依赖该软阈值。
+3. **减少CI等待占Runner。** 一台Runner让matrix串行，并在远程审查期间持续占用。首次CLI checkout三次直连超时，没有平台Run；应用项目既有git_proxy字段后，只补跑CLI，checkout2秒成功。公开小探针曾直连/代理均通过，不能反证正式job失败，也不能把总耗时全部归仓库大小。后续模板可把提交与异步观察拆开，保留版本绑定和去重。
+4. **失败交付仍有缺口。** 旧23f8因报告器空comments异常缺report，原回执failed保持，六件只读诊断副本不能冒充正式归档，也未强删原环境绕过门禁。此次源修复后，新CLI partial能够正式产出七件并释放，这是新路径实证，不代表旧失败回执被修复。部分失败产物保留与正式释放机制仍需梳理。
+5. **边界仍保留。** Agent原生回合硬截止缺口未修；本轮无待审批阻塞。研发主图revision14已升级，但tests→code_review→QA新增阶段没有新整链Run，本对照不能代替。跨仓fresh install、长期并发可靠性、误报/漏报评测未做。
+
+当前建议优先用已完成本样本的Codex＋Skill作审查参考，CLI＋GLM继续作为对照与调优路径；不据本轮静态结果替代固定测试、独立产品QA或人工合并，也不自动切换现有研发图策略。PR71仍draft，Issue69保持Open以追踪CLI完成性和研发整链未验部分；平台仅开发分支提交推送，没有合平台main或产品部署。
