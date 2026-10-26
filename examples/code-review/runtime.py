@@ -153,7 +153,7 @@ def run_tool(arguments, destination, *, llm=False, timeout=120):
             if not os.environ.get(key):
                 raise ValueError("CLI model connection is not configured")
             env[key] = os.environ[key]
-        env["OCR_LLM_TIMEOUT"] = "300"
+        env["OCR_LLM_TIMEOUT"] = "600"
     started = time.monotonic()
     try:
         result = subprocess.run(
@@ -355,13 +355,13 @@ def cli_review(binary=None):
             "--concurrency",
             "2",
             "--timeout",
-            "20",
+            "30",
             "--max-tokens-budget",
-            "500000",
+            "3000000",
         ],
         OUTPUT / "raw.json",
         llm=True,
-        timeout=1800,
+        timeout=2700,
     )
     try:
         value = json.loads((OUTPUT / "raw.json").read_text())

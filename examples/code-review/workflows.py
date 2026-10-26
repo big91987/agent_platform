@@ -54,7 +54,7 @@ def execution(name, code, *, refs=None, artifacts=False):
         "id": name,
         "name": name,
         "kind": "execution",
-        "execution_timeout_seconds": 2100,
+        "execution_timeout_seconds": 3000,
         "execution": {
             "mode": "command",
             "command": python_command(code),

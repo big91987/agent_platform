@@ -28,7 +28,7 @@ jobs:
       matrix:
         engine: ${{ fromJSON(inputs.engine == 'cli' && '["cli"]' || inputs.engine == 'delegate' && '["delegate"]' || '["cli","delegate"]') }}
     runs-on: [self-hosted, macOS, ARM64, he-full]
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - name: Configure GitHub transport
         id: github_transport

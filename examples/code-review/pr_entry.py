@@ -74,7 +74,7 @@ def main():
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--pr", required=True, type=int)
     parser.add_argument("--engine", choices=["cli", "delegate"], required=True)
-    parser.add_argument("--wait-seconds", type=int, default=3000)
+    parser.add_argument("--wait-seconds", type=int, default=3600)
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
     repo = config["repository"]
