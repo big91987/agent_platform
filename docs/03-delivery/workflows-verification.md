@@ -3864,3 +3864,8 @@ Issue63研发首轮11:26:21.257Z wait_for_input accepted、11:26:29.945Z回合�
 ### 2026-10-26：工程质量与瓶颈评估证据
 
 [只读工程评估](model-relay-engineering-assessment-2026-10-26.md)锁定PR68/head736a928e…与171件6316a232…源码；实时GitHub确认open/draft未合并。复核Issue37共124评论及最后Release矩阵，最终FileNotFoundError/Not Run、独立QA入口缺口、旧Unknown未闭合，不与本轮QA混同。原主gate1403.175秒中五browser共726.403秒（51.77%）、14实验cell共199.439秒，预算余96.825秒；其余477.333秒尚无细分归因。静态源表EXPLAIN显示admissions扫描/时间排序，无新压测或吞吐结论。产品UI留存截图确认多候选CSV与长原字段诊断；独立只读Standards/Spec审查无确认新增重要违规。全部新调查回执在既有ignored feature-delivery-continuation/assessment，原QA/日志保持。本次只改分析和进度文档，不实施建议、不新增产品验收通过声明。
+
+
+### 2026-10-26：评估主目标明确为Harness工程
+
+评估范围纠偏：已重新只读核Example sandbox_delivery/entry/prepare、角色指令和平台workflow_delivery。已发生的通用问题与项目测试设施问题分开；旧Connector交付视图能否接入新Execution发布仅为静态候选，尚未线上复现，不列确认故障。没有新增测试/恢复/部署。完整两层分析及实证见[Harness工程评估](model-relay-engineering-assessment-2026-10-26.md)，上一轮产品视角保留历史，不作为当前优先级。
