@@ -8,7 +8,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "platform-workflows"))
 
-from sandbox_delivery import definition as delivery_definition  # noqa: E402
+from sandbox_delivery import (  # noqa: E402
+    definition as delivery_definition,
+)
+from sandbox_delivery import (  # noqa: E402
+    preparation_code,
+    python_command,
+)
 
 ARTIFACTS = [
     "preview.json",
@@ -50,9 +56,8 @@ def execution(name, code, *, refs=None, artifacts=False):
         "kind": "execution",
         "execution_timeout_seconds": 1500,
         "execution": {
-            "mode": "code",
-            "language": "python",
-            "code": code,
+            "mode": "command",
+            "command": python_command(code),
             "output": {"source": "exit_code"},
             "env_refs": refs or {},
             "artifacts": ["harness-output/code-review/" + p for p in ARTIFACTS]
@@ -82,15 +87,14 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
     original = delivery_definition(repository, credential_ref, proxy)
     prepare = original["nodes"][0]
     prepare["execution_timeout_seconds"] = 600
-    prepare["execution"]["code"] += program(
+    code = preparation_code(repository) + program(
         "context=json.loads(Path(os.environ['WORKFLOW_INPUT_FILE']).read_text())\n"
         "(STATE).mkdir(parents=True,exist_ok=True)\n"
         f"(STATE/'rules.json').write_text({(HERE / 'rules.json').read_text()!r})\n"
         "preview(context['parameters']['review_base_commit'],context['parameters']['repository_commit'])"
     )
-    prepare["execution"]["code"] += (
-        "\nprint('CODE_REVIEW_SOURCE_SHA256='+hashlib.sha256((OUTPUT/'source.json').read_bytes()).hexdigest())\n"
-    )
+    code += "\nprint('CODE_REVIEW_SOURCE_SHA256='+hashlib.sha256((OUTPUT/'source.json').read_bytes()).hexdigest())\n"
+    prepare["execution"]["command"] = python_command(code)
     prepare["rule_handoff"] = {
         **rule("review"),
         "rules": [

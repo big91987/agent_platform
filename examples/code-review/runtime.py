@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import time
 import urllib.request
@@ -265,12 +266,16 @@ def trusted_source(*, required=False):
         ]
         if prepare:
             receipt = prepare[-1].get("execution_receipt", {})
-            captured = [
-                line.removeprefix("CODE_REVIEW_SOURCE_SHA256=")
-                for line in receipt.get("stdout", "").splitlines()
-                if line.startswith("CODE_REVIEW_SOURCE_SHA256=")
-            ]
-            if len(captured) == 1 and receipt.get("exit_code") == 0:
+            # OpenSandbox may omit stream chunk separators in the captured log.
+            captured = re.findall(
+                r"CODE_REVIEW_SOURCE_SHA256=([0-9a-f]{64})(?![0-9a-f])",
+                receipt.get("output", ""),
+            )
+            if (
+                len(captured) == 1
+                and receipt.get("exit_code") == 0
+                and not receipt.get("log", {}).get("truncated", False)
+            ):
                 raw = (OUTPUT / "source.json").read_bytes()
                 if hashlib.sha256(raw).hexdigest() != captured[0]:
                     raise ValueError(

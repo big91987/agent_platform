@@ -20,7 +20,7 @@ python3 .harness/agent-platform/examples/code-review/install.py \
 安装保存两张图的正式回执；重入复用原 ID，配置漂移拒绝覆盖，升级前阻止执行中或等待中的 Run。Skill 是官方 v1.13.3 原件，许可证和摘要见 `skill/`；平台从该目录将选中的 Skill 传给原生 Codex。
 
 4. CI 私有 JSON 由项目管理，含 `repository`、`base_url`、`token_file`、`review_workflow_ids`（安装返回的 cli/delegate ID），可选 `git_proxy`；文件及 Token 保持在 Runner 的私有目录。GitHub 仓库变量 `AGENT_PLATFORM_CODE_REVIEW_CONFIG` 指向该文件。Token 对应用户需要能调用这两张图。
-5. 把 `code-review.yml` **复制**到项目 `.github/workflows/agent-platform-code-review.yml` 并调整 Runner 标签。本例沿用可连接私有平台的自托管 Runner。PR 入口只从可信 base checkout 适配器，拒绝 fork、非 Owner 和已关闭 PR，不在 Runner 上执行 PR 代码。两个 matrix job 分别提交相同 base/head。可通过 workflow_dispatch 指定开放 PR 做对照。
+5. 把 `code-review.yml` **复制**到项目 `.github/workflows/agent-platform-code-review.yml` 并调整 Runner 标签。本例沿用可连接私有平台的自托管 Runner。PR 入口只从可信 base checkout 适配器，拒绝 fork、非 Owner 和已关闭 PR，不在 Runner 上执行 PR 代码。两个 matrix job 分别提交相同 base/head。可通过 workflow_dispatch 指定开放 PR；`engine` 选择两种一起运行或单独一种，不必为诊断重复消耗另一模型。
 
 平台 Run 按 `PR/base/head/engine` 去重。后续提交或基线移动产生新的范围，旧报告不会标记新提交通过。此模板不改分支保护、不自动合并、不部署。
 
@@ -32,7 +32,7 @@ python3 .harness/agent-platform/examples/code-review/install.py \
 
 ## 结果与边界
 
-OCR 固定 `v1.13.3`、官方发布二进制 SHA256；完整模式 low effort、并发2、总 token 预算500000、整条命令最多1200秒。准备节点和 Agent/执行节点另有平台时限。凭据不会进入模型报告，OCR 进程不继承 Git 认证。
+OCR 固定 `v1.13.3`、官方发布二进制 SHA256；完整模式 low effort、并发2、总 token 预算500000、整条命令最多1200秒。独立审查准备节点最多600秒，其中固定base/head历史拉取最多480秒；不会自动重试失败拉取。OCR需要merge-base，保留真实历史。Agent/执行节点另有平台时限。凭据不会进入模型报告，OCR 进程不继承 Git 认证。可信准备、审查及报告校验以 `python3 -I` 启动，避免从PR工作区加载同名Python模块或启动钩子；这不改变用户代码节点的导入方式。
 
 `rules.json` 显式纳入测试，叠加系统规则；排除的历史大报告列在 preview，不能当已审查。PR 内的 OCR 配置不会替换受信规则。报告保留严重度、位置和依据；默认所有已报告发现均需人工核实。**clean** 表示覆盖完整且没有报告发现，**findings** 表示有待核实的问题，**incomplete** 表示漏项/警告/无法分类，**error** 表示执行或源文件变动。CLI exit0 或空 comments 均不能独立判通过。Codex 报告使用宿主自己的文件覆盖表，不伪造 OCR 原生清单。
 

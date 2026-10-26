@@ -46,8 +46,7 @@ class SandboxPreparationTest(unittest.TestCase):
             def local_fetch(command, **kwargs):
                 command = list(command)
                 if "fetch" in command:
-                    self.assertEqual(command[-2:], ["origin", commit])
-                    command[-2] = source.as_uri()
+                    command[command.index("origin")] = source.as_uri()
                 return real_run(command, **kwargs)
 
             with (
@@ -55,6 +54,31 @@ class SandboxPreparationTest(unittest.TestCase):
                 patch("sandbox_prepare.subprocess.run", side_effect=local_fetch),
             ):
                 prepare(context, "owner/project", workspace)
+            review_workspace = base / "review"
+            review_workspace.mkdir()
+            review_context = {
+                **context,
+                "parameters": {
+                    **context["parameters"],
+                    "review_base_commit": historical,
+                },
+            }
+            with (
+                patch.dict(os.environ, {"GITHUB_TOKEN": "fixture"}),
+                patch("sandbox_prepare.subprocess.run", side_effect=local_fetch),
+            ):
+                prepare(review_context, "owner/project", review_workspace)
+            merge_base = subprocess.check_output(
+                ["git", "-C", str(review_workspace), "merge-base", historical, commit],
+                text=True,
+            ).strip()
+            self.assertEqual(merge_base, historical)
+            self.assertEqual(
+                json.loads(
+                    (review_workspace / ".git/agent-platform-prepared.json").read_text()
+                )["review_base_commit"],
+                historical,
+            )
             head = subprocess.check_output(
                 ["git", "-C", str(workspace), "rev-parse", "HEAD"], text=True
             ).strip()

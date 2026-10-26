@@ -72,12 +72,14 @@ def prepare(context, repository, workspace=Path("/workspace")):
                 cwd=workspace,
                 env=env,
                 check=True,
-                timeout=120,
+                timeout=480 if base and args[0] == "fetch" else 120,
             )
 
         git("init", "--quiet")
         git("remote", "add", "origin", "https://github.com/" + repository + ".git")
-        # Fixed HEAD still needs reachable history for project regression gates.
+        # Fixed HEAD still needs reachable history for project regression gates
+        # and OCR merge-base. Review preparation has a 600-second node budget;
+        # allow its large-repository fetch up to 480 seconds without retries.
         git("fetch", "--quiet", "origin", commit, *([base] if base else []))
         actual = (
             subprocess.check_output(

@@ -189,10 +189,28 @@ CLI 使用用户指定的 OpenAI 兼容模型服务 glm-5.3-flash；密钥仅私
 
 ## 任务与验证
 
-- [ ] `examples/code-review/runtime.py`、`runtime_test.py`：版本安装、候选准备与范围核对、CLI 报告规范化、覆盖/警告/未知严重度拒绝通过、原始输出和报告保存。先写失败回归，再实现；真实二进制验证其 JSON 契约。
-- [ ] `examples/code-review/workflows.py`、官方 Skill 与规则：生成独立 CLI/Delegate 两张图；可在研发图 tests→review→QA 复用 CLI 节点。Agent 只写报告；固定后处理核覆盖、版本和源文件未改。
-- [ ] `examples/code-review/github_entry.py`、`code-review.yml`：可信 PR 入口、精确 SHA、幂等提交、终态检查与 GitHub 可查看结果。正常、旧 head、fork/非授权、运行失败、部分审查和重复请求回归。
+- [x] `examples/code-review/runtime.py`、`runtime_test.py`：版本安装、候选准备与范围核对、CLI 报告规范化、覆盖/警告/未知严重度拒绝通过、原始输出和报告保存。先写失败回归，再实现；真实二进制验证其 JSON 契约。
+- [x] `examples/code-review/workflows.py`、官方 Skill 与规则：生成独立 CLI/Delegate 两张图；可在研发图 tests→review→QA 复用 CLI 节点。Agent 只写报告；固定后处理核覆盖、版本和源文件未改。
+- [x] `examples/code-review/pr_entry.py`、`code-review.yml`：可信 PR 入口、精确 SHA、幂等提交、终态检查与 GitHub 可查看结果。正常、旧 head、fork/非授权、运行失败、部分审查和重复请求回归。
 - [ ] 标准导出/项目内复制及112正式 API 安装新图；现有冻结 Run 不改。用真实 PR 触发 CLI 与 Delegate，核原生消息、同版报告、执行时间和释放后产物留存。真实调用失败保留首回执，不造通过、不盲重试。
 - [ ] 比较可复核发现、误报/漏报边界、覆盖、耗时与可得 token；未验项目单列。将入口、配置与升级文档纳入模板，不依赖开发者临时脚本。
 
 当前：实施中。已有产品 PR68 实时为 merged，不沿用旧 draft 快照；不得把后续审查称为合并前已执行的检查。
+
+
+### 2026-10-26 · PR 审查正式入口与沙箱边界
+
+唯一维护源 `fe349085e348dd1b51295385f77b9762be4d9fff` 已提交并推送开发分支。标准导出166件校验后通过正式安装/API应用：独立CLI图 `0ddb0eff52aa31a2494df6b434f7bfc8` revision2、Delegate图 `9efca4daff248c3c6914cd68d54acc64` revision3；研发主图revision12已插入tests→code_review→QA，发现问题回development，10条既有冻结Run未改。112平台二进制仍dfecd925，模型配置只引用私有环境名，Git凭据只进入prepare。112是控制面，实际克隆与审查在每Run独立OpenSandbox `/workspace` 执行，不在宿主执行PR代码。首次91.275秒模型Loop为本机隔离探针，不能冒称沙箱PR审查。
+
+[Issue69](https://github.com/big91987/model-relay/issues/69)和[Harness PR70](https://github.com/big91987/model-relay/pull/70)已建立标准入口，PR70精确合main a1cbbb86。首次自动40257071468/40258960641在读取PR失败前未建Run；根因之一是入口漏pull-requests:read。固定分支手动40259093279又暴露GitHub checkout真实超时/HTTP2中断，以及Delegate模板要求externalSandbox不支持的单节点禁网而HTTP400；两者均无Run，不归为模型审查失败。维护源补PR读权限、安全错误分类、CI只稀疏取项目工具包、模板遵守现有沙箱网络契约，并新增Go真实图验证回归；不扩大冻结Run权限。旧失败保留，不盲rerun旧基线。
+
+[PR71](https://github.com/big91987/model-relay/pull/71)当前draft/open、head25ba454995db22cb2a4c41df1a5f626ff60d0be6，包含同版标准副本及入口修复，尚未合并。pull_request_target仍使用main旧YAML，40261623285两项失败不能当修复版结果。修复后仅一次正式分支dispatch [40262132950](https://github.com/big91987/model-relay/actions/runs/40262132950)，2026-10-26T03:03:41Z受理唯一Delegate Run `1c3c7d6c2f0d111a7bfdec6f8b241f81`，沙箱ready后prepare运行；CLI仍待Runner队列。此时尚无真实PR审查结论、同版报告或释放复验；不得称两种集成完成或产品QA通过。
+
+管理传输曾因通用旧回执被误认造成后续命令落入Shell，未完成升级；已确认归档1658880bytes/SHA fd1ef25e…完整，改为精确摘要回执及私有文件执行，正式安装完成。该管理错误和入口/队列等待计入工程交付耗时，不计Agent净审查。定时任务继续暂停，未启动旧产品任务或部署。
+
+
+2026-10-26 03:24UTC追加实测：正式CLI Run bf2aea6f0d536f404e4acba2a69906fb于03:18:21Z completed，但审查为 **incomplete/No-Go**。准备92.690秒；实际OCR命令626.512秒、7件完成3件/失败4件，原生partial，537137总token（input516832/output20305/cache426240为input子集），超过500000聚合预算且grace round超时。零发现不能当通过，不上调预算掩盖；7件1115521bytes正式原件已全部重新下载并核size/SHA，CI失败正确。Delegate原Run准备120秒fetch超时，没有Agent；实际CLI同版准备成功，网络波动/历史体积/固定120秒共同候选，未证明单一网络根因。正式review准备在600秒节点预算内允许fetch480秒且不自动重试；OCR依赖merge-base，保留历史，不浅拉破坏比较范围。
+
+独立复审另发现可信Python以-c在PR目录启动，可执行同名hashlib.py，且sitecustomize在代码前启动；此为Harness安全缺口，不是Model Relay产品缺陷。最终修复在标准可信模板使用普通command执行正确shell引用的python3 -I -c，覆盖准备、CLI、Delegate校验和研发审查；平台自由代码节点不强制隔离。真实恶意同名模块/启动钩子及$()/反引号/引号回归红→绿，19审查测试、28sandbox定向经独立复审通过，无剩余Important。可信摘要另按实际ConnectorReceipt.output混合日志读取唯一64位摘要、exit0且日志未截断；原stdout字段不存在，已用真实捕获的无换行拼接形式复现再修，不保留旧兼容分支。
+
+最终scripts/verify.sh真实exit0，136271bytes/SHA9bd524f128e4e612f34aa63d1c52cb19b76753ae3d5c2f0ad38ef95f618c74f4，Go部分缓存如实保留；中途ruff导入排序失败日志保留。新增手动engine选择用于单独验证一种方式，自动PR仍双路，不为单路诊断重复消耗另一模型；YAML实际校验另列。上述新修复尚待精确版本标准安装/新head入口，不能称最终整链已绿。[机器人Issue反馈6407484385](https://github.com/big91987/model-relay/issues/69#issuecomment-6407484385)明确报告原始阻塞与结论。旧冻结Run不改，安全风险未因当前PR无同名模块而泛称已消除。

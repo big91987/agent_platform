@@ -4,7 +4,25 @@
 import argparse
 import json
 import re
+import shlex
 from pathlib import Path
+
+
+def python_command(code):
+    """Trusted template programs must not import code from the reviewed workspace."""
+    return shlex.join(["python3", "-I", "-c", code])
+
+
+def preparation_code(repository):
+    prepare = (
+        Path(__file__)
+        .with_name("sandbox_prepare.py")
+        .read_text()
+        .split("if __name__ ==")[0]
+        + f"\nprepare(json.loads(Path(os.environ['WORKFLOW_INPUT_FILE']).read_text()), {repository!r})\n"
+    )
+    prepare += "Path('harness-output').mkdir(exist_ok=True)\nwith Path('.git/info/exclude').open('a') as out:out.write('\\nharness-output/\\n')\n"
+    return prepare
 
 
 def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localhost"):
@@ -59,14 +77,6 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                 for key in ["http_proxy", "https_proxy", "no_proxy"]
             }
         )
-    prepare = (
-        Path(__file__)
-        .with_name("sandbox_prepare.py")
-        .read_text()
-        .split("if __name__ ==")[0]
-        + f"\nprepare(json.loads(Path(os.environ['WORKFLOW_INPUT_FILE']).read_text()), {repository!r})\n"
-    )
-    prepare += "Path('harness-output').mkdir(exist_ok=True)\nwith Path('.git/info/exclude').open('a') as out:out.write('\\nharness-output/\\n')\n"
     graph = {
         "name": "OpenSandbox · " + repository + " 研发与独立QA",
         "enabled": True,
@@ -97,9 +107,8 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
                 },
                 "execution": {
                     "output": {"source": "exit_code"},
-                    "mode": "code",
-                    "language": "python",
-                    "code": prepare,
+                    "mode": "command",
+                    "command": python_command(preparation_code(repository)),
                     "env_refs": refs,
                 },
             },

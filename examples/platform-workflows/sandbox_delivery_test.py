@@ -1,3 +1,4 @@
+import shlex
 import unittest
 
 from sandbox_delivery import definition
@@ -27,7 +28,9 @@ class DeliveryExampleTest(unittest.TestCase):
             self.assertEqual(
                 nodes[key]["agent"]["env"]["no_proxy"], "localhost,platform"
             )
-        compile(nodes["prepare"]["execution"]["code"], "prepare", "exec")
+        compile(
+            shlex.split(nodes["prepare"]["execution"]["command"])[-1], "prepare", "exec"
+        )
         edges = {(e["source"], e["route"]): e["target"] for e in graph["edges"]}
         self.assertEqual(edges["tests", "rule_2"], "development")
         self.assertEqual(edges["qa", "revise"], "development")

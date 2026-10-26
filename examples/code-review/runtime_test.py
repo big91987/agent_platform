@@ -143,9 +143,9 @@ class CandidateAndDelegateTest(unittest.TestCase):
             raw = json.dumps(expected).encode()
             (output / "source.json").write_bytes(raw)
             receipt = {
-                "stdout": "prepared\nCODE_REVIEW_SOURCE_SHA256="
+                "output": '{"Event":"ping","Data":"{}"}\n{"prepared":true}CODE_REVIEW_SOURCE_SHA256='
                 + hashlib.sha256(raw).hexdigest()
-                + "\n",
+                + '{"Event":"execution_complete"}\n',
                 "exit_code": 0,
             }
             input_file = Path(folder) / "input.json"
@@ -179,3 +179,44 @@ class CandidateAndDelegateTest(unittest.TestCase):
                 )
                 with self.assertRaises(ValueError):
                     runtime.trusted_source(required=True)
+
+    def test_truncated_or_duplicate_baseline_log_is_rejected(self):
+        import hashlib
+        import json
+        import os
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        import runtime
+
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "output"
+            output.mkdir()
+            raw = b'{"files":{},"expected":[]}'
+            (output / "source.json").write_bytes(raw)
+            line = "CODE_REVIEW_SOURCE_SHA256=" + hashlib.sha256(raw).hexdigest() + "\n"
+            input_file = Path(folder) / "input.json"
+            for log, truncated in ((line, True), (line + line, False)):
+                input_file.write_text(
+                    json.dumps(
+                        {
+                            "previous_results": [
+                                {
+                                    "node": "prepare",
+                                    "execution_receipt": {
+                                        "output": log,
+                                        "exit_code": 0,
+                                        "log": {"truncated": truncated},
+                                    },
+                                }
+                            ]
+                        }
+                    )
+                )
+                with (
+                    patch.dict(os.environ, {"WORKFLOW_INPUT_FILE": str(input_file)}),
+                    patch.object(runtime, "OUTPUT", output),
+                ):
+                    with self.assertRaises(ValueError):
+                        runtime.trusted_source(required=True)
