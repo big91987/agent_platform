@@ -18,6 +18,10 @@ Keep real behavior verifiable. Repair supported paths rather than patching indiv
 
 Use gofmt and go vet. Keep tests small and focused on meaningful behavior: isolation, queue ordering, cancellation, restart, deduplication, authorization and real executor continuity. Do not pile up assertions about constants, prose or implementation structure.
 
+## 工程初始化工具
+
+Kodus Agent Readiness 纳入工程工具链，用于项目接入及工程初始化时的仓库基线体检。独立运行并核对逐项建议，不默认插入进行中的研发流程，不将总分直接作为研发门禁；它不替代真实构建测试、代码审查或独立 QA。试用先固定工具和仓库版本，保存原始报告，区分配置存在、工具识别限制和已验证的工程能力；启用外部模型另行明确凭据及发送范围。
+
 ## 配置与实现收敛
 
 除非用户明确要求，不默认保留旧配置格式、兼容分支、自动猜测或双套界面。配置模型调整时，同步修改源码、模板与现有正式配置，通过受支持的 API 完成明确的一次性升级，再删除旧实现。无法转换的配置应明确报错，不静默降级或推断条件。历史记录保留为事实，不代表旧执行方式仍可继续使用；不为兼容而改写已发生的回执或冻结运行。

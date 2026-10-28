@@ -2280,3 +2280,12 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 用户授权新Run[cb5547cf](http://10.1.20.112:8795/workflow-runs/cb5547cfa116d5e163eb994faea92fcc)已completed/released：原生complete、manifest13/13、0发现、固定exit0；OCR1010.783秒，准备113.386秒，全Run1134.390秒；2641841总token，费用不可得。源35a4cbd标准导出166件安装CLI5/Delegate7，只新跑CLI，研发主图未由本次安装修改，PR71的base/head保持draft，未合并部署。正式API新用户事件去重启动，不冒称新Actions；22相关回归、141模板20.374s及ruff通过。
 
 与前两路source/rules逐字节同版，7件1120242bytes释放后新目录全部复取核SHA；report379bytes/SHAfa20e637da701050ecec6437285f779e3f476ad649ee8f974af03a49493ac85e。完整覆盖解决，但旧四候选均未再报告且无逐条排除理由；两处已复核基线弱点仍未修，不因新clean关闭，发现质量未获证明。仍low effort每组一轮；stderr保留Git版本告警，CLI适配器结束前不呈现文件级进度。时间与预算同时变化，不单独归因时间，不据不同缓存和模型的token比较费用。完整对照、原件及限制见[代码审查记录](qa-review-pipeline.md#长窗口-cli-补验结果2026-10-26-1010utc完成)。定时任务保持暂停。
+
+
+### 2026-10-28 · 工程初始化工具：Agent Readiness
+
+用户确认将[Kodus Agent Readiness](https://github.com/kodustech/agent-readiness)纳入工程工具链，定位为项目接入/工程初始化时的仓库基线体检。独立扫描并人工核对工程缺口，不插入正在进行的研发流程，不新增Workflow节点、门禁、GitHub触发器或审批，不修改在途Run。它不替代构建测试、Code Review、独立QA或效能评价。
+
+首次试用扫描Model Relay当前main固定快照a1cbbb862714346a77a24c96b2bf5d5672c6be1a，固定npm包@kodus/agent-readiness@0.1.3，基础模式不调用模型、不启动Web服务。安装在忽略目录并禁用安装脚本；项目代码只读、执行环境不继承Git或模型凭据。原始JSON和日志私有留存，工具分数与逐项核验分开报告；扫描结果见[本次工程初始化体检](model-relay-agent-readiness-2026-10-28.md)。已知工具限制：配置/文件存在不等于执行有效，mtime不等于依赖更新，抽样AI不等于全仓质量，AGENTS.md未在其上下文识别列表中。
+
+首次实扫已完成：main a1cbbb86、工具0.1.3、基础扫描0.238秒，Level1/Pass12/Fail23/AI Skip4；不是产品质量验收。AGENTS.md、E2E及CI委托检查存在明显识别遗漏，逐项核对见上述报告；main实际protected=false。完整源中历史产物占99.2%，源码准备成本远大于扫描，后续单独考虑保存布局，当前未改现有仓库或流程。

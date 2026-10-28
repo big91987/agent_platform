@@ -3948,3 +3948,14 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 用户授权新Run[cb5547cf](http://10.1.20.112:8795/workflow-runs/cb5547cfa116d5e163eb994faea92fcc)已completed/released：原生complete、manifest13/13、0发现、固定exit0；OCR1010.783秒，准备113.386秒，全Run1134.390秒；2641841总token，费用不可得。源35a4cbd标准导出166件安装CLI5/Delegate7，只新跑CLI，研发主图未由本次安装修改，PR71的base/head保持draft，未合并部署。正式API新用户事件去重启动，不冒称新Actions；22相关回归、141模板20.374s及ruff通过。
 
 与前两路source/rules逐字节同版，7件1120242bytes释放后新目录全部复取核SHA；report379bytes/SHAfa20e637da701050ecec6437285f779e3f476ad649ee8f974af03a49493ac85e。完整覆盖解决，但旧四候选均未再报告且无逐条排除理由；两处已复核基线弱点仍未修，不因新clean关闭，发现质量未获证明。仍low effort每组一轮；stderr保留Git版本告警，CLI适配器结束前不呈现文件级进度。时间与预算同时变化，不单独归因时间，不据不同缓存和模型的token比较费用。完整对照、原件及限制见[代码审查记录](qa-review-pipeline.md#长窗口-cli-补验结果2026-10-26-1010utc完成)。定时任务保持暂停。
+
+
+### 2026-10-28 · 工程初始化Agent Readiness实扫
+
+用户明确纳入工具链，仅用于项目接入/工程初始化，不接入进行中的研发流程。该边界已记录AGENTS.md和workflows-plan.md；没有创建/修改Workflow、在途Run、仓库门禁或触发器。
+
+固定npm @kodus/agent-readiness@0.1.3，main a1cbbb862714346a77a24c96b2bf5d5672c6be1a，远端Git树6d540f6a788c54882cd0806de0010e52c0020b8b与现有Runner对象一致，只读Git归档导出独立完整快照5667件；扫描前后全部SHA一致。基础扫描0.237623秒、exit0、stderr空；未设置等级门禁，未启AI/Web、未继承Git/模型凭据。原始JSON27143bytes/SHA6f4e3efa5b058535de71a7c2d536ea7ea34bf3304b695b5e70423c05471c48ef；安装锁、包integrity、源码清单/回执/日志私有留存。
+
+工具原评级Level1，基础35项Pass12/Fail23，AI4项Skipped；七维度分别2/5、3/5、1/6、2/5、3/6、1/3、0/5。不是功能QA或工程成熟度验收。人工静态核对：AGENTS.md、tests/browser、CI→controller.prepare→make verify均存在，部分为规则漏识别；配置存在和实际执行仍分开。实际GitHub main protected=false；同版check-runs另有prepare=failure，本次未调查首错或重跑。安全0/5不能解释为发现漏洞或全面无外部扫描。
+
+准备过程：直连压缩包180秒/代理240秒均超时，未用于扫描；另起Git clone在找到同版缓存后仅停止该下载及其子进程，未停Runner/服务/Pipeline。归档303347558bytes；完整源501529318bytes中历史Run5216件/497551307bytes（99.2%），是源码准备成本的额外观察，不归为工具原生发现。完整39项提示、原建议、适用性核对及局限见[初始化体检报告](model-relay-agent-readiness-2026-10-28.md)。
