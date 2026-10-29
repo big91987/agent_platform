@@ -2320,3 +2320,10 @@ Issue72正文已把旧SSH卡点更新为实际部署/PR门禁状态，暂未加�
 
 
 2026-10-29 修复版已标准同步：源3f574c3/166件→PR71新精确headd6f110ec54628a8c2b05c7499c511fd096b41713；Delegate模板9、CLI5，研发图15/Runtime2e9d453保持。自动Actions40830430257已产生唯一Delegate Run6bc3e944…：17件完整、0发现、fixed validate通过，GitHub作业SUCCESS；此前真实发布回归已由新同版独立审查复核。CLI唯一Run216fadcf…在途，尚无本轮总Go、未合并、Issue72仍无Run。新默认读取已实际生效：首命令原生输出从旧1048563字符变为30043字符且不再依赖缺失jq，完整源库存校验保持；不据此推算费用/总提效百分比。详情及完整原始证据见qa-review-pipeline.md。
+
+
+2026-10-29 07:53UTC推进：PR71精确headd6f110e两路均17/17、0发现，Actions40830430257成功；CLI命令1891.681秒，native input2095434/output87296/total2182730、cached897984为input子集，费用未知。两沙箱released，15原件释放后复取全同，GitHub6件附件与平台同字节。授权Harness合并为main42b20c6649478e91cec0460f38af426136701214（07:32:49Z），166标准对象再次核对。Issue72经原标签唯一入口40836449852成功，Runffba71cc0d3c8573fed2d520b59c1407/rev15于07:42:57Z受理，prepare53.113秒后研发2/45acd9…运行、审批0。入口created07:35:50Z→受理07:42:57Z约427.529秒，含Runner排队/checkout/SDK，不称净Agent耗时。
+
+同轮新事实：push prepare40836126567固定make verify在项目tests/verify的timeout_gate缺cancel-ready而失败，deploy跳过；完整私有0600日志1033405bytes/SHA285d9bc81f4cf0e9a9bcf18419a29a77885e19d3b1b7b36186d363b505866a76，171件源码6316a232…前后相同。Builder未代产品修复或重跑，正式UserInput21475（稳定去重键、限定研发2）交Pipeline诊断并最小修项目设施，Issue72标题/范围已同步，不增窗口/删断言求绿。尚无本轮固定门禁/QA/PR结论。
+
+另确认ready_for_review事件在PR已合并后才执行，40836117156因closed拒绝，未新建Run；原失败保留并在PR正文解释。通用维护源最小修自动过期事件skip、不写commit status/不启动Run，手动closed仍拒绝；入口回归首红→绿、独立只读复审无C/I、完整scripts/verify.sh exit0（审查23/模板146、真实浏览器/Go vet/race缓存命中/构建）。尚未标准同步此后续入口修复，不冒称已进测试仓；112 Runtime仍2e9d453，研发图15不变。释放POST本次120秒响应超时后先GET确认released、未重放；长响应根因仍未知，产物留存已证。

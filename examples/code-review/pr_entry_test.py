@@ -79,3 +79,71 @@ class PullReviewEntryTest(unittest.TestCase):
             self.assertEqual(run(), 2)
         self.assertIn("HTTP 403", out.getvalue())
         self.assertNotIn("private diagnostic", out.getvalue())
+
+    def test_closed_pr_skips_only_queued_automatic_event_without_status_or_new_work(
+        self,
+    ):
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import Mock, patch
+
+        from pr_entry import main
+
+        closed = dict(self.pr, state="closed")
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder) / "config.json"
+            token = Path(folder) / "token"
+            token.write_text("test-only")
+            config.write_text(
+                json.dumps(
+                    dict(
+                        self.config,
+                        base_url="http://platform.invalid",
+                        token_file=str(token),
+                    )
+                )
+            )
+            for event in ("pull_request_target", "workflow_dispatch"):
+                output = io.StringIO()
+                github = Mock(return_value=closed)
+                with (
+                    self.subTest(event=event),
+                    patch.dict(
+                        "os.environ",
+                        {
+                            "GITHUB_REPOSITORY": "owner/project",
+                            "GITHUB_ACTOR": "owner",
+                            "GITHUB_TRIGGERING_ACTOR": "owner",
+                            "GITHUB_EVENT_NAME": event,
+                        },
+                    ),
+                    patch(
+                        "sys.argv",
+                        [
+                            "pr_entry",
+                            "--config",
+                            str(config),
+                            "--pr",
+                            "12",
+                            "--engine",
+                            "cli",
+                        ],
+                    ),
+                    patch("pr_entry.configured_github_call", return_value=github),
+                    patch("pr_entry.Client") as client,
+                    contextlib.redirect_stdout(output),
+                ):
+                    if event == "pull_request_target":
+                        self.assertEqual(main(), 0)
+                        self.assertEqual(
+                            json.loads(output.getvalue())["status"], "skipped"
+                        )
+                        client.assert_not_called()
+                    else:
+                        with self.assertRaisesRegex(ValueError, "Only an open"):
+                            main()
+                        client.return_value.start_workflow.assert_not_called()
+                    github.assert_called_once_with("repos/owner/project/pulls/12")

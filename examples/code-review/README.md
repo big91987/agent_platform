@@ -24,6 +24,8 @@ python3 .harness/agent-platform/examples/code-review/install.py \
 
 平台 Run 按 `PR/base/head/engine` 去重。后续提交或基线移动产生新的范围，旧报告不会标记新提交通过。此模板不改分支保护、不自动合并、不部署。
 
+自动 PR 事件排队期间，如果 PR 已关闭或合并，入口跳过过期事件，不创建 Run、不覆盖提交状态，也不将跳过称作审查通过。手动请求关闭的 PR 仍明确拒绝。
+
 ## 研发图内使用
 
 `workflows.add_cli_review(graph, model_refs)` 给开发模板显式插入 `tests → code_review → qa`。review 是普通执行节点；发现问题回 development，审查不完整或执行错误停止，不把基础设施失败交给产品开发盲修。审查前用独立 Git index 生成只在本工作区存在的候选 commit，不改 HEAD 或用户 index，覆盖未提交的实现；同版源码在审查前后逐文件摘要核对。固定测试和独立 QA 保留。

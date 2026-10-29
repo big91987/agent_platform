@@ -86,6 +86,16 @@ def main():
         raise ValueError("Only the configured repository owner may start review")
     call = configured_github_call(config, github)
     pr = call(f"repos/{repo}/pulls/{args.pr}")
+    if (
+        os.environ.get("GITHUB_EVENT_NAME") == "pull_request_target"
+        and pr["state"] == "closed"
+    ):
+        # A queued event can outlive its PR. Do not submit work or overwrite
+        # an existing commit status; this is not a successful review.
+        print(
+            json.dumps({"status": "skipped", "reason": "PR closed before review began"})
+        )
+        return 0
     client = Client(config["base_url"], Path(config["token_file"]).read_text().strip())
     run = submit(config, client, pr, args.engine)
     url = config["base_url"] + "/workflow-runs/" + run["id"]
