@@ -2192,3 +2192,16 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 
 
 2026-10-29 集成准备回执：平台开发分支已提交并推送 `2e9d4534ee5feeaed0ce7178a0f251b2d6c86b6c`；标准导出166件、完整源码归档439常规成员已准备。只读核PR71原166件逐Git对象与旧SOURCE一致、无项目定制漂移；待同步清单12件加SOURCE，尚未更新远端ref。已去重创建[Issue72「【Harness修复】完善新成员开发入口与发布前检查」](https://github.com/big91987/model-relay/issues/72)，远端open/无执行标签；等待112标准升级后通过原标签入口启动，尚无新整链结果。测试仓与平台main均未合并；无部署、无定时任务恢复。
+
+
+### 2026-10-29：标准升级及原PR同步已完成，新head进入真实审查
+
+用户重新接通112后，已将门禁通过的2e9d453精确源码归档逐摘要传输，在112调用标准build.sh构建并由标准install.py激活8795；build/install均exit0。实际health HTTP200/revision2e9d4534ee5feeaed0ce7178a0f251b2d6c86b6c，二进制SHA256 `5ae4a08e86f4cfa6cdca91a3694a97d616d962334da19fdd4349fadf3fc4bdb2`；18条旧Run冻结定义、原工作流及私有配置/凭据保持。没有改旧库/回执/运行副本或其他端口。
+
+正式API把研发图14→15：新会话单轮上限development5400/qa3600/report1800秒，报告新增标准publisher --check说明；保留现有项目角色指令及主图Code Review策略。独立审查通过原标准安装器升级：CLI5保持，Delegate7→8并设置1800秒；10条主图及8条审查旧Run定义分别不变。
+
+原PR71已更新到精确head `6e9d2b5125b3ade519a647a3815c46c6f449bcab`，维护源166导出件全Git对象匹配，14项远端变更逐字节核验（12源件、SOURCE、项目Workflow拷贝）；未另建PR、未合并。正式Actions40813702743已自动触发，CLI唯一Run553fb9c0d23dd49972f912df5eb36949，prepare于03:43:20.378–03:45:07.504Z完成（107.126秒）；CLI review开始后真实运行，Delegate当时仍在共享Runner队列，未重复dispatch。现有串行等待是效率观测，不能当Agent净耗时或判模型质量。
+
+Issue72正文已把旧SSH卡点更新为实际部署/PR门禁状态，暂未加执行标签，尚未创建研发Run；需新head正式审查结论后精确合并Harness升级，再从原Issue入口启动。源码绿/安装成功不能替代此新整链实证。当前仍未产品部署，定时任务保持暂停。
+
+维护连接：后续112断线可在ds112中执行用户指定的`g112`；确认已进入112远程shell再操作，不能以旧窗口标题充当在线证据。旧传输助手误把终端尾部空行当未ready，已核实际marker后完成原接收器传输并验摘要；这是本次运维诊断，不冒称平台功能修复。
