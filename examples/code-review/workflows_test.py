@@ -101,6 +101,38 @@ class ReviewWorkflowTest(unittest.TestCase):
             self.assertEqual(actual["OCR_LLM_TOKEN"], refs["OCR_LLM_TOKEN"])
             self.assertNotIn("GITHUB_TOKEN", actual)
 
+    def test_explicit_review_upgrade_keeps_other_roles_permissions_and_routes(self):
+        import copy
+
+        from sandbox_delivery import definition as delivery
+        from workflows import add_cli_review, upgrade_cli_review
+
+        original = add_cli_review(
+            delivery("owner/project", "TOKEN"), {"OCR_LLM_TOKEN": "KEY"}
+        )
+        review = next(n for n in original["nodes"] if n["id"] == "code_review")
+        review["execution"]["command"] = "previous reviewed program"
+        review["execution_timeout_seconds"] = 2100
+        review["name"] = "Team review"
+        review["execution"]["env_refs"]["https_proxy"] = "TEAM_PROXY"
+        original["revision"] = 15
+        frozen = copy.deepcopy(original)
+        upgraded = upgrade_cli_review(original)
+        actual = next(n for n in upgraded["nodes"] if n["id"] == "code_review")
+        self.assertNotEqual(
+            actual["execution"]["command"], review["execution"]["command"]
+        )
+        compile(
+            shlex.split(actual["execution"]["command"])[-1], "upgraded-review", "exec"
+        )
+        actual["execution"]["command"] = review["execution"]["command"]
+        actual["execution_timeout_seconds"] = review["execution_timeout_seconds"]
+        self.assertEqual(upgraded, original)
+        self.assertEqual(original, frozen)
+        for graph in (delivery("owner/project", "TOKEN"), dict(original, nodes=[])):
+            with self.assertRaises(ValueError):
+                upgrade_cli_review(graph)
+
     def test_pr_module_cannot_run_during_trusted_review_imports(self):
         import subprocess
         import tempfile

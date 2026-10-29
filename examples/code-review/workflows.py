@@ -182,17 +182,8 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
     }
 
 
-def add_cli_review(graph, model_refs):
-    """Explicit template choice: fixed tests → OCR → QA, findings → development."""
-    import copy
-
-    graph = copy.deepcopy(graph)
-    nodes = {n["id"]: n for n in graph["nodes"]}
-    if "code_review" in nodes or not {"tests", "development", "qa"}.issubset(nodes):
-        raise ValueError(
-            "expected a development graph without an installed review node"
-        )
-    code = program(
+def _development_review_program():
+    return program(
         "import uuid\n"
         "STATE.mkdir(parents=True,exist_ok=True)\n"
         "if OUTPUT.exists(): OUTPUT.rename(STATE/('previous-'+uuid.uuid4().hex))\n"
@@ -203,9 +194,44 @@ def add_cli_review(graph, model_refs):
         "preview(base,head)\n"
         "raise SystemExit(cli_review())"
     )
+
+
+def upgrade_cli_review(graph):
+    """Explicitly replace the standard review program and its execution limit.
+
+    The caller reviews and saves the returned graph through the versioned API.
+    Other roles, permissions, credential references and routes are untouched.
+    Existing Runs retain their frozen definitions.
+    """
+    import copy
+
+    result = copy.deepcopy(graph)
+    matches = [n for n in result["nodes"] if n["id"] == "code_review"]
+    if (
+        len(matches) != 1
+        or matches[0].get("kind") != "execution"
+        or matches[0].get("execution", {}).get("mode") != "command"
+    ):
+        raise ValueError("expected one installed CLI review execution node")
+    desired = execution("code_review", _development_review_program())
+    matches[0]["execution"]["command"] = desired["execution"]["command"]
+    matches[0]["execution_timeout_seconds"] = desired["execution_timeout_seconds"]
+    return result
+
+
+def add_cli_review(graph, model_refs):
+    """Explicit template choice: fixed tests → OCR → QA, findings → development."""
+    import copy
+
+    graph = copy.deepcopy(graph)
+    nodes = {n["id"]: n for n in graph["nodes"]}
+    if "code_review" in nodes or not {"tests", "development", "qa"}.issubset(nodes):
+        raise ValueError(
+            "expected a development graph without an installed review node"
+        )
     node = execution(
         "code_review",
-        code,
+        _development_review_program(),
         refs={
             **{
                 key: value

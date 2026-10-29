@@ -131,33 +131,60 @@ class CandidateAndDelegateTest(unittest.TestCase):
 
         from runtime import candidate_commit, git
 
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            subprocess.run(["git", "init", "-q", folder], check=True)
-            (root / "app.py").write_text("before")
-            git(root, "add", ".")
-            git(
-                root,
-                "-c",
-                "user.name=fixture",
-                "-c",
-                "user.email=fixture@localhost",
-                "commit",
-                "-qm",
-                "base",
-            )
-            head = git(root, "rev-parse", "HEAD")
-            index = git(root, "write-tree")
-            (root / "app.py").write_text("after")
-            (root / "harness-output").mkdir()
-            (root / "harness-output/private.txt").write_text("report excluded")
-            candidate = candidate_commit(root)
-            self.assertEqual(git(root, "rev-parse", "HEAD"), head)
-            self.assertEqual(git(root, "write-tree"), index)
-            self.assertEqual(git(root, "show", candidate + ":app.py"), b"after")
-            self.assertNotIn(
-                b"harness-output", git(root, "ls-tree", "-r", "--name-only", candidate)
-            )
+        for ignored in (False, True):
+            with self.subTest(ignored=ignored), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                subprocess.run(["git", "init", "-q", folder], check=True)
+                (root / "app.py").write_text("before")
+                (root / "deleted.py").write_text("remove me")
+                git(root, "add", ".")
+                git(
+                    root,
+                    "-c",
+                    "user.name=fixture",
+                    "-c",
+                    "user.email=fixture@localhost",
+                    "commit",
+                    "-qm",
+                    "base",
+                )
+                head = git(root, "rev-parse", "HEAD")
+                (root / "app.py").write_text("staged")
+                git(root, "add", "app.py")
+                index = git(root, "write-tree")
+                (root / "app.py").write_text("after")
+                (root / "deleted.py").unlink()
+                new_name = ":(glob)new [entry]\nfile.py"
+                (root / new_name).write_text("new file")
+                (root / "harness-output").mkdir()
+                private = root / "harness-output/deep/private.txt"
+                private.parent.mkdir()
+                private.write_text("report excluded")
+                private_blob = git(root, "hash-object", str(private)).decode().strip()
+                if ignored:
+                    (root / ".git/info/exclude").write_text("harness-output/\n")
+                candidate = candidate_commit(root)
+                self.assertEqual(git(root, "rev-parse", "HEAD"), head)
+                self.assertEqual(git(root, "write-tree"), index)
+                self.assertEqual(git(root, "show", candidate + ":app.py"), b"after")
+                self.assertEqual(
+                    git(root, "show", candidate + ":" + new_name), b"new file"
+                )
+                self.assertNotIn(
+                    b"deleted.py", git(root, "ls-tree", "-r", "--name-only", candidate)
+                )
+                self.assertNotIn(
+                    b"harness-output",
+                    git(root, "ls-tree", "-r", "--name-only", candidate),
+                )
+                self.assertNotEqual(
+                    subprocess.run(
+                        ["git", "-C", str(root), "cat-file", "-e", private_blob],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    ).returncode,
+                    0,
+                )
 
     def test_delegate_accounts_for_every_selected_file_and_skips_are_incomplete(self):
         from runtime import assess_delegate

@@ -191,19 +191,51 @@ def candidate_commit(root=Path(".")):
             GIT_AUTHOR_EMAIL="review@localhost",
             GIT_COMMITTER_NAME="Code Review",
             GIT_COMMITTER_EMAIL="review@localhost",
+            GIT_LITERAL_PATHSPECS="1",
         )
 
-        def command(*args):
+        def command(*args, input=None):
             return (
                 subprocess.check_output(
-                    ["git", "-C", str(root), *args], env=env, timeout=60
+                    ["git", "-C", str(root), *args], env=env, timeout=60, input=input
                 )
                 .decode()
                 .strip()
             )
 
         command("read-tree", "HEAD")
-        command("add", "-A", "--", ".", ":!harness-output")
+        # Negative pathspecs naming an ignored directory still make git add
+        # fail. Select actual tracked/unignored files before staging; runtime
+        # outputs must not even be written into the private index/object store.
+        names = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            env=env,
+            timeout=60,
+        )
+        selected = [
+            name
+            for name in names.split(b"\0")
+            if name
+            and name != b"harness-output"
+            and not name.startswith(b"harness-output/")
+        ]
+        if selected:
+            command(
+                "add",
+                "-A",
+                "--pathspec-from-file=-",
+                "--pathspec-file-nul",
+                input=b"\0".join(selected) + b"\0",
+            )
         tree = command("write-tree")
         return command(
             "commit-tree", tree, "-p", "HEAD", "-m", "Local immutable review candidate"

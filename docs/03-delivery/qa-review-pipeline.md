@@ -411,3 +411,12 @@ SSH此次再次断开后已按用户指定执行g112自动恢复；先只读确�
 资源回收区别记录：PR73 Delegate62d77217首次release响应20秒超时后GET released，8件释放后全同；CLI7f207303首次release收到OpenSandbox500，正式reconcile一次响应超时后GET ready，当前不得称已释放。已在112普通用户日志定位requests PermissionError13；服务与登录账号均有docker组1002、socket0660，但显式ACL user:moffett:---拒绝访问，安全标签unconfined。未修改ACL/组/权限，已异步询问用户是否允许恢复这一具体服务访问；当前研发继续。控制面原窗口日志0600/14577bytes/SHA92666c61…保留。两次自动主干prepare的实际末错误均是同一timeout_gate缺cancel-ready（后轮日志1032556bytes/SHA124f1966…），源码1716316a232…未变、部署跳过，去重作为同一已交研发问题；不把内嵌历史分类器的预期红误当新产品缺陷。
 
 PR73 Delegate完整原生审计371事件/3页含EOF、600475bytes/SHA256 `7f38c7a10dc70784a0502403970c2776e1ef2e9f1ea6274c633e2253b61f59ee`。CLI 13工具调用/0工具失败；其原件没有retry_report，不能据缺失字段断言不存在重试。3件包含SOURCE、入口与测试，README未列为代码审查项。已导出范围不等于全仓审查。
+
+
+2026-10-29 09:35UTC实证：Issue72/Runffba71cc的研发2正式交接后，固定tests3完整make verify exit0，08:41:08Z–09:02:07Z（驻留1258.498秒，原执行1256.969秒）。API37页至EOF，1183697bytes/SHAa12d54aa34d441e5ec2220b18a7e03cccd2a1e49b68cb2efb7b1e15d42f2f0a7，truncated=false；171件源89c0a651…前后相同，开发最终20分51秒全量绿为另一次执行，二者不混算。研发38件6889497bytes已归档并全摘要核对。源码快照为不参与编译文本映射，六件原路径/bytes/SHA保持；一次AGENTS.md归档路径拒绝后修正声明，08:40:14Z handoff accepted→08:40:27Z原生结束→08:41:08Z下一节点，未提前调度。
+
+同Run code_review4于09:02:10Z正式failed：完整1225bytes/EOF未截断/SHA83daf688…，候选树构造git add -A -- . :!harness-output因目标被.git/info/exclude忽略而退出1；模型未开始，不是代码质量No-Go，也无QA/确认/PR。普通条件无命中按既定规则停止，未补else放行或重跑。唯一维护源已以同样Git忽略场景首红复现，改为私有index中按tracked/unignored真实路径枚举，写Git前排除运行产物，再NUL stdin+literal pathspec add；保持正常HEAD/索引不变、修改/删除/特殊名新增、ignored/unignored和深层运行输出不入Git对象等回归。显式upgrade_cli_review仅更新后续图的标准程序/期限，保留权限/refs/其他节点及路由；不改旧Run冻结程序。独立只读复审无C/I，完整源码门禁exit0（审查24/模板146、真实浏览器、Go vet/race缓存命中和构建）。尚未标准安装/新Run实证，不能称当前整链完成。
+
+权限与归因：用户已明确允许恢复moffett已有docker组访问；尝试仅删除该条ACL的sudo -n命令因需要密码退出1，权限未改。用户正配置sudo免密，未回复完成前不再尝试。只读journal/auth.log均未发现setfacl/docker.sock匹配；socket元数据ctime08:05:13UTC（北京时间16:05:13）不能单独证明ACL修改时间或操作者，归因未知，不能指认人或Agent。恢复前0600ACL快照已保存。下一步待权限恢复且修复正式应用后，经受支持入口接续既有实现/保留失败并显式导入材料，不篡改冻结图或临时git shim绕过缺陷。
+
+候选/升级修复源码门禁全文139988bytes/SHA256 `a9a5208bf6253526d79b531288d3a25a4fb067ecf89957d5e2600e1390973282`，见忽略存储candidate-upgrade-full-verify.log。研发原生5686事件至execution.completed、4593444bytes/SHA `ddb9ac0336ee1e7d8a6c0db2adb129036c331eba56927da7100a9aa7232b6689`；累计input10275295/output78332/total10353627，cached10051712为input子集、reasoning43491为output子集。这是请求累计，不是单次上下文长度；费用不可得。两次主动取消全门禁分别因新增外部修复范围、补启动前deadline边界，取消/首红均留；不能算通过，也不能据此报无故重试率。
