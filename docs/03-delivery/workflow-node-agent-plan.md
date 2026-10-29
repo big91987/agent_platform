@@ -2208,3 +2208,6 @@ Issue72正文已把旧SSH卡点更新为实际部署/PR门禁状态，暂未加�
 
 
 2026-10-29 复验更新：PR71/head6e9d2b5的两路真实审查均完整结束但均findings/No-Go，非超时/预算失败。Delegate发现的“暂存删除后恢复已选文件”发布预检回归已实证并在维护源红→绿修复；默认值覆盖已补，完整平台门禁exit0（模板146/审查22，Go race缓存命中）。原PR未合并，Issue72无Run。两沙箱正式released，15原件释放后复取逐字节一致。网络出站风险保持为现后端限制，不以文档说明冒充隔离修复；详情见[Code Review实证记录](qa-review-pipeline.md#2026-10-29真实审查发现发布预检回归)。
+
+
+2026-10-29 修复版已标准同步：源3f574c3/166件→PR71新精确headd6f110ec54628a8c2b05c7499c511fd096b41713；Delegate模板9、CLI5，研发图15/Runtime2e9d453保持。自动Actions40830430257已产生唯一Delegate Run6bc3e944…：17件完整、0发现、fixed validate通过，GitHub作业SUCCESS；此前真实发布回归已由新同版独立审查复核。CLI唯一Run216fadcf…在途，尚无本轮总Go、未合并、Issue72仍无Run。新默认读取已实际生效：首命令原生输出从旧1048563字符变为30043字符且不再依赖缺失jq，完整源库存校验保持；不据此推算费用/总提效百分比。详情及完整原始证据见qa-review-pipeline.md。

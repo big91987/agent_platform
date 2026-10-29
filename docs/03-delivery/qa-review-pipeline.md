@@ -342,7 +342,7 @@ CLI在时间放宽后确实得到更多输出，但仍未完成。500000只是�
 | 准备 | 107.126秒 | 80.132秒 |
 | 审查阶段 | 2355.502秒，原命令2345.474秒 | 437.003秒，另固定校验9.993秒 |
 | 覆盖/发现 | 17/17，2候选，findings | 17/17，1候选，findings |
-| 原生用量 | input989110/output103114/total1092224；cache770624为input子集 | 尚未提取，不估造费用或tokens |
+| 原生用量 | input989110/output103114/total1092224；cache770624为input子集 | 分页1201事件/6页含EOF：input2759375/output7481/total2766856；cache2620672为input子集，reasoning2073为output子集；费用不可得 |
 | 正式原件 | 7件1215724bytes | 8件1112388bytes |
 
 Delegate于04:24:52Z才受理，距同Actions创建03:43:00Z为41分52秒，包含Runner队列、checkout和入站。已在正式作业状态观察到CLI占用单Runner、Delegate排队，不能将其计作Agent推理时间。样本同版但模型/Loop不同，不据一次结果概括模型胜负。
@@ -358,3 +358,20 @@ Delegate于04:24:52Z才受理，距同Actions创建03:43:00Z为41分52秒，包�
 修复版完整scripts/verify.sh exit0：模板146、审查22、真实浏览器、Go vet/race（race缓存命中）和构建通过；全文139616bytes/SHA256 `1696067981f020311e4865868144856fd0c38782ccd710c0266e8390a84888ef`，忽略存储`.data/harness-improvement-20261029/remediation-final-verify.log`。不将该源码验证签给旧head，仍需标准导出/同步新head和正式复验。
 
 两沙箱已通过正式release入口释放。CLI连接重置、Delegate响应超时后都先GET核实际released，没有盲重放；原错误保留。随后从API全新下载15件，manifest及全部原件与释放前逐字节一致。GitHub原作业保留失败及附件；目前未合PR、未部署Model Relay、未启动Issue72，不增限、不重跑求绿。具名外部回写见[PR71评论6489612918](https://github.com/big91987/model-relay/pull/71#issuecomment-6489612918)。
+
+
+### 修复版标准同步与输入消费实测（2026-10-29）
+
+维护源3f574c38cf43034d6d5fc7a17d7649f1fee77da9已通过完整门禁并标准导出166件；标准安装器仅更新后续Delegate到revision9，CLI5与研发图15保持，10条已有审查Run冻结定义逐条不变。Runtime二进制仍为2e9d453，因为本次改动为Python模板/文档/回归。PR71精确新head `d6f110ec54628a8c2b05c7499c511fd096b41713` 的166工具对象匹配新SOURCE，5源件加SOURCE更新；没有重新创建PR或手工dispatch。
+
+正式Actions40830430257于06:38:27Z自动受理，本轮Delegate先占Runner，CLI排队；唯一Delegate Run6bc3e944e74c09ae8bd40b0883502510于06:39:46.103Z受理，准备108.899秒后进入原生review（06:41:35.002Z），冻结revision9/每轮1800秒。当前为在途观测，尚无新质量结论。
+
+输入消费已有实际原生证据：原c5首条命令完整cat库存等文件，aggregatedOutput共1048563字符，下一条jq命令exit127；新回合按模板执行python3 -I提取base/head/expected，连同Skill/preview/rules首条输出30043字符且exit0。完整库存并未删除或跳过固定源校验。这里证明默认读取方式改变，不由字符数直接推算token、费用或总效率提升。原c5已补全1201事件/6页含EOF，累计input2759375/output7481/total2766856、cached2620672为input子集，reasoning2073为output子集；费用不可得。
+
+SSH此次再次断开后已按用户指定执行g112自动恢复；先只读确认目标包不存在，再按O_EXCL传输并校验本次完整bytes/SHA回执。没有重复建立接收器、重放模型任务或更改账号。
+
+
+06:48:25Z，修复版Delegate Run6bc3e944已completed：review400.258秒、固定校验9.994秒，17/17/0发现、result clean；正式GitHub作业123303130687于06:48:45Z SUCCESS。8件1107152bytes已从平台逐bytes/SHA下载。此前真实预检回归已同版独立复核，但不是全产品QA，也不能给仍在途的CLI或新研发Run签通过。CLI唯一Run216fadcfc44b31620c0a5a67806af3f4于06:49:31Z受理，prepare136.813秒，06:51:48Z进入review；沿原有限时间/预算执行。
+
+
+07:00UTC复核：新Delegate已正式released，8件1107152bytes在释放后从产物API全新下载，manifest与全部原文件逐字节一致。完整原生审计618事件/4页含EOF、1069047bytes/SHA256 `2880737b9a316d4218d6022e2ab249940a7dc0cd1b99358888ad6a2bc55eb548`；累计input2368735/output4963/total2373698，cached2231296为input子集、reasoning1081为output子集，费用不可得。虽然首命令文本显著减少，本轮累计输入仍较大；两轮执行内容、工具调用及缓存不同，不将它归因为单一变量或宣称通用提效比例。
