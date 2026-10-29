@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -79,6 +80,10 @@ func (s *Scheduler) dispatch() {
 			return
 		}
 		ctx, cancel := context.WithCancel(s.ctx)
+		if c.Snapshot.TurnTimeoutSeconds > 0 {
+			cancel()
+			ctx, cancel = context.WithTimeout(s.ctx, time.Duration(c.Snapshot.TurnTimeoutSeconds)*time.Second)
+		}
 		s.active[c.ID] = cancel
 		if x, ok := s.executor.(interface{ SupportsSteering() bool }); ok && x.SupportsSteering() {
 			ch := make(chan steeringInput, 16)
@@ -114,6 +119,12 @@ func (s *Scheduler) execute(ctx context.Context, c Conversation, m Message) {
 		}
 		return s.store.RecordEvent(c.ID, m.ID, raw)
 	})
+	// Inspect before removing the active cancel function: cleanup cancellation
+	// must not turn a successful execution into a timeout. Keep typed stop
+	// uncertainty so the existing recovery path cannot claim a confirmed stop.
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		e = errors.Join(fmt.Errorf("Agent turn timeout after %d seconds", c.Snapshot.TurnTimeoutSeconds), e)
+	}
 	status, reason := "completed", ""
 	if e != nil {
 		status = "failed"

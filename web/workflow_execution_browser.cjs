@@ -347,7 +347,7 @@ const {chromium}=require('playwright');
   await page.reload();await page.locator(`[data-node="${addedAgent.id}"] .wf-node-body`).click();
   await page.locator('#wf-tab-config').click();
   await page.locator('#wf-agent-instructions').fill('完整角色指令 BROWSER_ROLE');
-  await page.getByText('高级：原生配置、Hook 与环境',{exact:true}).click();
+  await page.getByText('高级：执行限制、原生配置与环境',{exact:true}).click();
   await page.locator('#wf-agent-native').fill('developer_instructions="BROWSER_NATIVE"');
   const previewResponse=page.waitForResponse(r=>r.url().endsWith('/api/workflows/preview'));
   await page.locator('#wf-tab-preview').click();

@@ -113,6 +113,9 @@ func (s *Store) Close() error {
 	return e
 }
 func (s *Store) SaveAgent(a Agent) (Agent, error) {
+	if err := validateAgentExecutionLimits(a); err != nil {
+		return a, err
+	}
 	if err := validateApprovalReviewer(a); err != nil {
 		return a, err
 	}

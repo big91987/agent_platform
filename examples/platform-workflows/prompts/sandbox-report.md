@@ -17,6 +17,10 @@
 - `harness-output` 内的 QA 报告和 `report.json` 是工作流交接输入：列入 `artifacts`，不列入 `files`。固定发布节点会将 QA 和 PR 正文原文复制到 `docs/harness/run-*`。
 - 不强制添加 Git 忽略文件，不提交构建目录、凭据或原生会话历史。
 
+## 发布前检查
+
+生成报告后，运行 `python3 .harness/agent-platform/examples/platform-workflows/sandbox_publish.py --repository <启动输入中的仓库> --check`。此命令使用与发布相同的本地校验，不提交、不联网、不需要 GitHub 凭据。缺文件、忽略路径、遗漏改动或无效报告时先修正，再交接；预检通过不替代最终发布回执。
+
 ## 交接要求
 
 调用 `handoff`，填写 `target=publish`，交付 `report.json` 及 QA 报告的实际文件路径。

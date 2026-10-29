@@ -128,6 +128,9 @@ func nativeConfig(a Agent) ([]byte, error) {
 	if a.Sandbox != "" && a.Sandbox != "workspace-write" && a.Sandbox != "read-only" {
 		return nil, errors.New("sandbox must be workspace-write or read-only")
 	}
+	if err := validateAgentExecutionLimits(a); err != nil {
+		return nil, err
+	}
 	if err := validateApprovalReviewer(a); err != nil {
 		return nil, err
 	}

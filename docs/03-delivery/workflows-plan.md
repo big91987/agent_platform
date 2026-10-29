@@ -2289,3 +2289,12 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 首次试用扫描Model Relay当前main固定快照a1cbbb862714346a77a24c96b2bf5d5672c6be1a，固定npm包@kodus/agent-readiness@0.1.3，基础模式不调用模型、不启动Web服务。安装在忽略目录并禁用安装脚本；项目代码只读、执行环境不继承Git或模型凭据。原始JSON和日志私有留存，工具分数与逐项核验分开报告；扫描结果见[本次工程初始化体检](model-relay-agent-readiness-2026-10-28.md)。已知工具限制：配置/文件存在不等于执行有效，mtime不等于依赖更新，抽样AI不等于全仓质量，AGENTS.md未在其上下文识别列表中。
 
 首次实扫已完成：main a1cbbb86、工具0.1.3、基础扫描0.238秒，Level1/Pass12/Fail23/AI Skip4；不是产品质量验收。AGENTS.md、E2E及CI委托检查存在明显识别遗漏，逐项核对见上述报告；main实际protected=false。完整源中历史产物占99.2%，源码准备成本远大于扫描，后续单独考虑保存布局，当前未改现有仓库或流程。
+
+
+### 2026-10-29：Agent 运行期限与发布预检已完成源码验证，待正式集成
+
+承接 Code Review 与 Kodus 逐项复核，本轮只补真实缺口：共享 Agent 单轮超时（新表单1800秒、模板研发5400/QA3600/报告1800）、参数校验与保存/重载、标准安装显式设置/升级保留；保留现有自动接续期限的原有含义。publisher新增无写入/无网络 `--check`，报告节点先预检。独立复审实证的暂存区残留和生成正文校验遗漏已先红后绿修复，正式发布继续复验。
+
+标准 `scripts/verify.sh` 本轮完整 exit0：Node/浏览器、Python各套件（模板144、审查22）、实际Go浏览器回归、go vet、Go race及构建通过。全文 138536 bytes / SHA256 `58342cfb7a643cecce2bc3255817ea35c9b8c3cdb3efeb4a06d9eebc1b8c4096`，本地忽略证据 `.data/harness-improvement-20261029/final-verify-2.log`。初次沙箱监听EPERM、表单字段遗漏、旧浏览器定位及复审红例都保留，不用最终绿覆盖。此为平台/模板验证，不是产品QA或新研发整链完成。
+
+正式集成卡点：API核112研发图revision14含Code Review，PR71仍draft/heada6e77d58、maina1cbbb86，暂无新研发Run。ds112实际SSH已被堡垒机断开，其他已核旧通道也断开；直连112:22超时。传输未收到ready、未发送文件payload；清理本机未执行的输入，未安装或重启服务、未改数据库/冻结Run/凭据。已请用户恢复连接。下一步：标准构建安装→按版本升级正式配置/同步原PR71→项目正式Issue入口验证新增审查阶段及QA交付。定时任务保持暂停。

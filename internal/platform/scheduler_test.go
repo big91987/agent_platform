@@ -3,10 +3,100 @@ package platform
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestSchedulerTurnTimeoutStopsOnlyItsConversationAndPreservesQueuedInput(t *testing.T) {
+	s := testStore(t)
+	a := testAgent(t, s)
+	// Exercise the persisted public configuration, including its frozen snapshot.
+	raw, _ := json.Marshal(a)
+	var config map[string]any
+	json.Unmarshal(raw, &config)
+	config["turn_timeout_seconds"] = 1
+	raw, _ = json.Marshal(config)
+	json.Unmarshal(raw, &a)
+	a, err := s.SaveAgent(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	x := &controlledExecutor{started: make(chan string, 5), release: make(chan struct{}, 5)}
+	sched := NewScheduler(s, x, 2)
+	sched.Start()
+	defer sched.Close()
+	caller := Caller{Source: "console", Admin: true}
+	r, err := s.Submit(caller, Input{AgentID: a.ID, UserID: "operator", Message: "blocked turn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-x.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("executor not started")
+	}
+	_, err = s.Submit(caller, Input{ConversationID: r.ConversationID, UserID: "operator", Message: "keep queued"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A new saved configuration must not extend an already frozen conversation.
+	config["turn_timeout_seconds"] = 0
+	raw, _ = json.Marshal(config)
+	json.Unmarshal(raw, &a)
+	if _, err = s.SaveAgent(a); err != nil {
+		t.Fatal(err)
+	}
+	other, err := s.Submit(caller, Input{AgentID: a.ID, UserID: "operator", Message: "independent turn"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-x.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("independent executor not started")
+	}
+	waitStatus(t, s, r.ConversationID, "failed")
+	c, _ := s.Conversation(r.ConversationID)
+	if !strings.Contains(c.Error, "timeout") {
+		t.Fatalf("timeout cause missing: %s", c.Error)
+	}
+	messages, _ := s.Messages(r.ConversationID)
+	if len(messages) != 2 || messages[0].Status != "failed" || messages[1].Status != "queued" {
+		t.Fatalf("lost queued input: %+v", messages)
+	}
+	c, _ = s.Conversation(other.ConversationID)
+	if c.Status != "running" {
+		t.Fatalf("unrelated execution interrupted: %s", c.Status)
+	}
+	x.release <- struct{}{}
+	waitStatus(t, s, other.ConversationID, "idle")
+}
+
+func TestAgentTurnTimeoutRejectsInvalidLimitsInStandaloneAndWorkflow(t *testing.T) {
+	s := testStore(t)
+	base := testAgent(t, s)
+	for _, limit := range []int{-1, 86401} {
+		a := base
+		raw, _ := json.Marshal(a)
+		var config map[string]any
+		json.Unmarshal(raw, &config)
+		config["turn_timeout_seconds"] = limit
+		raw, _ = json.Marshal(config)
+		json.Unmarshal(raw, &a)
+		if _, err := s.SaveAgent(a); err == nil {
+			t.Fatalf("standalone accepted timeout %d", limit)
+		}
+		a.ID = ""
+		a.Name = ""
+		a.Enabled = false
+		a.AuthorizedUsers = nil
+		if err := validateWorkflowAgent(s.DB, a); err == nil {
+			t.Fatalf("workflow accepted timeout %d", limit)
+		}
+	}
+}
 
 type controlledExecutor struct {
 	started chan string
@@ -159,5 +249,27 @@ func TestSchedulerStopRetainsUnconfirmedNativeOutcome(t *testing.T) {
 	messages, _ := s.Messages(receipt.ConversationID)
 	if messages[0].Status != "failed" {
 		t.Fatal("uncertain stop presented as confirmed", messages)
+	}
+}
+
+func TestSchedulerTimeoutRetainsUnconfirmedNativeOutcome(t *testing.T) {
+	s := testStore(t)
+	a := testAgent(t, s)
+	a.TurnTimeoutSeconds = 1
+	if _, err := s.SaveAgent(a); err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan struct{})
+	scheduler := NewScheduler(s, uncertainNativeExecutor{started}, 1)
+	scheduler.Start()
+	defer scheduler.Close()
+	receipt, err := s.Submit(Caller{Source: "console", Admin: true}, Input{AgentID: a.ID, UserID: "operator", Message: "timeout evidence"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitStatus(t, s, receipt.ConversationID, "failed")
+	conversation, _ := s.Conversation(receipt.ConversationID)
+	if !strings.Contains(conversation.Error, "timeout") || !strings.Contains(conversation.Error, "stop could not be confirmed") {
+		t.Fatalf("timeout or native uncertainty erased: %s", conversation.Error)
 	}
 }

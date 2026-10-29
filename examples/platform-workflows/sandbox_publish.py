@@ -16,7 +16,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError("GitHub redirected an authenticated request")
 
 
-def publish(repository, report):
+def publish(repository, report, *, check_only=False):
     root = Path.cwd().resolve()
     value = json.loads(report.read_text())
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
@@ -150,6 +150,7 @@ def publish(repository, report):
         str(delivery / "report.md"): body.encode(),
     }
     for name, content in delivery_files.items():
+        check_publish_blob(name, content)
         destination = root / name
         if destination.is_symlink() or (
             destination.exists() and destination.read_bytes() != content
@@ -211,33 +212,43 @@ def publish(repository, report):
     changed = set(git("diff", "--name-only", identity["commit"]).splitlines())
     if not changed.issubset(set(files)):
         raise ValueError("unreviewed tracked changes remain")
+
+    def check_index():
+        staged = (
+            subprocess.check_output(
+                ["git", "diff", "--cached", "--name-only", "-z", identity["commit"]],
+                cwd=root,
+                timeout=30,
+            )
+            .decode()
+            .rstrip("\0")
+            .split("\0")
+        )
+        for name in filter(None, staged):
+            if name not in files:
+                raise ValueError("unreviewed staged file would be committed")
+            blob = ":" + name
+            size = int(git("cat-file", "-s", blob))
+            if size > 5 * 1024 * 1024:
+                raise ValueError("staged blob exceeds publication limit")
+            check_publish_blob(
+                name,
+                subprocess.check_output(
+                    ["git", "cat-file", "blob", blob], cwd=root, timeout=10
+                ),
+            )
+
+    check_index()
+    if check_only:
+        print(
+            json.dumps({"checked": True, "repository": repository, "files": len(files)})
+        )
+        return
     (root / delivery).mkdir(parents=True, exist_ok=True)
     for name, content in delivery_files.items():
         (root / name).write_bytes(content)
     subprocess.run(["git", "add", "--", *files], cwd=root, check=True, timeout=30)
-    staged = (
-        subprocess.check_output(
-            ["git", "diff", "--cached", "--name-only", "-z", identity["commit"]],
-            cwd=root,
-            timeout=30,
-        )
-        .decode()
-        .rstrip("\0")
-        .split("\0")
-    )
-    for name in filter(None, staged):
-        if name not in files:
-            raise ValueError("unreviewed staged file would be committed")
-        blob = ":" + name
-        size = int(git("cat-file", "-s", blob))
-        if size > 5 * 1024 * 1024:
-            raise ValueError("staged blob exceeds publication limit")
-        check_publish_blob(
-            name,
-            subprocess.check_output(
-                ["git", "cat-file", "blob", blob], cwd=root, timeout=10
-            ),
-        )
+    check_index()
     if git("diff", "--cached", "--name-only"):
         subprocess.run(
             [
@@ -348,5 +359,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--report", type=Path, default=Path("harness-output/report.json")
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Validate locally without writes, credentials or publication",
+    )
     args = parser.parse_args()
-    publish(args.repository, args.report)
+    publish(args.repository, args.report, check_only=args.check)

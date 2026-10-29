@@ -27,6 +27,7 @@ AGENT_EXECUTION_FIELDS = frozenset(
         "network_access",
         "allow_elevation",
         "approvals_reviewer",
+        "turn_timeout_seconds",
         "native_config",
         "trust_hooks",
         "inherit_env",
@@ -397,6 +398,12 @@ def main():
         default=None,
         help="Native permission reviewer; explicit auto_review uses Codex review, not blanket approval; preserve on upgrade",
     )
+    parser.add_argument(
+        "--agent-turn-timeout",
+        type=int,
+        default=None,
+        help="Per-turn Agent execution limit in seconds (0 disables); preserve on upgrade",
+    )
     browser_skill = parser.add_mutually_exclusive_group()
     browser_skill.add_argument(
         "--browser-skill",
@@ -449,6 +456,11 @@ def main():
     parser.add_argument("--prepare-browser", action="store_true")
     parser.add_argument("--trellis-executable", default=shutil.which("trellis"))
     args = parser.parse_args()
+    if (
+        args.agent_turn_timeout is not None
+        and not 0 <= args.agent_turn_timeout <= 86400
+    ):
+        parser.error("agent turn timeout must be between 0 and 86400 seconds")
     if args.notification_token_env is not None and not re.fullmatch(
         r"[A-Za-z_][A-Za-z0-9_]*", args.notification_token_env
     ):
@@ -626,6 +638,9 @@ def main():
             if args.model is not None
             else prior.get("model", base.get("model", "")),
             "sandbox": "workspace-write",
+            "turn_timeout_seconds": args.agent_turn_timeout
+            if args.agent_turn_timeout is not None
+            else prior.get("turn_timeout_seconds", 1800 if not prior else 0),
             "inherit_env": False,
             "instructions": "\n\n".join(
                 filter(

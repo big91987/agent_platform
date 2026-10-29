@@ -49,8 +49,10 @@ test('editing role instructions keeps its current draft when a target is changed
  const {ctx,el}=editorPage();vm.runInContext('renderWorkflowInspector(editor)',ctx);
  for(const [id,value]of Object.entries({'#wf-node-name':'研究','#wf-agent-instructions':'修改后的职责','#wf-node-x':'0','#wf-node-y':'0','#wf-continuation':'3','#wf-timeout':'14400'}))el(id).value=value;
  el('#wf-agent-instructions').oninput();
+ el('#wf-agent-turn-timeout').value='2345';el('#wf-agent-turn-timeout').oninput();
  vm.runInContext('graph.updateEdge(0,{target:c.id});renderWorkflowInspector(editor)',ctx);
  assert.match(el('#wf-inspector').innerHTML,/修改后的职责/);
+ assert.equal(el('#wf-agent-turn-timeout').value,'2345');
  assert.equal(vm.runInContext('graph.value.edges[0].target',ctx),'node_3');
 });
 test('node user input permission is visible and unsaved preview respects disabling it',async()=>{
@@ -165,20 +167,22 @@ test('new input protocol saves node name and common settings without a separate 
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-node-prompt"/);
  assert.doesNotMatch(el('#wf-inspector').innerHTML,/id="wf-agent-seed"/);
  el('#wf-node-name').value='独立验收';el('#wf-node-name').onblur();
- el('#wf-agent-model').value='gpt-6.1-sol';el('#wf-agent-instructions').value='核对实际证据';
+ el('#wf-agent-model').value='gpt-6.1-sol';el('#wf-agent-turn-timeout').value='1234';el('#wf-agent-instructions').value='核对实际证据';
  ctx.requests=[];vm.runInContext("history={replaceState(){}};api=async(path,method,body)=>{requests.push(JSON.parse(JSON.stringify(body)));return {...body,id:'saved',revision:1}}",ctx);
  el('#wf-node-apply').onclick();await vm.runInContext('saveWorkflow(editor)',ctx);
  assert.equal(ctx.requests.length,1,el('#toast').textContent);
  assert.equal(ctx.requests[0].nodes[0].name,'独立验收');
  assert.equal(ctx.requests[0].nodes[0].agent.model,'gpt-6.1-sol');
+ assert.equal(ctx.requests[0].nodes[0].agent.turn_timeout_seconds,1234);
  assert.equal(ctx.requests[0].nodes[0].prompt,undefined);
  vm.runInContext('renderWorkflowInspector(editor)',ctx);
  assert.equal(el('#wf-node-name').value,'独立验收');
  assert.equal(el('#wf-agent-instructions').value,'核对实际证据');
+ assert.equal(el('#wf-agent-turn-timeout').value,'1234');
 });
 test('standalone and workflow forms read the same execution settings and preserve unavailable tools',()=>{
  const {ctx,el}=editorPage();
- const values={executor:'codex',model:'gpt-6.1-sol',instructions:'核对证据',skills:'/skills/review\n/skills/report',sandbox:'read-only',seed:'/template',native:'model_reasoning_effort = "high"',env:'{"MODE":"test","REMOVE":null}'};
+ const values={executor:'codex',model:'gpt-6.1-sol',instructions:'核对证据','turn-timeout':'1234',skills:'/skills/review\n/skills/report',sandbox:'read-only',seed:'/template',native:'model_reasoning_effort = "high"',env:'{"MODE":"test","REMOVE":null}'};
  for(const prefix of ['agent','wf-agent']){
   for(const [key,value]of Object.entries(values))el('#'+prefix+'-'+key).value=value;
   for(const key of ['network','elevation','trust','inherit'])el('#'+prefix+'-'+key).checked=key==='inherit';
@@ -187,6 +191,9 @@ test('standalone and workflow forms read the same execution settings and preserv
  const standalone=JSON.parse(vm.runInContext("JSON.stringify(readAgentConfig({},'agent'))",ctx));
  const node=JSON.parse(vm.runInContext("JSON.stringify(readAgentConfig({},'wf-agent'))",ctx));
  assert.deepEqual(standalone,node);
+ assert.equal(node.turn_timeout_seconds,1234);
+ el('#agent-turn-timeout').value='-1';
+ assert.throws(()=>vm.runInContext("readAgentConfig({},'agent')",ctx),/超时/);
  assert.deepEqual(node.env,{MODE:'test',REMOVE:null});
  assert.deepEqual(node.tool_servers,[{server_id:'unavailable',tools:['inspect'],approvals:{inspect:'confirm'}}]);
 });

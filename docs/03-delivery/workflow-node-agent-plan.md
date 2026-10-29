@@ -2180,3 +2180,12 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 用户授权新Run[cb5547cf](http://10.1.20.112:8795/workflow-runs/cb5547cfa116d5e163eb994faea92fcc)已completed/released：原生complete、manifest13/13、0发现、固定exit0；OCR1010.783秒，准备113.386秒，全Run1134.390秒；2641841总token，费用不可得。源35a4cbd标准导出166件安装CLI5/Delegate7，只新跑CLI，研发主图未由本次安装修改，PR71的base/head保持draft，未合并部署。正式API新用户事件去重启动，不冒称新Actions；22相关回归、141模板20.374s及ruff通过。
 
 与前两路source/rules逐字节同版，7件1120242bytes释放后新目录全部复取核SHA；report379bytes/SHAfa20e637da701050ecec6437285f779e3f476ad649ee8f974af03a49493ac85e。完整覆盖解决，但旧四候选均未再报告且无逐条排除理由；两处已复核基线弱点仍未修，不因新clean关闭，发现质量未获证明。仍low effort每组一轮；stderr保留Git版本告警，CLI适配器结束前不呈现文件级进度。时间与预算同时变化，不单独归因时间，不据不同缓存和模型的token比较费用。完整对照、原件及限制见[代码审查记录](qa-review-pipeline.md#长窗口-cli-补验结果2026-10-26-1010utc完成)。定时任务保持暂停。
+
+
+### 2026-10-29：Agent 运行期限与发布预检已完成源码验证，待正式集成
+
+承接 Code Review 与 Kodus 逐项复核，本轮只补真实缺口：共享 Agent 单轮超时（新表单1800秒、模板研发5400/QA3600/报告1800）、参数校验与保存/重载、标准安装显式设置/升级保留；保留现有自动接续期限的原有含义。publisher新增无写入/无网络 `--check`，报告节点先预检。独立复审实证的暂存区残留和生成正文校验遗漏已先红后绿修复，正式发布继续复验。
+
+标准 `scripts/verify.sh` 本轮完整 exit0：Node/浏览器、Python各套件（模板144、审查22）、实际Go浏览器回归、go vet、Go race及构建通过。全文 138536 bytes / SHA256 `58342cfb7a643cecce2bc3255817ea35c9b8c3cdb3efeb4a06d9eebc1b8c4096`，本地忽略证据 `.data/harness-improvement-20261029/final-verify-2.log`。初次沙箱监听EPERM、表单字段遗漏、旧浏览器定位及复审红例都保留，不用最终绿覆盖。此为平台/模板验证，不是产品QA或新研发整链完成。
+
+正式集成卡点：API核112研发图revision14含Code Review，PR71仍draft/heada6e77d58、maina1cbbb86，暂无新研发Run。ds112实际SSH已被堡垒机断开，其他已核旧通道也断开；直连112:22超时。传输未收到ready、未发送文件payload；清理本机未执行的输入，未安装或重启服务、未改数据库/冻结Run/凭据。已请用户恢复连接。下一步：标准构建安装→按版本升级正式配置/同步原PR71→项目正式Issue入口验证新增审查阶段及QA交付。定时任务保持暂停。

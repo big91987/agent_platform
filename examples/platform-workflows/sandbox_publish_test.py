@@ -10,6 +10,48 @@ from sandbox_publish import publish
 
 
 class PublicationBoundaryTest(unittest.TestCase):
+    def test_preflight_rejects_staged_only_paths_and_generated_private_report(self):
+        for kind in ("staged-only", "report-secret"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                git, report = self.fixture(root)
+                if kind == "staged-only":
+                    (root / ".env").write_text("staged fixture")
+                    git("add", ".env")
+                    (root / ".env").unlink()
+                    error = "unreviewed staged file"
+                else:
+                    (root / ".git/info/exclude").write_text("report.json\n")
+                    value = json.loads(report.read_text())
+                    value["body"] = "github_pat_" + "a" * 36
+                    report.write_text(json.dumps(value))
+                    error = "private credential"
+                index = (root / ".git/index").read_bytes()
+                with patch("sandbox_publish.Path.cwd", return_value=root):
+                    with self.assertRaisesRegex(ValueError, error):
+                        publish("owner/project", report, check_only=True)
+                self.assertEqual(index, (root / ".git/index").read_bytes())
+                self.assertFalse((root / "docs/harness").exists())
+
+    def test_preflight_checks_real_selection_without_git_or_network_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            (root / "reviewed.txt").write_text("reviewed change")
+            before = {
+                name: (root / name).read_bytes() for name in (".git/index", ".git/HEAD")
+            }
+            head = git("rev-parse", "HEAD")
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                publish("owner/project", report, check_only=True)
+                (root / "unreviewed.txt").write_text("not in selected files")
+                with self.assertRaisesRegex(ValueError, "unreviewed tracked changes"):
+                    publish("owner/project", report, check_only=True)
+            self.assertEqual(head, git("rev-parse", "HEAD"))
+            for name, raw in before.items():
+                self.assertEqual(raw, (root / name).read_bytes())
+            self.assertFalse((root / "docs/harness").exists())
+
     def fixture(self, root, project_files=()):
         def git(*args):
             return subprocess.check_output(

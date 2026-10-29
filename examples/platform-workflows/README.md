@@ -472,3 +472,11 @@ OpenSandbox 图可沿用不读取文件的 GitHub Issue 评论通知 Hook；目�
 
 
 2026-10-20：OpenSandbox 模板的固定 `make verify` 节点改用「数据来源：进程退出码」和显式 `$ == 0` / `$ != 0` 规则，分别交独立 QA / 研发；无需 JSON 输出或 Schema。先部署支持原始数据交接的平台版本，再用项目自有标准同步及安装入口更新定义；在途 Run 的冻结图保持。STDOUT、STDERR、指定文件默认原始文本，可选 JSON 解析与 Schema 校验，读取、解析、校验及条件计算失败各自配置去向。
+
+### Agent 执行期限与发布预检
+
+Agent 的 `turn_timeout_seconds` 限制单轮实际执行；从领取消息开始，含本轮工具调用与审批等待，不含排队或回合结束后的等待。0 不限制，新建表单默认 1800 秒。研发模板为 development 5400、qa 3600、report 1800 秒；项目按真实耗时调整。节点 `execution_timeout_seconds` 仍限制自动接续期限，不中断正在运行的 Agent。新配置作用于新会话和新 Run，冻结 Run 保持原配置。到期保留失败与停止确认结果，不自动重放。
+
+报告节点可先运行 `python3 .harness/agent-platform/examples/platform-workflows/sandbox_publish.py --repository OWNER/REPO --check`，复用最终 publisher 的本地校验，不修改索引/提交/交付目录、不联网。最终发布会重新校验；预检通过不代表 QA、远端 PR 或部署通过。
+
+标准安装器的 `--agent-turn-timeout SECONDS` 为本次安装的 Agent 节点显式设置单轮超时；升级时省略则保留原值，0 关闭。

@@ -81,7 +81,7 @@ func workflowHTTPValue(c Caller, value any) any {
 		w.Nodes = append([]WorkflowNode(nil), w.Nodes...)
 		for i, n := range w.Nodes {
 			if n.Agent != nil {
-				w.Nodes[i].Agent = &Agent{Executor: n.Agent.Executor, Model: n.Agent.Model, Sandbox: n.Agent.Sandbox, NetworkAccess: n.Agent.NetworkAccess, AllowElevation: n.Agent.AllowElevation, ApprovalsReviewer: n.Agent.ApprovalsReviewer}
+				w.Nodes[i].Agent = &Agent{TurnTimeoutSeconds: n.Agent.TurnTimeoutSeconds, Executor: n.Agent.Executor, Model: n.Agent.Model, Sandbox: n.Agent.Sandbox, NetworkAccess: n.Agent.NetworkAccess, AllowElevation: n.Agent.AllowElevation, ApprovalsReviewer: n.Agent.ApprovalsReviewer}
 			}
 		}
 		return w

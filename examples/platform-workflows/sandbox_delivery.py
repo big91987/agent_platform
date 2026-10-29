@@ -54,6 +54,9 @@ def definition(repository, credential_ref, proxy="", no_proxy="127.0.0.1,localho
             "execution_timeout_seconds": 1800,
             "agent": {
                 "executor": "codex",
+                "turn_timeout_seconds": {"development": 5400, "qa": 3600}.get(
+                    key, 1800
+                ),
                 "model": "gpt-6.1-sol",
                 "instructions": (prompts / ("sandbox-" + key + ".md"))
                 .read_text()

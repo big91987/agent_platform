@@ -229,6 +229,19 @@ class NodeAgentInstallTest(unittest.TestCase):
             if node["kind"] == "agent":
                 self.assertEqual(node["agent"]["approvals_reviewer"], "user")
 
+    def test_agent_turn_timeout_is_preserved_and_explicitly_upgraded(self):
+        self.run_install("--agent-turn-timeout", "2700")
+        self.api.writes.clear()
+        self.run_install("--upgrade")
+        self.assertEqual(self.api.writes, [])
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertEqual(node["agent"]["turn_timeout_seconds"], 2700)
+        self.run_install("--upgrade", "--agent-turn-timeout", "0")
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertEqual(node["agent"]["turn_timeout_seconds"], 0)
+
     def test_product_e2e_keeps_product_failure_for_review_without_publish(self):
         self.run_install("--template", "product-e2e")
         graph = self.api.objects["workflows"][0]

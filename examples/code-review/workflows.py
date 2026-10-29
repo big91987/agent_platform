@@ -123,6 +123,7 @@ def definition(repository, credential_ref, engine, skill="", model_refs=None, pr
             "execution_timeout_seconds": 1800,
             "agent": {
                 "executor": "codex",
+                "turn_timeout_seconds": 1800,
                 "model": "gpt-6.1-sol",
                 "instructions": (HERE / "delegate.md").read_text(),
                 "skills": [skill],

@@ -241,7 +241,7 @@ test('saving a shared Agent can return to the calling workflow without navigatin
  vm.runInContext("api=async(path,method)=>path==='/api/agents'?[]:[];collectToolChoices=()=>[];toast=message=>{savedMessage=message};let returned=false;agentsView=async()=>{throw Error('unexpected navigation')};",context);
  node('#dialog').showModal=()=>{};node('#dialog').close=()=>{};context.document.querySelectorAll=()=>[];
  await vm.runInContext("editAgent({id:'a1',name:'角色',instructions:'职责',env:{},skills:[]},async()=>{returned=true})",context);
- for(const [id,value]of Object.entries({'#agent-name':'角色','#agent-model':'','#agent-instructions':'职责','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'{}','#agent-sandbox':'workspace-write'}))node(id).value=value;
+ for(const [id,value]of Object.entries({'#agent-turn-timeout':'0','#agent-name':'角色','#agent-model':'','#agent-instructions':'职责','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'{}','#agent-sandbox':'workspace-write'}))node(id).value=value;
  await node('#agent-form').onsubmit({preventDefault(){}});
  assert.equal(vm.runInContext('returned',context),true);
 });
@@ -250,7 +250,7 @@ test('standalone Agent rejects non-object environment values before calling save
  node('#dialog').showModal=()=>{};node('#dialog').close=()=>{};
  vm.runInContext("let writes=[];api=async(path,method,body)=>{if(method)writes.push(body);return []};toast=message=>{savedMessage=message}",context);
  await vm.runInContext('editAgent()',context);
- for(const [id,value]of Object.entries({'#agent-name':'Reviewer','#agent-executor':'codex','#agent-model':'test-model','#agent-instructions':'Review','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'[]','#agent-sandbox':'workspace-write'}))node(id).value=value;
+ for(const [id,value]of Object.entries({'#agent-turn-timeout':'1800','#agent-name':'Reviewer','#agent-executor':'codex','#agent-model':'test-model','#agent-instructions':'Review','#agent-seed':'','#agent-skills':'','#agent-native':'','#agent-env':'[]','#agent-sandbox':'workspace-write'}))node(id).value=value;
  await node('#agent-form').onsubmit({preventDefault(){}});
  assert.equal(vm.runInContext('writes.length',context),0);
  assert.match(vm.runInContext('savedMessage',context),/环境/);

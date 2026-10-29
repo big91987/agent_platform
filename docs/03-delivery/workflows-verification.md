@@ -3959,3 +3959,12 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 工具原评级Level1，基础35项Pass12/Fail23，AI4项Skipped；七维度分别2/5、3/5、1/6、2/5、3/6、1/3、0/5。不是功能QA或工程成熟度验收。人工静态核对：AGENTS.md、tests/browser、CI→controller.prepare→make verify均存在，部分为规则漏识别；配置存在和实际执行仍分开。实际GitHub main protected=false；同版check-runs另有prepare=failure，本次未调查首错或重跑。安全0/5不能解释为发现漏洞或全面无外部扫描。
 
 准备过程：直连压缩包180秒/代理240秒均超时，未用于扫描；另起Git clone在找到同版缓存后仅停止该下载及其子进程，未停Runner/服务/Pipeline。归档303347558bytes；完整源501529318bytes中历史Run5216件/497551307bytes（99.2%），是源码准备成本的额外观察，不归为工具原生发现。完整39项提示、原建议、适用性核对及局限见[初始化体检报告](model-relay-agent-readiness-2026-10-28.md)。
+
+
+### 2026-10-29：Agent 运行期限与发布预检已完成源码验证，待正式集成
+
+承接 Code Review 与 Kodus 逐项复核，本轮只补真实缺口：共享 Agent 单轮超时（新表单1800秒、模板研发5400/QA3600/报告1800）、参数校验与保存/重载、标准安装显式设置/升级保留；保留现有自动接续期限的原有含义。publisher新增无写入/无网络 `--check`，报告节点先预检。独立复审实证的暂存区残留和生成正文校验遗漏已先红后绿修复，正式发布继续复验。
+
+标准 `scripts/verify.sh` 本轮完整 exit0：Node/浏览器、Python各套件（模板144、审查22）、实际Go浏览器回归、go vet、Go race及构建通过。全文 138536 bytes / SHA256 `58342cfb7a643cecce2bc3255817ea35c9b8c3cdb3efeb4a06d9eebc1b8c4096`，本地忽略证据 `.data/harness-improvement-20261029/final-verify-2.log`。初次沙箱监听EPERM、表单字段遗漏、旧浏览器定位及复审红例都保留，不用最终绿覆盖。此为平台/模板验证，不是产品QA或新研发整链完成。
+
+正式集成卡点：API核112研发图revision14含Code Review，PR71仍draft/heada6e77d58、maina1cbbb86，暂无新研发Run。ds112实际SSH已被堡垒机断开，其他已核旧通道也断开；直连112:22超时。传输未收到ready、未发送文件payload；清理本机未执行的输入，未安装或重启服务、未改数据库/冻结Run/凭据。已请用户恢复连接。下一步：标准构建安装→按版本升级正式配置/同步原PR71→项目正式Issue入口验证新增审查阶段及QA交付。定时任务保持暂停。
