@@ -1,6 +1,6 @@
 # OpenSandbox 工作流改造实施计划
 
-> 2026-10-29 当前：PR71修复版两路正式审查完整通过，已合测试仓main42b20c6；Issue72唯一Runffba71cc…已进入研发2。自动部署准备另有timeout_gate基线红，已通过正式输入交Pipeline排查；尚无本轮QA或交付结论。112 Runtime2e9d453/研发图15保持，定时任务仍暂停。以下旧时点保留为历史，最新证据见文末。
+> 2026-10-29 当前：Harness PR71/73均已通过同版正式审查并合测试仓main，当前main521751f；Issue72唯一Runffba71cc/rev15仍在研发2，原生纠正已确认送达。固定验证超时夹具基线红交Pipeline修复，尚无新QA或交付结论。审查资源清理遇明确Docker socket ACL拒绝，待用户授权；不改权限，112 Runtime2e9d453/研发图15及定时暂停保持。最新证据见文末。
 
 > 同版对照结论（2026-10-26）：放宽CLI至请求5分钟/分组20分钟/整命令30分钟后，精确heada6e77d58、13件及全源/解析规则逐字节相同。Codex＋官方Skill：13/13、0发现、审查阶段419.637秒、固定校验clean；GLM＋OCR CLI：命令1108.908秒、5/13完成/8预算失败、4候选、strict exit20/incomplete，GitHub正确失败。独立静态复核4候选为2误报/契约不成立、2历史缺陷/诊断加固，0确认当前PR新增缺陷；不能推断漏报率或模型胜负。两Run均正式released，15原件及两份GitHub三件附件重新下载全摘要一致。详情见[对照记录](qa-review-pipeline.md#放宽时间后的同版对照2026-10-26)。PR71仍draft/未合部署，研发新审查阶段尚无整链实证，定时任务仍暂停。
 
@@ -1704,3 +1704,8 @@ Issue72正文已把旧SSH卡点更新为实际部署/PR门禁状态，暂未加�
 同轮新事实：push prepare40836126567固定make verify在项目tests/verify的timeout_gate缺cancel-ready而失败，deploy跳过；完整私有0600日志1033405bytes/SHA285d9bc81f4cf0e9a9bcf18419a29a77885e19d3b1b7b36186d363b505866a76，171件源码6316a232…前后相同。Builder未代产品修复或重跑，正式UserInput21475（稳定去重键、限定研发2）交Pipeline诊断并最小修项目设施，Issue72标题/范围已同步，不增窗口/删断言求绿。尚无本轮固定门禁/QA/PR结论。
 
 另确认ready_for_review事件在PR已合并后才执行，40836117156因closed拒绝，未新建Run；原失败保留并在PR正文解释。通用维护源最小修自动过期事件skip、不写commit status/不启动Run，手动closed仍拒绝；入口回归首红→绿、独立只读复审无C/I、完整scripts/verify.sh exit0（审查23/模板146、真实浏览器/Go vet/race缓存命中/构建）。尚未标准同步此后续入口修复，不冒称已进测试仓；112 Runtime仍2e9d453，研发图15不变。释放POST本次120秒响应超时后先GET确认released、未重放；长响应根因仍未知，产物留存已证。
+
+
+2026-10-29 08:38UTC继续：后续通用入口修复已标准导出源a3976fe/166件，经PR73/head2230d54两路同库存3/3、0发现、Actions40838201820成功及GitHub6附件逐字节比对，已精确合main521751f1a0afaca26bd50b989f6f0df2d09f10e5（08:19:51Z）。没有平台main合并、产品合并/激活部署或冻结图改写。Delegate原生187.121秒/922925累计tokens（cache816000为input子集），CLI763.592秒/1091966tokens；费用不可得、样本不足不评模型胜负。Issue72保持同一Runffba71cc/rev15和原base42b20c6，正式输入21475已通过原生steer于07:55:28Z确认steered，同一会话继续，没有重复消息或Run。研发自报已实证超时夹具把启动时间算入200ms并在修复边界；尚无固定tests/独立QA/PR放行事实。
+
+资源回收区别记录：PR73 Delegate62d77217首次release响应20秒超时后GET released，8件释放后全同；CLI7f207303首次release收到OpenSandbox500，正式reconcile一次响应超时后GET ready，当前不得称已释放。已在112普通用户日志定位requests PermissionError13；服务与登录账号均有docker组1002、socket0660，但显式ACL user:moffett:---拒绝访问，安全标签unconfined。未修改ACL/组/权限，已异步询问用户是否允许恢复这一具体服务访问；当前研发继续。控制面原窗口日志0600/14577bytes/SHA92666c61…保留。两次自动主干prepare的实际末错误均是同一timeout_gate缺cancel-ready（后轮日志1032556bytes/SHA124f1966…），源码1716316a232…未变、部署跳过，去重作为同一已交研发问题；不把内嵌历史分类器的预期红误当新产品缺陷。

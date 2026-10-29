@@ -399,3 +399,15 @@ SSH此次再次断开后已按用户指定执行g112自动恢复；先只读确�
 另确认ready_for_review事件在PR已合并后才执行，40836117156因closed拒绝，未新建Run；原失败保留并在PR正文解释。通用维护源最小修自动过期事件skip、不写commit status/不启动Run，手动closed仍拒绝；入口回归首红→绿、独立只读复审无C/I、完整scripts/verify.sh exit0（审查23/模板146、真实浏览器/Go vet/race缓存命中/构建）。尚未标准同步此后续入口修复，不冒称已进测试仓；112 Runtime仍2e9d453，研发图15不变。释放POST本次120秒响应超时后先GET确认released、未重放；长响应根因仍未知，产物留存已证。
 
 通用入口后续修复完整全文139804bytes/SHA256 `74c2631ec67a20a44ef2654454fa393ae257048ab3ecfbcbfcd6e404d887505c`，存于忽略路径stale-event-full-verify.log。首测试夹具遗漏base_url而KeyError的准备错误单独保留；补完整配置后原入口确因closed报ValueError红，随后修复自动skip绿，未将夹具错误当产品证据。
+
+
+2026-10-29 08:24UTC资源回收新故障：PR73的CLI Run7f207303已完成并归档7件1099109bytes，首次正式release返回HTTP400/下游OpenSandbox HTTP500，状态release_unconfirmed；没有重放delete。正式reconcile一次响应40秒超时，随后GET为ready，证明资源仍被正式后端核为存在，不得称已释放。所有原件仍可取。用户影响为终态沙箱仍占资源，主研发Runffba71cc不受状态变更。假设为控制面删除失败及另一个响应传输问题，根因尚未证；先读112控制面日志，不重启或直接操作Docker删除。
+
+重复POST已释放Run的诊断被自动审批拒绝，理由是重复副作用风险，未执行。安全替代为隔离Store/假生命周期服务的真实HTTP线框测试：空JSON与空请求体均200、仅一次模拟删除，1.040秒通过；临时诊断文件已清理、原件留忽略存储。这未复现112超时，不能冒称修复。
+
+
+2026-10-29 08:38UTC继续：后续通用入口修复已标准导出源a3976fe/166件，经PR73/head2230d54两路同库存3/3、0发现、Actions40838201820成功及GitHub6附件逐字节比对，已精确合main521751f1a0afaca26bd50b989f6f0df2d09f10e5（08:19:51Z）。没有平台main合并、产品合并/激活部署或冻结图改写。Delegate原生187.121秒/922925累计tokens（cache816000为input子集），CLI763.592秒/1091966tokens；费用不可得、样本不足不评模型胜负。Issue72保持同一Runffba71cc/rev15和原base42b20c6，正式输入21475已通过原生steer于07:55:28Z确认steered，同一会话继续，没有重复消息或Run。研发自报已实证超时夹具把启动时间算入200ms并在修复边界；尚无固定tests/独立QA/PR放行事实。
+
+资源回收区别记录：PR73 Delegate62d77217首次release响应20秒超时后GET released，8件释放后全同；CLI7f207303首次release收到OpenSandbox500，正式reconcile一次响应超时后GET ready，当前不得称已释放。已在112普通用户日志定位requests PermissionError13；服务与登录账号均有docker组1002、socket0660，但显式ACL user:moffett:---拒绝访问，安全标签unconfined。未修改ACL/组/权限，已异步询问用户是否允许恢复这一具体服务访问；当前研发继续。控制面原窗口日志0600/14577bytes/SHA92666c61…保留。两次自动主干prepare的实际末错误均是同一timeout_gate缺cancel-ready（后轮日志1032556bytes/SHA124f1966…），源码1716316a232…未变、部署跳过，去重作为同一已交研发问题；不把内嵌历史分类器的预期红误当新产品缺陷。
+
+PR73 Delegate完整原生审计371事件/3页含EOF、600475bytes/SHA256 `7f38c7a10dc70784a0502403970c2776e1ef2e9f1ea6274c633e2253b61f59ee`。CLI 13工具调用/0工具失败；其原件没有retry_report，不能据缺失字段断言不存在重试。3件包含SOURCE、入口与测试，README未列为代码审查项。已导出范围不等于全仓审查。
