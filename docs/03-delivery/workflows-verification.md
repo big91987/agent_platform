@@ -3968,3 +3968,6 @@ Agent原始报告13件全部reviewed、skipped0/comments0；实际Git diff分别
 标准 `scripts/verify.sh` 本轮完整 exit0：Node/浏览器、Python各套件（模板144、审查22）、实际Go浏览器回归、go vet、Go race及构建通过。全文 138536 bytes / SHA256 `58342cfb7a643cecce2bc3255817ea35c9b8c3cdb3efeb4a06d9eebc1b8c4096`，本地忽略证据 `.data/harness-improvement-20261029/final-verify-2.log`。初次沙箱监听EPERM、表单字段遗漏、旧浏览器定位及复审红例都保留，不用最终绿覆盖。此为平台/模板验证，不是产品QA或新研发整链完成。
 
 正式集成卡点：API核112研发图revision14含Code Review，PR71仍draft/heada6e77d58、maina1cbbb86，暂无新研发Run。ds112实际SSH已被堡垒机断开，其他已核旧通道也断开；直连112:22超时。传输未收到ready、未发送文件payload；清理本机未执行的输入，未安装或重启服务、未改数据库/冻结Run/凭据。已请用户恢复连接。下一步：标准构建安装→按版本升级正式配置/同步原PR71→项目正式Issue入口验证新增审查阶段及QA交付。定时任务保持暂停。
+
+
+2026-10-29 集成准备回执：平台开发分支已提交并推送 `2e9d4534ee5feeaed0ce7178a0f251b2d6c86b6c`；标准导出166件、完整源码归档439常规成员已准备。只读核PR71原166件逐Git对象与旧SOURCE一致、无项目定制漂移；待同步清单12件加SOURCE，尚未更新远端ref。已去重创建[Issue72「【Harness修复】完善新成员开发入口与发布前检查」](https://github.com/big91987/model-relay/issues/72)，远端open/无执行标签；等待112标准升级后通过原标签入口启动，尚无新整链结果。测试仓与平台main均未合并；无部署、无定时任务恢复。
