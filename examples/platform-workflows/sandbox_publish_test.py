@@ -10,6 +10,34 @@ from sandbox_publish import publish
 
 
 class PublicationBoundaryTest(unittest.TestCase):
+    def test_preflight_and_publish_use_restored_reviewed_file_after_staged_deletion(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, report = self.fixture(root)
+            git("rm", "reviewed.txt")
+            (root / "reviewed.txt").write_text("reviewed restoration")
+            index = (root / ".git/index").read_bytes()
+            original = subprocess.run
+
+            def stop_before_network(args, **kwargs):
+                if "push" in args:
+                    raise RuntimeError("fixture network boundary")
+                return original(args, **kwargs)
+
+            with patch("sandbox_publish.Path.cwd", return_value=root):
+                publish("owner/project", report, check_only=True)
+                self.assertEqual(index, (root / ".git/index").read_bytes())
+                with patch(
+                    "sandbox_publish.subprocess.run", side_effect=stop_before_network
+                ):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "fixture network boundary"
+                    ):
+                        publish("owner/project", report)
+            self.assertEqual("reviewed restoration", git("show", "HEAD:reviewed.txt"))
+
     def test_preflight_rejects_staged_only_paths_and_generated_private_report(self):
         for kind in ("staged-only", "report-secret"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:

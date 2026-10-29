@@ -213,7 +213,7 @@ def publish(repository, report, *, check_only=False):
     if not changed.issubset(set(files)):
         raise ValueError("unreviewed tracked changes remain")
 
-    def check_index():
+    def check_index(*, verify_blobs):
         staged = (
             subprocess.check_output(
                 ["git", "diff", "--cached", "--name-only", "-z", identity["commit"]],
@@ -227,6 +227,8 @@ def publish(repository, report, *, check_only=False):
         for name in filter(None, staged):
             if name not in files:
                 raise ValueError("unreviewed staged file would be committed")
+            if not verify_blobs:
+                continue
             blob = ":" + name
             size = int(git("cat-file", "-s", blob))
             if size > 5 * 1024 * 1024:
@@ -238,7 +240,10 @@ def publish(repository, report, *, check_only=False):
                 ),
             )
 
-    check_index()
+    # The selected regular files and generated outputs were validated above.
+    # Old index blobs will be replaced by git add, including staged deletions.
+    # Check their scope now, then validate the actual new blobs after staging.
+    check_index(verify_blobs=False)
     if check_only:
         print(
             json.dumps({"checked": True, "repository": repository, "files": len(files)})
@@ -248,7 +253,7 @@ def publish(repository, report, *, check_only=False):
     for name, content in delivery_files.items():
         (root / name).write_bytes(content)
     subprocess.run(["git", "add", "--", *files], cwd=root, check=True, timeout=30)
-    check_index()
+    check_index(verify_blobs=True)
     if git("diff", "--cached", "--name-only"):
         subprocess.run(
             [

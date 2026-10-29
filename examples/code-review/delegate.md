@@ -2,7 +2,11 @@
 
 ## 任务
 
-使用已选中的 `open-code-review-delegate` Skill，审查当前共享工作区中固定 base/head 的代码变更。先读 `harness-output/code-review/source.json`、`preview.json` 和 `rules.json`；文件选择和规则已由锁定版本 OCR 真实执行。
+使用已选中的 `open-code-review-delegate` Skill，审查当前共享工作区中固定 base/head 的代码变更。先提取 `harness-output/code-review/source.json` 中的 `base`、`head` 和 `expected`，再读 `preview.json` 和 `rules.json`；文件选择和规则已由锁定版本 OCR 真实执行。`files` 是供固定校验器核对的完整仓库库存，不要整份打印到会话中。
+
+```sh
+python3 -I -c 'import json; from pathlib import Path; v=json.loads(Path("harness-output/code-review/source.json").read_text()); print(json.dumps({k:v[k] for k in ("base","head","expected")},ensure_ascii=False,indent=2))'
+```
 
 ## 审查约束
 

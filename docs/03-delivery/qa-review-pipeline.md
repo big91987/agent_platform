@@ -330,3 +330,31 @@ CLI在时间放宽后确实得到更多输出，但仍未完成。500000只是�
 正式留存7件1120242bytes，释放后从新目录重新下载全部bytes/SHA一致，environment=released。report.md379bytes/SHAfa20e637da701050ecec6437285f779e3f476ad649ee8f974af03a49493ac85e；result SHA7c560823d282ea9ea2bf59ff20e700178b21b741018a7c062feb2c7d5522c9d7。完整正文与版本信息已发布到[既有Issue69](https://github.com/big91987/model-relay/issues/69#issuecomment-6413542887)，平台原件需登录，不冒称GitHub Actions附件或部署看板。
 
 工程记录：22审查相关回归、141模板回归20.374s与ruff通过；首次额外模板调用缺sdk/python导致导入错误，正确PYTHONPATH后完整通过，属于测试调用问题。直连push超时先核远端未更新，再用既有代理推送35a4cbd成功。CLI适配器subprocess.run使用PIPE，结束后才写原始报告/日志，长任务在途缺少文件级进度，是后续可观测性改进点。本轮没有更改在途配置、旧冻结回执或定时任务。
+
+
+## 2026-10-29：真实审查发现发布预检回归
+
+本轮对象为PR71/head6e9d2b5125b3ade519a647a3815c46c6f449bcab/basea1cbbb86，17个选中文件和5667件完整源库存、规则在两沙箱之间相同。正式Actions40813702743的两作业均失败，平台Run均completed，业务结论均为findings；门禁未被流程结束掩盖。
+
+| 观测 | CLI / GLM glm-5.3-flash | Codex/gpt-6.1-sol＋Delegate |
+|---|---|---|
+| 唯一Run | 553fb9c0d23dd49972f912df5eb36949 | c5d67741814b81496e24875ca23764f6 |
+| 准备 | 107.126秒 | 80.132秒 |
+| 审查阶段 | 2355.502秒，原命令2345.474秒 | 437.003秒，另固定校验9.993秒 |
+| 覆盖/发现 | 17/17，2候选，findings | 17/17，1候选，findings |
+| 原生用量 | input989110/output103114/total1092224；cache770624为input子集 | 尚未提取，不估造费用或tokens |
+| 正式原件 | 7件1215724bytes | 8件1112388bytes |
+
+Delegate于04:24:52Z才受理，距同Actions创建03:43:00Z为41分52秒，包含Runner队列、checkout和入站。已在正式作业状态观察到CLI占用单Runner、Delegate排队，不能将其计作Agent推理时间。样本同版但模型/Loop不同，不据一次结果概括模型胜负。
+
+### 发现与处理
+
+- **Delegate真实回归**：基线已审查文件git rm后恢复到工作区并列入report.files，旧preflight过早读取不存在的索引blob，--check与正式publish都报cat-file错误。真实Git夹具先红；源码先检查原索引范围、已校验的拟发布工作区/生成文件，git add后仍检查全部实际blob。恢复文件可正式提交，未评审暂存路径/凭据/越界/生成报告检查仍保持。16项publisher回归绿。
+- **CLI回归覆盖建议**：原默认逻辑没有证实语义错误；补19项安装回归，确认新安装有期限、旧安装不被省略参数静默加限。临时将fallback变成统一新默认值时真实失败，恢复后绿。没有增加旧格式执行分支。
+- **CLI出网风险**：现入口已有Owner本人/同仓/开放PR限制及拒绝fork测试，后端externalSandboxPolicy明确拒绝禁网/只读配置。直接改network_access=false无法运行。README澄清当前仅可信自有仓试点、无目的地白名单、容器隔离不代表阻止源码外传；没有把该风险判为已修复或虚构用户接受。没有降低结果分类或忽略安全规则。
+
+源码另将Delegate的默认source.json读取收敛为base/head/expected，避免1MiB库存直接进入模型上下文；完整files库存保持，由固定校验器复核。新指令仅用于后续安装图，旧冻结Run不变，效果待新真实回合验证。
+
+修复版完整scripts/verify.sh exit0：模板146、审查22、真实浏览器、Go vet/race（race缓存命中）和构建通过；全文139616bytes/SHA256 `1696067981f020311e4865868144856fd0c38782ccd710c0266e8390a84888ef`，忽略存储`.data/harness-improvement-20261029/remediation-final-verify.log`。不将该源码验证签给旧head，仍需标准导出/同步新head和正式复验。
+
+两沙箱已通过正式release入口释放。CLI连接重置、Delegate响应超时后都先GET核实际released，没有盲重放；原错误保留。随后从API全新下载15件，manifest及全部原件与释放前逐字节一致。GitHub原作业保留失败及附件；目前未合PR、未部署Model Relay、未启动Issue72，不增限、不重跑求绿。具名外部回写见[PR71评论6489612918](https://github.com/big91987/model-relay/pull/71#issuecomment-6489612918)。

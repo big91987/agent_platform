@@ -242,6 +242,27 @@ class NodeAgentInstallTest(unittest.TestCase):
             if node["kind"] == "agent":
                 self.assertEqual(node["agent"]["turn_timeout_seconds"], 0)
 
+    def test_fresh_install_is_bounded_without_limiting_an_existing_install(self):
+        self.run_install()
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertGreater(node["agent"]["turn_timeout_seconds"], 0)
+                del node["agent"]["turn_timeout_seconds"]
+        # A valid pre-feature installation omitted this optional setting in
+        # both the API and its installation manifest. Upgrading it must not
+        # silently start enforcing the new-install default.
+        saved = json.loads(self.manifest.read_text())
+        for node in saved["objects"]["workflow"]["spec"]["nodes"]:
+            if node["kind"] == "agent":
+                del node["agent"]["turn_timeout_seconds"]
+        self.manifest.write_text(json.dumps(saved))
+        self.api.writes.clear()
+        self.run_install("--upgrade")
+        self.assertEqual(self.api.writes, [])
+        for node in self.api.objects["workflows"][0]["nodes"]:
+            if node["kind"] == "agent":
+                self.assertEqual(node["agent"].get("turn_timeout_seconds", 0), 0)
+
     def test_product_e2e_keeps_product_failure_for_review_without_publish(self):
         self.run_install("--template", "product-e2e")
         graph = self.api.objects["workflows"][0]
