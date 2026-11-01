@@ -1,5 +1,10 @@
 import concurrent.futures
+import os
+import signal
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -81,6 +86,53 @@ class StoreTests(unittest.TestCase):
             self.store.event(db, "two", "native_started", {})
             self.store.event(db, "one", "native_finished", {})
         self.assertEqual(self.store.snapshot()["peak_native_processes"], 2)
+
+    def test_concurrency_change_is_explicit_and_refused_while_tasks_run(self):
+        self.store.set_concurrency(4)
+        self.assertEqual(Store(self.root).settings()["concurrency"], 4)
+        self.store.add_tasks([self.task("one")])
+        self.store.claim()
+        with self.assertRaises(ValueError):
+            self.store.set_concurrency(20)
+        self.assertEqual(self.store.settings()["concurrency"], 4)
+        self.store.finish("one", "failed", {"message": "preserved"})
+        self.store.set_concurrency(20)
+        self.assertEqual(self.store.settings()["concurrency"], 20)
+        with self.assertRaises(ValueError):
+            self.store.set_concurrency(21)
+
+    def test_resume_refuses_old_process_group_after_parent_has_exited(self):
+        parent = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time; time.sleep(20)'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)",
+            ],
+            start_new_session=True,
+        )
+        parent.wait(timeout=3)
+        self.store.add_tasks([self.task("one")])
+        self.store.claim()
+        self.store.execution(
+            "one",
+            pid=parent.pid,
+            thread_id="recorded-session",
+            worktree=str(self.root / "worktree"),
+            branch="agent-team/task-one-1",
+            base_commit="a" * 40,
+            finished=time.time(),
+            returncode=0,
+        )
+        self.store.finish("one", "failed", {"message": "parent exited without handoff"})
+        try:
+            with self.assertRaises(ValueError):
+                self.store.requeue("one", "Do not overlap with surviving descendants.")
+            self.assertEqual(self.store.get("one")["status"], "failed")
+        finally:
+            try:
+                os.killpg(parent.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
 
 
 if __name__ == "__main__":

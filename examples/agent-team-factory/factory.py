@@ -29,9 +29,14 @@ def main():
     plan.add_argument("--task-count", type=int, default=4)
     sub.add_parser("run")
     sub.add_parser("status")
+    concurrency = sub.add_parser("set-concurrency")
+    concurrency.add_argument("--limit", type=int, required=True)
     message = sub.add_parser("message")
     message.add_argument("--to", required=True)
     message.add_argument("--text", required=True)
+    resume = sub.add_parser("resume")
+    resume.add_argument("--task", required=True)
+    resume.add_argument("--message", required=True)
     integrate = sub.add_parser("integrate")
     integrate.add_argument("--task", required=True)
     serve = sub.add_parser("serve")
@@ -63,9 +68,16 @@ def main():
         result = {"initialized": True, "root": str(root)}
     elif args.command == "status":
         result = Store(args.root).snapshot()
+    elif args.command == "set-concurrency":
+        store = Store(args.root)
+        store.set_concurrency(args.limit)
+        result = {"concurrency": store.settings()["concurrency"]}
     elif args.command == "message":
         Store(args.root).message("user", args.to, args.text)
         result = {"accepted": True}
+    elif args.command == "resume":
+        Store(args.root).requeue(args.task, args.message)
+        result = {"accepted": True, "task": args.task, "next": "run"}
     elif args.command == "serve":
         from board import serve
 

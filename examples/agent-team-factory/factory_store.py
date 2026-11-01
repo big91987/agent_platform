@@ -2,6 +2,7 @@
 
 import contextlib
 import json
+import os
 import re
 import sqlite3
 import time
@@ -65,6 +66,94 @@ class Store:
         if not row:
             raise ValueError("initialize this factory first")
         return json.loads(row[0])
+
+    def set_concurrency(self, limit):
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError("concurrency must be an integer between 1 and 20")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if db.execute(
+                "SELECT count(*) FROM tasks WHERE status='running'"
+            ).fetchone()[0]:
+                raise ValueError(
+                    "finish or stop active tasks before changing concurrency"
+                )
+            row = db.execute("SELECT value FROM settings WHERE key='config'").fetchone()
+            if not row:
+                raise ValueError("initialize this factory first")
+            config = json.loads(row[0])
+            previous = config["concurrency"]
+            config["concurrency"] = limit
+            db.execute(
+                "UPDATE settings SET value=? WHERE key='config'", (json.dumps(config),)
+            )
+            self.event(
+                db,
+                None,
+                "concurrency_changed",
+                {"previous": previous, "current": limit},
+            )
+
+    def requeue(self, task_id, message):
+        if not isinstance(message, str) or not message.strip():
+            raise ValueError("explicit recovery requires a reason or new input")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
+            if not row or row["status"] not in ("failed", "blocked", "interrupted"):
+                raise ValueError(
+                    "only a failed, blocked or interrupted task can be explicitly resumed"
+                )
+            execution = json.loads(row["execution"])
+            if (
+                not all(
+                    execution.get(key)
+                    for key in (
+                        "thread_id",
+                        "worktree",
+                        "branch",
+                        "base_commit",
+                        "finished",
+                    )
+                )
+                or execution.get("returncode") is None
+                or execution.get("termination_error")
+            ):
+                raise ValueError(
+                    "native continuity or confirmed process exit is missing; refusing a replacement session"
+                )
+            if execution.get("pid"):
+                for check in (os.kill, os.killpg):
+                    try:
+                        check(execution["pid"], 0)
+                    except ProcessLookupError:
+                        continue
+                    except PermissionError as failure:
+                        raise ValueError(
+                            "cannot verify previous native process ownership"
+                        ) from failure
+                    raise ValueError(
+                        "previous native process or process group still exists; inspect before recovery"
+                    )
+            execution["resume"] = True
+            db.execute(
+                "UPDATE tasks SET status='pending', submission=NULL, result=NULL, execution=? WHERE id=?",
+                (json.dumps(execution), task_id),
+            )
+            db.execute(
+                "INSERT INTO messages(sender,recipient,body,created) VALUES ('user',?,?,?)",
+                (task_id, message, time.time()),
+            )
+            self.event(
+                db,
+                task_id,
+                "resume_requested",
+                {
+                    "previous_status": row["status"],
+                    "message": message,
+                    "attempt": row["attempt"],
+                },
+            )
 
     @staticmethod
     def validate_task(task):

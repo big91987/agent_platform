@@ -32,11 +32,13 @@ prefix='mcp_servers.agent_team_factory'
 server=json.loads(values[prefix+'.command'])
 server_args=json.loads(values[prefix+'.args'])
 task=server_args[server_args.index('--task')+1]
-print(json.dumps({'type':'thread.started','thread_id':'fixture-'+task}),flush=True)
+runtime=pathlib.Path(server_args[server_args.index('--root')+1])
+sid='replacement-thread' if 'resume' in args and (runtime/'fixture-replace-session').exists() else 'fixture-'+task
+print(json.dumps({'type':'thread.started','thread_id':sid}),flush=True)
 print(json.dumps({'type':'turn.started'}),flush=True)
 sys.stdin.read()
 time.sleep(0.3)
-if task=='missing-handoff': sys.exit(0)
+if task=='missing-handoff' and server_args[server_args.index('--attempt')+1]=='1': sys.exit(0)
 target=pathlib.Path(task+'.txt'); target.write_text('isolated executor fixture, not real Agent output')
 requests=[{'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2024-11-05'}},{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'handoff','arguments':{'status':'completed','message':'isolated protocol fixture','artifacts':[str(target)]}}}]
 p=subprocess.run([server,*server_args],input='\\n'.join(map(json.dumps,requests))+'\\n',capture_output=True,text=True)
@@ -98,6 +100,34 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':1,'output_toke
             Factory(self.root).run()
         self.assertEqual(self.store.get("later")["status"], "pending")
         self.assertEqual(self.store.get("later")["attempt"], 0)
+
+    def test_explicit_resume_keeps_worktree_thread_and_original_native_evidence(self):
+        self.store.add_tasks([self.task("missing-handoff")])
+        Factory(self.root).run()
+        old = self.store.get("missing-handoff")
+        previous_events = Path(old["execution"]["native_directory"]) / "events.jsonl"
+        original = previous_events.read_bytes()
+        self.store.requeue(
+            "missing-handoff", "Continue the preserved task after its known exit."
+        )
+        Factory(self.root).run()
+        task = self.store.get("missing-handoff")
+        self.assertEqual(task["status"], "ready")
+        self.assertEqual(task["attempt"], 2)
+        self.assertEqual(task["execution"]["worktree"], old["execution"]["worktree"])
+        self.assertEqual(task["execution"]["thread_id"], old["execution"]["thread_id"])
+        self.assertEqual(previous_events.read_bytes(), original)
+
+    def test_resume_rejects_replacement_native_session(self):
+        self.store.add_tasks([self.task("missing-handoff")])
+        Factory(self.root).run()
+        original = self.store.get("missing-handoff")["execution"]["thread_id"]
+        (self.root / "fixture-replace-session").touch()
+        self.store.requeue("missing-handoff", "Resume the existing session only.")
+        Factory(self.root).run()
+        task = self.store.get("missing-handoff")
+        self.assertEqual(task["status"], "failed")
+        self.assertEqual(task["execution"]["thread_id"], original)
 
 
 if __name__ == "__main__":

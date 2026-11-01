@@ -11,7 +11,7 @@
 - 测试仓汇合分支：`agent-team/experiment`。任务分支统一为 `agent-team/task-<task-id>-<attempt>`，worktree 目录含 `agent-team` 标记。
 - 任务和执行状态分开记录；原生进程退出不单独代表任务完成。提交结果必须来自 Worker，协调者不代写产品实现或代 QA 判通过。
 - Worker 不负责提交、推送、合并、部署或改变其他任务。控制器只提交该任务的允许路径；合并目标固定为实验分支，拒绝 main/master。
-- 不绕过原生审批或沙箱。权限拒绝、模型限额、超时、中断和未知结果保留为失败/阻塞证据，不自动重复执行。
+- 保留原生任务沙箱，不全局批准 Shell 或外部工具。`exec` 非交互模式无法展示审批，因此仅为本例已授权、绑定当前任务的 `get_task`、`send_message`、`handoff` 配置逐工具预授权；不启用 auto_review。其他权限拒绝、模型限额、超时、中断和未知结果保留为失败/阻塞证据，不自动重复执行。
 - 先验证小规模真实并发，再逐级提高。配置支持最多 20 个并发执行位置，配置值不等于实测容量。
 
 ## 最小组成
@@ -57,13 +57,17 @@ python3 examples/agent-team-factory/factory.py --root /private/runtime plan \
   --request-file /private/request.md --task-count 4
 python3 examples/agent-team-factory/factory.py --root /private/runtime run
 python3 examples/agent-team-factory/factory.py --root /private/runtime status
+python3 examples/agent-team-factory/factory.py --root /private/runtime set-concurrency --limit 8
+python3 examples/agent-team-factory/factory.py --root /private/runtime resume --task TASK_ID --message '已处理的原因与新的输入'
 python3 examples/agent-team-factory/factory.py --root /private/runtime serve --port 8977
 python3 examples/agent-team-factory/factory.py --root /private/runtime integrate --task TASK_ID
 ```
 
 `run` 的退出表示本批可执行任务已返回，不代表产品通过。`ready` 只是 Worker 已交接、原生进程退出、控制器已检查范围并保存候选；`integrate` 是显式选择后的实验分支汇合，不包含产品验收或部署。依赖等待前置任务实际合入实验分支。
 
-`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。本版尚未提供完整的显式原生会话接续或冲突解决入口：冲突保留现场、阻止新任务领取，不能把“保留并拒绝重试”描述成恢复已经完成。通过 `message --to TASK_ID --text '补充说明'` 可留存输入，但不会单独启动 Agent。
+`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。`resume` 仅接受已确认原生进程退出、保留会话及原工作区的失败/阻塞/中断任务，下一次 `run` 从同一原生会话和工作区接续，旧日志不改写；缺会话、PID仍在、提交已改变或终止结果未知则拒绝。恢复有隔离协议回归，真实原生接续须以本次实际回执为准。
+
+冲突解决及崩溃后不确定进程的核验入口仍未完成：冲突保留现场、阻止新任务领取，不能把“保留并拒绝重试”描述成完整恢复。通过 `message --to TASK_ID --text '补充说明'` 可留存输入，但不会单独启动 Agent。`set-concurrency` 只在无运行任务时允许显式修改，并记录变更。
 
 部署到其他机器时，从已提交源码生成归档，记录精确提交和 SHA-256，再调用本目录 `install.py --archive ... --root ... --revision ... --sha256 ...`。安装到不可变的 `releases/<revision>/`，从返回的 entry 调用；升级使用新提交，不覆盖运行中的源文件和 MCP 工具。
 

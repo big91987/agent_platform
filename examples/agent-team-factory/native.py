@@ -29,8 +29,6 @@ class Native:
             "-C",
             str(workspace),
             "-c",
-            'approval_policy="on-request"',
-            "-c",
             'sandbox_mode="workspace-write"'
             if task and task["write_paths"]
             else 'sandbox_mode="read-only"',
@@ -54,7 +52,15 @@ class Native:
                 f"{prefix}.command={json.dumps(sys.executable)}",
                 "-c",
                 f"{prefix}.args={json.dumps(server_args)}",
+                "-c",
+                f'{prefix}.default_tools_approval_mode="prompt"',
+                "-c",
+                f'{prefix}.enabled_tools=["get_task","send_message","handoff"]',
             ]
+            # exec cannot prompt. Only these task-bound local operations are
+            # pre-authorized; shell and other MCP permissions are unchanged.
+            for tool in ("get_task", "send_message", "handoff"):
+                argv += ["-c", f'{prefix}.tools.{tool}.approval_mode="approve"']
         argv += ["exec"]
         if thread_id:
             argv += ["resume", thread_id]
@@ -153,7 +159,9 @@ class Native:
                         pending += data
                         while b"\n" in pending:
                             raw, pending = pending.split(b"\n", 1)
-                            self.observe(raw, task_id, status)
+                            self.observe(
+                                raw, task_id, status, expected_thread=thread_id
+                            )
                 process.wait(timeout=10)
             except Exception as failure:
                 reason = reason or "execution_error"
@@ -163,14 +171,18 @@ class Native:
                 if not process.stdin.closed:
                     process.stdin.close()
                 process.stdout.close()
-                if not termination_sent and (reason or process.poll() is None):
+                if not termination_sent:
                     try:
                         self.terminate(process)
                     except (OSError, subprocess.TimeoutExpired) as failure:
                         status["termination_error"] = str(failure)
                         self.stop.set()
             if pending:
-                self.observe(pending, task_id, status)
+                try:
+                    self.observe(pending, task_id, status, expected_thread=thread_id)
+                except ValueError as failure:
+                    reason = reason or "execution_error"
+                    status["error"] = str(failure)
             status.update(
                 returncode=process.returncode, finished=time.time(), reason=reason
             )
@@ -186,13 +198,21 @@ class Native:
             )
         return status
 
-    def observe(self, raw, task_id, status):
+    def observe(self, raw, task_id, status, expected_thread=None):
         try:
             event = json.loads(raw)
         except (ValueError, UnicodeDecodeError):
             return
         kind = event.get("type")
         if kind == "thread.started":
+            if expected_thread and event.get("thread_id") != expected_thread:
+                status["session_mismatch"] = {
+                    "expected": expected_thread,
+                    "observed": event.get("thread_id"),
+                }
+                raise ValueError(
+                    "native resumed a different session; original session ID preserved"
+                )
             status["thread_id"] = event.get("thread_id")
             if task_id:
                 self.store.execution(task_id, thread_id=status["thread_id"])

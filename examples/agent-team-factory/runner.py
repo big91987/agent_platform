@@ -76,7 +76,26 @@ class Factory:
 
     def execute(self, task):
         try:
-            work = self.workspace.prepare(task["id"], task["attempt"])
+            thread_id = None
+            if task["execution"].get("resume"):
+                from git_workspace import git
+
+                previous = task["execution"]
+                work = {
+                    "path": Path(previous["worktree"]),
+                    "branch": previous["branch"],
+                    "base": previous["base_commit"],
+                }
+                if (
+                    git(work["path"], "branch", "--show-current") != work["branch"]
+                    or git(work["path"], "rev-parse", "HEAD") != work["base"]
+                ):
+                    raise ValueError(
+                        "preserved worktree has a different branch or commit; inspect rather than replay"
+                    )
+                thread_id = previous["thread_id"]
+            else:
+                work = self.workspace.prepare(task["id"], task["attempt"])
             self.store.execution(
                 task["id"],
                 worktree=str(work["path"]),
@@ -103,7 +122,11 @@ class Factory:
 - handoff 成功后结束本轮，不再修改文件。正常退出不是自动验收；控制器还会检查范围并提交候选。
 """
             result = Native(self.store, self.stop).run(
-                f"{task['id']}-{task['attempt']}", work["path"], prompt, task=task
+                f"{task['id']}-{task['attempt']}",
+                work["path"],
+                prompt,
+                task=task,
+                thread_id=thread_id,
             )
             if result["reason"] == "interrupted":
                 self.store.finish(
