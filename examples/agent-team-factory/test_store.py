@@ -1,4 +1,5 @@
 import concurrent.futures
+import json
 import os
 import signal
 import subprocess
@@ -116,6 +117,28 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.store.snapshot()["tasks"], [])
         with self.assertRaises(ValueError):
             self.store.add_tasks([self.task("one"), self.task("one")])
+
+    def test_system_message_identities_cannot_be_assigned_to_tasks(self):
+        for reserved in ("user", "leader"):
+            with self.assertRaises(ValueError):
+                self.store.add_tasks([self.task(reserved)])
+        self.assertEqual(self.store.snapshot()["tasks"], [])
+
+    def test_ambiguous_existing_sender_is_rejected_instead_of_trusted(self):
+        self.store.add_tasks([self.task("victim")])
+        # Isolated fixture of an older installation; not a production migration.
+        with self.store.connect() as db:
+            db.execute(
+                "INSERT INTO tasks(id,definition,created) VALUES (?,?,?)",
+                ("user", json.dumps(self.task("user")), 1),
+            )
+            db.execute(
+                "INSERT INTO messages(sender,recipient,body,created) VALUES ('user','victim','ambiguous old peer text',1)"
+            )
+        with self.assertRaises(ValueError):
+            self.store.user_input("victim")
+        with self.assertRaises(ValueError):
+            self.store.message("user", "victim", "must not add ambiguous input")
 
     def test_pending_dependency_revision_is_audited_and_started_tasks_are_frozen(self):
         self.store.add_tasks([self.task("one"), self.task("two", ["one"])])

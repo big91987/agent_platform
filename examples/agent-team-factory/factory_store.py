@@ -149,6 +149,7 @@ class Store:
             raise ValueError("explicit recovery requires a reason or new input")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            self.validate_message_identities(db)
             row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
             if not row or row["status"] not in (
                 "failed",
@@ -226,6 +227,10 @@ class Store:
         ):
             raise ValueError(
                 "task id must be a lowercase slug of at most 64 characters"
+            )
+        if task["id"] in ("user", "leader"):
+            raise ValueError(
+                "user and leader are reserved message identities, not task IDs"
             )
         for field in ("title", "instructions"):
             if not isinstance(task.get(field), str) or not task[field].strip():
@@ -458,6 +463,8 @@ class Store:
         if not isinstance(body, str) or not body.strip() or len(body) > 50000:
             raise ValueError("message must contain between 1 and 50000 characters")
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self.validate_message_identities(db)
             known = {row[0] for row in db.execute("SELECT id FROM tasks")} | {
                 "leader",
                 "user",
@@ -467,6 +474,27 @@ class Store:
             db.execute(
                 "INSERT INTO messages(sender, recipient, body, created) VALUES (?, ?, ?, ?)",
                 (sender, recipient, body, time.time()),
+            )
+
+    def user_input(self, task_id):
+        with self.connect() as db:
+            db.execute("BEGIN")
+            self.validate_message_identities(db)
+            return [
+                dict(row)
+                for row in db.execute(
+                    "SELECT seq, body, created FROM messages WHERE sender='user' AND recipient=? ORDER BY seq",
+                    (task_id,),
+                )
+            ]
+
+    @staticmethod
+    def validate_message_identities(db):
+        if db.execute(
+            "SELECT id FROM tasks WHERE id IN ('user','leader') LIMIT 1"
+        ).fetchone():
+            raise ValueError(
+                "existing task IDs conflict with system identities; message origin is ambiguous"
             )
 
     def snapshot(self):

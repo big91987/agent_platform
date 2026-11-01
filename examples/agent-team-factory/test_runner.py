@@ -42,7 +42,7 @@ runtime=pathlib.Path(server_args[server_args.index('--root')+1])
 sid='replacement-thread' if 'resume' in args and (runtime/'fixture-replace-session').exists() else 'fixture-'+task
 print(json.dumps({'type':'thread.started','thread_id':sid}),flush=True)
 print(json.dumps({'type':'turn.started'}),flush=True)
-sys.stdin.read()
+(runtime/('input-'+task+'-'+server_args[server_args.index('--attempt')+1]+'.txt')).write_text(sys.stdin.read())
 time.sleep(0.3)
 if task=='missing-handoff' and server_args[server_args.index('--attempt')+1]=='1': sys.exit(0)
 target=pathlib.Path(task+'.txt'); target.write_text('isolated executor fixture, not real Agent output')
@@ -96,6 +96,32 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':1,'output_toke
         self.assertIn("without a task handoff", result["tasks"][0]["result"]["message"])
         Factory(self.root).run()
         self.assertEqual(self.store.get("missing-handoff")["attempt"], 1)
+
+    def test_trusted_recovery_input_arrives_before_mcp_without_foreign_or_peer_input(
+        self,
+    ):
+        other = self.task("other")
+        other["depends_on"] = ["missing-handoff"]
+        self.store.add_tasks([self.task("missing-handoff"), other])
+        self.store.message(
+            "user", "missing-handoff", "Find the deferred task tools first."
+        )
+        self.store.message("user", "other", "Unrelated private input.")
+        self.store.message(
+            "other", "missing-handoff", "Peer discussion is not user authority."
+        )
+        Factory(self.root).run()
+        first = (self.root / "input-missing-handoff-1.txt").read_text()
+        self.assertIn("Find the deferred task tools first.", first)
+        self.assertNotIn("Unrelated private input.", first)
+        self.assertNotIn("Peer discussion is not user authority.", first)
+        self.store.requeue(
+            "missing-handoff", "This is the new explicit recovery input."
+        )
+        Factory(self.root).run()
+        second = (self.root / "input-missing-handoff-2.txt").read_text()
+        self.assertIn("This is the new explicit recovery input.", second)
+        self.assertEqual(self.store.get("missing-handoff")["status"], "ready")
 
     def test_dirty_integration_target_does_not_consume_pending_task(self):
         self.store.add_tasks([self.task("later")])

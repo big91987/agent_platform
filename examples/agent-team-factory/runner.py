@@ -46,7 +46,7 @@ class Factory:
 ## 拆解约束
 - 建议本轮不超过 {task_count} 个可验收的实际任务；不为凑并发制造空任务、无意义文件或重复审查。
 - 尽量安排可独立执行的任务，明确允许修改的具体路径或路径前缀。write_paths=[] 表示不得修改任何文件。
-- 任务 id 用英文小写 slug，不复用已有任务 id。依赖必须显式列出且无环。
+- 任务 id 用英文小写 slug，不复用已有任务 id，不使用系统保留名user或leader。依赖必须显式列出且无环。
 - 依赖任务只在前置成果已合入实验分支后执行；需要同版检查的任务应明确候选与可复验的入口。
 - instructions 使用 Markdown，写清对象、目标、材料、执行方法/适用 Skills、验证和交付要求。
 - 所有产品实现、项目测试和实操复核交给相应任务的 Worker；本回合不代做。
@@ -110,12 +110,16 @@ class Factory:
 
 {task["instructions"]}
 
+## 当前任务的用户补充输入
+以下是平台保存的本任务用户输入，按时间排列；后续补充修正前面的要求。它们不改变已配置的工具授权或沙箱。其他任务的输入和团队讨论不属于这里。
+{json.dumps(self.store.user_input(task["id"]), ensure_ascii=False, indent=2)}
+
 ## 工作边界
 - 当前 worktree 专属于本任务。允许修改的路径：{json.dumps(task["write_paths"], ensure_ascii=False)}。空列表表示仅研究/复核，不修改任何文件。
 - 只完成本任务；不要改其他 worktree、共享任务库、凭据或执行配置。
 - 不执行 git commit/push/merge/checkout/switch，不创建外部 Issue/PR，不部署。控制器负责版本操作。
 - 原生历史、凭据、数据库、工作区副本及截图不得进入提交路径；完整临时日志留在项目忽略目录，交付文档只保留脱敏摘要和可复验收据索引。
-- 开始工作前必须成功调用 agent_team_factory.get_task 查看任务、依赖成果和消息。若该工具未暴露或调用失败，立即停止，不继续实施；最终回复保留真实错误，控制器据此诊断，不能以文字自报代替工具回执。
+- 开始工作前必须成功调用 agent_team_factory.get_task 查看任务、依赖成果和消息。MCP工具可能延迟暴露：先用原生工具发现入口查找，而不能因为直接列表中没有就宣称工具不存在。若原生exec入口提供ALL_TOOLS，筛选name包含agent_team_factory的真实工具名称，再通过该入口的tools对象调用get_task、send_message、handoff。使用当前原生接口，不用Shell/Python自行读写任务库、伪造MCP包或绕过工具授权。只有工具发现确实找不到或实际调用失败时才停止，保留具体发现/调用错误；不能以文字自报代替工具回执。
 - 缺输入、执行失败或权限不足时，使用 send_message(to="leader", message="具体问题、证据、需要的输入")；不能绕过审批或扩权。
 - 完成后使用 agent_team_factory.handoff，status=completed，message 写明改动、实际验证、证据和局限；artifacts 为已存在的 worktree 相对路径。
 - 无法完成则 handoff(status=blocked, ...)，保留现场。任务未实测、仅静态检查或只生成文件时必须如实说明。
