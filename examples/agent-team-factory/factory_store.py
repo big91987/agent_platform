@@ -235,6 +235,8 @@ class Store:
                 not isinstance(x, str) for x in task[field]
             ):
                 raise ValueError(f"task {field} must be an array of strings")
+        if len(task["depends_on"]) != len(set(task["depends_on"])):
+            raise ValueError("duplicate task dependencies")
         for pattern in task["write_paths"]:
             if (
                 not pattern
@@ -244,6 +246,56 @@ class Store:
                 or "\\" in pattern
             ):
                 raise ValueError("write_paths must stay inside the task worktree")
+
+    @staticmethod
+    def validate_dependencies(tasks):
+        visiting, visited = set(), set()
+
+        def visit(task_id):
+            if task_id not in tasks or task_id in visiting:
+                raise ValueError("unknown or cyclic task dependency")
+            if task_id in visited:
+                return
+            visiting.add(task_id)
+            for dependency in tasks[task_id]["depends_on"]:
+                visit(dependency)
+            visiting.remove(task_id)
+            visited.add(task_id)
+
+        for task_id in tasks:
+            visit(task_id)
+
+    def set_dependencies(self, task_id, depends_on, reason):
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("dependency revision requires an explicit reason")
+        with self.control(), self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            rows = list(db.execute("SELECT * FROM tasks"))
+            row = next((row for row in rows if row["id"] == task_id), None)
+            if not row or row["status"] != "pending" or row["attempt"] != 0:
+                raise ValueError(
+                    "only an unstarted pending task can change dependencies"
+                )
+            tasks = {row["id"]: json.loads(row["definition"]) for row in rows}
+            task = tasks[task_id]
+            previous = task["depends_on"]
+            task["depends_on"] = depends_on
+            self.validate_task(task)
+            self.validate_dependencies(tasks)
+            db.execute(
+                "UPDATE tasks SET definition=? WHERE id=?",
+                (json.dumps(task), task_id),
+            )
+            self.event(
+                db,
+                task_id,
+                "dependencies_changed",
+                {
+                    "previous": previous,
+                    "current": depends_on,
+                    "reason": reason,
+                },
+            )
 
     def add_tasks(self, tasks):
         if not isinstance(tasks, list) or not tasks:
@@ -264,21 +316,7 @@ class Store:
                     "task already exists; existing tasks are not overwritten"
                 )
             combined = {**existing, **{t["id"]: t for t in tasks}}
-            visiting, visited = set(), set()
-
-            def visit(task_id):
-                if task_id not in combined or task_id in visiting:
-                    raise ValueError("unknown or cyclic task dependency")
-                if task_id in visited:
-                    return
-                visiting.add(task_id)
-                for dependency in combined[task_id]["depends_on"]:
-                    visit(dependency)
-                visiting.remove(task_id)
-                visited.add(task_id)
-
-            for task_id in combined:
-                visit(task_id)
+            self.validate_dependencies(combined)
             for task in tasks:
                 db.execute(
                     "INSERT INTO tasks(id, definition, created) VALUES (?, ?, ?)",

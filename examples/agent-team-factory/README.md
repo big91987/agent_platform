@@ -77,6 +77,8 @@ python3 examples/agent-team-factory/factory.py --root /private/runtime integrate
 
 冲突解决及崩溃后不确定进程的核验入口仍未完成：冲突保留现场、阻止新任务领取，不能把“保留并拒绝重试”描述成完整恢复。通过 `message --to TASK_ID --text '补充说明'` 可留存输入，但不会单独启动 Agent。`set-concurrency` 只在无运行任务时允许显式修改，并记录变更。
 
+发现任务依赖划错时，只能在任务从未领取且仍 pending 时修正；已经执行或恢复过的任务定义保持冻结。管理员使用 `set-dependencies --task TASK_ID --depends-on-json '["INPUT_TASK"]' --reason '具体修正依据'` 显式替换依赖；清空须明确传 `[]`。入口与调度共用控制器锁，拒绝未知任务、重复依赖及循环，保留变更前后与原因。修正排队关系不代表计划评审或产品验收通过；实际执行仍须满足该任务的业务门槛。
+
 部署到其他机器时，从已提交源码生成归档，记录精确提交和 SHA-256，再调用本目录 `install.py --archive ... --root ... --revision ... --sha256 ...`。安装到不可变的 `releases/<revision>/`，从返回的 entry 调用；升级使用新提交，不覆盖运行中的源文件和 MCP 工具。
 
 ## 验证

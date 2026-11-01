@@ -34,6 +34,10 @@ def main():
     execution.add_argument("--network", choices=["enabled", "disabled"], required=True)
     concurrency = sub.add_parser("set-concurrency")
     concurrency.add_argument("--limit", type=int, required=True)
+    dependencies = sub.add_parser("set-dependencies")
+    dependencies.add_argument("--task", required=True)
+    dependencies.add_argument("--depends-on-json", required=True)
+    dependencies.add_argument("--reason", required=True)
     message = sub.add_parser("message")
     message.add_argument("--to", required=True)
     message.add_argument("--text", required=True)
@@ -85,6 +89,11 @@ def main():
     elif args.command == "message":
         Store(args.root).message("user", args.to, args.text)
         result = {"accepted": True}
+    elif args.command == "set-dependencies":
+        Store(args.root).set_dependencies(
+            args.task, json.loads(args.depends_on_json), args.reason
+        )
+        result = {"accepted": True, "task": args.task}
     elif args.command == "resume":
         Store(args.root).requeue(args.task, args.message)
         result = {"accepted": True, "task": args.task, "next": "run"}

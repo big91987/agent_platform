@@ -117,6 +117,35 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.add_tasks([self.task("one"), self.task("one")])
 
+    def test_pending_dependency_revision_is_audited_and_started_tasks_are_frozen(self):
+        self.store.add_tasks([self.task("one"), self.task("two", ["one"])])
+        self.store.set_dependencies(
+            "two", [], "independent work must not wait on an unrelated gate"
+        )
+        self.assertEqual(self.store.get("two")["depends_on"], [])
+        event = self.store.snapshot()["events"][-1]
+        self.assertEqual(event["kind"], "dependencies_changed")
+        self.assertEqual(event["detail"]["previous"], ["one"])
+        self.store.set_dependencies("two", ["one"], "restore a real input dependency")
+        with self.assertRaises(ValueError):
+            self.store.set_dependencies("one", ["two"], "cycle is invalid")
+        with self.assertRaises(ValueError):
+            self.store.set_dependencies("two", ["missing"], "unknown input is invalid")
+        self.assertEqual(self.store.get("one")["depends_on"], [])
+        self.assertEqual(self.store.get("two")["depends_on"], ["one"])
+        for invalid in (None, "one", ["one", "one"], [1]):
+            with self.assertRaises(ValueError):
+                self.store.set_dependencies("two", invalid, "invalid input")
+        with self.assertRaises(ValueError):
+            self.store.set_dependencies("two", [], " ")
+        with self.store.control(), self.assertRaises(ValueError):
+            Store(self.root).set_dependencies("two", [], "controller is busy")
+        self.assertEqual(self.store.get("two")["depends_on"], ["one"])
+        self.store.claim()
+        with self.assertRaises(ValueError):
+            self.store.set_dependencies("one", [], "cannot change a frozen execution")
+        self.assertEqual(self.store.get("one")["attempt"], 1)
+
     def test_execution_configuration_is_persistent_and_cannot_change_active_task(self):
         self.store.configure_execution({"PATH": "/pinned/bin:/usr/bin"}, True)
         self.assertEqual(
