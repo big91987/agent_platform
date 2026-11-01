@@ -97,6 +97,19 @@ def server(transport, port):
             if self.command == "GET" and self.path == "/":
                 body = Path(__file__).with_name("team.html").read_bytes()
                 status, kind = 200, "text/html; charset=utf-8"
+            elif self.command == "GET" and self.path == "/api/catalog":
+                from team_mcp import LEADER, WORKER
+                from team_store import SKILLS
+
+                status, kind = 200, "application/json; charset=utf-8"
+                body = json.dumps(
+                    {
+                        "leader_tools": LEADER,
+                        "worker_tools": WORKER,
+                        "skills": list(SKILLS),
+                    },
+                    ensure_ascii=False,
+                ).encode()
             elif self.path.startswith("/api/"):
                 try:
                     size = int(self.headers.get("Content-Length", "0"))

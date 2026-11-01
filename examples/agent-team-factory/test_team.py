@@ -174,6 +174,30 @@ class TeamTests(unittest.TestCase):
         self.assertEqual(git(self.repo, "status", "--porcelain"), "")
         self.assertFalse((self.store.root / "integration-pending.json").exists())
 
+    def test_inspection_catalog_uses_same_role_tools_without_dispatching(self):
+        from team_proxy import server
+        from team_store import SKILLS
+
+        class NoDispatch:
+            def request(self, *_):
+                raise AssertionError("Catalog inspection must not reach execution")
+
+        instance = server(NoDispatch(), 0)
+        thread = threading.Thread(target=instance.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{instance.server_port}/api/catalog"
+            with urlopen(url) as response:
+                catalog = json.load(response)
+            self.assertEqual(catalog["leader_tools"], LEADER)
+            self.assertEqual(catalog["worker_tools"], WORKER)
+            self.assertEqual(catalog["skills"], list(SKILLS))
+            self.assertEqual(self.store.snapshot()["turns"], [])
+        finally:
+            instance.shutdown()
+            instance.server_close()
+            thread.join()
+
     def test_private_live_api_requires_key_and_does_not_invent_requests(self):
         instance = serve(self.team, "127.0.0.1", 0, "fixture-token")
         thread = threading.Thread(target=instance.serve_forever, daemon=True)
