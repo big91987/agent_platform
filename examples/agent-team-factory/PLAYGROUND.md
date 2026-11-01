@@ -13,19 +13,24 @@ python3 playground.py --root /private/team-runtime bootstrap --repository /priva
 python3 playground.py --root /private/team-runtime init \
   --repository /private/product-repo --codex /pinned/codex --workers 3 \
   --model gpt-5.6-sol --env-file /private/non-secret-env.json
-python3 playground.py --root /private/team-runtime serve --bind 127.0.0.1 --port 8991
+python3 playground.py --root /private/team-runtime serve --port 8991
 ```
 
 `non-secret-env.json`仅包含已准备好的PATH、GOTOOLCHAIN、GOWORK等执行环境，不放凭据。默认原生执行上限1800秒，可写Worker显式允许测试网络并保持工作区文件沙箱，Leader为只读仓库。权限配置沿用原生执行内核，只有本例绑定身份的团队工具预授权。
 
-网页由loopback代理提供：
+网页与执行API均只绑定loopback。当前112通过已有受信G112会话接入，不增加LAN或公网监听。先在专属G112 tmux窗口运行：
 
 ```sh
-python3 team_proxy.py --upstream http://127.0.0.1:8991 \
-  --key-file /private/team-runtime/http-key --port 8990
+python3 team_relay.py --root /private/team-runtime --port 8991
 ```
 
-打开`http://127.0.0.1:8990/`。页面与API实时连接，不是导出快照。跨机时使用已有受信通道或可达的私有执行机地址，API必须保留随机访问密钥；代理仅绑定loopback并检查Host/Origin，密钥只在代理和执行服务之间传递，不进入浏览器或URL。不对公网开放本原型。
+在本机运行：
+
+```sh
+python3 team_proxy.py --tmux-target YOUR_DEDICATED_G112_PANE --port 8990
+```
+
+打开`http://127.0.0.1:8990/`。页面实时连接执行状态，不是快照。独立终端通道使用带请求标识的压缩分帧与逐帧确认，避免大输入或轨迹超过终端行/滚动缓冲限制。访问密钥只保留在执行机，代理检查本机Host/Origin，不进入浏览器或URL。未知POST回执不会自动重放。专属relay窗口不要混用Shell命令；连接中断时先核状态，不盲目重复操作。
 
 ## 使用
 

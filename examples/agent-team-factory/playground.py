@@ -29,7 +29,6 @@ def main():
         "--env-file", required=True, help="Non-secret execution environment JSON"
     )
     start = sub.add_parser("serve")
-    start.add_argument("--bind", default="127.0.0.1")
     start.add_argument("--port", type=int, default=8991)
     sub.add_parser("status")
     args = parser.parse_args()
@@ -101,7 +100,7 @@ def main():
 
         team = Team(args.root)
         instance = serve(
-            team, args.bind, args.port, (store.root / "http-key").read_text().strip()
+            team, "127.0.0.1", args.port, (store.root / "http-key").read_text().strip()
         )
         team.start()
 
@@ -114,7 +113,7 @@ def main():
         signal.signal(signal.SIGTERM, stop)
         signal.signal(signal.SIGINT, stop)
         print(
-            f"Agent Team prototype API listening on {args.bind}:{args.port}", flush=True
+            f"Agent Team prototype API listening on 127.0.0.1:{args.port}", flush=True
         )
         try:
             instance.serve_forever()

@@ -2,6 +2,7 @@
 
 import contextlib
 import json
+import os
 import sqlite3
 import time
 import uuid
@@ -182,7 +183,7 @@ class TeamStore:
                     (time.time(), request_id),
                 )
             self.event(db, sender, "message_sent", {"recipient": recipient}, request_id)
-            if recipient == "leader":
+            if recipient == "leader" or sender.startswith("worker-"):
                 self.wake(db)
             return {"saved": True}
 
@@ -492,5 +493,17 @@ class TeamStore:
             actor = db.execute("SELECT * FROM actors WHERE id='leader'").fetchone()
             if actor["active_turn"]:
                 raise ValueError("Leader还在执行")
+            execution = json.loads(actor["execution"])
+            if execution.get("termination_error"):
+                raise ValueError("原生进程终止结果未确认，请先核验现场")
+            if execution.get("pid"):
+                try:
+                    os.killpg(execution["pid"], 0)
+                except ProcessLookupError:
+                    pass
+                except PermissionError as error:
+                    raise ValueError("无法核验原进程组，拒绝重复启动") from error
+                else:
+                    raise ValueError("原生进程组仍存在，拒绝重复启动")
             db.execute("UPDATE actors SET status='idle',error='' WHERE id='leader'")
             self.wake(db)

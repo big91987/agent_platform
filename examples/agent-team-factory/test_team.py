@@ -1,19 +1,22 @@
 """Isolated infrastructure fixtures only; never submit to the user's playground."""
 
+import base64
 import concurrent.futures
 import json
+import secrets
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+import zlib
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from git_workspace import git
 from native import Native
-from team_http import serve
+from team_http import serve, turn_data
 from team_mcp import LEADER, WORKER, validate
 from team_runtime import Team
 from team_store import TeamStore
@@ -109,6 +112,20 @@ class TeamTests(unittest.TestCase):
             )
         )
 
+    def test_peer_message_also_wakes_leader_to_coordinate_idle_consumers(self):
+        req = self.request()
+        turn = self.store.claim_leader()
+        self.store.finish_turn(turn, {"returncode": 0}, "fixture")
+        self.assertIsNone(self.store.claim_leader())
+        self.store.message("worker-1", "worker-2", "fixture collaboration", req)
+        self.assertIsNotNone(self.store.claim_leader())
+
+    def test_manual_continuation_refuses_uncertain_native_termination(self):
+        self.request()
+        self.store.execution("leader", termination_error="isolated uncertainty fixture")
+        with self.assertRaises(ValueError):
+            self.store.continue_leader()
+
     def test_role_scope_extra_identity_and_expired_turn_are_rejected(self):
         req = self.request()
         self.task(req, "one")
@@ -175,6 +192,77 @@ class TeamTests(unittest.TestCase):
             instance.server_close()
             thread.join()
 
+    def test_stdio_relay_preserves_multiframe_request_and_response(self):
+        instance = serve(self.team, "127.0.0.1", 0, "fixture-token")
+        thread = threading.Thread(target=instance.serve_forever, daemon=True)
+        thread.start()
+        (self.store.root / "http-key").write_text("fixture-token")
+        p = subprocess.Popen(
+            [
+                sys.executable,
+                str(Path(__file__).with_name("team_relay.py")),
+                "--root",
+                str(self.store.root),
+                "--port",
+                str(instance.server_port),
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            self.assertEqual(p.stdout.readline().strip(), "TEAM_RELAY_READY")
+            body = "中" * 20000 + secrets.token_hex(2000)
+            data = base64.b64encode(
+                zlib.compress(
+                    json.dumps(
+                        {
+                            "method": "POST",
+                            "path": "/api/requests",
+                            "body": {"text": body, "client_id": "relay-fixture"},
+                        }
+                    ).encode()
+                )
+            ).decode()
+            parts = [data[i : i + 2000] for i in range(0, len(data), 2000)]
+            nonce = "a" * 32
+            for n, part in enumerate(parts):
+                p.stdin.write(
+                    json.dumps(
+                        {"id": nonce, "index": n, "parts": len(parts), "data": part}
+                    )
+                    + "\n"
+                )
+                p.stdin.flush()
+                self.assertEqual(
+                    p.stdout.readline().strip(), f"TEAM_IN {nonce} {n} END"
+                )
+            output = bytearray()
+            n = 0
+            while True:
+                frame = p.stdout.readline().split()
+                self.assertEqual(frame[:3], ["TEAM_DATA", nonce, str(n)])
+                output.extend(base64.b64decode(frame[4]))
+                if n + 1 == int(frame[3]):
+                    break
+                n += 1
+                p.stdin.write(json.dumps({"id": nonce, "part": n}) + "\n")
+                p.stdin.flush()
+            reply = json.loads(zlib.decompress(output))
+            self.assertEqual(reply["status"], 201)
+            self.assertEqual(reply["body"]["body"], body)
+            self.assertNotIn("fixture-token", str(reply))
+            self.assertGreater(n, 0)
+        finally:
+            p.stdin.close()
+            p.wait(timeout=5)
+            p.stdout.close()
+            p.stderr.close()
+            instance.shutdown()
+            instance.server_close()
+            thread.join()
+
     def test_native_bridge_scopes_custom_tools_without_enlarging_shell_permissions(
         self,
     ):
@@ -211,6 +299,10 @@ class TeamTests(unittest.TestCase):
             argv,
         )
         self.assertFalse(any("dangerously" in x for x in argv))
+        trace = turn_data(self.team, turn)
+        self.assertEqual(trace["input"], "isolated protocol fixture")
+        self.assertEqual(trace["invocation"]["cwd"], str(self.repo))
+        self.assertTrue(trace["events"])
 
     def test_real_stdio_endpoint_keeps_worker_scope_and_checks_current_turn(self):
         req = self.request()

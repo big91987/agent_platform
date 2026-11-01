@@ -19,6 +19,15 @@ def turn_data(team, turn_id):
         raise ValueError("执行轮次不存在")
     directory = team.root / "native" / turn_id
     out = {"turn": turn, "input": "", "events": [], "stderr": ""}
+    if (directory / "invocation.json").is_file():
+        out["invocation"] = json.loads((directory / "invocation.json").read_text())
+    with team.store.connect() as db:
+        out["team_events"] = [
+            {**dict(x), "detail": json.loads(x["detail"])}
+            for x in db.execute(
+                "SELECT * FROM events WHERE turn_id=? ORDER BY seq", (turn_id,)
+            )
+        ]
     if (directory / "input.md").is_file():
         out["input"] = (directory / "input.md").read_text()
     if (directory / "events.jsonl").is_file():
