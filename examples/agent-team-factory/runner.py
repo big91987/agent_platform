@@ -237,10 +237,18 @@ class Factory:
         except Exception:
             from git_workspace import git
 
-            if git(self.repo, "diff", "--name-only", "--diff-filter=U"):
+            if (self.store.root / "integration-pending.json").exists() or git(
+                self.repo, "diff", "--name-only", "--diff-filter=U"
+            ):
                 self.store.finish(task_id, "conflict", task["result"])
             raise
         self.store.finish(
-            task_id, "merged", {**task["result"], "integration_commit": commit}
+            task_id,
+            "merged",
+            {
+                **task["result"],
+                "integration_commit": commit,
+                "integration_mode": "squash",
+            },
         )
         return self.store.get(task_id)

@@ -2,6 +2,8 @@
 
 import fnmatch
 import hashlib
+import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -31,8 +33,17 @@ class Workspace:
         self.root = Path(root).resolve()
         validate_experiment_branch(integration)
         self.integration = integration
+        version = re.search(r"git version (\d+)\.(\d+)", git(self.repo, "version"))
+        if not version or tuple(map(int, version.groups())) < (2, 38):
+            raise ValueError(
+                "Git 2.38 or newer is required for independent merge-tree validation"
+            )
 
     def check_target(self):
+        if (self.root / "integration-pending.json").exists():
+            raise ValueError(
+                "an unfinished integration is preserved; inspect it before further work or export"
+            )
         if git(self.repo, "branch", "--show-current") != self.integration:
             raise ValueError(
                 "repository is not on the configured experimental integration branch"
@@ -129,8 +140,60 @@ class Workspace:
         self.check_target()
         if not re.fullmatch(r"[a-f0-9]{40}", commit):
             raise ValueError("integration requires an exact commit")
-        git(self.repo, "merge", "--no-ff", "--no-edit", commit)
-        return git(self.repo, "rev-parse", "HEAD")
+        before = git(self.repo, "rev-parse", "HEAD")
+        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        pending = self.root / "integration-pending.json"
+        with pending.open("x") as record:
+            record.write(json.dumps({"public_head": before, "candidate": commit}))
+            record.flush()
+            os.fsync(record.fileno())
+        pending.chmod(0o600)
+        # Candidate attempts remain in the private execution repository. Only
+        # their final content enters the public experiment history: a cleaned
+        # report must not make earlier private diagnostics reachable again.
+        try:
+            tree = git(
+                self.repo, "merge-tree", "--write-tree", before, commit
+            ).splitlines()[0]
+        except subprocess.CalledProcessError as failure:
+            if failure.returncode == 1:
+                # Keep Git's ordinary conflict index/worktree for inspection.
+                # No hook may turn a failed independent merge into acceptance.
+                git(self.repo, "merge", "--squash", commit)
+            raise ValueError(
+                "independent merge-tree failed; operation preserved"
+            ) from failure
+        if not re.fullmatch(r"[a-f0-9]{40}", tree):
+            raise ValueError("independent merge-tree returned an invalid tree")
+        git(self.repo, "merge", "--squash", commit)
+        if git(self.repo, "write-tree") != tree:
+            raise ValueError(
+                "merge hook changed the approved tree; operation preserved"
+            )
+        changed = bool(git(self.repo, "diff", "--cached", "--name-only"))
+        if git(self.repo, "rev-parse", "HEAD") != before:
+            raise ValueError(
+                "merge hook changed the public HEAD; integration preserved"
+            )
+        if changed:
+            git(self.repo, "commit", "-m", f"agent-team: integrate {commit}")
+        head = git(self.repo, "rev-parse", "HEAD")
+        if (
+            git(self.repo, "branch", "--show-current") != self.integration
+            or git(self.repo, "status", "--porcelain", "--untracked-files=all")
+            or git(self.repo, "rev-parse", "HEAD^{tree}") != tree
+            or (
+                changed
+                and git(self.repo, "rev-list", "--parents", "-n", "1", head).split()
+                != [head, before]
+            )
+            or (not changed and head != before)
+        ):
+            raise ValueError(
+                "integration hook changed content, branch or ancestry; inspect preserved operation"
+            )
+        pending.unlink()
+        return head
 
     def bundle(self, expected_head):
         self.check_target()

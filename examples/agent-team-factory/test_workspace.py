@@ -30,6 +30,8 @@ class WorkspaceTests(unittest.TestCase):
         ).strip()
 
     def test_worktrees_and_commits_are_isolated_until_explicit_integration(self):
+        base = self.git("rev-parse", "HEAD")
+        self.assertEqual(self.workspace.integrate(base), base)
         first = self.workspace.prepare("first", 1)
         second = self.workspace.prepare("second", 1)
         self.assertIn("agent-team", str(first["path"]))
@@ -59,6 +61,86 @@ class WorkspaceTests(unittest.TestCase):
                 {"id": "first", "title": "feature", "write_paths": ["outside.txt"]},
                 work,
             )
+
+    def private_report_candidate(self):
+        base = self.git("rev-parse", "HEAD")
+        self.git("update-ref", "refs/remotes/origin/agent-team/experiment", base)
+        work = self.workspace.prepare("report", 1)
+        task = {"id": "report", "title": "report", "write_paths": ["report.md"]}
+        (work["path"] / "report.md").write_text("private diagnostic placeholder")
+        private = self.workspace.commit(task, work)
+        work["base"] = private
+        (work["path"] / "report.md").write_text("sanitized report")
+        clean = self.workspace.commit(task, work)
+        return work, private, clean
+
+    def test_integration_exports_clean_content_without_private_candidate_history(self):
+        work, private, clean = self.private_report_candidate()
+        base = self.git("rev-parse", "refs/remotes/origin/agent-team/experiment")
+        head = self.workspace.integrate(clean)
+        self.assertEqual(self.git("show", head + ":report.md"), "sanitized report")
+        self.assertNotEqual(head, clean)
+        exported = self.root / "exported"
+        self.git("init", "-b", "agent-team/experiment", str(exported))
+        self.git("fetch", str(self.repo), base, cwd=exported)
+        self.git("reset", "--hard", "FETCH_HEAD", cwd=exported)
+        bundle = self.workspace.bundle(head)
+        self.git("fetch", bundle["bundle"], "agent-team/experiment", cwd=exported)
+        self.assertEqual(
+            self.git("show", "FETCH_HEAD:report.md", cwd=exported), "sanitized report"
+        )
+        for private_object in [private, self.git("rev-parse", private + ":report.md")]:
+            result = subprocess.run(
+                ["git", "cat-file", "-e", private_object],
+                cwd=exported,
+                capture_output=True,
+            )
+            self.assertNotEqual(
+                result.returncode, 0, "private candidate object was exported"
+            )
+        self.assertEqual(
+            self.git("rev-list", "--parents", "-n", "1", head).split(), [head, base]
+        )
+        self.assertEqual(
+            self.git("show", private + ":report.md", cwd=work["path"]),
+            "private diagnostic placeholder",
+        )
+
+    def test_integration_hook_cannot_reintroduce_private_ancestry(self):
+        _, _, clean = self.private_report_candidate()
+        hook = self.repo / ".git/hooks/post-commit"
+        hook.write_text(f"#!/bin/sh\ngit reset --soft {clean}\n")
+        hook.chmod(0o700)
+        with self.assertRaises(ValueError):
+            self.workspace.integrate(clean)
+        with self.assertRaises(ValueError):
+            self.workspace.bundle(self.git("rev-parse", "HEAD"))
+        with self.assertRaises(ValueError):
+            self.workspace.prepare("later", 1)
+
+    def test_integration_hook_cannot_change_the_approved_tree(self):
+        _, _, clean = self.private_report_candidate()
+        hook = self.repo / ".git/hooks/post-commit"
+        hook.write_text(
+            '#!/bin/sh\nrm "$0"\nprintf tampered > report.md\ngit add report.md\ngit commit --amend --no-edit\n'
+        )
+        hook.chmod(0o700)
+        with self.assertRaises(ValueError):
+            self.workspace.integrate(clean)
+        with self.assertRaises(ValueError):
+            self.workspace.bundle(self.git("rev-parse", "HEAD"))
+
+    def test_merge_hook_cannot_replace_clean_content_with_private_diagnostics(self):
+        _, private, clean = self.private_report_candidate()
+        hook = self.repo / ".git/hooks/post-merge"
+        hook.write_text(
+            f"#!/bin/sh\ngit read-tree {private}^{{tree}}\ngit checkout-index -a -f\n"
+        )
+        hook.chmod(0o700)
+        with self.assertRaises(ValueError):
+            self.workspace.integrate(clean)
+        with self.assertRaises(ValueError):
+            self.workspace.bundle(self.git("rev-parse", "HEAD"))
 
     def test_main_target_is_rejected_and_merge_conflict_keeps_evidence(self):
         with self.assertRaises(ValueError):
