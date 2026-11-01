@@ -178,17 +178,21 @@ class Store:
                     "native continuity or confirmed process exit is missing; refusing a replacement session"
                 )
             if execution.get("pid"):
-                for check in (os.kill, os.killpg):
-                    try:
-                        check(execution["pid"], 0)
-                    except ProcessLookupError:
-                        continue
-                    except PermissionError as failure:
-                        raise ValueError(
-                            "cannot verify previous native process ownership"
-                        ) from failure
+                # Native.run always creates a private session/group whose ID
+                # is the original PID. A PID reused in another group does not
+                # identify that native execution; never inspect/signal it as
+                # though it were still ours. A surviving owned group blocks.
+                try:
+                    os.killpg(execution["pid"], 0)
+                except ProcessLookupError:
+                    pass
+                except PermissionError as failure:
                     raise ValueError(
-                        "previous native process or process group still exists; inspect before recovery"
+                        "cannot verify previous native process group ownership"
+                    ) from failure
+                else:
+                    raise ValueError(
+                        "previous native process group still exists; inspect before recovery"
                     )
             execution["resume"] = True
             if row["status"] == "ready":

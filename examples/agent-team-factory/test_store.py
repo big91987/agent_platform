@@ -113,6 +113,36 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.set_concurrency(21)
 
+    def test_resume_ignores_reused_pid_outside_the_owned_process_group(self):
+        # Simulate a reused PID: an unrelated live process belongs to a
+        # different group. Recovery must neither signal nor claim ownership.
+        unrelated = subprocess.Popen(
+            [sys.executable, "-c", "import time;time.sleep(20)"]
+        )
+        try:
+            self.assertNotEqual(os.getpgid(unrelated.pid), unrelated.pid)
+            self.store.add_tasks([self.task("one")])
+            self.store.claim()
+            self.store.execution(
+                "one",
+                pid=unrelated.pid,
+                thread_id="preserved-session",
+                worktree=str(self.root / "work"),
+                branch="agent-team/task-one-1",
+                base_commit="a" * 40,
+                finished=time.time(),
+                returncode=0,
+            )
+            self.store.finish("one", "blocked", {"message": "preserved failure"})
+            self.store.requeue(
+                "one", "Original process group is gone; PID now unrelated."
+            )
+            self.assertEqual(self.store.get("one")["status"], "pending")
+            self.assertIsNone(unrelated.poll())
+        finally:
+            unrelated.terminate()
+            unrelated.wait(timeout=3)
+
     def test_resume_refuses_old_process_group_after_parent_has_exited(self):
         parent = subprocess.Popen(
             [

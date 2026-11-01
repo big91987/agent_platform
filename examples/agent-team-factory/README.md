@@ -42,7 +42,7 @@
 在独立目录完整检出已创建的实验分支。项目验证可能读取跟踪的历史证据，不能仅凭文件类型做 sparse checkout；本次实际门禁已证明只检出 Markdown 会漏掉必须的基线日志。
 
 ```sh
-git clone --depth 1 --branch agent-team/experiment \
+git clone --branch agent-team/experiment \
   https://github.com/big91987/model-relay.git model-relay
 ```
 
@@ -63,7 +63,7 @@ python3 examples/agent-team-factory/factory.py --root /private/runtime integrate
 
 `run` 的退出表示本批可执行任务已返回，不代表产品通过。`ready` 只是 Worker 已交接、原生进程退出、控制器已检查范围并保存候选；`integrate` 是显式选择后的实验分支汇合，不包含产品验收或部署。依赖等待前置任务实际合入实验分支。
 
-`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。`resume` 仅接受已确认原生进程退出、保留会话及原工作区的失败/阻塞/中断任务或尚未合并的候选，下一次 `run` 从同一原生会话和工作区接续，旧日志不改写；缺会话、PID仍在、提交已改变或终止结果未知则拒绝。恢复有隔离协议回归，真实原生接续须以本次实际回执为准。
+`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。`resume` 仅接受已确认原生进程退出、保留会话及原工作区的失败/阻塞/中断任务或尚未合并的候选，下一次 `run` 从同一原生会话和工作区接续，旧日志不改写；缺会话、原进程组仍在、提交已改变或终止结果未知则拒绝。恢复有隔离协议回归，真实原生接续须以本次实际回执为准。
 
 冲突解决及崩溃后不确定进程的核验入口仍未完成：冲突保留现场、阻止新任务领取，不能把“保留并拒绝重试”描述成完整恢复。通过 `message --to TASK_ID --text '补充说明'` 可留存输入，但不会单独启动 Agent。`set-concurrency` 只在无运行任务时允许显式修改，并记录变更。
 
