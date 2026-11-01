@@ -61,6 +61,8 @@ git clone --branch agent-team/experiment \
 
 任务运行目录与集成 checkout 必须为彼此独立的目录。以下从本维护源运行；request.md 写本轮用户目标：
 
+任务输入必须给出可读的实际材料和版本。跨仓任务应分别列出各仓的固定提交、只读源码入口及交付位置；测试仓的 worktree 不包含工厂维护源。需要逐项时序或证据作图时，提供原始逐项记录及摘要，不能只给总数、中位数而要求 Worker 反推。缺输入应真实 blocked，再通过 `resume` 补充并接续原会话，不填占位数据。
+
 ```sh
 python3 examples/agent-team-factory/factory.py --root /private/runtime init \
   --repository /private/model-relay --concurrency 3 --timeout-seconds 1800
