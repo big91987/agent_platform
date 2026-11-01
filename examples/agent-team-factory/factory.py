@@ -42,6 +42,8 @@ def main():
     resume.add_argument("--message", required=True)
     integrate = sub.add_parser("integrate")
     integrate.add_argument("--task", required=True)
+    bundle = sub.add_parser("bundle")
+    bundle.add_argument("--expected-head", required=True)
     serve = sub.add_parser("serve")
     serve.add_argument("--port", type=int, default=8977)
     args = parser.parse_args()
@@ -99,6 +101,8 @@ def main():
             result = factory.plan(Path(args.request_file).read_text(), args.task_count)
         elif args.command == "run":
             result = factory.run()
+        elif args.command == "bundle":
+            result = factory.bundle(args.expected_head)
         else:
             result = factory.integrate(args.task)
     print(json.dumps(result, ensure_ascii=False, indent=2))

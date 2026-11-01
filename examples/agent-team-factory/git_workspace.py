@@ -1,6 +1,7 @@
 """Git operations owned by the experiment controller, never a product Worker."""
 
 import fnmatch
+import hashlib
 import re
 import subprocess
 from pathlib import Path
@@ -17,12 +18,18 @@ def git(repo, *args):
     return result.stdout.strip()
 
 
+def validate_experiment_branch(branch):
+    if not isinstance(branch, str) or not re.fullmatch(
+        r"agent-team/[a-z][a-z0-9-]*", branch
+    ):
+        raise ValueError("integration must be a dedicated agent-team/<name> branch")
+
+
 class Workspace:
     def __init__(self, repo, root, integration):
         self.repo = Path(repo).resolve()
         self.root = Path(root).resolve()
-        if not re.fullmatch(r"agent-team/[a-z][a-z0-9-]*", integration):
-            raise ValueError("integration must be a dedicated agent-team/<name> branch")
+        validate_experiment_branch(integration)
         self.integration = integration
 
     def check_target(self):
@@ -124,3 +131,40 @@ class Workspace:
             raise ValueError("integration requires an exact commit")
         git(self.repo, "merge", "--no-ff", "--no-edit", commit)
         return git(self.repo, "rev-parse", "HEAD")
+
+    def bundle(self, expected_head):
+        self.check_target()
+        if (
+            not re.fullmatch(r"[a-f0-9]{40}", expected_head)
+            or git(self.repo, "rev-parse", "HEAD") != expected_head
+        ):
+            raise ValueError("export requires the selected exact integration HEAD")
+        base = git(self.repo, "rev-parse", "refs/remotes/origin/" + self.integration)
+        if base == expected_head:
+            raise ValueError("integration has no new commits beyond tracked origin")
+        git(self.repo, "merge-base", "--is-ancestor", base, expected_head)
+        directory = self.root / "bundles"
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        path = directory / (expected_head + ".bundle")
+        if not path.exists():
+            git(
+                self.repo,
+                "bundle",
+                "create",
+                path,
+                "refs/heads/" + self.integration,
+                "^" + base,
+            )
+        git(self.repo, "bundle", "verify", path)
+        if git(self.repo, "bundle", "list-heads", path).split() != [
+            expected_head,
+            "refs/heads/" + self.integration,
+        ]:
+            raise ValueError("bundle contains a different HEAD or additional refs")
+        return {
+            "bundle": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "branch": self.integration,
+            "head": expected_head,
+            "base": base,
+        }

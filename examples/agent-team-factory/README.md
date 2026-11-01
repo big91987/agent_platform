@@ -104,3 +104,26 @@ python3 factory.py --root /private/runtime configure-execution \
 Go 版本须满足目标仓库 go.mod；安装完成后固定 PATH，使项目 Makefile 的 GOTOOLCHAIN=local 使用正确版本。仓库门禁及浏览器依赖准备遵循项目入口，不跳过历史证据、不改测试断言。依赖缓存、网络等待与验证时间分别计入实验报告。
 
 候选在环境修复或审查反馈后可通过 `resume` 从原会话、原工作树及已保存候选提交接续；已合并任务不能重开。每次回执和原生输入/输出单独保留。重新验证不自动改变首次失败结论。
+
+## 执行机与控制端分离发布
+
+执行机可以只持有原生 Agent 登录，GitHub 写凭据保留在可信控制端。Worker 不能调用发布工具；只有操作控制器的人在任务已收敛后选择精确实验 HEAD，经正式入口导出增量 Git bundle：
+
+```sh
+python3 factory.py --root /private/runtime bundle --expected-head FULL_40_HEX_COMMIT
+```
+
+该入口需要干净的实验分支与其 origin 同名跟踪基线，和调度/恢复/汇合共用控制器锁；输出 bundle 路径、SHA-256、目标分支及精确 HEAD。通过受信通道把 bundle 复制到控制端的 Git 忽略目录，核对摘要后发布：
+
+```sh
+python3 publish.py --bundle /private/evidence/candidate.bundle \
+  --sha256 FULL_64_HEX_SHA256 --expected-head FULL_40_HEX_COMMIT \
+  --branch agent-team/experiment \
+  --remote https://github.com/OWNER/REPOSITORY.git --github-auth
+```
+
+`--github-auth` 复用控制端已有的 `gh` 认证助手，不输出、复制或保存令牌到执行机。其他 Git 服务使用控制端既有 Git 凭据配置；HTTPS URL 不接受内嵌凭据。代理使用 Git 标准环境变量（如 `HTTPS_PROXY`），不修改全局配置。
+
+发布器固定已校验字节的私有副本，核验单一实验 ref 与导入 HEAD，再按授权 SHA 普通非强制 push，并读回远端。摘要不符、主线目标或远端分叉均拒绝。每次独立回执保存在 bundle 同目录 `publish-receipts/`；push 前原子保存 `unknown`，中断或响应丢失不记成失败未发生。再次调用先核远端，已是目标 SHA 时返回 `already_published`；远端无法确认时保留未知，不自动重试或强推。不要把 unknown 回执当作可重放授权。
+
+本地 Git 夹具覆盖提交SHA保持、主线不变、远端分叉、摘要/HEAD不符、校验后输入文件替换、真实push后响应丢失与SIGTERM；真实GitHub发布仍须以远端读回为准。

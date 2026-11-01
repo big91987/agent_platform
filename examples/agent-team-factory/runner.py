@@ -114,6 +114,7 @@ class Factory:
 - 当前 worktree 专属于本任务。允许修改的路径：{json.dumps(task["write_paths"], ensure_ascii=False)}。空列表表示仅研究/复核，不修改任何文件。
 - 只完成本任务；不要改其他 worktree、共享任务库、凭据或执行配置。
 - 不执行 git commit/push/merge/checkout/switch，不创建外部 Issue/PR，不部署。控制器负责版本操作。
+- 原生历史、凭据、数据库、工作区副本及截图不得进入提交路径；完整临时日志留在项目忽略目录，交付文档只保留脱敏摘要和可复验收据索引。
 - 使用 agent_team_factory.get_task 查看任务、依赖成果和消息。
 - 缺输入、执行失败或权限不足时，使用 send_message(to="leader", message="具体问题、证据、需要的输入")；不能绕过审批或扩权。
 - 完成后使用 agent_team_factory.handoff，status=completed，message 写明改动、实际验证、证据和局限；artifacts 为已存在的 worktree 相对路径。
@@ -214,6 +215,18 @@ class Factory:
     def integrate(self, task_id):
         with self.store.control():
             return self._integrate(task_id)
+
+    def bundle(self, expected_head):
+        with self.store.control():
+            result = self.workspace.bundle(expected_head)
+            with self.store.connect() as db:
+                self.store.event(
+                    db,
+                    None,
+                    "bundle_exported",
+                    {k: result[k] for k in ("sha256", "branch", "head", "base")},
+                )
+            return result
 
     def _integrate(self, task_id):
         task = self.store.get(task_id)
