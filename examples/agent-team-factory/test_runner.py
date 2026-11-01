@@ -1,8 +1,13 @@
 """Isolated executor-protocol fixtures; these are NOT real Agent throughput tests."""
 
 import fcntl
+import json
+import os
+import signal
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -146,6 +151,69 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':1,'output_toke
                 self.store.requeue("one", "must not race integration")
         self.assertEqual(self.store.get("one")["status"], "ready")
         self.assertFalse((self.repo / "one.txt").exists())
+
+    def test_sigterm_cancels_native_group_and_preserves_interrupted_state(self):
+        self.probe.write_text(
+            "#!/usr/bin/env python3\nimport pathlib,subprocess,sys,time\nsys.stdin.read()\np=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'])\nmarker=pathlib.Path("
+            + repr(str(self.root / "cancel-child-pid"))
+            + ")\nmarker.with_suffix('.pending').write_text(str(p.pid))\nmarker.with_suffix('.pending').replace(marker)\ntime.sleep(30)\n"
+        )
+        self.store.add_tasks([self.task("cancelled")])
+        controller = subprocess.Popen(
+            [
+                sys.executable,
+                str(Path(__file__).with_name("factory.py")),
+                "--root",
+                str(self.root),
+                "run",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            marker = self.root / "cancel-child-pid"
+            deadline = time.monotonic() + 8
+            while (
+                not marker.exists()
+                and time.monotonic() < deadline
+                and controller.poll() is None
+            ):
+                time.sleep(0.02)
+            self.assertTrue(marker.exists(), "native child did not start")
+            child = int(marker.read_text())
+            controller.terminate()
+            out, err = controller.communicate(timeout=5)
+            self.assertEqual(controller.returncode, 0, err.decode(errors="replace"))
+            task = self.store.get("cancelled")
+            self.assertEqual(task["status"], "interrupted")
+            status = json.loads(
+                (
+                    Path(task["execution"]["native_directory"]) / "status.json"
+                ).read_text()
+            )
+            self.assertEqual(status["reason"], "interrupted")
+            child_state = subprocess.run(
+                ["ps", "-p", str(child), "-o", "stat="], capture_output=True, text=True
+            )
+            self.assertIn(child_state.returncode, (0, 1), child_state.stderr)
+            self.assertEqual(
+                child_state.stderr.strip(), "", "process observation failed"
+            )
+            self.assertTrue(
+                not child_state.stdout.strip()
+                or child_state.stdout.strip().startswith("Z"),
+                child_state.stdout,
+            )
+        finally:
+            for event in self.store.snapshot()["events"]:
+                if event["kind"] == "native_started":
+                    try:
+                        os.killpg(event["detail"]["pid"], signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+            if controller.poll() is None:
+                controller.kill()
+                controller.communicate(timeout=3)
 
     def test_resume_rejects_replacement_native_session(self):
         self.store.add_tasks([self.task("missing-handoff")])

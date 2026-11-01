@@ -78,6 +78,45 @@ class MCPTests(unittest.TestCase):
             self.assertEqual(store.get("one")["status"], "running")
             self.assertEqual(store.snapshot()["messages"][0]["sender"], "one")
 
+    def test_extra_identity_unknown_tool_and_stale_attempt_cannot_mutate_tasks(self):
+        from mcp_server import call
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(tmp)
+            store.initialize({"concurrency": 1})
+            store.add_tasks(
+                [
+                    {
+                        "id": name,
+                        "title": name,
+                        "instructions": "inspect",
+                        "depends_on": [],
+                        "write_paths": [],
+                    }
+                    for name in ("one", "two")
+                ]
+            )
+            store.claim()
+            report = {"status": "completed", "message": "fixture", "artifacts": []}
+            with self.assertRaises(ValueError):
+                call(store, "one", 1, "handoff", {**report, "task_id": "two"})
+            with self.assertRaises(ValueError):
+                call(
+                    store,
+                    "one",
+                    1,
+                    "send_message",
+                    {"sender": "two", "to": "leader", "message": "spoof"},
+                )
+            with self.assertRaises(ValueError):
+                call(store, "one", 1, "unregistered", {})
+            with self.assertRaises(ValueError):
+                call(store, "one", 0, "handoff", report)
+            self.assertIsNone(store.get("one")["submission"])
+            self.assertEqual(store.get("one")["status"], "running")
+            self.assertEqual(store.get("two")["status"], "pending")
+            self.assertEqual(store.snapshot()["messages"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

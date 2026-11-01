@@ -39,6 +39,16 @@
 
 需要 Python 3.10+、Git、已登录的原生 Codex CLI。本次使用 Codex CLI 0.151.0；程序不复制凭据、不更改全局配置，不指定模型时使用原生配置。
 
+可以在独立目录安装本实验已验证的精确执行器版本，再使用该绝对路径初始化。安装不修改全局 CLI；需要已有的原生登录状态，不能通过复制凭据文件替代登录。
+
+```sh
+npm install --prefix /private/factory-native --save-exact @openai/codex@0.151.0
+/private/factory-native/node_modules/.bin/codex --version
+/private/factory-native/node_modules/.bin/codex login status
+```
+
+目标仓库的语言工具链仍按其锁文件准备；本轮 Model Relay 实测 Go1.25.6 与 Node22。下方 init 增加 `--codex /private/factory-native/node_modules/.bin/codex` 可使用上述固定版本。原生文件沙箱策略与逐工具审批配置以本版本为验证依据，不声称任意旧版 CLI 可运行。
+
 在独立目录完整检出已创建的实验分支。项目验证可能读取跟踪的历史证据，不能仅凭文件类型做 sparse checkout；本次实际门禁已证明只检出 Markdown 会漏掉必须的基线日志。
 
 ```sh

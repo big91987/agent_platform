@@ -31,42 +31,42 @@
 
 **Files:** `factory_store.py`, `test_store.py` in `examples/agent-team-factory/`.
 **Interfaces:** `Store(root)`, `initialize(settings)`, `add_tasks(tasks)`, `claim()`, `finish(...)`, `submit(...)`, `message(...)`, `snapshot()`。
-- [ ] 写并观察失败测试：双连接并发领取唯一、满额不领取、依赖阻断、重复任务拒绝、结果及消息重开可读。
-- [ ] 实现 SQLite 事务，任务 ID 和依赖显式验证，结果不静默覆盖。
-- [ ] 运行本项测试并记录结果。
+- [x] 写并观察失败测试：双连接并发领取唯一、满额不领取、依赖阻断、重复任务拒绝、结果及消息重开可读。
+- [x] 实现 SQLite 事务，任务 ID 和依赖显式验证，结果不静默覆盖。
+- [x] 运行本项测试并记录结果。
 
 ## Task 2: 独立工作区与受限汇合
 
 **Files:** `git_workspace.py`, `test_workspace.py`.
 **Interfaces:** `Workspace(repo, root, integration)`, `prepare(task_id, attempt)`, `commit(task, path)`, `integrate(task, commit)`。
-- [ ] 真实临时 Git 仓测试先红：分支/worktree 标记、路径范围、脏/错误分支拒绝、合并冲突保留。
-- [ ] 实现任务工作区准备和提交，拒绝主线目标与不安全路径。
-- [ ] 运行测试，核原始基线和无关文件保持。
+- [x] 真实临时 Git 仓测试先红：分支/worktree 标记、路径范围、脏/错误分支拒绝、合并冲突保留。
+- [x] 实现任务工作区准备和提交，拒绝主线目标与不安全路径。
+- [x] 运行测试，核原始基线和无关文件保持。
 
 ## Task 3: 真实 Leader、Worker 和交接入口
 
 **Files:** `native.py`, `mcp_server.py`, `factory.py`, `schemas/plan.json`.
 **Interfaces:** CLI `init`, `plan`, `run`, `status`, `message`, `integrate`, `serve`; stdio MCP `handoff`, `send_message`, `get_task`。
-- [ ] 测试进程退出无 handoff、不一致重复 handoff、非法 MCP 请求、取消与超时保留。
-- [ ] 实现原生 CLI 事件留存、模型不擅换、Worker 控制器调度及 MCP 交接。
-- [ ] 在真实 Model Relay 版本上由 Leader 拆任务，启动至少两名真实 Worker，核会话与时间重叠。
+- [x] 测试进程退出无 handoff、不一致重复 handoff、非法 MCP 请求、取消与超时保留。
+- [x] 实现原生 CLI 事件留存、模型不擅换、Worker 控制器调度及 MCP 交接。
+- [x] 在真实 Model Relay 版本上由 Leader 拆任务，启动至少两名真实 Worker，核会话与时间重叠。
 
 ## Task 4: 公共看板与实验说明
 
 **Files:** `board.py`, `board.html`, README updates.
-- [ ] 提供 loopback 只读任务/消息/结果看板，页面展示实际执行状态与峰值。
-- [ ] 记录受支持安装、启动、停止、显式恢复与实验分支汇合命令。
-- [ ] 验证输出转义、私有日志隔离和实际浏览器显示。
+- [x] 提供 loopback 只读任务/消息/结果看板，页面展示实际执行状态与峰值。
+- [x] 记录受支持安装、启动、停止、显式恢复与实验分支汇合命令。
+- [x] 验证输出转义、私有日志隔离和实际浏览器显示。
 
 ## Task 5: 端到端并发实验与报告
 
 **Files:** `docs/03-delivery/agent-team-factory-experiment-2026-11-01.md`; ignored runtime evidence.
-- [ ] 创建并核验两仓专用实验分支；测试仓创建去重后的 `【Harness验证】` 跟踪 Issue。
+- [x] 创建并核验两仓专用实验分支；测试仓创建去重后的 `【Harness验证】` 跟踪 Issue。
 - [ ] 真实需求 → Leader → 并发 Worker → 结果交接 → 独立复核 → 实验分支汇合。
 - [ ] 分级提高并发，记录实测峰值与失败，不以配置值宣称 20 并发已验。
 - [ ] 由实验 Agent 执行 Model Relay 验证；控制器核版本、回执和保留证据。
 - [ ] 记录任务完成量、墙钟、等待、返工、Token/资源、集成与质量局限。
-- [ ] 源分支完整检查与独立只读复审；只推送专用实验分支。
+- [x] 源分支完整检查与独立只读复审；只推送专用实验分支。
 
 ## Progress
 
@@ -76,3 +76,6 @@
 - 2026-11-01：任务库、Git/MCP/原生调度/只读看板和版本化安装已实现；十九项隔离回归在本机与执行主机最终通过，独立评审发现的四项 Important 及 stdin_closed/重复清理问题已修正。完整实际状态见 `docs/03-delivery/agent-team-factory-experiment-2026-11-01.md`。
 - 2026-11-01：真实 Leader job `agent-team-factory-leader-01` 已从受支持 CLI 启动，初始请求选择最多三个既有产品范围的小任务。尚未把原生读代码事件冒称拆分完成或真实 Worker 并发成功。
 - 2026-11-01：Leader 60.708秒完成三项拆分；第一批真实 Worker 实际三并发。三项最终均因 CLI Never 拒绝 MCP 而无有效交接，failed 原记录保留；产品未提交/汇合。维护源已加入窄范围逐工具授权、正式同SID/worktree恢复、替代SID/旧PGID拒绝及静默重放防护，二十三项隔离回归最终通过；待精确版本部署后原任务接续。
+
+- 2026-11-01续：第六轮原三个Worker已实际推进至浏览器完整旅程，原生PID确认存活；每个候选的2480个受控延迟样本均完成、失败0，仍非完整门禁/独立QA结论。后续4项独立QA任务由真实Leader规划并等待合入。另已提出8项互不重复的仓库工程静态审查，明确其不是8个产品功能或实操QA，用于下一阶段真实并发及工程质量评估。
+- 2026-11-01续：新增100待办/20领取位置、40连接争用的隔离压力回归，实际按序且不重复排空，数据库领取峰值20、原生进程峰值0，不能作为20个真实Agent证据。另补正式run的SIGTERM/后代清理/中断状态保留，以及MCP身份额外字段、未注册工具与过期attempt不得改状态。Task1–4按实现、隔离回归及实际浏览器/原生接续证据更新；Task5的真实扩大并发、独立验收与最终汇合继续保留未完成。

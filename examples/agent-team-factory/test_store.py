@@ -4,6 +4,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -40,6 +41,55 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(len({x["id"] for x in claims}), 2)
         self.store.finish(claims[0]["id"], "ready", {"message": "finished"})
         self.assertIsNotNone(self.store.claim())
+
+    def test_backlog_100_drains_once_in_order_with_20_claims_across_connections(self):
+        # Database contention fixture only: these are not model executions or
+        # product tasks. A held first wave makes the 20-slot boundary observable.
+        self.store.set_concurrency(20)
+        expected = [f"backlog-{i:03d}" for i in range(100)]
+        self.store.add_tasks([self.task(name) for name in expected])
+        wave = threading.Barrier(20)
+        lock = threading.Lock()
+        done = threading.Event()
+        claimed, completed = [], []
+        deadline = time.monotonic() + 20
+
+        def worker(_):
+            store = Store(self.root)
+            while time.monotonic() < deadline:
+                task = store.claim()
+                if task is None:
+                    if done.wait(0.01):
+                        return
+                    continue
+                with lock:
+                    claimed.append(task["id"])
+                    first_wave = len(claimed) <= 20
+                if first_wave:
+                    wave.wait(timeout=15)
+                store.finish(
+                    task["id"], "ready", {"message": "database contention fixture"}
+                )
+                with lock:
+                    completed.append(task["id"])
+                    if len(completed) == len(expected):
+                        done.set()
+            raise AssertionError(
+                "backlog did not drain before contention fixture deadline"
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=40) as pool:
+            list(pool.map(worker, range(40)))
+        snapshot = self.store.snapshot()
+        self.assertEqual(len(completed), len(set(completed)))
+        self.assertEqual(set(completed), set(expected))
+        self.assertEqual(
+            [e["task_id"] for e in snapshot["events"] if e["kind"] == "started"],
+            expected,
+        )
+        self.assertEqual(snapshot["peak_claimed"], 20)
+        self.assertEqual(snapshot["peak_native_processes"], 0)
+        self.assertEqual({t["status"] for t in snapshot["tasks"]}, {"ready"})
 
     def test_dependency_only_releases_after_success_and_state_survives_restart(self):
         self.store.add_tasks([self.task("first"), self.task("second", ["first"])])
