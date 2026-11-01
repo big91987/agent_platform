@@ -115,7 +115,7 @@ class Factory:
 - 只完成本任务；不要改其他 worktree、共享任务库、凭据或执行配置。
 - 不执行 git commit/push/merge/checkout/switch，不创建外部 Issue/PR，不部署。控制器负责版本操作。
 - 原生历史、凭据、数据库、工作区副本及截图不得进入提交路径；完整临时日志留在项目忽略目录，交付文档只保留脱敏摘要和可复验收据索引。
-- 使用 agent_team_factory.get_task 查看任务、依赖成果和消息。
+- 开始工作前必须成功调用 agent_team_factory.get_task 查看任务、依赖成果和消息。若该工具未暴露或调用失败，立即停止，不继续实施；最终回复保留真实错误，控制器据此诊断，不能以文字自报代替工具回执。
 - 缺输入、执行失败或权限不足时，使用 send_message(to="leader", message="具体问题、证据、需要的输入")；不能绕过审批或扩权。
 - 完成后使用 agent_team_factory.handoff，status=completed，message 写明改动、实际验证、证据和局限；artifacts 为已存在的 worktree 相对路径。
 - 无法完成则 handoff(status=blocked, ...)，保留现场。任务未实测、仅静态检查或只生成文件时必须如实说明。
