@@ -24,17 +24,31 @@ class Native:
         if prompt_path.exists():
             raise ValueError("native attempt already exists; refusing uncertain replay")
         prompt_path.write_text(prompt)
-        argv = [
-            settings.get("codex", "codex"),
-            "-C",
-            str(workspace),
-            "-c",
-            'sandbox_mode="workspace-write"'
-            if task and task["write_paths"]
-            else 'sandbox_mode="read-only"',
-        ]
+        argv = [settings.get("codex", "codex"), "-C", str(workspace)]
         if settings.get("model"):
             argv += ["-m", settings["model"]]
+        if task and task["write_paths"] and "network_access" in settings:
+            # Explicit administrator choice for tasks that run HTTP/browser tests.
+            # Inherit native filesystem protections; do not execute project code
+            # in the host MCP process or grant full filesystem access.
+            argv += [
+                "-c",
+                'default_permissions="agent-team-test"',
+                "-c",
+                'permissions.agent-team-test.extends=":workspace"',
+                "-c",
+                "permissions.agent-team-test.network.enabled="
+                + str(settings["network_access"]).lower(),
+            ]
+        else:
+            argv += [
+                "-c",
+                'sandbox_mode="workspace-write"'
+                if task and task["write_paths"]
+                else 'sandbox_mode="read-only"',
+            ]
+        for key, value in settings.get("execution_env", {}).items():
+            argv += ["-c", f"shell_environment_policy.set.{key}={json.dumps(value)}"]
         if task:
             server = Path(__file__).with_name("mcp_server.py").resolve()
             prefix = "mcp_servers.agent_team_factory"
@@ -92,6 +106,7 @@ class Native:
                 stdout=subprocess.PIPE,
                 stderr=error,
                 start_new_session=True,
+                env={**os.environ, **settings.get("execution_env", {})},
             )
             status["pid"] = process.pid
             if task:

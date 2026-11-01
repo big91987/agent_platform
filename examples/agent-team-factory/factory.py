@@ -29,6 +29,9 @@ def main():
     plan.add_argument("--task-count", type=int, default=4)
     sub.add_parser("run")
     sub.add_parser("status")
+    execution = sub.add_parser("configure-execution")
+    execution.add_argument("--env-json", required=True)
+    execution.add_argument("--network", choices=["enabled", "disabled"], required=True)
     concurrency = sub.add_parser("set-concurrency")
     concurrency.add_argument("--limit", type=int, required=True)
     message = sub.add_parser("message")
@@ -68,6 +71,11 @@ def main():
         result = {"initialized": True, "root": str(root)}
     elif args.command == "status":
         result = Store(args.root).snapshot()
+    elif args.command == "configure-execution":
+        Store(args.root).configure_execution(
+            json.loads(args.env_json), args.network == "enabled"
+        )
+        result = {"configured": True}
     elif args.command == "set-concurrency":
         store = Store(args.root)
         store.set_concurrency(args.limit)

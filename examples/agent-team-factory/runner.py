@@ -1,7 +1,6 @@
 """Task-driven experiment execution; no fixed software-development role graph."""
 
 import concurrent.futures
-import fcntl
 import json
 import signal
 import threading
@@ -169,11 +168,7 @@ class Factory:
             self.store.finish(task["id"], "failed", detail)
 
     def run(self):
-        with (self.store.root / "controller.lock").open("a") as lock:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError as error:
-                raise ValueError("a controller is already running") from error
+        with self.store.control():
             if self.store.snapshot()["running"]:
                 raise ValueError(
                     "unfinished execution records exist; inspect original processes and evidence before recovery"
@@ -217,6 +212,10 @@ class Factory:
         return self.store.snapshot()
 
     def integrate(self, task_id):
+        with self.store.control():
+            return self._integrate(task_id)
+
+    def _integrate(self, task_id):
         task = self.store.get(task_id)
         if task["status"] != "ready" or not task["result"]:
             raise ValueError("only an explicitly selected ready task can be integrated")

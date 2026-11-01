@@ -67,6 +67,18 @@ class StoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.add_tasks([self.task("one"), self.task("one")])
 
+    def test_execution_configuration_is_persistent_and_cannot_change_active_task(self):
+        self.store.configure_execution({"PATH": "/pinned/bin:/usr/bin"}, True)
+        self.assertEqual(
+            Store(self.root).settings()["execution_env"]["PATH"], "/pinned/bin:/usr/bin"
+        )
+        self.assertTrue(self.store.settings()["network_access"])
+        self.store.add_tasks([self.task("one")])
+        self.store.claim()
+        with self.assertRaises(ValueError):
+            self.store.configure_execution({}, False)
+        self.assertTrue(self.store.settings()["network_access"])
+
     def test_message_is_persistent_without_completing_task(self):
         self.store.add_tasks([self.task("one")])
         self.store.message("one", "leader", "Which API contract should I use?")

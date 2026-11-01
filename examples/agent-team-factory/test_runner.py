@@ -1,5 +1,6 @@
 """Isolated executor-protocol fixtures; these are NOT real Agent throughput tests."""
 
+import fcntl
 import subprocess
 import tempfile
 import unittest
@@ -117,6 +118,34 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':1,'output_toke
         self.assertEqual(task["execution"]["worktree"], old["execution"]["worktree"])
         self.assertEqual(task["execution"]["thread_id"], old["execution"]["thread_id"])
         self.assertEqual(previous_events.read_bytes(), original)
+
+    def test_explicit_ready_resume_keeps_original_session_at_candidate_commit(self):
+        self.store.add_tasks([self.task("one")])
+        Factory(self.root).run()
+        original = self.store.get("one")
+        self.store.requeue(
+            "one", "Repeat real verification after environment preparation."
+        )
+        Factory(self.root).run()
+        resumed = self.store.get("one")
+        self.assertEqual(resumed["status"], "ready")
+        self.assertEqual(
+            resumed["execution"]["thread_id"], original["execution"]["thread_id"]
+        )
+        self.assertEqual(resumed["result"]["commit"], original["result"]["commit"])
+        self.assertEqual(resumed["attempt"], 2)
+
+    def test_integration_and_resume_refuse_an_active_controller_lock(self):
+        self.store.add_tasks([self.task("one")])
+        Factory(self.root).run()
+        with (self.root / "controller.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaisesRegex(ValueError, "controller"):
+                Factory(self.root).integrate("one")
+            with self.assertRaisesRegex(ValueError, "controller"):
+                self.store.requeue("one", "must not race integration")
+        self.assertEqual(self.store.get("one")["status"], "ready")
+        self.assertFalse((self.repo / "one.txt").exists())
 
     def test_resume_rejects_replacement_native_session(self):
         self.store.add_tasks([self.task("missing-handoff")])

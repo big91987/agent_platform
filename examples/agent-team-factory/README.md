@@ -39,13 +39,11 @@
 
 需要 Python 3.10+、Git、已登录的原生 Codex CLI。本次使用 Codex CLI 0.151.0；程序不复制凭据、不更改全局配置，不指定模型时使用原生配置。
 
-在独立目录检出已创建的实验分支。Model Relay 历史 `docs/workflow` 含大量证据文件，可用标准 sparse checkout 保留项目代码与 Markdown 文档：
+在独立目录完整检出已创建的实验分支。项目验证可能读取跟踪的历史证据，不能仅凭文件类型做 sparse checkout；本次实际门禁已证明只检出 Markdown 会漏掉必须的基线日志。
 
 ```sh
-git clone --depth 1 --filter=blob:none --no-checkout \
-  --branch agent-team/experiment https://github.com/big91987/model-relay.git model-relay
-git -C model-relay sparse-checkout set --no-cone '/**' '!/docs/workflow/**' '/docs/workflow/**/*.md'
-git -C model-relay read-tree -mu HEAD
+git clone --depth 1 --branch agent-team/experiment \
+  https://github.com/big91987/model-relay.git model-relay
 ```
 
 任务运行目录与集成 checkout 必须为彼此独立的目录。以下从本维护源运行；request.md 写本轮用户目标：
@@ -65,7 +63,7 @@ python3 examples/agent-team-factory/factory.py --root /private/runtime integrate
 
 `run` 的退出表示本批可执行任务已返回，不代表产品通过。`ready` 只是 Worker 已交接、原生进程退出、控制器已检查范围并保存候选；`integrate` 是显式选择后的实验分支汇合，不包含产品验收或部署。依赖等待前置任务实际合入实验分支。
 
-`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。`resume` 仅接受已确认原生进程退出、保留会话及原工作区的失败/阻塞/中断任务，下一次 `run` 从同一原生会话和工作区接续，旧日志不改写；缺会话、PID仍在、提交已改变或终止结果未知则拒绝。恢复有隔离协议回归，真实原生接续须以本次实际回执为准。
+`Ctrl+C` / `SIGTERM` 请求停止控制器及其原生进程组，保留任务、会话和文件。启动时遇到旧 running 记录拒绝重放。`resume` 仅接受已确认原生进程退出、保留会话及原工作区的失败/阻塞/中断任务或尚未合并的候选，下一次 `run` 从同一原生会话和工作区接续，旧日志不改写；缺会话、PID仍在、提交已改变或终止结果未知则拒绝。恢复有隔离协议回归，真实原生接续须以本次实际回执为准。
 
 冲突解决及崩溃后不确定进程的核验入口仍未完成：冲突保留现场、阻止新任务领取，不能把“保留并拒绝重试”描述成完整恢复。通过 `message --to TASK_ID --text '补充说明'` 可留存输入，但不会单独启动 Agent。`set-concurrency` 只在无运行任务时允许显式修改，并记录变更。
 
@@ -80,3 +78,19 @@ ruff format --check examples/agent-team-factory
 ```
 
 进程生命周期测试与 HTTP 测试需要真实子进程和回环监听权限。受限沙箱内的失败应区分环境原因；沙箱也可能提前杀死探针后代而掩盖生命周期问题，因此须在实际执行主机再跑。`test_runner.py` 的临时可执行文件是明确标识的协议探针，不是模型、产品实现或真实 Agent 吞吐证据。
+
+## 执行依赖与测试网络
+
+维护者在无运行任务时通过正式入口配置非凭据环境变量及网络策略；配置持久化，后续任务及显式 resume 使用同一配置，不改全局 shell 或在途会话。
+
+```sh
+python3 factory.py --root /private/runtime configure-execution \
+  --env-json '{"PATH":"/pinned/go/bin:/pinned/node/bin:/usr/local/bin:/usr/bin:/bin","GOTOOLCHAIN":"local","GOWORK":"off"}' \
+  --network enabled
+```
+
+启用网络时，可写任务继承原生 `:workspace` 文件系统保护，显式允许网络（含回环测试服务与外网）。仅研究的只读任务保持原策略。关闭使用 `--network disabled`；没有配置时保持原默认。此配置不会批准 Shell 提权或启用全文件系统访问。本实验在 112 上实测原生沙箱回环监听成功、树内可写、树外不可写。项目检查仍由 Worker 在该沙箱执行；没有让 MCP 在宿主执行仓库代码的工具。
+
+Go 版本须满足目标仓库 go.mod；安装完成后固定 PATH，使项目 Makefile 的 GOTOOLCHAIN=local 使用正确版本。仓库门禁及浏览器依赖准备遵循项目入口，不跳过历史证据、不改测试断言。依赖缓存、网络等待与验证时间分别计入实验报告。
+
+候选在环境修复或审查反馈后可通过 `resume` 从原会话、原工作树及已保存候选提交接续；已合并任务不能重开。每次回执和原生输入/输出单独保留。重新验证不自动改变首次失败结论。

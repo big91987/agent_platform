@@ -1,6 +1,7 @@
 """Persistent task ownership and messages for one isolated factory experiment."""
 
 import contextlib
+import fcntl
 import json
 import os
 import re
@@ -67,6 +68,42 @@ class Store:
             raise ValueError("initialize this factory first")
         return json.loads(row[0])
 
+    def configure_execution(self, env, network_access):
+        if (
+            not isinstance(env, dict)
+            or any(
+                not isinstance(k, str)
+                or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", k)
+                or not isinstance(v, str)
+                or "\0" in v
+                for k, v in env.items()
+            )
+            or type(network_access) is not bool
+        ):
+            raise ValueError(
+                "execution environment must contain string variables and explicit network choice"
+            )
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if db.execute(
+                "SELECT count(*) FROM tasks WHERE status='running'"
+            ).fetchone()[0]:
+                raise ValueError("finish active tasks before configuring execution")
+            row = db.execute("SELECT value FROM settings WHERE key='config'").fetchone()
+            if not row:
+                raise ValueError("initialize this factory first")
+            config = json.loads(row[0])
+            config.update(execution_env=env, network_access=network_access)
+            db.execute(
+                "UPDATE settings SET value=? WHERE key='config'", (json.dumps(config),)
+            )
+            self.event(
+                db,
+                None,
+                "execution_configured",
+                {"environment_keys": sorted(env), "network_access": network_access},
+            )
+
     def set_concurrency(self, limit):
         if type(limit) is not int or not 1 <= limit <= 20:
             raise ValueError("concurrency must be an integer between 1 and 20")
@@ -94,15 +131,33 @@ class Store:
                 {"previous": previous, "current": limit},
             )
 
+    @contextlib.contextmanager
+    def control(self):
+        with (self.root / "controller.lock").open("a") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise ValueError("a controller operation is already running") from error
+            yield
+
     def requeue(self, task_id, message):
+        with self.control():
+            return self._requeue(task_id, message)
+
+    def _requeue(self, task_id, message):
         if not isinstance(message, str) or not message.strip():
             raise ValueError("explicit recovery requires a reason or new input")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
-            if not row or row["status"] not in ("failed", "blocked", "interrupted"):
+            if not row or row["status"] not in (
+                "failed",
+                "blocked",
+                "interrupted",
+                "ready",
+            ):
                 raise ValueError(
-                    "only a failed, blocked or interrupted task can be explicitly resumed"
+                    "only an unmerged task with preserved execution can be explicitly resumed"
                 )
             execution = json.loads(row["execution"])
             if (
@@ -136,6 +191,11 @@ class Store:
                         "previous native process or process group still exists; inspect before recovery"
                     )
             execution["resume"] = True
+            if row["status"] == "ready":
+                result = json.loads(row["result"] or "null")
+                if not result or not result.get("commit"):
+                    raise ValueError("ready task has no preserved candidate commit")
+                execution["base_commit"] = result["commit"]
             db.execute(
                 "UPDATE tasks SET status='pending', submission=NULL, result=NULL, execution=? WHERE id=?",
                 (json.dumps(execution), task_id),
