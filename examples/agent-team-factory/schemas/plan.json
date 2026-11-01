@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary": {"type": "string"},
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "instructions": {"type": "string"},
+          "depends_on": {"type": "array", "items": {"type": "string"}},
+          "write_paths": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["id", "title", "instructions", "depends_on", "write_paths"]
+      }
+    }
+  },
+  "required": ["summary", "tasks"]
+}
