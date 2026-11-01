@@ -1,5 +1,11 @@
 # Agent Team 软件工厂实验
 
+## 当前用户试用入口
+
+用户自主提交需求、Leader持续派发与固定Worker池的独立原型使用[playground.py](playground.py)，说明见[用户试用说明](PLAYGROUND.md)。它有独立的运行库与实时页面，启动为空，不导入以下已结束的Model Relay批次实验或补造用户需求。五个Skill的唯一维护源在`team_skills/`，由Worker任务输入实际加载对应正文。
+
+## 早期批次实验记录
+
 本例验证一个独立的软件工厂：真实 Leader Agent 拆解需求，多个真实原生 Agent 在独立 Git worktree 中执行任务，共享持久化任务、消息和结果，成果只合入专用实验分支。它不启动或修改已有 Agent Platform 工作流，也不部署 Model Relay。
 
 这是实验原型，已实测20个原生Worker同时执行静态审查；首轮17项有效交接、3项失败。它不能代表20个功能并发交付或生产可用。实际执行、恢复及质量结论见[实验报告](../../docs/03-delivery/agent-team-factory-experiment-2026-11-01.md)，隔离进程探针与真实Agent分别记录。

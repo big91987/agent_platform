@@ -16,8 +16,24 @@ class Native:
         self.store = store
         self.stop = stop or threading.Event()
 
-    def run(self, name, workspace, prompt, *, task=None, schema=None, thread_id=None):
+    def run(
+        self,
+        name,
+        workspace,
+        prompt,
+        *,
+        task=None,
+        schema=None,
+        thread_id=None,
+        mcp=None,
+        execution_env=None,
+    ):
         settings = self.store.settings()
+        if execution_env:
+            settings = {
+                **settings,
+                "execution_env": {**settings.get("execution_env", {}), **execution_env},
+            }
         directory = self.store.root / "native" / name
         directory.mkdir(parents=True, mode=0o700)
         prompt_path = directory / "input.md"
@@ -52,6 +68,7 @@ class Native:
         if task:
             server = Path(__file__).with_name("mcp_server.py").resolve()
             prefix = "mcp_servers.agent_team_factory"
+            tools = ("get_task", "send_message", "handoff")
             server_args = [
                 str(server),
                 "--root",
@@ -61,6 +78,10 @@ class Native:
                 "--attempt",
                 str(task["attempt"]),
             ]
+            if mcp is not None:
+                prefix = "mcp_servers." + mcp["name"]
+                server_args = [str(mcp["entry"]), *mcp["args"]]
+                tools = tuple(mcp["tools"])
             argv += [
                 "-c",
                 f"{prefix}.command={json.dumps(sys.executable)}",
@@ -73,11 +94,11 @@ class Native:
                 "-c",
                 f'{prefix}.default_tools_approval_mode="prompt"',
                 "-c",
-                f'{prefix}.enabled_tools=["get_task","send_message","handoff"]',
+                f"{prefix}.enabled_tools={json.dumps(tools)}",
             ]
             # exec cannot prompt. Only these task-bound local operations are
             # pre-authorized; shell and other MCP permissions are unchanged.
-            for tool in ("get_task", "send_message", "handoff"):
+            for tool in tools:
                 argv += ["-c", f'{prefix}.tools.{tool}.approval_mode="approve"']
         argv += ["exec"]
         if thread_id:
