@@ -1,0 +1,92 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #182338;
+  background: #f4f6fa;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 850px;
+  margin: 64px auto;
+  padding: 32px;
+  border: 1px solid #dce2ed;
+  border-radius: 16px;
+  background: white;
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+header p,
+dt {
+  color: #68758c;
+}
+form {
+  margin-top: 28px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.controls {
+  display: flex;
+  gap: 12px;
+}
+input,
+button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid #cbd4e4;
+  padding: 10px 14px;
+}
+input {
+  flex: 1;
+  min-width: 0;
+}
+button {
+  cursor: pointer;
+  color: white;
+  background: #365fde;
+  border-color: #365fde;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+:focus-visible {
+  outline: 3px solid #92adff;
+  outline-offset: 2px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 30px;
+}
+.metrics div {
+  padding: 20px;
+  border-radius: 12px;
+  background: #f4f6fa;
+}
+dd {
+  margin: 8px 0 0;
+  font-size: 30px;
+  font-weight: 650;
+}
+[role="alert"] {
+  color: #a22626;
+}
+@media (max-width: 600px) {
+  main {
+    margin: 20px;
+    padding: 20px;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

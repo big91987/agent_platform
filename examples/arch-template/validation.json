@@ -1,0 +1,341 @@
+{
+  "date": "2026-11-01",
+  "tool_version": "0.2.0",
+  "scope": "Deterministic architecture enforcement and portable reference scaffolds; no Model Relay migration",
+  "environment": {
+    "os": "macOS arm64",
+    "python": "3.14.5",
+    "go": "1.25.6",
+    "node": "26.0.0",
+    "npm": "11.12.1"
+  },
+  "checks": [
+    {
+      "name": "tool contracts",
+      "command": "python3 -m unittest discover -s examples/arch-template/tool/tests -v",
+      "status": "passed",
+      "tests": 31
+    },
+    {
+      "name": "scaffold and upgrade protection",
+      "command": "python3 -m unittest discover -s examples/arch-template/tests -v",
+      "status": "passed",
+      "tests": 7
+    },
+    {
+      "name": "source repository Go baseline",
+      "command": "go test ./... and go vet ./...",
+      "status": "passed"
+    },
+    {
+      "name": "reference Go and Vue checks",
+      "command": "Go race/vet/build; Vue typecheck, 2 tests and production build; fresh exported verify.py",
+      "status": "passed"
+    },
+    {
+      "name": "source formatting",
+      "command": "ruff check; ruff format --check; gofmt; git diff --check",
+      "status": "passed"
+    }
+  ],
+  "red_green": [
+    {
+      "scenario": "one Go package assigned to two file-level modules",
+      "before": "incorrect conformant exit 0",
+      "after": "incomplete exit 2"
+    },
+    {
+      "scenario": "SaaS HTTP imports Domain, Application imports SQLite, Domain imports SQL or an unapproved dependency",
+      "before": "missing split or incorrectly conformant",
+      "after": "violations exit 1"
+    },
+    {
+      "scenario": "Go public-file list pretending to encapsulate a package",
+      "before": "incorrect conformant exit 0",
+      "after": "incomplete exit 2"
+    },
+    {
+      "scenario": "model-gateway then SaaS loses explicit allow_external",
+      "before": "incorrect conformant exit 0",
+      "after": "violations exit 1 in both component orders"
+    },
+    {
+      "scenario": "Domain imports database/sql/driver",
+      "before": "incorrect conformant exit 0",
+      "after": "violations exit 1"
+    }
+  ],
+  "independent_export": {
+    "selection": [
+      "model-gateway",
+      "saas",
+      "vue"
+    ],
+    "steps": [
+      {
+        "check": "final-scaffold",
+        "exit_code": 0,
+        "seconds": 0.161,
+        "log": "/Users/zhaojiuzhou/.codex/worktrees/a78b/agent_platform-workflows/output/architecture-checks/20261101/final-scaffold.log"
+      },
+      {
+        "check": "final-setup",
+        "exit_code": 0,
+        "seconds": 1.142,
+        "log": "/Users/zhaojiuzhou/.codex/worktrees/a78b/agent_platform-workflows/output/architecture-checks/20261101/final-setup.log"
+      },
+      {
+        "check": "final-verify",
+        "exit_code": 0,
+        "seconds": 10.545,
+        "log": "/Users/zhaojiuzhou/.codex/worktrees/a78b/agent_platform-workflows/output/architecture-checks/20261101/final-verify.log"
+      }
+    ],
+    "reports": {
+      "backend": {
+        "status": "conformant",
+        "version": "0.2.0",
+        "snapshot": "297aef992eca62f38ea897750947630174d51dc3afb3c757f23cbdba335e9309",
+        "files": 10
+      },
+      "frontend": {
+        "status": "conformant",
+        "version": "0.2.0",
+        "snapshot": "981a733e0e0d387e9fbb2c3527d10920bf43f5e0c91cdf15982c68499e8f2728",
+        "files": 7
+      }
+    }
+  },
+  "independent_review": {
+    "important_findings": 2,
+    "fixed": [
+      "order-dependent external allowlist merge",
+      "SQL driver subpackage bypass"
+    ],
+    "additional_validation": "pure quota boundaries including MaxInt64 added as required by the implementation plan",
+    "remaining_findings": []
+  },
+  "limitations": [
+    "External model HTTP service was not called with real credentials; transport tests use local fixture servers.",
+    "One semantic example is not a model precision/recall benchmark.",
+    "Linux, minimum runtime versions and external CI were not executed here.",
+    "Model Relay migration, product QA and deployment were not performed.",
+    "Only declared source scope and static imports are mechanically checked; semantic correctness still requires review and behavior tests.",
+    "Initial restricted executions could not bind local test ports; the same full suites passed through the normal authorized execution permission path."
+  ],
+  "implementation_hashes": {
+    "AGENTS.md": "4dfcfdb1ffc014a18b5f8c4d7f2e69207ae59fafa6bbf05522da5f308a7cc242",
+    "README.md": "388194f3117a56d08782eab7faf9e6e130c97684c3c8971c4f64d3b5a923ea93",
+    "backend/go/README.md": "51aa7fa1243ae4befd63bdf54adc48a612fe1697c0b2417251e1f54e1a07113a",
+    "backend/go/model-gateway/README.md": "18eabf6c25d1eb2af58474392b85126224c30522aa8dc46c75aa5f9809848564",
+    "backend/go/model-gateway/template/AGENTS.md": "4b01b4e8f9e8ba1cdae637a59e6a19e57531db53097c19ccf212bb36ef5686f4",
+    "backend/go/model-gateway/template/architecture.json": "73b12de782efbe0de91ff5f77cb0d230bbb1339bf2dd5b9ef2a5acdc56dd5a21",
+    "backend/go/model-gateway/template/cmd/gateway/main.go": "2d26f1d98c8a4d25257479250ac9487fea495375802d26475f54145ad6974e44",
+    "backend/go/model-gateway/template/docs/model-gateway.md": "8c1a2576653988edfe4f12ec16f98ae57364a47aff8ee1405be81ea055b8a49b",
+    "backend/go/model-gateway/template/internal/gateway/relay.go": "40b6f30b737e87239f006ae5b5121b20a1bc656bbd2e308d1983e1b5017db83a",
+    "backend/go/model-gateway/template/internal/httpapi/relay.go": "6ef9aaee0ff8cb771ce4166492c03bcc529eab4a151edd5e9deb7dd04c138c11",
+    "backend/go/model-gateway/template/internal/httpapi/relay_test.go": "4d5372c75ba51a65b1ee17a32041be9407e3c305e1a19c3874320634e52a058b",
+    "backend/go/model-gateway/template/internal/infrastructure/upstream/client.go": "f686c4508f948dc3a152db88775992807bfcc7b9776a9ac89569874649e7f9f3",
+    "backend/go/model-gateway/template/internal/routing/pool.go": "a9d363312ac0e4e69dc61c58d8019d4256aa34db7fcb9b68e5a2a13aeb985148",
+    "backend/go/model-gateway/template/internal/routing/pool_test.go": "eb71f4bed035e2c1b3bcf077dfa03ffa66ebc039a33f1c137492dfd5efd81b7c",
+    "backend/go/saas/README.md": "87417d47165d02f7bac7fd884bc433fb0c55f948c088101454be69098b4fd273",
+    "backend/go/saas/template/AGENTS.md": "1781a7c29284f0b613dad24ecf44a86db65950de4cfb627b40feba5b4516740e",
+    "backend/go/saas/template/architecture.json": "3b584bb0a16d4445dc75c99dac7b48e814427852845e37294ee83108cc6ca563",
+    "backend/go/saas/template/cmd/saas/main.go": "8c5a5b205ec95d6ea6c755e975da6435442cc5eff7702722cd609909b6eb87fb",
+    "backend/go/saas/template/docs/saas.md": "96e29e36692b4f20f38a9e7d227e843bad1eb01d3befdc352e1ac7ff32ae04e2",
+    "backend/go/saas/template/internal/accounting/application/service.go": "080643788abb5a84026f9a3c8518b1346b71c390d0bd35c5ddc4db9d95681620",
+    "backend/go/saas/template/internal/accounting/domain/quota.go": "e6d7a6a5f886145298d84c05efc5a0d2fb6a5ae3303a9cbe377db0b0cb710c06",
+    "backend/go/saas/template/internal/accounting/domain/quota_test.go": "2e8a113692221f3c1edfe70cbbcdfdda2980aca581802ddb0a5c8b9f34d2cabb",
+    "backend/go/saas/template/internal/accounting/domain/reservation_test.go": "1bb77c577835b5e9b73805bb4e944b90c7e2c53a6702d4f2bee81b6933453500",
+    "backend/go/saas/template/internal/httpapi/quota.go": "82be489934aa3539e3cf849d5e649416f590e9a8f241c5b8f0ed8ded2d1c8d20",
+    "backend/go/saas/template/internal/infrastructure/sqlite/accounting.go": "c2a622d6ce35d1531fb40906555b3ab2ad361f27545751da54472272ae33c582",
+    "backend/go/saas/template/internal/infrastructure/sqlite/accounting_test.go": "984fdf247d261ffef41e7d53ac9680a0b943cf1111e12c6bd8c2141dcc94187f",
+    "frontend/vue/admin-console/README.md": "7f626ddaae51ca7054f1cbb4fd833e269c78e8a6cfa1d1f802e3e4465e545e25",
+    "frontend/vue/admin-console/template/AGENTS.md": "1d96a732c6975722e7c1de4221e701ec15eca7253440fc6c64962fc5e67258ca",
+    "frontend/vue/admin-console/template/architecture.json": "03e099adad086d0dc0bad2d1bf2f0596d4a805c8188958568fefce4f8e4ee2a0",
+    "frontend/vue/admin-console/template/docs/admin-console.md": "00011dc2e515f26ec4b9ff04c6662e59ed17db30ab7a33365d4fe3fd9d7121ca",
+    "frontend/vue/admin-console/template/package-lock.json": "38a94088fe4f91ae56dbbac636c53e96ee09acde282575d481dcbc5845115acf",
+    "frontend/vue/admin-console/template/package.json": "16793a21d38a45eea5c89d341c26e7fae5caa74eb690b159d4c2e73af4a74c35",
+    "frontend/vue/admin-console/template/src/app/App.vue": "d1f020c8f30fde585a8a9e94d49bdfd314e16afe694dfc43146cb2982d2c772b",
+    "frontend/vue/admin-console/template/src/app/main.ts": "a9a77d229d3df173585188d0cfcdeb479cf61b5a0028b67353b4f5998c9e3ad9",
+    "frontend/vue/admin-console/template/src/features/quotas/QuotaPanel.vue": "51ca3c82b2f9a0bae65a017df78d8f8fbfef37699c58dbb49031eff9b2865013",
+    "frontend/vue/admin-console/template/src/features/quotas/api.ts": "5e02af80476fce8984e4afd57644130a9588599799d99cabf94240e7cbe027e7",
+    "frontend/vue/admin-console/template/src/features/quotas/index.ts": "e632f37291f9635f975507819ef04ac2a0e8d8621c29c2a6b98a143bccca6f1b",
+    "frontend/vue/admin-console/template/src/features/quotas/useQuota.test.ts": "93673543adef06ab1e32612168c145cc10f6f498d358492242488ab3a25cd716",
+    "frontend/vue/admin-console/template/src/features/quotas/useQuota.ts": "af51ad75bbfc4c500ccf8e6ff7fd7d9844b03ed41fd7fb6679b5dd0f9dd8f7c9",
+    "frontend/vue/admin-console/template/src/shared/api/index.ts": "ad4ad51e352cddf2883e4fe5e59f13209bbef0d4525e4294716afb06952fb049",
+    "frontend/vue/admin-console/template/tsconfig.json": "0df46eadbb9bbdc5ffe43d887d603d6619db84a71370b31e19b173a2b65c4756",
+    "frontend/vue/admin-console/template/vite.config.ts": "5d5f09ec2752f4e9a5daba93f915806bef23525d947d82b79745010bd5f81e5d",
+    "frontend/vue/admin-console/template/vitest.config.ts": "76107d7c8fde1aa99df775cd39be377a68767387b4414e2037f936e9913668ca",
+    "principles.md": "a84d010abcb1b1cb208629a94a8bc5d5f2b9069932fac688a58d07b9be5591f8",
+    "scaffold.py": "bea9d41460ccedc2a590ca9401df90b759a070d2b96df406b187c9257231613c",
+    "tests/test_scaffold.py": "4d50ca09d78fde0596e01fb8c28e21cdcab151ce2a06ca2b6ccf9ea01ae1b9aa",
+    "tool/README.md": "64f9b9ddc26f37fb881a9e0d31a08f96883d6554af5d642b36c147361d92d99a",
+    "tool/archcheck/__init__.py": "794e07d9e25db37a28dbdb23cfa9799cdbce4cdb123866d5812263363f01cecd",
+    "tool/archcheck/analyzers/go.go": "74344c293f16051f30b85c36da5daac9eb9903fdc6d1da468c72ef81ae83baaa",
+    "tool/archcheck/cli.py": "304bce93cbce3a2e15815428cefd2c1644c7010836b6a34d2a29f0efc923b785",
+    "tool/archcheck/engine.py": "ce5e0f9d86c95074ebbb620d36a7bcd18427e1d14555234fffc6944d6e34cc89",
+    "tool/archcheck/review.py": "f186feb232c6e00e5ecf0afe2bc5423b72bd5c2bff41e53a42a2359520cdf349",
+    "tool/archcheck.py": "951793ba6ec057a5aecada4b7573a06c829b10032927e5160ed8aa63d434fb78",
+    "tool/model_reviewer.py": "52c9b1f5a3f16f79c90769316e264e8f6af9d566054e8d8c813c35b3d63885b5",
+    "tool/package-lock.json": "906156dad5e290e7cc07239d34b22c31e0c36bd63802bc65d4b4039a0378fcb3",
+    "tool/package.json": "4b8015864ddbf626b7be73328eb34f2aa222b9d6a8feac73546d0553cc2cf33e",
+    "tool/tests/fixtures/layered-misplaced/AGENTS.md": "98c059dd4524618ce58ef921f0230d27f84ed5eb39d59c58d1295dc79c15374d",
+    "tool/tests/fixtures/layered-misplaced/architecture.json": "40337b687becdb08df8a008ea5dc17184a0935022f0c7e7eb99ec4a481d75142",
+    "tool/tests/fixtures/layered-misplaced/internal/application/checkout.go": "7c34b9f713d324b1dbe01f7939910b13890d3954402c8d793f9447ee5ea62659",
+    "tool/tests/fixtures/layered-misplaced/internal/application/quote.go": "09c21671194385e8ef7d691f7e55964a2a6c4ae385086b07fd59b2d1ca058b89",
+    "tool/tests/fixtures/layered-misplaced/internal/domain/order.go": "565adda377ab113b6a9ecb6642858e65f6842161005470b3ba30237df15b2fd1",
+    "tool/tests/fixtures/layered-misplaced.review.json": "71afb6eb03bd0e8e8b59d6592d7328440989f6c0a72dc0d987c83ddd9a45a194",
+    "tool/tests/test_check.py": "f5530233fe5469267c29b2594b1e5d358859d238e19f109b2e519d326f39550f",
+    "tool/tests/test_model_reviewer.py": "9748bd11ff2783cdb4348cbfd7a5831a33956f565b6811ef82c3f416df6c16e7",
+    "tool/tests/test_review.py": "64c192152e10db313ec6af4302c77c545d9de1357854733c7162785c15c449eb",
+    "validation.md": "c4084dd47b1c6ea1a6247e67376728dc75ec21ac188fc7d428b9eadb97193476",
+    "verification.md": "04ca58b757107c644a429a9879e4362f8ec201625d07da10c26d62598971502b"
+  },
+  "history": [
+    {
+      "date": "2026-11-01",
+      "tool_version": "0.1.0",
+      "environment": {
+        "os": "macOS arm64",
+        "python": "3.14.5",
+        "go": "1.25.6",
+        "node": "26.0.0",
+        "npm": "11.12.1"
+      },
+      "checks": [
+        {
+          "name": "tool contracts",
+          "command": "python3 -m unittest discover -s tool/tests",
+          "status": "passed",
+          "tests": 28
+        },
+        {
+          "name": "scaffold and upgrade contracts",
+          "command": "python3 -m unittest discover -s tests",
+          "status": "passed",
+          "tests": 5
+        },
+        {
+          "name": "source formatting and lint",
+          "command": "ruff check; ruff format --check",
+          "status": "passed"
+        },
+        {
+          "name": "source repository Go baseline",
+          "command": "go test ./...; go vet ./...",
+          "status": "passed"
+        },
+        {
+          "name": "Go scenarios independently",
+          "command": "go test -race ./...; go vet ./...; go build ./...",
+          "status": "passed"
+        },
+        {
+          "name": "Vue reference",
+          "command": "npm run verify",
+          "status": "passed",
+          "tests": 2
+        },
+        {
+          "name": "dependency audit",
+          "command": "npm audit --audit-level=low",
+          "status": "passed",
+          "known_vulnerabilities": 0
+        }
+      ],
+      "independent_export": {
+        "selection": [
+          "saas",
+          "model-gateway",
+          "vue"
+        ],
+        "steps": [
+          {
+            "command": "scaffold",
+            "exit_code": 0,
+            "duration_seconds": 0.167
+          },
+          {
+            "command": "setup.py",
+            "exit_code": 0,
+            "duration_seconds": 1.336
+          },
+          {
+            "command": "verify.py",
+            "exit_code": 0,
+            "duration_seconds": 9.517
+          }
+        ],
+        "backend_snapshot": "2c4a87085da9683f8c4c00acb7010c33e3d83bd1d51ae4506d9a1cb94c28edd1",
+        "frontend_snapshot": "0ac36074eb745569580d31e3f65d98a6283f4d31c188b9d2bd6bbded7b16e50e"
+      },
+      "semantic_sample": {
+        "fixture": "tool/tests/fixtures/layered-misplaced",
+        "result": "tool/tests/fixtures/layered-misplaced.review.json",
+        "snapshot": "e3fc05bf8f2f0bc03fb02b409fe7fc0651c15d469981ab030eed618e2abdb709",
+        "status": "review_required",
+        "evidence_status": "citations_checked",
+        "findings": 1,
+        "source": "independently model-authored; not a fixed model transport response"
+      },
+      "limitations": [
+        "External model HTTP service was not called with real credentials; transport tests use local fixture servers.",
+        "One semantic example is not a model precision/recall benchmark.",
+        "Linux, minimum runtime versions and external CI were not executed here.",
+        "Model Relay migration, product QA and deployment were not performed."
+      ],
+      "implementation_hashes": {
+        "backend/go/model-gateway/template/architecture.json": "73b12de782efbe0de91ff5f77cb0d230bbb1339bf2dd5b9ef2a5acdc56dd5a21",
+        "backend/go/model-gateway/template/cmd/gateway/main.go": "2d26f1d98c8a4d25257479250ac9487fea495375802d26475f54145ad6974e44",
+        "backend/go/model-gateway/template/internal/gateway/relay.go": "40b6f30b737e87239f006ae5b5121b20a1bc656bbd2e308d1983e1b5017db83a",
+        "backend/go/model-gateway/template/internal/httpapi/relay.go": "6ef9aaee0ff8cb771ce4166492c03bcc529eab4a151edd5e9deb7dd04c138c11",
+        "backend/go/model-gateway/template/internal/httpapi/relay_test.go": "4d5372c75ba51a65b1ee17a32041be9407e3c305e1a19c3874320634e52a058b",
+        "backend/go/model-gateway/template/internal/infrastructure/upstream/client.go": "f686c4508f948dc3a152db88775992807bfcc7b9776a9ac89569874649e7f9f3",
+        "backend/go/model-gateway/template/internal/routing/pool.go": "a9d363312ac0e4e69dc61c58d8019d4256aa34db7fcb9b68e5a2a13aeb985148",
+        "backend/go/model-gateway/template/internal/routing/pool_test.go": "eb71f4bed035e2c1b3bcf077dfa03ffa66ebc039a33f1c137492dfd5efd81b7c",
+        "backend/go/saas/template/architecture.json": "c4ee64f8bb44b0b90ab5a88e1a14800f6d1d284c94c1c90acbab300e146aea33",
+        "backend/go/saas/template/cmd/saas/main.go": "94319e41ed6cfc392ab491f63cf585468018d8e682ee7af4bc4b4247af492b9c",
+        "backend/go/saas/template/internal/accounting/quota.go": "775ab22042c5d92183ae6320a6ea4b990b3df5e7fea7b19935ca4cadcc607128",
+        "backend/go/saas/template/internal/accounting/reservation_test.go": "c8b028fdf16935657e335397185ad4ac3367d8f12bfb3335fd8a994de6a0dc9e",
+        "backend/go/saas/template/internal/httpapi/quota.go": "7d65f86dbb562f6004b97a6bd51ac6f37e6c90f8150732656f1cb6fe6deb426b",
+        "backend/go/saas/template/internal/infrastructure/sqlite/accounting.go": "0fad45ba5baf4ab6194bbfcb05c85cdaa41b0b96f8b7af8d8fb8183d442147ec",
+        "backend/go/saas/template/internal/infrastructure/sqlite/accounting_test.go": "c8a0e2e20f7d156bf3d821e41cd796869d1e61499c537a6735190971ee2eaaf0",
+        "frontend/vue/admin-console/template/architecture.json": "03e099adad086d0dc0bad2d1bf2f0596d4a805c8188958568fefce4f8e4ee2a0",
+        "frontend/vue/admin-console/template/package-lock.json": "38a94088fe4f91ae56dbbac636c53e96ee09acde282575d481dcbc5845115acf",
+        "frontend/vue/admin-console/template/package.json": "16793a21d38a45eea5c89d341c26e7fae5caa74eb690b159d4c2e73af4a74c35",
+        "frontend/vue/admin-console/template/src/app/App.vue": "d1f020c8f30fde585a8a9e94d49bdfd314e16afe694dfc43146cb2982d2c772b",
+        "frontend/vue/admin-console/template/src/app/main.ts": "a9a77d229d3df173585188d0cfcdeb479cf61b5a0028b67353b4f5998c9e3ad9",
+        "frontend/vue/admin-console/template/src/features/quotas/QuotaPanel.vue": "51ca3c82b2f9a0bae65a017df78d8f8fbfef37699c58dbb49031eff9b2865013",
+        "frontend/vue/admin-console/template/src/features/quotas/api.ts": "5e02af80476fce8984e4afd57644130a9588599799d99cabf94240e7cbe027e7",
+        "frontend/vue/admin-console/template/src/features/quotas/index.ts": "e632f37291f9635f975507819ef04ac2a0e8d8621c29c2a6b98a143bccca6f1b",
+        "frontend/vue/admin-console/template/src/features/quotas/useQuota.test.ts": "93673543adef06ab1e32612168c145cc10f6f498d358492242488ab3a25cd716",
+        "frontend/vue/admin-console/template/src/features/quotas/useQuota.ts": "af51ad75bbfc4c500ccf8e6ff7fd7d9844b03ed41fd7fb6679b5dd0f9dd8f7c9",
+        "frontend/vue/admin-console/template/src/shared/api/index.ts": "ad4ad51e352cddf2883e4fe5e59f13209bbef0d4525e4294716afb06952fb049",
+        "frontend/vue/admin-console/template/tsconfig.json": "0df46eadbb9bbdc5ffe43d887d603d6619db84a71370b31e19b173a2b65c4756",
+        "frontend/vue/admin-console/template/vite.config.ts": "5d5f09ec2752f4e9a5daba93f915806bef23525d947d82b79745010bd5f81e5d",
+        "frontend/vue/admin-console/template/vitest.config.ts": "76107d7c8fde1aa99df775cd39be377a68767387b4414e2037f936e9913668ca",
+        "scaffold.py": "73443bd9655de8a8a9461ad7c7faaf7f7ca4c51a898cb67c56c140c83a470887",
+        "tests/test_scaffold.py": "d880d2d297dde643150dd8db7b9a1ade30b41dcc172a85df4ba4bfd995a0992d",
+        "tool/archcheck/__init__.py": "6daa1ad4f95151c2483b5ae23b7a540e38908ad5e5625454ba7fd09aa589c385",
+        "tool/archcheck/analyzers/go.go": "275084ad0e5a1812112f339ffbba18336b221e9d2ddd856eec0a19a94359d490",
+        "tool/archcheck/analyzers/typescript.cjs": "9d300d6975ab0bf524cc59603fc29033cdaeed2384d708f51adb6f2a650357a2",
+        "tool/archcheck/cli.py": "304bce93cbce3a2e15815428cefd2c1644c7010836b6a34d2a29f0efc923b785",
+        "tool/archcheck/engine.py": "5c09804d45bf77bd237b5345e29390ad95a409b97b606d75479aa07ef74fd272",
+        "tool/archcheck/review.py": "f186feb232c6e00e5ecf0afe2bc5423b72bd5c2bff41e53a42a2359520cdf349",
+        "tool/archcheck.py": "951793ba6ec057a5aecada4b7573a06c829b10032927e5160ed8aa63d434fb78",
+        "tool/model_reviewer.py": "52c9b1f5a3f16f79c90769316e264e8f6af9d566054e8d8c813c35b3d63885b5",
+        "tool/package-lock.json": "906156dad5e290e7cc07239d34b22c31e0c36bd63802bc65d4b4039a0378fcb3",
+        "tool/package.json": "4b8015864ddbf626b7be73328eb34f2aa222b9d6a8feac73546d0553cc2cf33e",
+        "tool/tests/fixtures/layered-misplaced/architecture.json": "40337b687becdb08df8a008ea5dc17184a0935022f0c7e7eb99ec4a481d75142",
+        "tool/tests/fixtures/layered-misplaced/internal/application/checkout.go": "7c34b9f713d324b1dbe01f7939910b13890d3954402c8d793f9447ee5ea62659",
+        "tool/tests/fixtures/layered-misplaced/internal/application/quote.go": "09c21671194385e8ef7d691f7e55964a2a6c4ae385086b07fd59b2d1ca058b89",
+        "tool/tests/fixtures/layered-misplaced/internal/domain/order.go": "565adda377ab113b6a9ecb6642858e65f6842161005470b3ba30237df15b2fd1",
+        "tool/tests/fixtures/layered-misplaced.review.json": "71afb6eb03bd0e8e8b59d6592d7328440989f6c0a72dc0d987c83ddd9a45a194",
+        "tool/tests/test_check.py": "438142c8892bee03632d9b266e494a31e1509725099a2a8f1b1b5814bf2296b1",
+        "tool/tests/test_model_reviewer.py": "9748bd11ff2783cdb4348cbfd7a5831a33956f565b6811ef82c3f416df6c16e7",
+        "tool/tests/test_review.py": "64c192152e10db313ec6af4302c77c545d9de1357854733c7162785c15c449eb"
+      }
+    }
+  ]
+}

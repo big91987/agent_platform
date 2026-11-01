@@ -1,0 +1,29 @@
+{
+  "source_roots": ["src"],
+  "languages": ["typescript"],
+  "exclude": ["**/*.test.ts"],
+  "documents": [
+    "AGENTS.md",
+    "docs/admin-console.md",
+    "src/features/quotas/useQuota.test.ts"
+  ],
+  "modules": [
+    {
+      "name": "app",
+      "paths": ["src/app/**"],
+      "allow": ["quotas"]
+    },
+    {
+      "name": "quotas",
+      "paths": ["src/features/quotas/**"],
+      "allow": ["http"],
+      "public": ["src/features/quotas/index.ts"]
+    },
+    {
+      "name": "http",
+      "paths": ["src/shared/api/**"],
+      "allow": [],
+      "public": ["src/shared/api/index.ts"]
+    }
+  ]
+}

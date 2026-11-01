@@ -1,0 +1,48 @@
+{
+  "snapshot": "e3fc05bf8f2f0bc03fb02b409fe7fc0651c15d469981ab030eed618e2abdb709",
+  "reviewed_files": [
+    "internal/application/checkout.go",
+    "internal/application/quote.go",
+    "internal/domain/order.go"
+  ],
+  "limitations": [],
+  "findings": [
+    {
+      "title": "Checkout and quote independently implement the same pricing policy and disagree on rounding",
+      "severity": "medium",
+      "principle": "The supplied order contract assigns qualification and discount rules to the domain module and requires quote and checkout prices to match.",
+      "impact": "Both application entry points own the premium threshold and discount calculation. For Premium=true and Total=1001, static evaluation gives checkout 901 and quote 900. Updating qualification or rounding in only one entry point can change the charged amount after a quote; the quote multiplication also overflows for sufficiently large positive int64 totals.",
+      "recommendation": "Keep one pricing operation in the existing domain module, define its integer rounding policy, and have both application entry points call it. Use an arithmetic formulation that preserves that policy without overflowing intermediate multiplication; no extra layer or interface is needed.",
+      "validation": "Add shared domain boundary tests for non-premium totals, totals immediately below and at 1000, nonmultiples of ten such as 1001 and 1009, and large supported totals. Verify quote and checkout return the same value through their public entry points. This review derives the discrepancy from the source and does not claim those tests have run.",
+      "evidence": [
+        {
+          "path": "AGENTS.md",
+          "line": 3,
+          "end": 3,
+          "quote": "Order qualification and discount rules belong to the domain module. Checkout and quote are application entry points for the same pricing policy. A premium customer with a total of at least 1000 receives a ten percent discount. Prices must match between quoting and checkout. The application coordinates use cases; it must not independently own duplicate pricing policies. This is a deliberately small architecture review fixture, not a production order service."
+        },
+        {
+          "path": "internal/application/checkout.go",
+          "line": 5,
+          "end": 10,
+          "quote": "func CheckoutPrice(order domain.Order) int64 {\n\tif order.Premium && order.Total >= 1000 {\n\t\treturn order.Total - order.Total/10\n\t}\n\treturn order.Total\n}"
+        },
+        {
+          "path": "internal/application/quote.go",
+          "line": 5,
+          "end": 10,
+          "quote": "func QuotePrice(order domain.Order) int64 {\n\tif order.Premium && order.Total >= 1000 {\n\t\treturn order.Total * 90 / 100\n\t}\n\treturn order.Total\n}"
+        },
+        {
+          "path": "internal/domain/order.go",
+          "line": 3,
+          "end": 6,
+          "quote": "type Order struct {\n\tTotal   int64\n\tPremium bool\n}"
+        }
+      ]
+    }
+  ],
+  "reviewer": {
+    "model": "independent Codex reviewer"
+  }
+}

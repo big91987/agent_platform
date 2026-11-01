@@ -1,0 +1,85 @@
+{
+  "source_roots": [
+    "cmd",
+    "internal"
+  ],
+  "languages": [
+    "go"
+  ],
+  "exclude": [
+    "**/*_test.go"
+  ],
+  "documents": [
+    "AGENTS.md",
+    "docs/saas.md",
+    "internal/infrastructure/sqlite/accounting_test.go",
+    "internal/accounting/domain/reservation_test.go",
+    "internal/accounting/domain/quota_test.go"
+  ],
+  "modules": [
+    {
+      "name": "accounting_domain",
+      "paths": [
+        "internal/accounting/domain/**"
+      ],
+      "allow": [],
+      "allow_external": [],
+      "forbid_imports": [
+        "net/http*",
+        "database/sql*"
+      ]
+    },
+    {
+      "name": "accounting_application",
+      "paths": [
+        "internal/accounting/application/**"
+      ],
+      "allow": [
+        "accounting_domain"
+      ],
+      "allow_external": [],
+      "forbid_imports": [
+        "net/http*",
+        "database/sql*"
+      ]
+    },
+    {
+      "name": "httpapi",
+      "paths": [
+        "internal/httpapi/**"
+      ],
+      "allow": [
+        "accounting_application"
+      ],
+      "allow_external": [],
+      "forbid_imports": [
+        "database/sql*"
+      ]
+    },
+    {
+      "name": "sqlite",
+      "paths": [
+        "internal/infrastructure/sqlite/**"
+      ],
+      "allow": [
+        "accounting_application",
+        "accounting_domain"
+      ],
+      "allow_external": [
+        "github.com/mattn/go-sqlite3"
+      ]
+    },
+    {
+      "name": "entry",
+      "paths": [
+        "cmd/**"
+      ],
+      "allow": [
+        "accounting_application",
+        "httpapi",
+        "sqlite"
+      ],
+      "allow_external": []
+    }
+  ]
+}

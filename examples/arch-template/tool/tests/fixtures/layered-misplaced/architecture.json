@@ -1,0 +1,1 @@
+{"source_roots":["internal"],"languages":["go"],"documents":["AGENTS.md"],"modules":[{"name":"domain","paths":["internal/domain/**"],"allow":[],"forbid_imports":["database/sql","net/http*"]},{"name":"application","paths":["internal/application/**"],"allow":["domain"]}]}

@@ -1,0 +1,24 @@
+{
+  "name": "admin-console-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "verify": "vue-tsc --noEmit && vitest run && vite build"
+  },
+  "dependencies": {
+    "vue": "3.5.44"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.12",
+    "vue-tsc": "3.1.1",
+    "@types/node": "22.18.12"
+  }
+}

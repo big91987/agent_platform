@@ -1,0 +1,12 @@
+{
+  "name": "architecture-check-parsers",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "typescript": "5.9.3",
+    "@vue/compiler-sfc": "3.5.44"
+  }
+}

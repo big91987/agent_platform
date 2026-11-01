@@ -1,0 +1,74 @@
+{
+  "source_roots": [
+    "cmd",
+    "internal"
+  ],
+  "languages": [
+    "go"
+  ],
+  "exclude": [
+    "**/*_test.go"
+  ],
+  "documents": [
+    "AGENTS.md",
+    "docs/model-gateway.md",
+    "internal/httpapi/relay_test.go",
+    "internal/routing/pool_test.go"
+  ],
+  "modules": [
+    {
+      "name": "routing",
+      "paths": [
+        "internal/routing/**"
+      ],
+      "allow": [],
+      "forbid_imports": [
+        "net/http*",
+        "database/sql"
+      ]
+    },
+    {
+      "name": "gateway",
+      "paths": [
+        "internal/gateway/**"
+      ],
+      "allow": [
+        "routing"
+      ],
+      "forbid_imports": [
+        "net/http*",
+        "database/sql"
+      ]
+    },
+    {
+      "name": "httpapi",
+      "paths": [
+        "internal/httpapi/**"
+      ],
+      "allow": [
+        "gateway"
+      ]
+    },
+    {
+      "name": "upstream",
+      "paths": [
+        "internal/infrastructure/upstream/**"
+      ],
+      "allow": [
+        "routing"
+      ]
+    },
+    {
+      "name": "entry",
+      "paths": [
+        "cmd/**"
+      ],
+      "allow": [
+        "gateway",
+        "httpapi",
+        "upstream",
+        "routing"
+      ]
+    }
+  ]
+}
