@@ -97,6 +97,22 @@ class WorkflowTests(unittest.TestCase):
             added = subprocess.run(argv, cwd=root, capture_output=True, text=True)
             self.assertEqual(added.returncode, 2, added.stderr + added.stdout)
             shadow.unlink()
+            outside = root.parent / (root.name + "-outside")
+            outside.mkdir()
+            reports = root / "harness-output/architecture"
+            import shutil
+
+            shutil.rmtree(reports)
+            reports.symlink_to(outside)
+            manifest.write_text("null")
+            unavailable = subprocess.run(argv, cwd=root, capture_output=True, text=True)
+            self.assertEqual(
+                unavailable.returncode, 3, unavailable.stderr + unavailable.stdout
+            )
+            self.assertFalse(list(outside.iterdir()))
+            reports.unlink()
+            outside.rmdir()
+            manifest.write_bytes(saved)
             (root / ".harness/archcheck/inspect_project.py").write_text(
                 "raise SystemExit(0)\n"
             )
@@ -104,3 +120,46 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(drift.returncode, 2, drift.stderr + drift.stdout)
         with self.assertRaises(ValueError):
             module.add_check(graph)
+        original.update(
+            environment="opensandbox",
+            context_version=2,
+            hooks=[
+                {
+                    "event": "run.failed",
+                    "connector_id": "notifications",
+                    "input": {"issue_parameter": "issue_number"},
+                    "body": "failed",
+                }
+            ],
+        )
+        original["nodes"].append(
+            {
+                "id": "prepare",
+                "kind": "execution",
+                "execution": {"mode": "command", "command": "python3 -c 'pass'"},
+                "rule_handoff": {"rules": []},
+            }
+        )
+        original["hooks"].insert(
+            0,
+            {
+                "event": "handoff.after",
+                "node": "qa",
+                "connector_id": "qa-only",
+                "input": {"issue_number": "111"},
+                "body": "qa",
+            },
+        )
+        inspection = module.inspection_definition(original, "initial inspection")
+        self.assertTrue(
+            any(
+                h["event"] == "handoff.after" and h.get("node") == "architecture_check"
+                for h in inspection["hooks"]
+            )
+        )
+        self.assertEqual(
+            next(h for h in inspection["hooks"] if h["event"] == "handoff.after")[
+                "connector_id"
+            ],
+            "notifications",
+        )

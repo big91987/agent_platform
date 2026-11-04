@@ -69,7 +69,7 @@ python3 -I /path/to/repository/.harness/archcheck/inspect_project.py --root /pat
 
 项目维护 architecture.json 并将检查命令接到自己的固定验证入口。已有安装用 `--update-tool`，拒绝本地工具漂移；只检查 Go 的项目不必安装 npm 解析器。将 harness-output/ 加入忽略规则。[ci.yml](ci.yml) 可复制为项目的架构 CI，绑定提交、展示 Markdown 结果并保留原始报告；平台自身使用同一维护源直接运行。
 
-`inspect_project.py` 每次生成独立报告，同时更新 latest-report.json/md 两个固定普通文件，供平台按步骤归档；0=规则通过，1=规则违规，2=分析未完成。报告保留源码摘要、实际范围和 Git HEAD，未提交修改仍以逐文件摘要为准。它不调用模型，也不代表产品 QA 通过。
+`inspect_project.py` 每次生成独立报告，同时更新 latest-report.json/md 两个固定普通文件，供平台按步骤归档；0=规则通过，1=规则违规，2=分析未完成；工作流包装无法保存本次报告时返回3并停止，不接受旧报告。报告保留源码摘要、实际范围和 Git HEAD，未提交修改仍以逐文件摘要为准。它不调用模型，也不代表产品 QA 通过。
 
 ## 工作流与 Issue
 

@@ -23,18 +23,25 @@ expected="""
         + repr(expected)
         + r"""
 def incomplete(reason):
-    folder=root/'harness-output/architecture'
-    if not folder.resolve().is_relative_to(root):
-        print(json.dumps({'status':'incomplete','errors':['report directory escapes workspace']}))
-        raise SystemExit(2)
-    folder.mkdir(parents=True,exist_ok=True)
-    report={'status':'incomplete','model_review':{'status':'not_run'},'errors':[reason],'analysis_completed':False}
-    for name,text in [('latest-report.json',json.dumps(report,ensure_ascii=False,indent=2)),('latest-report.md','# 架构检查\n\n结果：incomplete\n分析未执行或未产生有效结果：'+reason+'\n')]:
-        target=folder/name
-        if target.is_symlink(): raise ValueError('report must not be a symlink')
-        target.write_text(text)
+    try:
+        folder=root/'harness-output/architecture'
+        if not folder.resolve().is_relative_to(root): raise ValueError('report directory escapes workspace')
+        folder.mkdir(parents=True,exist_ok=True)
+        report={'status':'incomplete','model_review':{'status':'not_run'},'errors':[reason],'analysis_completed':False}
+        for name,text in [('latest-report.json',json.dumps(report,ensure_ascii=False,indent=2)),('latest-report.md','# 架构检查\n\n结果：incomplete\n分析未执行或未产生有效结果：'+reason+'\n')]:
+            target=folder/name
+            if target.is_symlink(): raise ValueError('report must not be a symlink')
+            with tempfile.NamedTemporaryFile(mode='w',dir=folder,delete=False) as output:
+                output.write(text)
+                temporary=Path(output.name)
+            temporary.replace(target)
+    except (OSError,ValueError) as error:
+        print('Cannot retain a fresh architecture report: '+str(error),file=sys.stderr)
+        print(json.dumps({'status':'incomplete','errors':[reason,'Fresh report unavailable; previous reports are not results of this invocation.']}))
+        raise SystemExit(3)
     print(json.dumps({'status':'incomplete','errors':[reason]}))
     raise SystemExit(2)
+
 try:
     skip={'node_modules','__pycache__','dist','.DS_Store','SOURCE.json'}
     actual={p.relative_to(tool).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in tool.rglob('*') if p.is_file() and not any(x in skip for x in p.relative_to(tool).parts)}
@@ -149,6 +156,31 @@ def add_check(original):
         },
     }
     graph["nodes"].append(node)
+    destinations = [
+        h
+        for h in graph.get("hooks", [])
+        if h["event"] == "handoff.after"
+        and h.get("node", "") in ("", "architecture_check")
+    ]
+    if not destinations:
+        destination = next(
+            (
+                h
+                for h in graph.get("hooks", [])
+                if h["event"] in ("run.failed", "run.completed")
+            ),
+            None,
+        )
+        if destination:
+            graph.setdefault("hooks", []).append(
+                {
+                    "event": "handoff.after",
+                    "node": "architecture_check",
+                    "connector_id": destination["connector_id"],
+                    "input": copy.deepcopy(destination.get("input", {})),
+                    "body": "**架构检查已产生结果**\n\n{{summary}}\n下一节点：{{target}}\n\n报告：{{artifacts}}\n\n[查看与处理]({{run_url}})",
+                }
+            )
     for index, route in enumerate(rules, 1):
         graph["edges"].append(
             {
@@ -209,6 +241,30 @@ def inspection_definition(source, name):
             "title": "修复后重试",
         }
     )
+    hooks = [
+        copy.deepcopy(h)
+        for h in graph.get("hooks", [])
+        if h["event"] in ("run.completed", "run.failed")
+    ]
+    destination = next(
+        (
+            h
+            for h in graph.get("hooks", [])
+            if h["event"] == "handoff.after"
+            and h.get("node", "") in ("", "architecture_check")
+        ),
+        next(iter(hooks), None),
+    )
+    if destination:
+        hooks.append(
+            {
+                "event": "handoff.after",
+                "node": "architecture_check",
+                "connector_id": destination["connector_id"],
+                "input": copy.deepcopy(destination.get("input", {})),
+                "body": "**架构检查已产生结果**\n\n{{summary}}\n下一节点：{{target}}\n\n报告：{{artifacts}}\n\n[查看与处理]({{run_url}})",
+            }
+        )
     return {
         "name": name,
         "enabled": True,
@@ -217,11 +273,7 @@ def inspection_definition(source, name):
         "authorized_users": source.get("authorized_users", []),
         "entry": "prepare",
         "start_nodes": [],
-        "hooks": [
-            copy.deepcopy(hook)
-            for hook in source.get("hooks", [])
-            if hook["event"] in ("run.completed", "run.failed")
-        ],
+        "hooks": hooks,
         "max_steps": 10,
         "nodes": selected,
         "edges": edges,
