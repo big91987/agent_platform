@@ -39,7 +39,7 @@ def copy(source, dest):
 
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    manifest = dict(version="0.3.0", files=hashes(dest))
+    manifest = dict(version="0.3.1", files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
@@ -232,7 +232,7 @@ def export(destination, backends, frontend):
         (project / "template-source.json").write_text(
             json.dumps(
                 dict(
-                    version="0.3.0",
+                    version="0.3.1",
                     backends=backends,
                     frontend="vue" if frontend else None,
                     files=hashes(project),
