@@ -32,3 +32,8 @@ Model Relay 的26个Go源文件仍集中于启动和 relay；控制台3个JavaSc
 维护源精确head0308f6e的[GitHub CI](https://github.com/big91987/agent_platform/actions/runs/41812248327)实际成功，报告附件已下载复核：版本0.3.1、74个生产文件、源码摘要7d8c67b9a3148d526f9a10810bde1ae3a145b37b141fcd09eadf9fcd9b3c7726。报告记录的Git HEAD为PR合并检查点22cf8c289e9029661a09fc24650b3ddeb39be4ed，不能混称源分支提交。
 
 112原研发图revision15存在旧等待Run，本轮未修改。新图安装的Mac请求连接重置，远端查询确认未创建；将固定源码传到112再执行正式安装器的动作被自动审批拒绝，已向用户发出具体授权选项。实际112新图、执行、归档下载和Issue自动状态回写尚未验证；不能以本地命令或GitHubCI通过替代。
+
+
+后续实测：Model Relay [架构CI](https://github.com/big91987/model-relay/actions/runs/41812694027)在候选d03fe5b上成功。附件已下载核对，报告工具0.3.1、29个文件、源码摘要8868a1cded1f8c735efb31d646883b565393b78787ce199a52b8fec41f7e3ba4；Git HEAD为PR合并检查点8e710c5c2c23b69f5e414ef2020eb08cafb53096，区别于源分支head。
+
+原有PR自动CLI/Delegate审查分别启动Run8ead513642043bba38850c1862c4f646、7f5d01746e85839f4b0c94e7dbd181fc，均在prepare阶段因OpenSandbox创建HTTP500且创建结果unconfirmed而失败，模型审查未执行。保留原Run和环境请求事实，须先核对真实创建回执再通过正式入口恢复；不能盲目重跑或算产品缺陷。已在Issue77写明影响及下一步。
