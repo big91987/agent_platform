@@ -22,3 +22,13 @@ Model Relay 的26个Go源文件仍集中于启动和 relay；控制台3个JavaSc
 初次平台扫描发现 macOS 下 Node 对大管道的同步读取触发 EAGAIN；百万字节回归已复现并在维护源修复为私有普通文件 stdin。工具清单损坏、额外源码和字节码替换应返回 incomplete；不能返回 violations 让研发盲修产品。
 
 实际安装、运行、GitHub回执和最终验证将在本文件补充；本段初检不代表已部署、已合并或完整产品QA。
+
+## 已验证交付
+
+维护源[PR8](https://github.com/big91987/agent_platform/pull/8)以既有开发分支为基线，测试仓[PR78](https://github.com/big91987/model-relay/pull/78)关联[Issue77](https://github.com/big91987/model-relay/issues/77)，两者均为草稿，未合并或部署。
+
+0.3.1版本33项工具测试、11项安装/工作流回归通过；Go vet与平台归档/恢复定向回归通过，独立评审无遗留P1/P2。Model Relay首次安装、明确升级及24件维护源文件逐字节匹配均已验证，make architecture-check实际通过。
+
+维护源精确head0308f6e的[GitHub CI](https://github.com/big91987/agent_platform/actions/runs/41812248327)实际成功，报告附件已下载复核：版本0.3.1、74个生产文件、源码摘要7d8c67b9a3148d526f9a10810bde1ae3a145b37b141fcd09eadf9fcd9b3c7726。报告记录的Git HEAD为PR合并检查点22cf8c289e9029661a09fc24650b3ddeb39be4ed，不能混称源分支提交。
+
+112原研发图revision15存在旧等待Run，本轮未修改。新图安装的Mac请求连接重置，远端查询确认未创建；将固定源码传到112再执行正式安装器的动作被自动审批拒绝，已向用户发出具体授权选项。实际112新图、执行、归档下载和Issue自动状态回写尚未验证；不能以本地命令或GitHubCI通过替代。
