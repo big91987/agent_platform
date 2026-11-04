@@ -11,6 +11,17 @@ TOOL = Path(__file__).resolve().parents[1] / "archcheck.py"
 
 
 class CheckTests(unittest.TestCase):
+    def test_large_typescript_input_is_read_completely(self):
+        self.write(
+            "internal/large.ts",
+            "//" + ("x" * 1_000_000) + "\nexport const enabled = true;\n",
+        )
+        code, report = self.check(
+            [dict(name="app", paths=["internal/**"])], languages=["typescript"]
+        )
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["coverage"]["scanned"], ["internal/large.ts"])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

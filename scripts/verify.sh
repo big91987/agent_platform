@@ -22,6 +22,9 @@ node --test web/request_test.js web/markdown_test.js web/app_test.js web/transcr
 NODE_PATH=examples/github/tooling/full_harness/browser/node_modules node --test web/live_browser_test.cjs
 ruff check sdk/python examples deploy
 ruff format --check sdk/python examples deploy
+python3 -I examples/arch-template/tool/inspect_project.py
+python3 -m unittest discover -s examples/arch-template/tool/tests -v
+python3 -m unittest discover -s examples/arch-template/tests -v
 python3 -m unittest discover -s deploy/platform -p 'test_*.py' -v
 python3 -m unittest discover -s deploy/opensandbox -p 'test_*.py' -v
 PYTHONPATH=sdk/python python3 -m unittest discover -s sdk/python/tests -v

@@ -1,0 +1,42 @@
+name: Architecture checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.25.6'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked architecture analyzers
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix .harness/archcheck
+      - name: Inspect declared architecture
+        run: python3 -I .harness/archcheck/inspect_project.py
+      - name: Attach readable result
+        if: always()
+        run: |
+          python3 -I - <<'PY'
+          import os
+          from pathlib import Path
+          report = Path('harness-output/architecture/latest-report.md')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(report.read_text() if report.exists() else 'Architecture inspection did not produce a report. Check the failed step; this is not a passing result.')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: architecture-${{ github.sha }}-${{ github.run_attempt }}
+          path: harness-output/architecture/
+          if-no-files-found: warn

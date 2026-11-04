@@ -16,3 +16,4 @@ examples/github/quality/node_modules/
 
 # Dependencies installed for portable example tooling
 **/node_modules/
+harness-output/

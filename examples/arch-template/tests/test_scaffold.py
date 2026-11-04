@@ -12,6 +12,26 @@ SOURCE = Path(__file__).resolve().parents[1]
 
 
 class ScaffoldTests(unittest.TestCase):
+    def test_install_existing_repository_keeps_product_and_refuses_replacement(self):
+        self.project.mkdir()
+        product = self.project / "AGENTS.md"
+        product.write_text("existing rules\n")
+        command = [
+            sys.executable,
+            str(SOURCE / "scaffold.py"),
+            "--install-tool",
+            str(self.project),
+        ]
+        installed = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        self.assertEqual(product.read_text(), "existing rules\n")
+        self.assertTrue(
+            (self.project / ".harness/archcheck/inspect_project.py").exists()
+        )
+        again = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(again.returncode, 2)
+        self.assertIn("already", again.stderr)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

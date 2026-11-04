@@ -39,8 +39,27 @@ def copy(source, dest):
 
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    manifest = dict(version="0.2.0", files=hashes(dest))
+    manifest = dict(version="0.3.0", files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
+def adopt(project):
+    if not project.is_dir():
+        raise ValueError("existing project directory is required")
+    parent = project / ".harness"
+    if parent.is_symlink():
+        raise ValueError("tool parent must not be a symlink")
+    target = parent / "archcheck"
+    if target.exists() or target.is_symlink():
+        raise ValueError(
+            "tool already installed; use --update-tool after reviewing changes"
+        )
+    parent.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=parent) as temporary:
+        candidate = Path(temporary) / "archcheck"
+        install_tool(candidate)
+        candidate.rename(target)
+    print(str(target))
 
 
 def upgrade(project):
@@ -69,7 +88,7 @@ def upgrade(project):
                 previous.rename(tool)
                 raise
     print(
-        "Tool upgraded from maintenance source. Run python3 setup.py before verification."
+        "Tool upgraded from maintenance source. Reinstall locked parser dependencies, then run the project verification entry."
     )
 
 
@@ -213,7 +232,7 @@ def export(destination, backends, frontend):
         (project / "template-source.json").write_text(
             json.dumps(
                 dict(
-                    version="0.2.0",
+                    version="0.3.0",
                     backends=backends,
                     frontend="vue" if frontend else None,
                     files=hashes(project),
@@ -235,9 +254,16 @@ def main():
     )
     parser.add_argument("--frontend", choices=["vue"])
     parser.add_argument("--update-tool", type=Path)
+    parser.add_argument("--install-tool", type=Path)
     args = parser.parse_args()
     try:
-        if args.update_tool:
+        if args.install_tool:
+            if args.destination or args.backend or args.frontend or args.update_tool:
+                raise ValueError(
+                    "tool installation cannot be combined with other options"
+                )
+            adopt(args.install_tool.resolve())
+        elif args.update_tool:
             if args.destination or args.backend or args.frontend:
                 raise ValueError(
                     "tool upgrade cannot be combined with scaffold options"

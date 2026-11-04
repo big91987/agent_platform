@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 from . import VERSION
@@ -253,15 +254,21 @@ def parse(root, inventory, language, config):
     if language == "go":
         env.update(GOWORK="off", GO111MODULE="off", GOPROXY="off", GOTOOLCHAIN="local")
         # The helper only imports the standard library, and never executes project code.
-    result = subprocess.run(
-        command,
-        input=json.dumps(payload),
-        text=True,
-        capture_output=True,
-        timeout=120,
-        cwd=root,
-        env=env,
-    )
+    # Node's synchronous fd-0 reader can see EAGAIN on macOS when Python
+    # writes a payload larger than the pipe buffer. A private regular file
+    # supplies the same complete JSON without a nonblocking pipe or retry.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as request:
+        json.dump(payload, request)
+        request.seek(0)
+        result = subprocess.run(
+            command,
+            stdin=request,
+            text=True,
+            capture_output=True,
+            timeout=120,
+            cwd=root,
+            env=env,
+        )
     if result.returncode:
         raise ValueError(f"{language} analyzer failed: {result.stderr.strip()[:2000]}")
     parsed = json.loads(result.stdout)
