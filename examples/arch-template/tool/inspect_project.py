@@ -84,7 +84,18 @@ def inspect_project(
             capture_output=True,
             text=True,
         )
-        report["git_head"] = head.stdout.strip() if head.returncode == 0 else None
+        top = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+        )
+        report["git_head"] = (
+            head.stdout.strip()
+            if head.returncode == 0
+            and top.returncode == 0
+            and Path(top.stdout.strip()).resolve() == root
+            else None
+        )
         report["checked_at"] = datetime.now(timezone.utc).isoformat()
         report["scope_note"] = (
             "Static architecture review of declared source and context; product acceptance was not performed."

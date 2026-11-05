@@ -147,3 +147,47 @@ class InspectionTests(unittest.TestCase):
                 .parent.joinpath("model-result.json")
                 .exists()
             )
+
+    def test_snapshot_directory_does_not_claim_unrelated_parent_git_head(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            subprocess.run(["git", "init", "-q", str(parent)], check=True)
+            (parent / "unrelated.txt").write_text("different repository")
+            subprocess.run(["git", "add", "unrelated.txt"], cwd=parent, check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Fixture",
+                    "-c",
+                    "user.email=fixture@example.invalid",
+                    "commit",
+                    "-qm",
+                    "fixture",
+                ],
+                cwd=parent,
+                check=True,
+            )
+            root = parent / "snapshot"
+            root.mkdir()
+            (root / "main.go").write_text("package app\n")
+            (root / "go.mod").write_text("module example.org/app\n\ngo 1.25\n")
+            (root / "architecture.json").write_text(
+                json.dumps(
+                    dict(
+                        languages=["go"],
+                        source_roots=["."],
+                        modules=[dict(name="app", paths=["*.go"])],
+                    )
+                )
+            )
+            result = subprocess.run(
+                [sys.executable, str(TOOL / "inspect_project.py"), "--root", str(root)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(
+                (root / json.loads(result.stdout)["report"]).read_text()
+            )
+            self.assertIsNone(report["git_head"])
