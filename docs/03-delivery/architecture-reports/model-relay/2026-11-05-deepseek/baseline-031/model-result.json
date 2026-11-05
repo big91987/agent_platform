@@ -1,0 +1,239 @@
+{
+  "snapshot": "9590f995d2b1f3ad3e936702308f22629ed01d455616e0ce6b4dcd7b41c3f173",
+  "reviewed_files": [
+    "cmd/model-relay/main.go",
+    "internal/relay/accounting.go",
+    "internal/relay/admin_response.go",
+    "internal/relay/backup.go",
+    "internal/relay/billing.go",
+    "internal/relay/configuration.go",
+    "internal/relay/console.go",
+    "internal/relay/console_api.go",
+    "internal/relay/console_clock.go",
+    "internal/relay/console_keys.go",
+    "internal/relay/console_overview.go",
+    "internal/relay/console_reports.go",
+    "internal/relay/console_storage.go",
+    "internal/relay/console_summaries.go",
+    "internal/relay/identity.go",
+    "internal/relay/legacy_accounting.go",
+    "internal/relay/protocol.go",
+    "internal/relay/proxy.go",
+    "internal/relay/routed_proxy.go",
+    "internal/relay/routing.go",
+    "internal/relay/routing_latency.go",
+    "internal/relay/routing_latency_storage.go",
+    "internal/relay/security.go",
+    "internal/relay/server.go",
+    "internal/relay/store.go",
+    "internal/relay/upgrade.go",
+    "internal/relay/web.go",
+    "internal/relay/web/app.js",
+    "internal/relay/web/workspace.js"
+  ],
+  "limitations": [
+    "Static reading only. I did not run make architecture-check, go vet, go test, or the browser journeys; rule_findings is empty and the tool result is not independently reproduced here.",
+    "The single-package design of internal/relay and the vanilla-JS console are documented, accepted debt (docs/engineering/architecture-checks.md, .trellis/spec/backend/index.md). Findings below are concrete problems inside that structure; I do not re-report the monolith itself.",
+    "Coverage is limited to coverage.scanned. Tests/browser/**, docs/workflow/** and docs/releases/** are absent, so QA receipts, frozen PRD acceptance intent and browser/user-journey behaviour cannot be verified. Several referenced specs (console-contracts.md, metering-regression.md, dom-lifecycle.md, console-lifecycle.md) are not in the bundle.",
+    "No runtime measurement of lock contention, latency of report queries, or SQLite behaviour was possible; statements about blocking are structural (which mutex is held while which work runs), not measured.",
+    "The two JavaScript files are reviewed as source text; no browser rendering, dialog/focus or SSE behaviour is claimed.",
+    "I could not verify that the three authorization SQL variants produce identical decisions for every key/tenant state without executing them (e.g. key generation revocation vs. tenant pause precedence); the finding is about duplicated ownership, and the divergence claim is limited to what the SQL text shows."
+  ],
+  "findings": [
+    {
+      "title": "The 'may this credential call this alias' rule is owned by three different SQL statements and is re-derived per call path",
+      "severity": "high",
+      "principle": "Single ownership of a business rule / module cohesion: one security rule should live in one function, not be restated by each adapter",
+      "impact": "The authorization rule is expressed three times with different join shapes and different neighbouring checks: authorizeModel checks key_controls+tenants.active, admit re-checks the grant intersection inside the admission transaction after a separate generationIdentity check plus a separate tenant-active query, and listModels builds an EXISTS subquery after appID/generationIdentity. Adding or changing a rule (e.g. treating a revoked generation or a paused tenant uniformly, or granting at model level only) requires finding and editing three sites, and any site missed silently keeps its own semantics. Because authorizeModel does not consult key_generations/revoked at all, callers must remember to perform a second, different check first; that is an implicit, undocumented precondition.",
+      "recommendation": "Extract one function, e.g. authorizeModel(transaction identityQuery, keyID, alias string) (decision, code string), that owns credential validity, tenant active state and the key/tenant grant intersection, and have admit, proxy/beginAttempt and listModels call it (listModels may use a set-returning variant for the list query). Keep the error codes in that one place.",
+      "validation": "Add a table-driven contract test over the matrix {valid, revoked generation, expired generation, disabled key, paused tenant, ungranted model, key-grant without tenant grant} asserting listModels, authorizeModel and admit return the same allow/deny decision and the same code for each row; run it under go test -race and re-run the existing console_contract_test.go and make verify on the host.",
+      "evidence": [
+        {
+          "path": "internal/relay/console_keys.go",
+          "line": 421,
+          "end": 421,
+          "quote": "\terr := store.DB.QueryRow(\"SELECT t.active,(SELECT count(*) FROM key_model_grants k JOIN tenant_model_grants g ON g.alias=k.alias AND g.tenant_id=c.tenant_id WHERE k.key_id=c.key_id AND k.alias=?) FROM key_controls c JOIN tenants t ON t.id=c.tenant_id WHERE c.key_id=?\", alias, keyID).Scan(&active, &allowed)"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 141,
+          "end": 141,
+          "quote": "\tif transaction.QueryRow(\"SELECT count(*) FROM key_model_grants k JOIN key_controls c ON c.key_id=k.key_id JOIN tenant_model_grants g ON g.alias=k.alias AND g.tenant_id=c.tenant_id WHERE k.key_id=? AND k.alias=?\", record.KeyID, record.Alias).Scan(&currentlyAuthorized) != nil {"
+        },
+        {
+          "path": "internal/relay/server.go",
+          "line": 536,
+          "end": 536,
+          "quote": "\t\t\tquery += \" AND EXISTS(SELECT 1 FROM tenant_model_grants g JOIN key_model_grants k ON k.alias=g.alias WHERE g.tenant_id=? AND k.key_id=? AND g.alias=models.alias)\""
+        }
+      ]
+    },
+    {
+      "title": "Production console responses are written to the client socket while the global dispatch mutex is held",
+      "severity": "medium",
+      "principle": "State/side-effect ownership and lock scope: the lock that serializes dispatch registration must not span response I/O, which is the documented purpose of adminResponse buffering",
+      "impact": "consoleAPI takes the exclusive server.mu, runs the handler, and only releases it after the handler has already encoded and written JSON/CSV to the client, because consoleAPI is entered before the buffered adminResponse wrapper is installed. The same mutex is taken by beginAttempt on every attempt dispatch and by acceptLatency on every completion, so a slow console client, or the requests export that streams up to 10000 rows, blocks all model generation and latency sampling for the duration of the socket write. The stated mitigation ('slow response writes cannot hold configuration lock') applies only to the legacy schema-2 path and the upstreams/models handlers.",
+      "recommendation": "Wrap the schema-3 console/identity dispatch in the same buffered writer used for the legacy path (install newAdminResponse before calling identityAPI/consoleAPI and flush after unlocking), or narrow the critical section to the clock advance plus the commit and release the lock before writing the response.",
+      "validation": "Add a handler-level test that uses a writer whose Write blocks, invokes a console GET (for example workspace/requests or the export), and asserts that a concurrent beginAttempt call completes; then run make verify on the host to confirm the browser journeys and existing lock/response assertions still pass.",
+      "evidence": [
+        {
+          "path": "internal/relay/console_api.go",
+          "line": 29,
+          "end": 29,
+          "quote": "\tserver.mu.Lock()"
+        },
+        {
+          "path": "internal/relay/server.go",
+          "line": 238,
+          "end": 238,
+          "quote": "\t\tif server.identityAPI(writer, request, current) || server.consoleAPI(writer, request, current) {"
+        },
+        {
+          "path": "internal/relay/server.go",
+          "line": 255,
+          "end": 255,
+          "quote": "\tresponse := newAdminResponse(writer)"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "line": 172,
+          "end": 172,
+          "quote": "\tserver.mu.Lock()"
+        }
+      ]
+    },
+    {
+      "title": "Billing settlement writes to the routing-configuration table model_bounds, which admission only reads",
+      "severity": "medium",
+      "principle": "Business-rule ownership and module boundaries: settlement should not mutate operator-declared configuration evidence owned by configuration/finance",
+      "impact": "model_bounds is the operator-declared, evidence-bearing cap that admission treats as trusted input; when a reported usage exceeds the stored cap, settleAdmission deletes the row from inside the settlement transaction. Billing therefore both consumes and destroys configuration state, so an unrelated settlement failure rolls back a configuration change, and the operator's registered evidence silently disappears as a side effect of a usage report. The bounds API (models/{alias}/bounds) is the documented owner of that row, and it cannot see or audit this destructive path.",
+      "recommendation": "Replace the deletion with a persisted, auditable fact (e.g. mark the bound as invalidated/flagged for review, or record the violation in the attempt/ledger rows) and let the operator-driven bounds endpoint or an explicit reconciliation action decide whether the cap is withdrawn. At minimum, move the write behind a named operation on the configuration side rather than an inline DELETE in the settlement loop.",
+      "validation": "Extend the existing bound-violation scenario to assert that after a violated attempt the bound still exists with a reviewable invalidation fact, that admission rejects with trusted_bound_required for the intended reason, and that no ledger/admission row changed; run TestMeteringBoundViolationInProcess/ActualHTTP plus make verify.",
+      "evidence": [
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 222,
+          "end": 222,
+          "quote": "\t\terr = transaction.QueryRow(\"SELECT max_input,max_output,evidence FROM model_bounds WHERE alias=? AND upstream_id=? AND upstream_execution=? AND candidate_execution=?\", record.Alias, candidate.UpstreamID, upstream.ExecutionRevision, candidate.ExecutionRevision).Scan(&value.Input, &value.Output, &evidence)"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 442,
+          "end": 442,
+          "quote": "\t\tif value.price.Input > 0 && (input > value.price.Input || output > value.price.Output) {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 443,
+          "end": 443,
+          "quote": "\t\t\tif _, err := transaction.Exec(\"DELETE FROM model_bounds WHERE (alias,upstream_id) IN(SELECT r.alias,a.upstream_id FROM requests r JOIN request_attempts a ON a.request_id=r.id WHERE r.id=? AND a.ordinal=?)\", requestID, value.ordinal); err != nil {"
+        }
+      ]
+    },
+    {
+      "title": "Report scoping returns a SQL fragment that another query rewrites by string replacement on table aliases",
+      "severity": "medium",
+      "principle": "Interface depth and explicit contracts: a scope predicate should be a typed, composable condition, not SQL text that callers patch textually",
+      "impact": "reportScope hands back the raw WHERE text 'c.tenant_id=?' plus positional args; the usage report then re-targets that text to a different FROM clause by ReplaceAll on 'c.' and 'r.', and offsets the argument list by repeating it five times to match the five correlated subqueries. Any future change to the fragment (a literal containing 'c.' or 'r.', an added column, a different alias, an added argument) silently produces wrong SQL or an argument-count mismatch whose failure mode is a 503 storage_unavailable rather than a compile or test error. The fragment also cannot be reused without knowing the alias names of the consumer.",
+      "recommendation": "Model the scope as a value (tenant id, developer user id, or platform) and render it per query with explicit alias parameters, or expose a small builder such as scopeCondition(alias string, args *[]any) string used by both the list query and the ledger subqueries; remove the ReplaceAll and the manual fivefold argument replication.",
+      "validation": "Add a unit test that renders the usage query for platform, tenant-administrator and developer scopes and asserts the produced SQL contains the expected alias-specific predicate and that the argument count equals the placeholder count; keep the existing usage/CSV journey assertions and run make verify.",
+      "evidence": [
+        {
+          "path": "internal/relay/console_reports.go",
+          "line": 205,
+          "end": 205,
+          "quote": "\t\t\treturn \"(SELECT coalesce(sum(e.\" + field + \"),0) FROM charge_entries e JOIN requests er ON er.id=e.request_id LEFT JOIN key_controls ec ON ec.key_id=er.key_id WHERE er.alias=r.alias AND \" + strings.ReplaceAll(strings.ReplaceAll(where, \"c.\", \"ec.\"), \"r.\", \"er.\") + \")\""
+        },
+        {
+          "path": "internal/relay/console_reports.go",
+          "line": 50,
+          "end": 50,
+          "quote": "\twhere := \"c.tenant_id=?\""
+        }
+      ]
+    },
+    {
+      "title": "The admission use case takes *http.Request and reads credentials and idempotency keys out of headers",
+      "severity": "low",
+      "principle": "Layering: business operations should receive explicit inputs, not the transport request object",
+      "impact": "admit is the accounting/admission operation but reaches into the HTTP request for the bearer credential and the Idempotency-Key header, so the accounting rule cannot be exercised without a transport request, and any non-HTTP caller (recovery, reconciliation, future CLI) must fabricate one. It also hides an input the caller is responsible for supplying consistently: generate() has already authenticated the key, yet admit re-derives and re-validates the credential from the header, so identity is computed twice from two sources of truth.",
+      "recommendation": "Pass an explicit admission input (credential, idempotency key, request id, alias, key id) into admit and let the HTTP adapter populate it; keep the re-validation of the credential but make the value an argument.",
+      "validation": "Compile-level check that admit has no net/http dependency in its signature, plus moving TestMeteringUndispatchedInProcess to call admit without building an httptest request; existing metering and console contract tests must stay green under make verify.",
+      "evidence": [
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 127,
+          "end": 127,
+          "quote": "func (store *Store) admit(record Record, snapshot routeSnapshot, payload map[string]json.RawMessage, request *http.Request) (string, int, string) {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 147,
+          "end": 147,
+          "quote": "\toperation := request.Header.Get(\"Idempotency-Key\")"
+        }
+      ]
+    },
+    {
+      "title": "boundedPayload both validates and mutates the outbound request payload",
+      "severity": "low",
+      "principle": "Side-effect ownership: a boolean predicate called from an if-condition should not modify shared state",
+      "impact": "The function reads as a validation predicate at its call site but injects max_tokens/max_completion_tokens into the caller's payload map when the client omitted a cap, so the upstream body is changed by a check. The idempotency fingerprint is computed earlier in admit from the pre-injection payload, so the two representations silently differ, and any future caller that logs, hashes or forwards the payload after this check observes a mutated request without a visible write.",
+      "recommendation": "Separate the concerns: return (ok bool) from validation and have the caller apply the output-cap default explicitly before marshal, or return the effective cap and let routedGenerate write it.",
+      "validation": "Unit test that boundedPayload leaves its input map unchanged and that the injected cap appears only in the marshalled upstream body produced by the explicit step; keep the metering cap assertions (default cap 64, explicit 32) green.",
+      "evidence": [
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 335,
+          "end": 335,
+          "quote": "\tif raw := payload[field]; raw != nil {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "line": 339,
+          "end": 339,
+          "quote": "\tpayload[field], _ = json.Marshal(maximumOutput)"
+        }
+      ]
+    },
+    {
+      "title": "API value types are decided by SQL column names inside the generic query helper",
+      "severity": "low",
+      "principle": "Explicit contract at the boundary: response typing should come from a projection definition, not from whatever alias a query happens to use",
+      "impact": "queryMaps converts int64 to decimal strings whenever the column name matches a hard-coded list or ends in _micro_usd, so whether a JSON field is a string or a number depends on the alias chosen in each ad-hoc SELECT. Renaming a column alias, or adding a money column without the suffix, silently changes the wire type of an admin/finance response; the same helper is used by detail, bills, catalog-ish reports and the CSV writer, so a change in one query can flip types for clients of another.",
+      "recommendation": "Decide the string/decimal representation at the projection instead of by name: either declare the money fields explicitly per query (a small column typing argument) or return typed structs per report and marshal money as decimal strings there.",
+      "validation": "Add a test that decodes a bills/usage/detail response into a typed struct and fails if a money field arrives as a JSON number; run the existing console summary and CSV assertions and make verify on the host.",
+      "evidence": [
+        {
+          "path": "internal/relay/console_reports.go",
+          "line": 81,
+          "end": 81,
+          "quote": "\t\t\tif amount, ok := fields[index].(int64); ok && (name == \"cost\" || name == \"fee\" || name == \"amount\" || name == \"original_cost\" || name == \"original_fee\" || name == \"fee_reserved\" || name == \"cost_input\" || name == \"cost_output\" || name == \"tenant_input\" || name == \"tenant_output\" || strings.HasSuffix(name, \"_micro_usd\")) {"
+        },
+        {
+          "path": "internal/relay/console_reports.go",
+          "line": 82,
+          "end": 82,
+          "quote": "\t\t\t\tvalue[name] = strconv.FormatInt(amount, 10)"
+        }
+      ]
+    }
+  ],
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 238664,
+      "completion_tokens": 33556,
+      "total_tokens": 272220,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 29634
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 238664
+    },
+    "duration_seconds": 153.382
+  }
+}

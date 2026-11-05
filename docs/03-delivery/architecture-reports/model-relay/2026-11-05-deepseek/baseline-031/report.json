@@ -1,0 +1,4647 @@
+{
+  "tool_version": "0.3.1",
+  "status": "incomplete",
+  "snapshot": "9590f995d2b1f3ad3e936702308f22629ed01d455616e0ce6b4dcd7b41c3f173",
+  "hashes": {
+    ".trellis/spec/backend/index.md": "5b5a51fece4383c805018b47b91437bc0e758d70c12dad1912b6b6e81f420120",
+    ".trellis/spec/backend/multitenant-contracts.md": "6854c3139ff1e2c1907c67b18b0088a217f2dadf847aa17e0818ddfd6fe1a697",
+    ".trellis/spec/backend/routing-contracts.md": "ebcdced8ec7ebefb7b795f3908a41d3f1466ec482f3cae2673b2b272d1ddd64a",
+    ".trellis/spec/backend/runtime-contracts.md": "9c56946acaf75e53ad37bf25b7e671a7cb7a27cdfb847dd118ecba47040aabf9",
+    ".trellis/spec/frontend/index.md": "7873e92360dfd3d72e404e8d7fd6caca0784fdfaf596b36939b0a1174df82139",
+    ".trellis/spec/frontend/workspace-contracts.md": "ac6e81a971f280d2ad5113e3c4acd28ed8b949f0baa36283ad9a356e2f572284",
+    "AGENTS.md": "c1f40477a17410fb2b45b256160cecc091c1e6372263b5b59b7fcb11e209120a",
+    "architecture.json": "ed1551668ea524b67b691c9f6e44a1789295386c61e9586a88b731d4caf8ea26",
+    "cmd/model-relay/main.go": "9b611219734040c0b06555bf74de0f4df18c21b7fdf6fb611293c400498ef52f",
+    "docs/engineering/architecture-checks.md": "4837e554a3323002ac64fc81c5259e3ea3289d63ae2b2d18f31c94a06fa64557",
+    "docs/roadmap.md": "01b67b4ba3110f5fbffbf9c81cca64673cbf26970a1c95dda768117c2e1a6201",
+    "go.mod": "43a61905ab453f007d88c21bd3066453570fb6d9bd533247b94b81612b615477",
+    "go.sum": "9afb7f3a178eab537ac50d13d8f518553386f2ebf4e0fce528cbc6b2f8be99d5",
+    "internal/relay/accounting.go": "f96dac6dd78480854eda76b3e5998bf495efc86c777bef60eb13613b24dadad6",
+    "internal/relay/admin_response.go": "d989e85f9955deec8b28dc9357cf670c4bd6251d955630519f6b4ce4602ea4cd",
+    "internal/relay/backup.go": "2d01722ee1e4613b5698eb2807ed0ad7fc7bdba45ac9d630c2b5cfe9842ccd62",
+    "internal/relay/billing.go": "47ad422d93334163c4ac7cd1d698e1ca7c41a95b91f72012b12583fc0abf37b8",
+    "internal/relay/configuration.go": "4ea688f3d49d792fc2c39345e4518a54c34b421996b8625796e69baf83467483",
+    "internal/relay/console.go": "01c1cfa6b6da8e490345e5a16fcdcbf9ea7539c1ebe17097e28d9ddd1e827ef1",
+    "internal/relay/console_api.go": "fa8c48e406c38e7a989c5725791ece3a7fa83baa1247590771264b754663ff78",
+    "internal/relay/console_clock.go": "54d3e1ba0f0ef5085976c4b34de307a736757d91dc569cbd58bc0e0217c8f124",
+    "internal/relay/console_contract_test.go": "d8ad4c64deb6bd4cdc4467c0289ea2221c33f85d5276863889531f297f29181b",
+    "internal/relay/console_keys.go": "5f0a25251fe68433fd22bf7bc0478d2ce2ba7627d577e61a9b8fc672901bfbab",
+    "internal/relay/console_overview.go": "a39f25a35a0b7bab95d663467f6b3febe729f84a3b2da780083a65b55050a9be",
+    "internal/relay/console_reports.go": "a08e2d630eff7eef019103d10548dd16ff2708bc95254ef5aa79170db7feb0b9",
+    "internal/relay/console_resource_matrix_test.go": "e206271d773fec693e32ce56e88356f63c42a70f4ec4dd423f6c1c950ffdcf4a",
+    "internal/relay/console_storage.go": "a7b7e45630949f82822b1d8a70be0419cee0388aaa0a56a1be01194fb4bfff10",
+    "internal/relay/console_summaries.go": "024265ba02f07c6cff7011051d9e9b423ccc5f0b49e5701b79048569201de331",
+    "internal/relay/identity.go": "f57a5374697ce1a717fc252f1c298b8521aa669faa26c9268c594d4d688fd8e8",
+    "internal/relay/legacy_accounting.go": "112f3849c5a5b4432fe7b5ad8a391dd42dba04070f2f83c4b8d5817a67227aa8",
+    "internal/relay/metering_regression_test.go": "09297f1b4f863754d1cfc839a32fcacc7aef90c6fa77024d98310f4e2d0acc10",
+    "internal/relay/protocol.go": "09514f0580ac9c254c10ab873300f671c1b89eec4343ac1a7850ed1822b90dae",
+    "internal/relay/proxy.go": "3dac32285e36b1b4b1c68e8073dc9751dcdb34890b6f260b775ad89b1883a2eb",
+    "internal/relay/routed_proxy.go": "2c80cea449cfa2fa1a246763c60587b062379dac12bd209959bf770212c981a7",
+    "internal/relay/routing.go": "8feafc1099c31a9cf2b88ccafff9df646d105f78cb25a267f55997bcc18cb824",
+    "internal/relay/routing_http_test.go": "47b08debd1b52322c3991a73c7ba3bd07190e11af1a9c28f73d9305b8f0ddc0b",
+    "internal/relay/routing_latency.go": "ce18d8fd65881fd8a2a80d30548e64d2843b16a69ba0f43fda4367d2a408190f",
+    "internal/relay/routing_latency_storage.go": "ad1fbf8e55c32489d41cb58b180c53a4b45081604e8ef855d1bca1bc334a362d",
+    "internal/relay/routing_latency_test.go": "18deb212f5654b010fbe690c8df64308644a8956b2a966b4ae5b2704482384b4",
+    "internal/relay/security.go": "9e5dedee572052240ceb94dd540582e6504eab55776d7ba0fc3447ba775b4cd1",
+    "internal/relay/server.go": "d887e26593810f22372862fa60fc364db003e39a2050064a0528b79ab7b19308",
+    "internal/relay/store.go": "033ff001a3f1cd1a9b95e027a3b41c0170396d2fcf71987dcbd87f268dcae9a8",
+    "internal/relay/upgrade.go": "7960fece69fb202fe8ea56b79931477069c305d33d961cfd4c807abb1ea4a9ad",
+    "internal/relay/web.go": "85649b5ef8fa8a9b8bf523fbde8ec5677d5b5a5fb713db48b975eb4afb9c9238",
+    "internal/relay/web/app.js": "534458755e9a44f7c8cd77094ab65d880f2eed1d1bb563e2de259741b9cced70",
+    "internal/relay/web/workspace.js": "a7207531a2bc8970db684c8a34764f095c7a5f7d2c4ec68169595d0c0f734283",
+    "package-lock.json": "05459652f98128ebcb6786e2d80bf694d23c437c0d4f7d45c56371da511bc688",
+    "package.json": "1a2755144abab6752719532bd09707cc2a09067d29d60e406cb3835999e89a3a",
+    "standards/arch-template/backend/go/README.md": "51aa7fa1243ae4befd63bdf54adc48a612fe1697c0b2417251e1f54e1a07113a",
+    "standards/arch-template/backend/go/model-gateway/README.md": "18eabf6c25d1eb2af58474392b85126224c30522aa8dc46c75aa5f9809848564",
+    "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md": "8c1a2576653988edfe4f12ec16f98ae57364a47aff8ee1405be81ea055b8a49b",
+    "standards/arch-template/backend/go/saas/README.md": "87417d47165d02f7bac7fd884bc433fb0c55f948c088101454be69098b4fd273",
+    "standards/arch-template/backend/go/saas/template/docs/saas.md": "96e29e36692b4f20f38a9e7d227e843bad1eb01d3befdc352e1ac7ff32ae04e2",
+    "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md": "00011dc2e515f26ec4b9ff04c6662e59ed17db30ab7a33365d4fe3fd9d7121ca",
+    "standards/arch-template/principles.md": "a84d010abcb1b1cb208629a94a8bc5d5f2b9069932fac688a58d07b9be5591f8",
+    "standards/arch-template/verification.md": "04ca58b757107c644a429a9879e4362f8ec201625d07da10c26d62598971502b"
+  },
+  "coverage": {
+    "scanned": [
+      "cmd/model-relay/main.go",
+      "internal/relay/accounting.go",
+      "internal/relay/admin_response.go",
+      "internal/relay/backup.go",
+      "internal/relay/billing.go",
+      "internal/relay/configuration.go",
+      "internal/relay/console.go",
+      "internal/relay/console_api.go",
+      "internal/relay/console_clock.go",
+      "internal/relay/console_keys.go",
+      "internal/relay/console_overview.go",
+      "internal/relay/console_reports.go",
+      "internal/relay/console_storage.go",
+      "internal/relay/console_summaries.go",
+      "internal/relay/identity.go",
+      "internal/relay/legacy_accounting.go",
+      "internal/relay/protocol.go",
+      "internal/relay/proxy.go",
+      "internal/relay/routed_proxy.go",
+      "internal/relay/routing.go",
+      "internal/relay/routing_latency.go",
+      "internal/relay/routing_latency_storage.go",
+      "internal/relay/security.go",
+      "internal/relay/server.go",
+      "internal/relay/store.go",
+      "internal/relay/upgrade.go",
+      "internal/relay/web.go",
+      "internal/relay/web/app.js",
+      "internal/relay/web/workspace.js"
+    ],
+    "excluded": [
+      "cmd/model-relay/deployment_test.go",
+      "cmd/model-relay/main_test.go",
+      "internal/relay/boundary_test.go",
+      "internal/relay/configuration_test.go",
+      "internal/relay/connection_lifecycle_test.go",
+      "internal/relay/console_clock_queue_test.go",
+      "internal/relay/console_clock_recovery_test.go",
+      "internal/relay/console_contract_test.go",
+      "internal/relay/console_http_test.go",
+      "internal/relay/console_migration_test.go",
+      "internal/relay/console_process_test.go",
+      "internal/relay/console_resource_matrix_test.go",
+      "internal/relay/console_review_regression_test.go",
+      "internal/relay/console_summaries_test.go",
+      "internal/relay/console_test.go",
+      "internal/relay/console_v3_test.go",
+      "internal/relay/crash_test.go",
+      "internal/relay/health_test.go",
+      "internal/relay/inprocess_test.go",
+      "internal/relay/lifecycle_test.go",
+      "internal/relay/metering_regression_test.go",
+      "internal/relay/persistence_test.go",
+      "internal/relay/protocol_role_test.go",
+      "internal/relay/qa_connection_contract_test.go",
+      "internal/relay/relay_test.go",
+      "internal/relay/routing_boundary_test.go",
+      "internal/relay/routing_contract_regression_test.go",
+      "internal/relay/routing_http_test.go",
+      "internal/relay/routing_latency_recovery_test.go",
+      "internal/relay/routing_latency_test.go",
+      "internal/relay/routing_test.go",
+      "internal/relay/single_fixture_test.go",
+      "internal/relay/sse_terminal_regression_test.go",
+      "internal/relay/upgrade_test.go",
+      "internal/relay/version_test.go"
+    ],
+    "assets": [
+      "internal/relay/web/index.html",
+      "internal/relay/web/style.css",
+      "internal/relay/web/workspace.css",
+      "internal/relay/web/workspace.html"
+    ]
+  },
+  "facts": {
+    "files": [
+      {
+        "path": "cmd/model-relay/main.go",
+        "language": "go",
+        "unit": "go:cmd/model-relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "flag",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "net",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "os",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "os/signal",
+            "line": 13,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 14,
+            "standard_library": true
+          },
+          {
+            "specifier": "syscall",
+            "line": 15,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 16,
+            "standard_library": true
+          },
+          {
+            "specifier": "model-relay/internal/relay",
+            "line": 18,
+            "standard_library": false
+          }
+        ],
+        "symbols": [
+          {
+            "name": "run",
+            "line": 23,
+            "end": 147
+          },
+          {
+            "name": "main",
+            "line": 148,
+            "end": 153
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/accounting.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bytes",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "math/big",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "sort",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 13,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "ResourceLimits",
+            "line": 16,
+            "end": 24
+          },
+          {
+            "name": "ResourceUsage",
+            "line": 26,
+            "end": 34
+          },
+          {
+            "name": "PriceSnapshot",
+            "line": 36,
+            "end": 45
+          },
+          {
+            "name": "MarshalJSON",
+            "line": 47,
+            "end": 49
+          },
+          {
+            "name": "microCharge",
+            "line": 51,
+            "end": 53
+          },
+          {
+            "name": "microReserve",
+            "line": 55,
+            "end": 57
+          },
+          {
+            "name": "microAmount",
+            "line": 59,
+            "end": 71
+          },
+          {
+            "name": "limitsFor",
+            "line": 73,
+            "end": 80
+          },
+          {
+            "name": "usageFor",
+            "line": 82,
+            "end": 110
+          },
+          {
+            "name": "overLimit",
+            "line": 112,
+            "end": 114
+          },
+          {
+            "name": "admissionClock",
+            "line": 116,
+            "end": 125
+          },
+          {
+            "name": "admit",
+            "line": 127,
+            "end": 309
+          },
+          {
+            "name": "boundedPayload",
+            "line": 311,
+            "end": 341
+          },
+          {
+            "name": "settleAdmission",
+            "line": 343,
+            "end": 450
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/admin_response.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bytes",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 5,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "adminResponse",
+            "line": 8,
+            "end": 13
+          },
+          {
+            "name": "newAdminResponse",
+            "line": 15,
+            "end": 17
+          },
+          {
+            "name": "Header",
+            "line": 18,
+            "end": 18
+          },
+          {
+            "name": "WriteHeader",
+            "line": 19,
+            "end": 23
+          },
+          {
+            "name": "Write",
+            "line": 24,
+            "end": 29
+          },
+          {
+            "name": "Unwrap",
+            "line": 30,
+            "end": 30
+          },
+          {
+            "name": "flush",
+            "line": 31,
+            "end": 41
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/backup.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "archive/tar",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/sha256",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/hex",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "os",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "path/filepath",
+            "line": 11,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "manifest",
+            "line": 14,
+            "end": 17
+          },
+          {
+            "name": "Backup",
+            "line": 19,
+            "end": 26
+          },
+          {
+            "name": "backupLocked",
+            "line": 28,
+            "end": 98
+          },
+          {
+            "name": "Restore",
+            "line": 99,
+            "end": 186
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/billing.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 7,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "validPeriod",
+            "line": 10,
+            "end": 13
+          },
+          {
+            "name": "tenantBills",
+            "line": 15,
+            "end": 108
+          },
+          {
+            "name": "manageBill",
+            "line": 110,
+            "end": 202
+          },
+          {
+            "name": "reconcileUsage",
+            "line": 204,
+            "end": 272
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/configuration.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "mime",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 13,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "Upstream",
+            "line": 16,
+            "end": 27
+          },
+          {
+            "name": "CheckResult",
+            "line": 29,
+            "end": 39
+          },
+          {
+            "name": "upstreamByID",
+            "line": 41,
+            "end": 63
+          },
+          {
+            "name": "pageLimit",
+            "line": 65,
+            "end": 75
+          },
+          {
+            "name": "configChanged",
+            "line": 77,
+            "end": 80
+          },
+          {
+            "name": "configurationConflict",
+            "line": 82,
+            "end": 84
+          },
+          {
+            "name": "upstreams",
+            "line": 86,
+            "end": 292
+          },
+          {
+            "name": "Candidate",
+            "line": 294,
+            "end": 303
+          },
+          {
+            "name": "describeModel",
+            "line": 305,
+            "end": 330
+          },
+          {
+            "name": "RouteModel",
+            "line": 332,
+            "end": 339
+          },
+          {
+            "name": "routeModel",
+            "line": 341,
+            "end": 360
+          },
+          {
+            "name": "routeModels",
+            "line": 362,
+            "end": 581
+          },
+          {
+            "name": "checkUpstream",
+            "line": 583,
+            "end": 696
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 6,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "rowScanner",
+            "line": 11,
+            "end": 13
+          },
+          {
+            "name": "scanRecord",
+            "line": 15,
+            "end": 19
+          },
+          {
+            "name": "configurationChanged",
+            "line": 21,
+            "end": 26
+          },
+          {
+            "name": "record",
+            "line": 28,
+            "end": 85
+          },
+          {
+            "name": "overview",
+            "line": 87,
+            "end": 144
+          },
+          {
+            "name": "identifyKey",
+            "line": 146,
+            "end": 164
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_api.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 9,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "consoleAPI",
+            "line": 12,
+            "end": 88
+          },
+          {
+            "name": "manageLimits",
+            "line": 90,
+            "end": 177
+          },
+          {
+            "name": "manageModelFinance",
+            "line": 179,
+            "end": 360
+          },
+          {
+            "name": "catalog",
+            "line": 362,
+            "end": 418
+          },
+          {
+            "name": "marshalSafe",
+            "line": 420,
+            "end": 420
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_clock.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "log",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 8,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "advanceClock",
+            "line": 13,
+            "end": 20
+          },
+          {
+            "name": "initializeConsoleClock",
+            "line": 22,
+            "end": 60
+          },
+          {
+            "name": "advanceClock",
+            "line": 62,
+            "end": 103
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_keys.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bytes",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 10,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "ControlledKey",
+            "line": 13,
+            "end": 23
+          },
+          {
+            "name": "KeyInput",
+            "line": 25,
+            "end": 33
+          },
+          {
+            "name": "operationStart",
+            "line": 35,
+            "end": 58
+          },
+          {
+            "name": "operationFinish",
+            "line": 60,
+            "end": 65
+          },
+          {
+            "name": "scanControlledKey",
+            "line": 67,
+            "end": 82
+          },
+          {
+            "name": "stringList",
+            "line": 84,
+            "end": 99
+          },
+          {
+            "name": "keyScope",
+            "line": 101,
+            "end": 120
+          },
+          {
+            "name": "validateKeyInput",
+            "line": 122,
+            "end": 149
+          },
+          {
+            "name": "setKeyGrants",
+            "line": 151,
+            "end": 166
+          },
+          {
+            "name": "controlledKeys",
+            "line": 168,
+            "end": 363
+          },
+          {
+            "name": "subsetStrings",
+            "line": 365,
+            "end": 376
+          },
+          {
+            "name": "expiryExpands",
+            "line": 378,
+            "end": 388
+          },
+          {
+            "name": "controlledAppID",
+            "line": 390,
+            "end": 396
+          },
+          {
+            "name": "identityQuery",
+            "line": 398,
+            "end": 398
+          },
+          {
+            "name": "generationIdentity",
+            "line": 400,
+            "end": 416
+          },
+          {
+            "name": "authorizeModel",
+            "line": 418,
+            "end": 432
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_overview.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 7,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "consoleOverview",
+            "line": 10,
+            "end": 60
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_reports.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/csv",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 9,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "replyCollection",
+            "line": 12,
+            "end": 37
+          },
+          {
+            "name": "reportScope",
+            "line": 39,
+            "end": 57
+          },
+          {
+            "name": "queryMaps",
+            "line": 59,
+            "end": 94
+          },
+          {
+            "name": "consoleReports",
+            "line": 96,
+            "end": 268
+          },
+          {
+            "name": "addConfirmedTokens",
+            "line": 270,
+            "end": 279
+          },
+          {
+            "name": "writeCSV",
+            "line": 281,
+            "end": 308
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_storage.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 7,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "createConsole",
+            "line": 46,
+            "end": 54
+          },
+          {
+            "name": "validateConsole",
+            "line": 56,
+            "end": 92
+          },
+          {
+            "name": "recoverConsole",
+            "line": 94,
+            "end": 143
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/console_summaries.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 5,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "tenantSummary",
+            "line": 8,
+            "end": 43
+          },
+          {
+            "name": "modelSummary",
+            "line": 45,
+            "end": 61
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/identity.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "crypto/subtle",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/mail",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "golang.org/x/crypto/argon2",
+            "line": 12,
+            "standard_library": false
+          }
+        ],
+        "symbols": [
+          {
+            "name": "Principal",
+            "line": 24,
+            "end": 28
+          },
+          {
+            "name": "Tenant",
+            "line": 30,
+            "end": 37
+          },
+          {
+            "name": "Invitation",
+            "line": 39,
+            "end": 46
+          },
+          {
+            "name": "validRole",
+            "line": 48,
+            "end": 50
+          },
+          {
+            "name": "invitationAccount",
+            "line": 52,
+            "end": 56
+          },
+          {
+            "name": "validPassword",
+            "line": 58,
+            "end": 60
+          },
+          {
+            "name": "passwordMaterial",
+            "line": 62,
+            "end": 65
+          },
+          {
+            "name": "createIdentity",
+            "line": 67,
+            "end": 73
+          },
+          {
+            "name": "authenticate",
+            "line": 75,
+            "end": 91
+          },
+          {
+            "name": "principal",
+            "line": 93,
+            "end": 97
+          },
+          {
+            "name": "scopedRole",
+            "line": 99,
+            "end": 107
+          },
+          {
+            "name": "auditIdentity",
+            "line": 109,
+            "end": 112
+          },
+          {
+            "name": "identityAPI",
+            "line": 114,
+            "end": 244
+          },
+          {
+            "name": "tenantInvitations",
+            "line": 246,
+            "end": 328
+          },
+          {
+            "name": "tenantMembers",
+            "line": 330,
+            "end": 402
+          },
+          {
+            "name": "acceptInvitation",
+            "line": 404,
+            "end": 503
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/legacy_accounting.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 6,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "reconcileLegacy",
+            "line": 9,
+            "end": 145
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/protocol.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bytes",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "unicode/utf8",
+            "line": 8,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "uniqueJSON",
+            "line": 11,
+            "end": 63
+          },
+          {
+            "name": "stringValue",
+            "line": 64,
+            "end": 68
+          },
+          {
+            "name": "boolValue",
+            "line": 69,
+            "end": 73
+          },
+          {
+            "name": "object",
+            "line": 74,
+            "end": 78
+          },
+          {
+            "name": "array",
+            "line": 79,
+            "end": 83
+          },
+          {
+            "name": "onlyKeys",
+            "line": 84,
+            "end": 91
+          },
+          {
+            "name": "positiveInteger",
+            "line": 92,
+            "end": 95
+          },
+          {
+            "name": "numberValue",
+            "line": 96,
+            "end": 110
+          },
+          {
+            "name": "functionDefinition",
+            "line": 111,
+            "end": 136
+          },
+          {
+            "name": "toolCalls",
+            "line": 137,
+            "end": 168
+          },
+          {
+            "name": "validateRequest",
+            "line": 169,
+            "end": 310
+          },
+          {
+            "name": "usageFrom",
+            "line": 311,
+            "end": 324
+          },
+          {
+            "name": "validResponse",
+            "line": 325,
+            "end": 374
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/proxy.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bufio",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "context",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "mime",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "net",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 13,
+            "standard_library": true
+          },
+          {
+            "specifier": "sync/atomic",
+            "line": 14,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 15,
+            "standard_library": true
+          },
+          {
+            "specifier": "unicode/utf8",
+            "line": 16,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "generate",
+            "line": 19,
+            "end": 170
+          },
+          {
+            "name": "classify",
+            "line": 171,
+            "end": 183
+          },
+          {
+            "name": "stream",
+            "line": 184,
+            "end": 325
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/routed_proxy.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "bytes",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "context",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "mime",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 10,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "routedGenerate",
+            "line": 13,
+            "end": 310
+          },
+          {
+            "name": "setWriteDeadline",
+            "line": 312,
+            "end": 318
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/routing.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "math",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "sort",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "sync",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 13,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "routeRuntime",
+            "line": 16,
+            "end": 20
+          },
+          {
+            "name": "routeHealth",
+            "line": 21,
+            "end": 28
+          },
+          {
+            "name": "routeSnapshot",
+            "line": 29,
+            "end": 35
+          },
+          {
+            "name": "Attempt",
+            "line": 37,
+            "end": 53
+          },
+          {
+            "name": "RouteDecision",
+            "line": 54,
+            "end": 63
+          },
+          {
+            "name": "UsagePart",
+            "line": 64,
+            "end": 69
+          },
+          {
+            "name": "usageParts",
+            "line": 71,
+            "end": 110
+          },
+          {
+            "name": "readAttempts",
+            "line": 112,
+            "end": 127
+          },
+          {
+            "name": "aggregateUsage",
+            "line": 128,
+            "end": 141
+          },
+          {
+            "name": "snapshot",
+            "line": 143,
+            "end": 165
+          },
+          {
+            "name": "healthKey",
+            "line": 167,
+            "end": 169
+          },
+          {
+            "name": "beginAttempt",
+            "line": 171,
+            "end": 320
+          },
+          {
+            "name": "finishAttempt",
+            "line": 322,
+            "end": 331
+          },
+          {
+            "name": "observe",
+            "line": 333,
+            "end": 369
+          },
+          {
+            "name": "temporaryStatus",
+            "line": 371,
+            "end": 373
+          },
+          {
+            "name": "attemptOutput",
+            "line": 375,
+            "end": 386
+          },
+          {
+            "name": "newAttemptOutput",
+            "line": 388,
+            "end": 400
+          },
+          {
+            "name": "Header",
+            "line": 401,
+            "end": 401
+          },
+          {
+            "name": "WriteHeader",
+            "line": 402,
+            "end": 402
+          },
+          {
+            "name": "Write",
+            "line": 403,
+            "end": 424
+          },
+          {
+            "name": "Flush",
+            "line": 425,
+            "end": 429
+          },
+          {
+            "name": "FlushError",
+            "line": 430,
+            "end": 435
+          },
+          {
+            "name": "Unwrap",
+            "line": 436,
+            "end": 436
+          },
+          {
+            "name": "isCommitted",
+            "line": 437,
+            "end": 441
+          },
+          {
+            "name": "timeout",
+            "line": 442,
+            "end": 446
+          },
+          {
+            "name": "stop",
+            "line": 447,
+            "end": 452
+          },
+          {
+            "name": "commitNormal",
+            "line": 453,
+            "end": 465
+          },
+          {
+            "name": "transportTemporary",
+            "line": 467,
+            "end": 469
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/routing_latency.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 8,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "latencySample",
+            "line": 13,
+            "end": 17
+          },
+          {
+            "name": "latencyPool",
+            "line": 18,
+            "end": 22
+          },
+          {
+            "name": "explorationState",
+            "line": 23,
+            "end": 26
+          },
+          {
+            "name": "SelectionObservation",
+            "line": 27,
+            "end": 43
+          },
+          {
+            "name": "LatencyResult",
+            "line": 44,
+            "end": 54
+          },
+          {
+            "name": "latencyMeasurement",
+            "line": 55,
+            "end": 59
+          },
+          {
+            "name": "latencyReader",
+            "line": 60,
+            "end": 64
+          },
+          {
+            "name": "Read",
+            "line": 66,
+            "end": 72
+          },
+          {
+            "name": "mark",
+            "line": 73,
+            "end": 78
+          },
+          {
+            "name": "latencyMetric",
+            "line": 79,
+            "end": 84
+          },
+          {
+            "name": "routingNow",
+            "line": 85,
+            "end": 90
+          },
+          {
+            "name": "latencyKey",
+            "line": 91,
+            "end": 93
+          },
+          {
+            "name": "describe",
+            "line": 94,
+            "end": 129
+          },
+          {
+            "name": "chooseLatency",
+            "line": 130,
+            "end": 193
+          },
+          {
+            "name": "outputDelta",
+            "line": 194,
+            "end": 219
+          },
+          {
+            "name": "acceptLatency",
+            "line": 220,
+            "end": 283
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/routing_latency_storage.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 6,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "routingExtension",
+            "line": 15,
+            "end": 45
+          },
+          {
+            "name": "ensureRouting",
+            "line": 47,
+            "end": 60
+          },
+          {
+            "name": "readRoutingEvidence",
+            "line": 62,
+            "end": 109
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/security.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/aes",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/cipher",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/rand",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/sha256",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/base64",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "net",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/netip",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/url",
+            "line": 13,
+            "standard_library": true
+          },
+          {
+            "specifier": "path",
+            "line": 14,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 15,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 16,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 17,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "randomSecret",
+            "line": 20,
+            "end": 26
+          },
+          {
+            "name": "digest",
+            "line": 27,
+            "end": 27
+          },
+          {
+            "name": "seal",
+            "line": 28,
+            "end": 42
+          },
+          {
+            "name": "unseal",
+            "line": 43,
+            "end": 57
+          },
+          {
+            "name": "Resolver",
+            "line": 59,
+            "end": 61
+          },
+          {
+            "name": "Policy",
+            "line": 62,
+            "end": 66
+          },
+          {
+            "name": "privateAllowed",
+            "line": 68,
+            "end": 75
+          },
+          {
+            "name": "publicIP",
+            "line": 98,
+            "end": 109
+          },
+          {
+            "name": "resolve",
+            "line": 110,
+            "end": 119
+          },
+          {
+            "name": "validateIPs",
+            "line": 120,
+            "end": 137
+          },
+          {
+            "name": "URL",
+            "line": 138,
+            "end": 162
+          },
+          {
+            "name": "Dial",
+            "line": 163,
+            "end": 179
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/server.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "crypto/subtle",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "encoding/json",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "io",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "log",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "mime",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "strconv",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "sync",
+            "line": 13,
+            "standard_library": true
+          },
+          {
+            "specifier": "sync/atomic",
+            "line": 14,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 15,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "Config",
+            "line": 18,
+            "end": 28
+          },
+          {
+            "name": "session",
+            "line": 29,
+            "end": 33
+          },
+          {
+            "name": "Server",
+            "line": 34,
+            "end": 53
+          },
+          {
+            "name": "New",
+            "line": 55,
+            "end": 76
+          },
+          {
+            "name": "reply",
+            "line": 77,
+            "end": 81
+          },
+          {
+            "name": "failure",
+            "line": 82,
+            "end": 84
+          },
+          {
+            "name": "storageFailure",
+            "line": 85,
+            "end": 88
+          },
+          {
+            "name": "jsonInput",
+            "line": 89,
+            "end": 109
+          },
+          {
+            "name": "validName",
+            "line": 110,
+            "end": 112
+          },
+          {
+            "name": "validAlias",
+            "line": 113,
+            "end": 123
+          },
+          {
+            "name": "ServeHTTP",
+            "line": 124,
+            "end": 171
+          },
+          {
+            "name": "getSession",
+            "line": 172,
+            "end": 186
+          },
+          {
+            "name": "admin",
+            "line": 187,
+            "end": 280
+          },
+          {
+            "name": "login",
+            "line": 281,
+            "end": 344
+          },
+          {
+            "name": "Model",
+            "line": 346,
+            "end": 350
+          },
+          {
+            "name": "AppKey",
+            "line": 352,
+            "end": 358
+          },
+          {
+            "name": "keys",
+            "line": 360,
+            "end": 449
+          },
+          {
+            "name": "records",
+            "line": 450,
+            "end": 497
+          },
+          {
+            "name": "appID",
+            "line": 498,
+            "end": 510
+          },
+          {
+            "name": "listModels",
+            "line": 511,
+            "end": 560
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/store.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "context",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "crypto/subtle",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "database/sql",
+            "line": 6,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 7,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/url",
+            "line": 8,
+            "standard_library": true
+          },
+          {
+            "specifier": "os",
+            "line": 9,
+            "standard_library": true
+          },
+          {
+            "specifier": "path/filepath",
+            "line": 10,
+            "standard_library": true
+          },
+          {
+            "specifier": "strings",
+            "line": 11,
+            "standard_library": true
+          },
+          {
+            "specifier": "sync",
+            "line": 12,
+            "standard_library": true
+          },
+          {
+            "specifier": "syscall",
+            "line": 13,
+            "standard_library": true
+          },
+          {
+            "specifier": "time",
+            "line": 14,
+            "standard_library": true
+          },
+          {
+            "specifier": "unicode/utf8",
+            "line": 15,
+            "standard_library": true
+          },
+          {
+            "specifier": "github.com/mattn/go-sqlite3",
+            "line": 17,
+            "standard_library": false
+          },
+          {
+            "specifier": "golang.org/x/crypto/argon2",
+            "line": 18,
+            "standard_library": false
+          }
+        ],
+        "symbols": [
+          {
+            "name": "Store",
+            "line": 21,
+            "end": 30
+          },
+          {
+            "name": "now",
+            "line": 32,
+            "end": 39
+          },
+          {
+            "name": "wallTime",
+            "line": 41,
+            "end": 46
+          },
+          {
+            "name": "lockDirectory",
+            "line": 48,
+            "end": 58
+          },
+          {
+            "name": "database",
+            "line": 59,
+            "end": 75
+          },
+          {
+            "name": "Init",
+            "line": 106,
+            "end": 108
+          },
+          {
+            "name": "InitConsole",
+            "line": 110,
+            "end": 112
+          },
+          {
+            "name": "initSchema",
+            "line": 114,
+            "end": 188
+          },
+          {
+            "name": "Open",
+            "line": 189,
+            "end": 191
+          },
+          {
+            "name": "openInstallation",
+            "line": 193,
+            "end": 253
+          },
+          {
+            "name": "Close",
+            "line": 254,
+            "end": 261
+          },
+          {
+            "name": "ResetAdminPassword",
+            "line": 265,
+            "end": 295
+          },
+          {
+            "name": "Password",
+            "line": 297,
+            "end": 304
+          },
+          {
+            "name": "Usage",
+            "line": 306,
+            "end": 310
+          },
+          {
+            "name": "Record",
+            "line": 311,
+            "end": 335
+          },
+          {
+            "name": "Start",
+            "line": 337,
+            "end": 342
+          },
+          {
+            "name": "Finish",
+            "line": 343,
+            "end": 369
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/upgrade.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "database/sql",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "errors",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "fmt",
+            "line": 6,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "materialQuery",
+            "line": 9,
+            "end": 11
+          },
+          {
+            "name": "upstreamAAD",
+            "line": 13,
+            "end": 15
+          },
+          {
+            "name": "validateMaterial",
+            "line": 17,
+            "end": 41
+          },
+          {
+            "name": "UpgradeResult",
+            "line": 43,
+            "end": 47
+          },
+          {
+            "name": "integrity",
+            "line": 49,
+            "end": 63
+          },
+          {
+            "name": "validateStorage",
+            "line": 65,
+            "end": 100
+          },
+          {
+            "name": "Upgrade",
+            "line": 102,
+            "end": 104
+          },
+          {
+            "name": "UpgradeConsole",
+            "line": 106,
+            "end": 108
+          },
+          {
+            "name": "upgradeTo",
+            "line": 110,
+            "end": 220
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/web.go",
+        "language": "go",
+        "unit": "go:internal/relay",
+        "imports": [
+          {
+            "specifier": "embed",
+            "line": 4,
+            "standard_library": true
+          },
+          {
+            "specifier": "io/fs",
+            "line": 5,
+            "standard_library": true
+          },
+          {
+            "specifier": "net/http",
+            "line": 6,
+            "standard_library": true
+          }
+        ],
+        "symbols": [
+          {
+            "name": "serveWeb",
+            "line": 12,
+            "end": 36
+          },
+          {
+            "name": "serveConsoleWeb",
+            "line": 38,
+            "end": 64
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/web/app.js",
+        "language": "typescript",
+        "unit": "ts:internal/relay/web/app.js",
+        "imports": [],
+        "symbols": [
+          {
+            "name": "friendly",
+            "line": 50,
+            "end": 50
+          },
+          {
+            "name": "message",
+            "line": 51,
+            "end": 51
+          },
+          {
+            "name": "owner",
+            "line": 52,
+            "end": 52
+          },
+          {
+            "name": "current",
+            "line": 53,
+            "end": 53
+          },
+          {
+            "name": "stale",
+            "line": 54,
+            "end": 54
+          },
+          {
+            "name": "assertCurrent",
+            "line": 55,
+            "end": 55
+          },
+          {
+            "name": "api",
+            "line": 56,
+            "end": 73
+          },
+          {
+            "name": "passwordVisibility",
+            "line": 74,
+            "end": 74
+          },
+          {
+            "name": "clearVersion",
+            "line": 76,
+            "end": 80
+          },
+          {
+            "name": "loadVersion",
+            "line": 81,
+            "end": 95
+          },
+          {
+            "name": "clearSecrets",
+            "line": 96,
+            "end": 102
+          },
+          {
+            "name": "stopCall",
+            "line": 103,
+            "end": 108
+          },
+          {
+            "name": "signedOut",
+            "line": 109,
+            "end": 117
+          },
+          {
+            "name": "signedIn",
+            "line": 118,
+            "end": 121
+          },
+          {
+            "name": "expireSession",
+            "line": 122,
+            "end": 125
+          },
+          {
+            "name": "scheduleExpiry",
+            "line": 126,
+            "end": 133
+          },
+          {
+            "name": "scheduleSession",
+            "line": 134,
+            "end": 142
+          },
+          {
+            "name": "checkSession",
+            "line": 143,
+            "end": 169
+          },
+          {
+            "name": "guarded",
+            "line": 172,
+            "end": 178
+          },
+          {
+            "name": "action",
+            "line": 179,
+            "end": 181
+          },
+          {
+            "name": "item",
+            "line": 182,
+            "end": 184
+          },
+          {
+            "name": "restoreRowFocus",
+            "line": 185,
+            "end": 189
+          },
+          {
+            "name": "callInputs",
+            "line": 190,
+            "end": 192
+          },
+          {
+            "name": "upstreamControls",
+            "line": 193,
+            "end": 197
+          },
+          {
+            "name": "resetUpstream",
+            "line": 198,
+            "end": 198
+          },
+          {
+            "name": "modelCreateControls",
+            "line": 199,
+            "end": 199
+          },
+          {
+            "name": "resetModelCreate",
+            "line": 200,
+            "end": 200
+          },
+          {
+            "name": "upstreamAction",
+            "line": 201,
+            "end": 206
+          },
+          {
+            "name": "showEmpty",
+            "line": 207,
+            "end": 207
+          },
+          {
+            "name": "allPages",
+            "line": 209,
+            "end": 213
+          },
+          {
+            "name": "setUpstream",
+            "line": 214,
+            "end": 223
+          },
+          {
+            "name": "renderUpstreams",
+            "line": 224,
+            "end": 231
+          },
+          {
+            "name": "cleanCandidates",
+            "line": 232,
+            "end": 232
+          },
+          {
+            "name": "defaultCandidate",
+            "line": 233,
+            "end": 233
+          },
+          {
+            "name": "candidateName",
+            "line": 234,
+            "end": 234
+          },
+          {
+            "name": "renderCandidates",
+            "line": 235,
+            "end": 253
+          },
+          {
+            "name": "readCandidates",
+            "line": 254,
+            "end": 258
+          },
+          {
+            "name": "renderSetup",
+            "line": 277,
+            "end": 288
+          },
+          {
+            "name": "load",
+            "line": 289,
+            "end": 372
+          },
+          {
+            "name": "recordValues",
+            "line": 375,
+            "end": 375
+          },
+          {
+            "name": "recordRow",
+            "line": 376,
+            "end": 376
+          },
+          {
+            "name": "findRecord",
+            "line": 377,
+            "end": 396
+          },
+          {
+            "name": "hashView",
+            "line": 397,
+            "end": 397
+          },
+          {
+            "name": "navigate",
+            "line": 398,
+            "end": 415
+          },
+          {
+            "name": "form",
+            "line": 417,
+            "end": 417
+          },
+          {
+            "name": "closeKey",
+            "line": 460,
+            "end": 460
+          },
+          {
+            "name": "bounded",
+            "line": 477,
+            "end": 477
+          },
+          {
+            "name": "appendRaw",
+            "line": 478,
+            "end": 478
+          },
+          {
+            "name": "appendReadable",
+            "line": 479,
+            "end": 496
+          }
+        ]
+      },
+      {
+        "path": "internal/relay/web/workspace.js",
+        "language": "typescript",
+        "unit": "ts:internal/relay/web/workspace.js",
+        "imports": [],
+        "symbols": [
+          {
+            "name": "runAction",
+            "line": 18,
+            "end": 18
+          },
+          {
+            "name": "keyStatus",
+            "line": 21,
+            "end": 29
+          },
+          {
+            "name": "collection",
+            "line": 30,
+            "end": 33
+          },
+          {
+            "name": "notice",
+            "line": 37,
+            "end": 37
+          },
+          {
+            "name": "releaseModalScroll",
+            "line": 39,
+            "end": 46
+          },
+          {
+            "name": "closeModal",
+            "line": 47,
+            "end": 50
+          },
+          {
+            "name": "openModal",
+            "line": 51,
+            "end": 59
+          },
+          {
+            "name": "clearSensitive",
+            "line": 60,
+            "end": 60
+          },
+          {
+            "name": "invalidate",
+            "line": 61,
+            "end": 61
+          },
+          {
+            "name": "signedOut",
+            "line": 62,
+            "end": 62
+          },
+          {
+            "name": "syncTenants",
+            "line": 63,
+            "end": 69
+          },
+          {
+            "name": "api",
+            "line": 70,
+            "end": 79
+          },
+          {
+            "name": "table",
+            "line": 80,
+            "end": 90
+          },
+          {
+            "name": "detail",
+            "line": 93,
+            "end": 93
+          },
+          {
+            "name": "closeEditor",
+            "line": 96,
+            "end": 96
+          },
+          {
+            "name": "edit",
+            "line": 100,
+            "end": 163
+          },
+          {
+            "name": "secretDialog",
+            "line": 164,
+            "end": 169
+          },
+          {
+            "name": "invitationDialog",
+            "line": 170,
+            "end": 170
+          },
+          {
+            "name": "mainAction",
+            "line": 171,
+            "end": 171
+          },
+          {
+            "name": "needTenant",
+            "line": 172,
+            "end": 172
+          },
+          {
+            "name": "enumLabel",
+            "line": 173,
+            "end": 182
+          },
+          {
+            "name": "technicalValue",
+            "line": 183,
+            "end": 187
+          },
+          {
+            "name": "modelSources",
+            "line": 189,
+            "end": 189
+          },
+          {
+            "name": "modelPrices",
+            "line": 190,
+            "end": 190
+          },
+          {
+            "name": "modelLatency",
+            "line": 191,
+            "end": 191
+          },
+          {
+            "name": "tenantDestination",
+            "line": 192,
+            "end": 192
+          },
+          {
+            "name": "modelCall",
+            "line": 193,
+            "end": 193
+          },
+          {
+            "name": "toggleModel",
+            "line": 194,
+            "end": 194
+          },
+          {
+            "name": "tenantBudget",
+            "line": 195,
+            "end": 195
+          },
+          {
+            "name": "role",
+            "line": 196,
+            "end": 196
+          },
+          {
+            "name": "keyEditor",
+            "line": 197,
+            "end": 205
+          },
+          {
+            "name": "limitsEditor",
+            "line": 206,
+            "end": 206
+          },
+          {
+            "name": "factSummary",
+            "line": 207,
+            "end": 214
+          },
+          {
+            "name": "limitSummary",
+            "line": 215,
+            "end": 221
+          },
+          {
+            "name": "serviceEditor",
+            "line": 222,
+            "end": 222
+          },
+          {
+            "name": "modelEditor",
+            "line": 223,
+            "end": 226
+          },
+          {
+            "name": "grantEditor",
+            "line": 227,
+            "end": 227
+          },
+          {
+            "name": "priceEditor",
+            "line": 228,
+            "end": 233
+          },
+          {
+            "name": "boundEditor",
+            "line": 234,
+            "end": 234
+          },
+          {
+            "name": "requestDetail",
+            "line": 235,
+            "end": 235
+          },
+          {
+            "name": "exportData",
+            "line": 236,
+            "end": 236
+          },
+          {
+            "name": "filters",
+            "line": 237,
+            "end": 237
+          },
+          {
+            "name": "renderPage",
+            "line": 238,
+            "end": 263
+          },
+          {
+            "name": "callForm",
+            "line": 264,
+            "end": 275
+          },
+          {
+            "name": "navigate",
+            "line": 276,
+            "end": 276
+          },
+          {
+            "name": "signedIn",
+            "line": 278,
+            "end": 278
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "flag",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "io",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "net",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "os",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "os/signal",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 14,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "syscall",
+        "line": 15,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": null,
+        "import_name": "time",
+        "line": 16,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "cmd/model-relay/main.go",
+        "target": "internal/relay/accounting.go",
+        "import_name": "model-relay/internal/relay",
+        "line": 18,
+        "external": false,
+        "standard_library": false
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "bytes",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "math/big",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "sort",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/accounting.go",
+        "target": null,
+        "import_name": "time",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/admin_response.go",
+        "target": null,
+        "import_name": "bytes",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/admin_response.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "archive/tar",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "crypto/sha256",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "encoding/hex",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "io",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "os",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/backup.go",
+        "target": null,
+        "import_name": "path/filepath",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/billing.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/billing.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/billing.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/billing.go",
+        "target": null,
+        "import_name": "time",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "io",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "mime",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/configuration.go",
+        "target": null,
+        "import_name": "time",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_api.go",
+        "target": null,
+        "import_name": "time",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_clock.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_clock.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_clock.go",
+        "target": null,
+        "import_name": "log",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_clock.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_clock.go",
+        "target": null,
+        "import_name": "time",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "bytes",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_keys.go",
+        "target": null,
+        "import_name": "time",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_overview.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_overview.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_overview.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_overview.go",
+        "target": null,
+        "import_name": "time",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "encoding/csv",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_reports.go",
+        "target": null,
+        "import_name": "time",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_storage.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_storage.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_storage.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_storage.go",
+        "target": null,
+        "import_name": "time",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_summaries.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/console_summaries.go",
+        "target": null,
+        "import_name": "time",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "crypto/subtle",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "net/mail",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "time",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/identity.go",
+        "target": null,
+        "import_name": "golang.org/x/crypto/argon2",
+        "line": 12,
+        "external": true,
+        "standard_library": false
+      },
+      {
+        "source": "internal/relay/legacy_accounting.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/legacy_accounting.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/legacy_accounting.go",
+        "target": null,
+        "import_name": "time",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/protocol.go",
+        "target": null,
+        "import_name": "bytes",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/protocol.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/protocol.go",
+        "target": null,
+        "import_name": "io",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/protocol.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/protocol.go",
+        "target": null,
+        "import_name": "unicode/utf8",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "bufio",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "context",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "io",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "mime",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "net",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "sync/atomic",
+        "line": 14,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "time",
+        "line": 15,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/proxy.go",
+        "target": null,
+        "import_name": "unicode/utf8",
+        "line": 16,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "bytes",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "context",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "io",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "mime",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routed_proxy.go",
+        "target": null,
+        "import_name": "time",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "math",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "sort",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "sync",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing.go",
+        "target": null,
+        "import_name": "time",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency.go",
+        "target": null,
+        "import_name": "io",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency.go",
+        "target": null,
+        "import_name": "time",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency_storage.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency_storage.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/routing_latency_storage.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "crypto/aes",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "crypto/cipher",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "crypto/rand",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "crypto/sha256",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "encoding/base64",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "net",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "net/netip",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "net/url",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "path",
+        "line": 14,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 15,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 16,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/security.go",
+        "target": null,
+        "import_name": "time",
+        "line": 17,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "crypto/subtle",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "encoding/json",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "io",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "log",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "mime",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "strconv",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "sync",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "sync/atomic",
+        "line": 14,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/server.go",
+        "target": null,
+        "import_name": "time",
+        "line": 15,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "context",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "crypto/subtle",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 7,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "net/url",
+        "line": 8,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "os",
+        "line": 9,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "path/filepath",
+        "line": 10,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "strings",
+        "line": 11,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "sync",
+        "line": 12,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "syscall",
+        "line": 13,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "time",
+        "line": 14,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "unicode/utf8",
+        "line": 15,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "github.com/mattn/go-sqlite3",
+        "line": 17,
+        "external": true,
+        "standard_library": false
+      },
+      {
+        "source": "internal/relay/store.go",
+        "target": null,
+        "import_name": "golang.org/x/crypto/argon2",
+        "line": 18,
+        "external": true,
+        "standard_library": false
+      },
+      {
+        "source": "internal/relay/upgrade.go",
+        "target": null,
+        "import_name": "database/sql",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/upgrade.go",
+        "target": null,
+        "import_name": "errors",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/upgrade.go",
+        "target": null,
+        "import_name": "fmt",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/web.go",
+        "target": null,
+        "import_name": "embed",
+        "line": 4,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/web.go",
+        "target": null,
+        "import_name": "io/fs",
+        "line": 5,
+        "external": true,
+        "standard_library": true
+      },
+      {
+        "source": "internal/relay/web.go",
+        "target": null,
+        "import_name": "net/http",
+        "line": 6,
+        "external": true,
+        "standard_library": true
+      }
+    ]
+  },
+  "findings": [],
+  "model_review": {
+    "status": "incomplete",
+    "evidence_status": "citations_checked",
+    "findings": [
+      {
+        "title": "The 'may this credential call this alias' rule is owned by three different SQL statements and is re-derived per call path",
+        "severity": "high",
+        "principle": "Single ownership of a business rule / module cohesion: one security rule should live in one function, not be restated by each adapter",
+        "impact": "The authorization rule is expressed three times with different join shapes and different neighbouring checks: authorizeModel checks key_controls+tenants.active, admit re-checks the grant intersection inside the admission transaction after a separate generationIdentity check plus a separate tenant-active query, and listModels builds an EXISTS subquery after appID/generationIdentity. Adding or changing a rule (e.g. treating a revoked generation or a paused tenant uniformly, or granting at model level only) requires finding and editing three sites, and any site missed silently keeps its own semantics. Because authorizeModel does not consult key_generations/revoked at all, callers must remember to perform a second, different check first; that is an implicit, undocumented precondition.",
+        "recommendation": "Extract one function, e.g. authorizeModel(transaction identityQuery, keyID, alias string) (decision, code string), that owns credential validity, tenant active state and the key/tenant grant intersection, and have admit, proxy/beginAttempt and listModels call it (listModels may use a set-returning variant for the list query). Keep the error codes in that one place.",
+        "validation": "Add a table-driven contract test over the matrix {valid, revoked generation, expired generation, disabled key, paused tenant, ungranted model, key-grant without tenant grant} asserting listModels, authorizeModel and admit return the same allow/deny decision and the same code for each row; run it under go test -race and re-run the existing console_contract_test.go and make verify on the host.",
+        "evidence": [
+          {
+            "path": "internal/relay/console_keys.go",
+            "line": 421,
+            "end": 421,
+            "quote": "\terr := store.DB.QueryRow(\"SELECT t.active,(SELECT count(*) FROM key_model_grants k JOIN tenant_model_grants g ON g.alias=k.alias AND g.tenant_id=c.tenant_id WHERE k.key_id=c.key_id AND k.alias=?) FROM key_controls c JOIN tenants t ON t.id=c.tenant_id WHERE c.key_id=?\", alias, keyID).Scan(&active, &allowed)"
+          },
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 141,
+            "end": 141,
+            "quote": "\tif transaction.QueryRow(\"SELECT count(*) FROM key_model_grants k JOIN key_controls c ON c.key_id=k.key_id JOIN tenant_model_grants g ON g.alias=k.alias AND g.tenant_id=c.tenant_id WHERE k.key_id=? AND k.alias=?\", record.KeyID, record.Alias).Scan(&currentlyAuthorized) != nil {"
+          },
+          {
+            "path": "internal/relay/server.go",
+            "line": 536,
+            "end": 536,
+            "quote": "\t\t\tquery += \" AND EXISTS(SELECT 1 FROM tenant_model_grants g JOIN key_model_grants k ON k.alias=g.alias WHERE g.tenant_id=? AND k.key_id=? AND g.alias=models.alias)\""
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "Production console responses are written to the client socket while the global dispatch mutex is held",
+        "severity": "medium",
+        "principle": "State/side-effect ownership and lock scope: the lock that serializes dispatch registration must not span response I/O, which is the documented purpose of adminResponse buffering",
+        "impact": "consoleAPI takes the exclusive server.mu, runs the handler, and only releases it after the handler has already encoded and written JSON/CSV to the client, because consoleAPI is entered before the buffered adminResponse wrapper is installed. The same mutex is taken by beginAttempt on every attempt dispatch and by acceptLatency on every completion, so a slow console client, or the requests export that streams up to 10000 rows, blocks all model generation and latency sampling for the duration of the socket write. The stated mitigation ('slow response writes cannot hold configuration lock') applies only to the legacy schema-2 path and the upstreams/models handlers.",
+        "recommendation": "Wrap the schema-3 console/identity dispatch in the same buffered writer used for the legacy path (install newAdminResponse before calling identityAPI/consoleAPI and flush after unlocking), or narrow the critical section to the clock advance plus the commit and release the lock before writing the response.",
+        "validation": "Add a handler-level test that uses a writer whose Write blocks, invokes a console GET (for example workspace/requests or the export), and asserts that a concurrent beginAttempt call completes; then run make verify on the host to confirm the browser journeys and existing lock/response assertions still pass.",
+        "evidence": [
+          {
+            "path": "internal/relay/console_api.go",
+            "line": 29,
+            "end": 29,
+            "quote": "\tserver.mu.Lock()"
+          },
+          {
+            "path": "internal/relay/server.go",
+            "line": 238,
+            "end": 238,
+            "quote": "\t\tif server.identityAPI(writer, request, current) || server.consoleAPI(writer, request, current) {"
+          },
+          {
+            "path": "internal/relay/server.go",
+            "line": 255,
+            "end": 255,
+            "quote": "\tresponse := newAdminResponse(writer)"
+          },
+          {
+            "path": "internal/relay/routing.go",
+            "line": 172,
+            "end": 172,
+            "quote": "\tserver.mu.Lock()"
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "Billing settlement writes to the routing-configuration table model_bounds, which admission only reads",
+        "severity": "medium",
+        "principle": "Business-rule ownership and module boundaries: settlement should not mutate operator-declared configuration evidence owned by configuration/finance",
+        "impact": "model_bounds is the operator-declared, evidence-bearing cap that admission treats as trusted input; when a reported usage exceeds the stored cap, settleAdmission deletes the row from inside the settlement transaction. Billing therefore both consumes and destroys configuration state, so an unrelated settlement failure rolls back a configuration change, and the operator's registered evidence silently disappears as a side effect of a usage report. The bounds API (models/{alias}/bounds) is the documented owner of that row, and it cannot see or audit this destructive path.",
+        "recommendation": "Replace the deletion with a persisted, auditable fact (e.g. mark the bound as invalidated/flagged for review, or record the violation in the attempt/ledger rows) and let the operator-driven bounds endpoint or an explicit reconciliation action decide whether the cap is withdrawn. At minimum, move the write behind a named operation on the configuration side rather than an inline DELETE in the settlement loop.",
+        "validation": "Extend the existing bound-violation scenario to assert that after a violated attempt the bound still exists with a reviewable invalidation fact, that admission rejects with trusted_bound_required for the intended reason, and that no ledger/admission row changed; run TestMeteringBoundViolationInProcess/ActualHTTP plus make verify.",
+        "evidence": [
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 222,
+            "end": 222,
+            "quote": "\t\terr = transaction.QueryRow(\"SELECT max_input,max_output,evidence FROM model_bounds WHERE alias=? AND upstream_id=? AND upstream_execution=? AND candidate_execution=?\", record.Alias, candidate.UpstreamID, upstream.ExecutionRevision, candidate.ExecutionRevision).Scan(&value.Input, &value.Output, &evidence)"
+          },
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 442,
+            "end": 442,
+            "quote": "\t\tif value.price.Input > 0 && (input > value.price.Input || output > value.price.Output) {"
+          },
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 443,
+            "end": 443,
+            "quote": "\t\t\tif _, err := transaction.Exec(\"DELETE FROM model_bounds WHERE (alias,upstream_id) IN(SELECT r.alias,a.upstream_id FROM requests r JOIN request_attempts a ON a.request_id=r.id WHERE r.id=? AND a.ordinal=?)\", requestID, value.ordinal); err != nil {"
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "Report scoping returns a SQL fragment that another query rewrites by string replacement on table aliases",
+        "severity": "medium",
+        "principle": "Interface depth and explicit contracts: a scope predicate should be a typed, composable condition, not SQL text that callers patch textually",
+        "impact": "reportScope hands back the raw WHERE text 'c.tenant_id=?' plus positional args; the usage report then re-targets that text to a different FROM clause by ReplaceAll on 'c.' and 'r.', and offsets the argument list by repeating it five times to match the five correlated subqueries. Any future change to the fragment (a literal containing 'c.' or 'r.', an added column, a different alias, an added argument) silently produces wrong SQL or an argument-count mismatch whose failure mode is a 503 storage_unavailable rather than a compile or test error. The fragment also cannot be reused without knowing the alias names of the consumer.",
+        "recommendation": "Model the scope as a value (tenant id, developer user id, or platform) and render it per query with explicit alias parameters, or expose a small builder such as scopeCondition(alias string, args *[]any) string used by both the list query and the ledger subqueries; remove the ReplaceAll and the manual fivefold argument replication.",
+        "validation": "Add a unit test that renders the usage query for platform, tenant-administrator and developer scopes and asserts the produced SQL contains the expected alias-specific predicate and that the argument count equals the placeholder count; keep the existing usage/CSV journey assertions and run make verify.",
+        "evidence": [
+          {
+            "path": "internal/relay/console_reports.go",
+            "line": 205,
+            "end": 205,
+            "quote": "\t\t\treturn \"(SELECT coalesce(sum(e.\" + field + \"),0) FROM charge_entries e JOIN requests er ON er.id=e.request_id LEFT JOIN key_controls ec ON ec.key_id=er.key_id WHERE er.alias=r.alias AND \" + strings.ReplaceAll(strings.ReplaceAll(where, \"c.\", \"ec.\"), \"r.\", \"er.\") + \")\""
+          },
+          {
+            "path": "internal/relay/console_reports.go",
+            "line": 50,
+            "end": 50,
+            "quote": "\twhere := \"c.tenant_id=?\""
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "The admission use case takes *http.Request and reads credentials and idempotency keys out of headers",
+        "severity": "low",
+        "principle": "Layering: business operations should receive explicit inputs, not the transport request object",
+        "impact": "admit is the accounting/admission operation but reaches into the HTTP request for the bearer credential and the Idempotency-Key header, so the accounting rule cannot be exercised without a transport request, and any non-HTTP caller (recovery, reconciliation, future CLI) must fabricate one. It also hides an input the caller is responsible for supplying consistently: generate() has already authenticated the key, yet admit re-derives and re-validates the credential from the header, so identity is computed twice from two sources of truth.",
+        "recommendation": "Pass an explicit admission input (credential, idempotency key, request id, alias, key id) into admit and let the HTTP adapter populate it; keep the re-validation of the credential but make the value an argument.",
+        "validation": "Compile-level check that admit has no net/http dependency in its signature, plus moving TestMeteringUndispatchedInProcess to call admit without building an httptest request; existing metering and console contract tests must stay green under make verify.",
+        "evidence": [
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 127,
+            "end": 127,
+            "quote": "func (store *Store) admit(record Record, snapshot routeSnapshot, payload map[string]json.RawMessage, request *http.Request) (string, int, string) {"
+          },
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 147,
+            "end": 147,
+            "quote": "\toperation := request.Header.Get(\"Idempotency-Key\")"
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "boundedPayload both validates and mutates the outbound request payload",
+        "severity": "low",
+        "principle": "Side-effect ownership: a boolean predicate called from an if-condition should not modify shared state",
+        "impact": "The function reads as a validation predicate at its call site but injects max_tokens/max_completion_tokens into the caller's payload map when the client omitted a cap, so the upstream body is changed by a check. The idempotency fingerprint is computed earlier in admit from the pre-injection payload, so the two representations silently differ, and any future caller that logs, hashes or forwards the payload after this check observes a mutated request without a visible write.",
+        "recommendation": "Separate the concerns: return (ok bool) from validation and have the caller apply the output-cap default explicitly before marshal, or return the effective cap and let routedGenerate write it.",
+        "validation": "Unit test that boundedPayload leaves its input map unchanged and that the injected cap appears only in the marshalled upstream body produced by the explicit step; keep the metering cap assertions (default cap 64, explicit 32) green.",
+        "evidence": [
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 335,
+            "end": 335,
+            "quote": "\tif raw := payload[field]; raw != nil {"
+          },
+          {
+            "path": "internal/relay/accounting.go",
+            "line": 339,
+            "end": 339,
+            "quote": "\tpayload[field], _ = json.Marshal(maximumOutput)"
+          }
+        ],
+        "verification": "needs_review"
+      },
+      {
+        "title": "API value types are decided by SQL column names inside the generic query helper",
+        "severity": "low",
+        "principle": "Explicit contract at the boundary: response typing should come from a projection definition, not from whatever alias a query happens to use",
+        "impact": "queryMaps converts int64 to decimal strings whenever the column name matches a hard-coded list or ends in _micro_usd, so whether a JSON field is a string or a number depends on the alias chosen in each ad-hoc SELECT. Renaming a column alias, or adding a money column without the suffix, silently changes the wire type of an admin/finance response; the same helper is used by detail, bills, catalog-ish reports and the CSV writer, so a change in one query can flip types for clients of another.",
+        "recommendation": "Decide the string/decimal representation at the projection instead of by name: either declare the money fields explicitly per query (a small column typing argument) or return typed structs per report and marshal money as decimal strings there.",
+        "validation": "Add a test that decodes a bills/usage/detail response into a typed struct and fails if a money field arrives as a JSON number; run the existing console summary and CSV assertions and make verify on the host.",
+        "evidence": [
+          {
+            "path": "internal/relay/console_reports.go",
+            "line": 81,
+            "end": 81,
+            "quote": "\t\t\tif amount, ok := fields[index].(int64); ok && (name == \"cost\" || name == \"fee\" || name == \"amount\" || name == \"original_cost\" || name == \"original_fee\" || name == \"fee_reserved\" || name == \"cost_input\" || name == \"cost_output\" || name == \"tenant_input\" || name == \"tenant_output\" || strings.HasSuffix(name, \"_micro_usd\")) {"
+          },
+          {
+            "path": "internal/relay/console_reports.go",
+            "line": 82,
+            "end": 82,
+            "quote": "\t\t\t\tvalue[name] = strconv.FormatInt(amount, 10)"
+          }
+        ],
+        "verification": "needs_review"
+      }
+    ],
+    "limitations": [
+      "Static reading only. I did not run make architecture-check, go vet, go test, or the browser journeys; rule_findings is empty and the tool result is not independently reproduced here.",
+      "The single-package design of internal/relay and the vanilla-JS console are documented, accepted debt (docs/engineering/architecture-checks.md, .trellis/spec/backend/index.md). Findings below are concrete problems inside that structure; I do not re-report the monolith itself.",
+      "Coverage is limited to coverage.scanned. Tests/browser/**, docs/workflow/** and docs/releases/** are absent, so QA receipts, frozen PRD acceptance intent and browser/user-journey behaviour cannot be verified. Several referenced specs (console-contracts.md, metering-regression.md, dom-lifecycle.md, console-lifecycle.md) are not in the bundle.",
+      "No runtime measurement of lock contention, latency of report queries, or SQLite behaviour was possible; statements about blocking are structural (which mutex is held while which work runs), not measured.",
+      "The two JavaScript files are reviewed as source text; no browser rendering, dialog/focus or SSE behaviour is claimed.",
+      "I could not verify that the three authorization SQL variants produce identical decisions for every key/tenant state without executing them (e.g. key generation revocation vs. tenant pause precedence); the finding is about duplicated ownership, and the divergence claim is limited to what the SQL text shows."
+    ],
+    "coverage_basis": "reviewer_reported",
+    "reviewer": {
+      "model": "deepseek-flash",
+      "usage": {
+        "prompt_tokens": 238664,
+        "completion_tokens": 33556,
+        "total_tokens": 272220,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 29634
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 238664
+      },
+      "duration_seconds": 153.382
+    }
+  },
+  "limits": [
+    "Static import/package analysis; no runtime call-graph or cross-service inference.",
+    "Go includes all selected build-tag variants; run Go build/test for active build validity.",
+    "Vue template auto-imports and runtime component names require explicit imports or separate review."
+  ]
+}

@@ -1,5 +1,7 @@
 # 架构检查接入与初检
 
+2026-11-05更新：[DeepSeek真实扫描、规则/模型职责和0.4.0修订记录](architecture-reports/model-relay/2026-11-05-deepseek/README.md)。最终工具结果与历史0.3.1初检分别保留；当前模型报告11项齐全、7项待复核发现，规则仍为0违规。
+
 维护源是 examples/arch-template，现有项目通过 scaffold.py --install-tool 接入，不复制产品样板覆盖现有代码。工具版本 0.3.1；架构规则、模型评审和产品验收分别记录。本轮仅启用确定规则，没有调用模型服务。
 
 **Model Relay 的 Template 符合度结论为不符合。** 下文的0条依赖违规仅针对现状声明，不能作为架构 Template 验收结果。逐项要求、代码偏离和检查覆盖缺口见[Model Relay 符合度核查](model-relay-template-conformance-2026-11-04.md)。

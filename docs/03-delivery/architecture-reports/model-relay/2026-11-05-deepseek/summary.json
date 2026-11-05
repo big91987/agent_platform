@@ -1,0 +1,361 @@
+{
+  "provider": "https://api.deepseek.com",
+  "requested_model": "DeepSeek V4.1 Flash",
+  "api_model_id": "deepseek-flash",
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "maintenance_source_commit": "02204e2018da668f73527a13876204cdded7f1ec",
+  "tool_tests": 43,
+  "scaffold_install_workflow_tests": 12,
+  "independent_review": "no remaining Important findings",
+  "rounds": [
+    {
+      "round": "baseline-031",
+      "description": "Original 0.3.1 protocol; normal scope notes classified as incomplete",
+      "tool_version": "0.3.1",
+      "status": "incomplete",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "incomplete",
+      "evidence_status": "citations_checked",
+      "snapshot": "9590f995d2b1f3ad3e936702308f22629ed01d455616e0ce6b4dcd7b41c3f173",
+      "policy_sha256": "cceaaa70054c46314f7dc2ce202b368aa86a451cb9f46575a31af2ebe461b522",
+      "seconds": 153.382,
+      "provider_metadata": {
+        "model": "deepseek-flash",
+        "usage": {
+          "prompt_tokens": 238664,
+          "completion_tokens": 33556,
+          "total_tokens": 272220,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 29634
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 238664
+        },
+        "duration_seconds": 153.382
+      },
+      "reported_checks": 0,
+      "accepted_findings": 7,
+      "raw_candidate_findings": 7,
+      "errors": [],
+      "artifacts": {
+        "report.json": "60c466a8bd8ffa86f9d7383fa8506a8c0f45b394ef1615cbf9387cebff0f4473",
+        "model-result.json": "2e50d9dc251da733a2cca2f139524e4b507c8c830a23fa28b4309507255b1083"
+      },
+      "missing_reported_files": [
+        ".trellis/spec/backend/index.md",
+        ".trellis/spec/backend/multitenant-contracts.md",
+        ".trellis/spec/backend/routing-contracts.md",
+        ".trellis/spec/backend/runtime-contracts.md",
+        ".trellis/spec/frontend/index.md",
+        ".trellis/spec/frontend/workspace-contracts.md",
+        "AGENTS.md",
+        "architecture.json",
+        "docs/engineering/architecture-checks.md",
+        "docs/roadmap.md",
+        "go.mod",
+        "go.sum",
+        "internal/relay/console_contract_test.go",
+        "internal/relay/console_resource_matrix_test.go",
+        "internal/relay/metering_regression_test.go",
+        "internal/relay/routing_http_test.go",
+        "internal/relay/routing_latency_test.go",
+        "package-lock.json",
+        "package.json",
+        "standards/arch-template/backend/go/README.md",
+        "standards/arch-template/backend/go/model-gateway/README.md",
+        "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+        "standards/arch-template/backend/go/saas/README.md",
+        "standards/arch-template/backend/go/saas/template/docs/saas.md",
+        "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+        "standards/arch-template/principles.md",
+        "standards/arch-template/verification.md"
+      ]
+    },
+    {
+      "round": "round-01",
+      "description": "0.4 development: exact full-line quote rule rejected a real unique substring",
+      "tool_version": "0.4.0",
+      "status": "incomplete",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "incomplete",
+      "evidence_status": null,
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "2423fcedc8f7ee20f604a9c10ae0175783594a27c439de7cd63127f0d6f98d38",
+      "seconds": 77.091,
+      "provider_metadata": {
+        "model": "deepseek-flash",
+        "usage": {
+          "prompt_tokens": 225333,
+          "completion_tokens": 14411,
+          "total_tokens": 239744,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 9649
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 225333
+        },
+        "duration_seconds": 75.971
+      },
+      "reported_checks": 11,
+      "accepted_findings": 0,
+      "raw_candidate_findings": 5,
+      "errors": [
+        "evidence quotation must match one complete unique span: docs/engineering/architecture-checks.md (0 matches)"
+      ],
+      "artifacts": {
+        "report.json": "7198c3aa158925b3fd2500073674f2193a2b0888285c9f713f3aa0c1abeafe51",
+        "model-result.json": "89211c4b8449aef43b708b8422fcb2058d225b56f1ee3555dda52fd5d241665b"
+      },
+      "missing_reported_files": []
+    },
+    {
+      "round": "round-02",
+      "description": "0.4 development: complete full-line-protocol review",
+      "tool_version": "0.4.0",
+      "status": "review_required",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "findings",
+      "evidence_status": "citations_checked",
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "2423fcedc8f7ee20f604a9c10ae0175783594a27c439de7cd63127f0d6f98d38",
+      "seconds": 114.232,
+      "provider_metadata": {
+        "model": "deepseek-flash",
+        "usage": {
+          "prompt_tokens": 225333,
+          "completion_tokens": 22971,
+          "total_tokens": 248304,
+          "prompt_tokens_details": {
+            "cached_tokens": 225152
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 17888
+          },
+          "prompt_cache_hit_tokens": 225152,
+          "prompt_cache_miss_tokens": 181
+        },
+        "duration_seconds": 112.776
+      },
+      "reported_checks": 11,
+      "accepted_findings": 5,
+      "raw_candidate_findings": 5,
+      "errors": [],
+      "artifacts": {
+        "report.json": "f2672e96cf8e55d7366b9752f84001e0805600ca72fac7597f04340dd0274511",
+        "model-result.json": "bc948d208331961aa16accf1c5cf69dd21c584d123a30c18cc58447d18e90d36"
+      },
+      "missing_reported_files": []
+    },
+    {
+      "round": "round-03",
+      "description": "0.4 development: non-streaming HTTP body interrupted",
+      "tool_version": "0.4.0",
+      "status": "incomplete",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "incomplete",
+      "evidence_status": null,
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+      "seconds": 150.974,
+      "provider_metadata": null,
+      "reported_checks": 0,
+      "accepted_findings": 0,
+      "raw_candidate_findings": null,
+      "errors": [
+        "reviewer failed with exit 1; no architecture conclusion"
+      ],
+      "artifacts": {
+        "report.json": "44ff59467bff4ee67d620ed30bb8e3bd54f58ae9f2098c1be90614434386b951"
+      }
+    },
+    {
+      "round": "round-04",
+      "description": "0.4 development: non-streaming HTTP body interrupted",
+      "tool_version": "0.4.0",
+      "status": "incomplete",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "incomplete",
+      "evidence_status": null,
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+      "seconds": 136.206,
+      "provider_metadata": null,
+      "reported_checks": 0,
+      "accepted_findings": 0,
+      "raw_candidate_findings": null,
+      "errors": [
+        "reviewer failed with exit 1; no architecture conclusion"
+      ],
+      "artifacts": {
+        "report.json": "ed74bac3c50cc46ca75e57abb6581d0461f119c938670833ac60e162be893914"
+      }
+    },
+    {
+      "round": "round-05",
+      "description": "Final 0.4 SSE: incomplete self-reported material coverage rejected",
+      "tool_version": "0.4.0",
+      "status": "incomplete",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "incomplete",
+      "evidence_status": null,
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+      "seconds": 101.638,
+      "provider_metadata": {
+        "model": "deepseek-flash",
+        "usage": {
+          "prompt_tokens": 225367,
+          "completion_tokens": 18805,
+          "total_tokens": 244172,
+          "prompt_tokens_details": {
+            "cached_tokens": 225152
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 14847
+          },
+          "prompt_cache_hit_tokens": 225152,
+          "prompt_cache_miss_tokens": 215
+        },
+        "duration_seconds": 100.428
+      },
+      "reported_checks": 11,
+      "accepted_findings": 0,
+      "raw_candidate_findings": 5,
+      "errors": [
+        "model reported incomplete source/context coverage"
+      ],
+      "artifacts": {
+        "report.json": "22fc6489b64d15fba630f454378cd09c3f3b69d1b323ffdf26ea609aaea08055",
+        "model-result.json": "652f2187226197370367b15018140459bf130768030f1b818f2dec99f4aeadd3"
+      },
+      "missing_reported_files": [
+        ".github/workflows/architecture.yml",
+        ".trellis/spec/backend/index.md",
+        ".trellis/spec/backend/runtime-contracts.md",
+        "AGENTS.md",
+        "Makefile",
+        "docs/roadmap.md",
+        "go.mod",
+        "go.sum",
+        "internal/relay/backup.go",
+        "internal/relay/configuration.go",
+        "internal/relay/console.go",
+        "internal/relay/console_clock.go",
+        "internal/relay/console_keys.go",
+        "internal/relay/console_overview.go",
+        "internal/relay/console_reports.go",
+        "internal/relay/console_resource_matrix_test.go",
+        "internal/relay/console_storage.go",
+        "internal/relay/console_summaries.go",
+        "internal/relay/identity.go",
+        "internal/relay/legacy_accounting.go",
+        "internal/relay/protocol.go",
+        "internal/relay/security.go",
+        "internal/relay/store.go",
+        "internal/relay/upgrade.go",
+        "internal/relay/web.go",
+        "internal/relay/web/index.html",
+        "internal/relay/web/style.css",
+        "internal/relay/web/workspace.css",
+        "internal/relay/web/workspace.html",
+        "package-lock.json",
+        "package.json",
+        "standards/arch-template/backend/go/README.md",
+        "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+        "standards/arch-template/backend/go/saas/template/docs/saas.md",
+        "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+        "standards/arch-template/principles.md",
+        "standards/arch-template/verification.md"
+      ]
+    },
+    {
+      "round": "round-06",
+      "description": "Final 0.4 SSE: complete review with checked exact citations",
+      "tool_version": "0.4.0",
+      "status": "review_required",
+      "rules": {
+        "status": "conformant",
+        "findings": []
+      },
+      "model_status": "findings",
+      "evidence_status": "citations_checked",
+      "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+      "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+      "seconds": 93.236,
+      "provider_metadata": {
+        "model": "deepseek-flash",
+        "usage": {
+          "prompt_tokens": 225367,
+          "completion_tokens": 17333,
+          "total_tokens": 242700,
+          "prompt_tokens_details": {
+            "cached_tokens": 225152
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 11315
+          },
+          "prompt_cache_hit_tokens": 225152,
+          "prompt_cache_miss_tokens": 215
+        },
+        "duration_seconds": 92.064
+      },
+      "reported_checks": 11,
+      "accepted_findings": 7,
+      "raw_candidate_findings": 7,
+      "errors": [],
+      "artifacts": {
+        "report.json": "87099cde5e9ccb27c90cbe4354341817d89f741f62d2bd94b5f5820c91d128a4",
+        "model-result.json": "983f0196f09fafaff9335dcb7e077d727d0e080e25b6a1d58bfff44b95afac1e",
+        "scan-report.original.json": "ec6a44a5048dcb978a4311e29089f368186ee2012a6a852b330ab33339c05449"
+      },
+      "missing_reported_files": [],
+      "artifact_note": "report.json is fresh supported validate-review output on the same untouched DeepSeek result. scan-report.original.json preserves the original scan receipt; its git_head inherited the unrelated parent checkout and must not be used as the product commit. Product commit and per-file hashes in this run metadata are authoritative."
+    }
+  ],
+  "final_findings_by_severity": {
+    "medium": 4,
+    "high": 1,
+    "low": 2
+  },
+  "final_check_results": {
+    "module_responsibilities": "deviation",
+    "business_rule_ownership": "deviation",
+    "dependency_direction": "conformant",
+    "state_ownership": "deviation",
+    "testability": "conformant",
+    "necessary_abstractions": "conformant",
+    "standards_alignment": "deviation",
+    "saas_responsibilities": "deviation",
+    "gateway_request_lifecycle": "conformant",
+    "gateway_upstream_separation": "deviation",
+    "frontend_features": "deviation"
+  },
+  "final_report_note": "Final round-06 report.json was regenerated by supported validate-review from the untouched provider result after correcting unrelated parent Git metadata; original scanner receipt is retained separately.",
+  "final_limit": "Per-file reading is model-reported, not independent proof. One final SSE round omitted coverage declarations and was rejected; two non-streaming requests were interrupted, with unknown provider usage. Do not infer an accuracy rate or compare models by raw finding count.",
+  "applied_test_repository_commit": "051addd25459b33024cf902488220212eed252fb",
+  "applied_test_repository_note": "Standard tool upgrade and new target requirements only; product cmd/internal bytes unchanged. Rule entry passed on updated configuration. DeepSeek reports remain bound to the separately recorded fixed d03fe5b product and material snapshots."
+}
