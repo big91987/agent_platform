@@ -1,7 +1,13 @@
 {
-  "source_roots": ["src"],
-  "languages": ["typescript"],
-  "exclude": ["**/*.test.ts"],
+  "source_roots": [
+    "src"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ],
   "documents": [
     "AGENTS.md",
     "docs/admin-console.md",
@@ -10,20 +16,40 @@
   "modules": [
     {
       "name": "app",
-      "paths": ["src/app/**"],
-      "allow": ["quotas"]
+      "paths": [
+        "src/app/**"
+      ],
+      "allow": [
+        "quotas"
+      ]
     },
     {
       "name": "quotas",
-      "paths": ["src/features/quotas/**"],
-      "allow": ["http"],
-      "public": ["src/features/quotas/index.ts"]
+      "paths": [
+        "src/features/quotas/**"
+      ],
+      "allow": [
+        "http"
+      ],
+      "public": [
+        "src/features/quotas/index.ts"
+      ]
     },
     {
       "name": "http",
-      "paths": ["src/shared/api/**"],
+      "paths": [
+        "src/shared/api/**"
+      ],
       "allow": [],
-      "public": ["src/shared/api/index.ts"]
+      "public": [
+        "src/shared/api/index.ts"
+      ]
+    }
+  ],
+  "review_checks": [
+    {
+      "name": "frontend_features",
+      "requirement": "Features own business UI, interaction state, business API and cleanup; shared transport is business-neutral, public entry points constrain dependencies. Apply these responsibilities to vanilla JS too; absence of Vue alone is not a defect."
     }
   ]
 }

@@ -34,7 +34,16 @@ OTHER_CODE = {
     ".rb",
     ".php",
 }
-IGNORED = {".git", "node_modules", "vendor", "dist", "__pycache__", ".harness"}
+IGNORED = {
+    ".git",
+    "node_modules",
+    "vendor",
+    "dist",
+    "__pycache__",
+    ".harness",
+    "harness-output",
+    ".harness-output",
+}
 
 
 def digest(value):
@@ -73,7 +82,14 @@ def strings(value, name):
 def load_config(root, filename):
     path = relative_file(root, filename)
     config = json.loads(path.read_text())
-    allowed = {"source_roots", "languages", "modules", "exclude", "documents"}
+    allowed = {
+        "source_roots",
+        "languages",
+        "modules",
+        "exclude",
+        "documents",
+        "review_checks",
+    }
     if not isinstance(config, dict) or set(config) - allowed:
         raise ValueError("unknown architecture configuration field")
     for key in ("source_roots", "languages"):
@@ -86,6 +102,16 @@ def load_config(root, filename):
     modules = config.get("modules")
     if not isinstance(modules, list) or not modules:
         raise ValueError("modules cannot be empty")
+    checks = config.get("review_checks", [])
+    if not isinstance(checks, list) or any(
+        not isinstance(c, dict)
+        or set(c) != {"name", "requirement"}
+        or any(not isinstance(v, str) or not v.strip() for v in c.values())
+        for c in checks
+    ):
+        raise ValueError("review_checks requires named requirements")
+    if len({c["name"] for c in checks}) != len(checks):
+        raise ValueError("duplicate review check names")
     names = set()
     for module in modules:
         if not isinstance(module, dict) or set(module) - {
@@ -226,6 +252,7 @@ def collect(root, config, filename):
             scanned=sorted(sources),
             excluded=sorted(set(excluded)),
             assets=sorted(set(assets)),
+            context=sorted(set(texts) - set(sources)),
         ),
     )
 
@@ -458,7 +485,9 @@ def analyze(root, filename="architecture.json"):
         hashes=inventory["hashes"],
         coverage=inventory["coverage"],
         facts=dict(files=files, dependencies=edges),
-        findings=findings,
+        rules=dict(
+            status="violations" if findings else "conformant", findings=findings
+        ),
         model_review=dict(status="not_run"),
         limits=[
             "Static import/package analysis; no runtime call-graph or cross-service inference.",

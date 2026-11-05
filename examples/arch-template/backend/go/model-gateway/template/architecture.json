@@ -70,5 +70,15 @@
         "routing"
       ]
     }
+  ],
+  "review_checks": [
+    {
+      "name": "gateway_request_lifecycle",
+      "requirement": "The gateway owns request/attempt lifecycle, cancellation, timeout, output commitment and retry policy. Do not infer runtime correctness from static inspection."
+    },
+    {
+      "name": "gateway_upstream_separation",
+      "requirement": "The gateway coordinates through explicit interfaces while upstream adapters own network/protocol implementation. Routing owns policy and runtime state without HTTP or SQL; do not require four business layers for algorithms."
+    }
   ]
 }

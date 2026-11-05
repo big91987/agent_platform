@@ -3,6 +3,7 @@
 
 import fcntl
 import json
+import sys
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -14,6 +15,7 @@ def run():
             if manifest.exists():
                 lock = resources.enter_context(manifest.open("rb"))
                 fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
             from archcheck.cli import main
 
             return main()
