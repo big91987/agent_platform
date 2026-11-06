@@ -1,0 +1,71 @@
+{
+  "round": "baseline-031",
+  "description": "Original 0.3.1 protocol; normal scope notes classified as incomplete",
+  "tool_version": "0.3.1",
+  "status": "incomplete",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "incomplete",
+  "evidence_status": "citations_checked",
+  "snapshot": "9590f995d2b1f3ad3e936702308f22629ed01d455616e0ce6b4dcd7b41c3f173",
+  "policy_sha256": "cceaaa70054c46314f7dc2ce202b368aa86a451cb9f46575a31af2ebe461b522",
+  "seconds": 153.382,
+  "provider_metadata": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 238664,
+      "completion_tokens": 33556,
+      "total_tokens": 272220,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 29634
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 238664
+    },
+    "duration_seconds": 153.382
+  },
+  "reported_checks": 0,
+  "accepted_findings": 7,
+  "raw_candidate_findings": 7,
+  "errors": [],
+  "artifacts": {
+    "report.json": "60c466a8bd8ffa86f9d7383fa8506a8c0f45b394ef1615cbf9387cebff0f4473",
+    "model-result.json": "2e50d9dc251da733a2cca2f139524e4b507c8c830a23fa28b4309507255b1083"
+  },
+  "missing_reported_files": [
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/backend/multitenant-contracts.md",
+    ".trellis/spec/backend/routing-contracts.md",
+    ".trellis/spec/backend/runtime-contracts.md",
+    ".trellis/spec/frontend/index.md",
+    ".trellis/spec/frontend/workspace-contracts.md",
+    "AGENTS.md",
+    "architecture.json",
+    "docs/engineering/architecture-checks.md",
+    "docs/roadmap.md",
+    "go.mod",
+    "go.sum",
+    "internal/relay/console_contract_test.go",
+    "internal/relay/console_resource_matrix_test.go",
+    "internal/relay/metering_regression_test.go",
+    "internal/relay/routing_http_test.go",
+    "internal/relay/routing_latency_test.go",
+    "package-lock.json",
+    "package.json",
+    "standards/arch-template/backend/go/README.md",
+    "standards/arch-template/backend/go/model-gateway/README.md",
+    "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+    "standards/arch-template/backend/go/saas/README.md",
+    "standards/arch-template/backend/go/saas/template/docs/saas.md",
+    "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+    "standards/arch-template/principles.md",
+    "standards/arch-template/verification.md"
+  ],
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}

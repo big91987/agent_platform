@@ -1,0 +1,51 @@
+{
+  "source_roots": [
+    "cmd",
+    "internal",
+    "web"
+  ],
+  "languages": [
+    "go",
+    "typescript"
+  ],
+  "exclude": [
+    "**/*_test.go",
+    "**/*_test.js",
+    "**/*_test.cjs",
+    "**/live_browser_test.cjs",
+    "**/*_browser.cjs",
+    "**/browser-fixture.js"
+  ],
+  "documents": [
+    "AGENTS.md",
+    "docs/02-architecture/architecture.md"
+  ],
+  "modules": [
+    {
+      "name": "startup",
+      "paths": [
+        "cmd/**"
+      ],
+      "allow": [
+        "platform",
+        "web"
+      ]
+    },
+    {
+      "name": "platform",
+      "paths": [
+        "internal/platform/**"
+      ],
+      "allow": [
+        "web"
+      ]
+    },
+    {
+      "name": "web",
+      "paths": [
+        "web/**"
+      ],
+      "allow": []
+    }
+  ]
+}

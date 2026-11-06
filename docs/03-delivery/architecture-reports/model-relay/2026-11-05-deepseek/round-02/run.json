@@ -1,0 +1,43 @@
+{
+  "round": "round-02",
+  "description": "0.4 development: complete full-line-protocol review",
+  "tool_version": "0.4.0",
+  "status": "review_required",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "findings",
+  "evidence_status": "citations_checked",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "policy_sha256": "2423fcedc8f7ee20f604a9c10ae0175783594a27c439de7cd63127f0d6f98d38",
+  "seconds": 114.232,
+  "provider_metadata": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225333,
+      "completion_tokens": 22971,
+      "total_tokens": 248304,
+      "prompt_tokens_details": {
+        "cached_tokens": 225152
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 17888
+      },
+      "prompt_cache_hit_tokens": 225152,
+      "prompt_cache_miss_tokens": 181
+    },
+    "duration_seconds": 112.776
+  },
+  "reported_checks": 11,
+  "accepted_findings": 5,
+  "raw_candidate_findings": 5,
+  "errors": [],
+  "artifacts": {
+    "report.json": "f2672e96cf8e55d7366b9752f84001e0805600ca72fac7597f04340dd0274511",
+    "model-result.json": "bc948d208331961aa16accf1c5cf69dd21c584d123a30c18cc58447d18e90d36"
+  },
+  "missing_reported_files": [],
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}

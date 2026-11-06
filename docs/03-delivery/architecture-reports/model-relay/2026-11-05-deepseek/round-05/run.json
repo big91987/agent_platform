@@ -1,0 +1,83 @@
+{
+  "round": "round-05",
+  "description": "Final 0.4 SSE: incomplete self-reported material coverage rejected",
+  "tool_version": "0.4.0",
+  "status": "incomplete",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "incomplete",
+  "evidence_status": null,
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+  "seconds": 101.638,
+  "provider_metadata": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225367,
+      "completion_tokens": 18805,
+      "total_tokens": 244172,
+      "prompt_tokens_details": {
+        "cached_tokens": 225152
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 14847
+      },
+      "prompt_cache_hit_tokens": 225152,
+      "prompt_cache_miss_tokens": 215
+    },
+    "duration_seconds": 100.428
+  },
+  "reported_checks": 11,
+  "accepted_findings": 0,
+  "raw_candidate_findings": 5,
+  "errors": [
+    "model reported incomplete source/context coverage"
+  ],
+  "artifacts": {
+    "report.json": "22fc6489b64d15fba630f454378cd09c3f3b69d1b323ffdf26ea609aaea08055",
+    "model-result.json": "652f2187226197370367b15018140459bf130768030f1b818f2dec99f4aeadd3"
+  },
+  "missing_reported_files": [
+    ".github/workflows/architecture.yml",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/backend/runtime-contracts.md",
+    "AGENTS.md",
+    "Makefile",
+    "docs/roadmap.md",
+    "go.mod",
+    "go.sum",
+    "internal/relay/backup.go",
+    "internal/relay/configuration.go",
+    "internal/relay/console.go",
+    "internal/relay/console_clock.go",
+    "internal/relay/console_keys.go",
+    "internal/relay/console_overview.go",
+    "internal/relay/console_reports.go",
+    "internal/relay/console_resource_matrix_test.go",
+    "internal/relay/console_storage.go",
+    "internal/relay/console_summaries.go",
+    "internal/relay/identity.go",
+    "internal/relay/legacy_accounting.go",
+    "internal/relay/protocol.go",
+    "internal/relay/security.go",
+    "internal/relay/store.go",
+    "internal/relay/upgrade.go",
+    "internal/relay/web.go",
+    "internal/relay/web/index.html",
+    "internal/relay/web/style.css",
+    "internal/relay/web/workspace.css",
+    "internal/relay/web/workspace.html",
+    "package-lock.json",
+    "package.json",
+    "standards/arch-template/backend/go/README.md",
+    "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+    "standards/arch-template/backend/go/saas/template/docs/saas.md",
+    "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+    "standards/arch-template/principles.md",
+    "standards/arch-template/verification.md"
+  ],
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}

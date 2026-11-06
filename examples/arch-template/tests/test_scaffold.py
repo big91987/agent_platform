@@ -12,6 +12,26 @@ SOURCE = Path(__file__).resolve().parents[1]
 
 
 class ScaffoldTests(unittest.TestCase):
+    def test_install_existing_repository_keeps_product_and_refuses_replacement(self):
+        self.project.mkdir()
+        product = self.project / "AGENTS.md"
+        product.write_text("existing rules\n")
+        command = [
+            sys.executable,
+            str(SOURCE / "scaffold.py"),
+            "--install-tool",
+            str(self.project),
+        ]
+        installed = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        self.assertEqual(product.read_text(), "existing rules\n")
+        self.assertTrue(
+            (self.project / ".harness/archcheck/inspect_project.py").exists()
+        )
+        again = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(again.returncode, 2)
+        self.assertIn("already", again.stderr)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -67,6 +87,42 @@ class ScaffoldTests(unittest.TestCase):
             "docs/engineering-principles.md", json.loads(frontend.stdout)["hashes"]
         )
         self.assertEqual(self.scaffold("--backend", "saas").returncode, 2)
+
+    def test_default_review_artifacts_ignored_after_export_and_upgrade(self):
+        r = self.scaffold("--backend", "saas")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        subprocess.run(["git", "init", "-q", str(self.project)], check=True)
+        paths = [
+            "harness-output/architecture/review-input.json",
+            ".harness-output/backend-architecture.json",
+        ]
+        for name in paths:
+            r = subprocess.run(
+                ["git", "check-ignore", name],
+                cwd=self.project,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        (self.project / ".gitignore").write_text(".harness-output/\n")
+        r = subprocess.run(
+            [
+                sys.executable,
+                str(SOURCE / "scaffold.py"),
+                "--update-tool",
+                str(self.project),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = subprocess.run(
+            ["git", "check-ignore", paths[0]],
+            cwd=self.project,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
     def test_frontend_only_contains_no_go_module(self):
         r = self.scaffold("--frontend", "vue")
@@ -126,7 +182,7 @@ class ScaffoldTests(unittest.TestCase):
                 self.assertTrue(
                     any(
                         f["rule"] == rule and f["source"] == relative
-                        for f in report["findings"]
+                        for f in report["rules"]["findings"]
                     ),
                     report,
                 )
@@ -149,7 +205,7 @@ class ScaffoldTests(unittest.TestCase):
                 self.assertTrue(
                     any(
                         f["rule"] == "external_dependency"
-                        for f in json.loads(result.stdout)["findings"]
+                        for f in json.loads(result.stdout)["rules"]["findings"]
                     )
                 )
 

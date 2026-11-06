@@ -37,10 +37,42 @@ def copy(source, dest):
         shutil.copyfile(path, target)
 
 
+def ignore_artifacts(project):
+    path = project / ".gitignore"
+    if path.is_symlink():
+        raise ValueError("project .gitignore must not be a symlink")
+    text = path.read_text() if path.exists() else ""
+    block = "harness-output/\n.harness-output/\n"
+    if not text.endswith(block):
+        path.write_text(
+            text + ("\n" if text and not text.endswith("\n") else "") + block
+        )
+
+
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    manifest = dict(version="0.2.0", files=hashes(dest))
+    manifest = dict(version="0.4.0", files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
+def adopt(project):
+    if not project.is_dir():
+        raise ValueError("existing project directory is required")
+    parent = project / ".harness"
+    if parent.is_symlink():
+        raise ValueError("tool parent must not be a symlink")
+    target = parent / "archcheck"
+    if target.exists() or target.is_symlink():
+        raise ValueError(
+            "tool already installed; use --update-tool after reviewing changes"
+        )
+    ignore_artifacts(project)
+    parent.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=parent) as temporary:
+        candidate = Path(temporary) / "archcheck"
+        install_tool(candidate)
+        candidate.rename(target)
+    print(str(target))
 
 
 def upgrade(project):
@@ -57,6 +89,7 @@ def upgrade(project):
             raise ValueError(
                 "installed tool has local changes; reconcile with its maintenance source before upgrading"
             )
+        ignore_artifacts(project)
         with tempfile.TemporaryDirectory(dir=tool.parent) as temp:
             candidate = Path(temp) / "new"
             candidate.mkdir()
@@ -69,13 +102,20 @@ def upgrade(project):
                 previous.rename(tool)
                 raise
     print(
-        "Tool upgraded from maintenance source. Run python3 setup.py before verification."
+        "Tool upgraded from maintenance source. Reinstall locked parser dependencies, then run the project verification entry."
     )
 
 
 def merge_config(base, new):
     for key in ("source_roots", "languages", "exclude", "documents"):
         base[key] = list(dict.fromkeys(base.get(key, []) + new.get(key, [])))
+    checks = {c["name"]: c for c in base.get("review_checks", [])}
+    for check in new.get("review_checks", []):
+        if check["name"] in checks and checks[check["name"]] != check:
+            raise ValueError("conflicting review requirement: " + check["name"])
+        checks[check["name"]] = check
+    if checks:
+        base["review_checks"] = list(checks.values())
     existing = {m["name"]: m for m in base["modules"]}
     for module in new["modules"]:
         if module["name"] not in existing:
@@ -120,7 +160,7 @@ def architecture(config, output):
     report=json.loads(result.stdout)
     print('Architecture:',config,report['status'],'report:',output)
     if result.returncode:
-        print(json.dumps(report.get('errors',report.get('findings')),ensure_ascii=False,indent=2))
+        print(json.dumps(report.get('errors',report.get('rules',{}).get('findings')),ensure_ascii=False,indent=2))
         raise SystemExit(result.returncode)
 if (root/'go.mod').exists():
     source=[str(p.relative_to(root)) for folder in ('cmd','internal') for p in (root/folder).rglob('*.go')]
@@ -201,7 +241,7 @@ def export(destination, backends, frontend):
         (project / "setup.py").write_text(SETUP)
         (project / "verify.py").write_text(VERIFY)
         (project / ".gitignore").write_text(
-            "**/node_modules/\n**/dist/\n**/__pycache__/\n.harness-output/\n*.db\n*.db-*\n"
+            "**/node_modules/\n**/dist/\n**/__pycache__/\n*.db\n*.db-*\nharness-output/\n.harness-output/\n"
         )
         (project / "README.md").write_text(
             "# Service reference scaffold\n\nSelected backend: "
@@ -213,7 +253,7 @@ def export(destination, backends, frontend):
         (project / "template-source.json").write_text(
             json.dumps(
                 dict(
-                    version="0.2.0",
+                    version="0.4.0",
                     backends=backends,
                     frontend="vue" if frontend else None,
                     files=hashes(project),
@@ -235,9 +275,16 @@ def main():
     )
     parser.add_argument("--frontend", choices=["vue"])
     parser.add_argument("--update-tool", type=Path)
+    parser.add_argument("--install-tool", type=Path)
     args = parser.parse_args()
     try:
-        if args.update_tool:
+        if args.install_tool:
+            if args.destination or args.backend or args.frontend or args.update_tool:
+                raise ValueError(
+                    "tool installation cannot be combined with other options"
+                )
+            adopt(args.install_tool.resolve())
+        elif args.update_tool:
             if args.destination or args.backend or args.frontend:
                 raise ValueError(
                     "tool upgrade cannot be combined with scaffold options"

@@ -1,0 +1,32 @@
+{
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "tool_version": "0.4.1",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "request_sha256": "267359c1dd5db09a8bc2674f95a9e5fb00a24acedc23b1000863cb1f0cc95922",
+  "status": "incomplete",
+  "source_and_context_files": 61,
+  "review_checks": 11,
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225685,
+      "completion_tokens": 19756,
+      "total_tokens": 245441,
+      "prompt_tokens_details": {
+        "cached_tokens": 223616
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 12907
+      },
+      "prompt_cache_hit_tokens": 223616,
+      "prompt_cache_miss_tokens": 2069
+    },
+    "duration_seconds": 104.239
+  },
+  "note": "开发轮：已返回中文，但多出 kind 字段，被原协议拒绝。未清洗或伪造通过。",
+  "artifact_sha256": {
+    "report.json": "4b3814f7f2a8f6793591f58b96a7526c5408a537c6e34e6f294863e1c06b82c2",
+    "report.md": "1f173c95f37fbaf0f693f078af1e2e5d74951eb5e9dfca7c83a6a1343bac427e",
+    "model-result.json": "c28bbe06d2a0a4cb1ed1edfef95e77dad1f87ed1bd1cf0b8bc35bea91a6abca7"
+  }
+}

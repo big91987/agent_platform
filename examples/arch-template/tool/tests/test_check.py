@@ -11,6 +11,17 @@ TOOL = Path(__file__).resolve().parents[1] / "archcheck.py"
 
 
 class CheckTests(unittest.TestCase):
+    def test_large_typescript_input_is_read_completely(self):
+        self.write(
+            "internal/large.ts",
+            "//" + ("x" * 1_000_000) + "\nexport const enabled = true;\n",
+        )
+        code, report = self.check(
+            [dict(name="app", paths=["internal/**"])], languages=["typescript"]
+        )
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["coverage"]["scanned"], ["internal/large.ts"])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -64,8 +75,8 @@ class CheckTests(unittest.TestCase):
         )
         code, report = self.check(modules)
         self.assertEqual(code, 1, report)
-        self.assertEqual(report["findings"][0]["rule"], "forbidden_import")
-        self.assertEqual(report["findings"][0]["line"], 2)
+        self.assertEqual(report["rules"]["findings"][0]["rule"], "forbidden_import")
+        self.assertEqual(report["rules"]["findings"][0]["line"], 2)
 
     def test_new_uncovered_code_and_unknown_config_fail(self):
         self.write("internal/domain/a.go", "package domain\n")
@@ -106,8 +117,8 @@ class CheckTests(unittest.TestCase):
         )
         code, report = self.check(modules)
         self.assertEqual(code, 1, report)
-        self.assertEqual(report["findings"][0]["rule"], "external_dependency")
-        self.assertEqual(report["findings"][0]["line"], 2)
+        self.assertEqual(report["rules"]["findings"][0]["rule"], "external_dependency")
+        self.assertEqual(report["rules"]["findings"][0]["line"], 2)
         modules[0]["allow_external"] = ["example.org/policy"]
         code, report = self.check(modules)
         self.assertEqual(code, 0, report)
@@ -155,7 +166,7 @@ class CheckTests(unittest.TestCase):
         )
         code, report = self.check(modules)
         self.assertEqual(code, 1, report)
-        self.assertTrue(any(f["rule"] == "cycle" for f in report["findings"]))
+        self.assertTrue(any(f["rule"] == "cycle" for f in report["rules"]["findings"]))
 
     def test_vue_alias_type_import_and_public_entry(self):
         self.write(
@@ -205,7 +216,9 @@ class CheckTests(unittest.TestCase):
         )
         r = subprocess.run(args, capture_output=True, text=True)
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
-        self.assertEqual(json.loads(r.stdout)["findings"][0]["rule"], "private_entry")
+        self.assertEqual(
+            json.loads(r.stdout)["rules"]["findings"][0]["rule"], "private_entry"
+        )
 
     def test_computed_import_is_incomplete_not_clean(self):
         self.write("internal/a.ts", 'const name = "./other"; import(name);\n')
@@ -263,7 +276,7 @@ class CheckTests(unittest.TestCase):
         self.assertTrue(
             any(
                 f["rule"] == "dependency" and f["target"] == "internal/dep.ts"
-                for f in report["findings"]
+                for f in report["rules"]["findings"]
             )
         )
 

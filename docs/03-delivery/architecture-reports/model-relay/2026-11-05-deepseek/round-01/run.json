@@ -1,0 +1,45 @@
+{
+  "round": "round-01",
+  "description": "0.4 development: exact full-line quote rule rejected a real unique substring",
+  "tool_version": "0.4.0",
+  "status": "incomplete",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "incomplete",
+  "evidence_status": null,
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "policy_sha256": "2423fcedc8f7ee20f604a9c10ae0175783594a27c439de7cd63127f0d6f98d38",
+  "seconds": 77.091,
+  "provider_metadata": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225333,
+      "completion_tokens": 14411,
+      "total_tokens": 239744,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 9649
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 225333
+    },
+    "duration_seconds": 75.971
+  },
+  "reported_checks": 11,
+  "accepted_findings": 0,
+  "raw_candidate_findings": 5,
+  "errors": [
+    "evidence quotation must match one complete unique span: docs/engineering/architecture-checks.md (0 matches)"
+  ],
+  "artifacts": {
+    "report.json": "7198c3aa158925b3fd2500073674f2193a2b0888285c9f713f3aa0c1abeafe51",
+    "model-result.json": "89211c4b8449aef43b708b8422fcb2058d225b56f1ee3555dda52fd5d241665b"
+  },
+  "missing_reported_files": [],
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}

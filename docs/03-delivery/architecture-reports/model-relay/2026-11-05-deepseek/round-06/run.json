@@ -1,0 +1,45 @@
+{
+  "round": "round-06",
+  "description": "Final 0.4 SSE: complete review with checked exact citations",
+  "tool_version": "0.4.0",
+  "status": "review_required",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "findings",
+  "evidence_status": "citations_checked",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+  "seconds": 93.236,
+  "provider_metadata": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225367,
+      "completion_tokens": 17333,
+      "total_tokens": 242700,
+      "prompt_tokens_details": {
+        "cached_tokens": 225152
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 11315
+      },
+      "prompt_cache_hit_tokens": 225152,
+      "prompt_cache_miss_tokens": 215
+    },
+    "duration_seconds": 92.064
+  },
+  "reported_checks": 11,
+  "accepted_findings": 7,
+  "raw_candidate_findings": 7,
+  "errors": [],
+  "artifacts": {
+    "report.json": "87099cde5e9ccb27c90cbe4354341817d89f741f62d2bd94b5f5820c91d128a4",
+    "model-result.json": "983f0196f09fafaff9335dcb7e077d727d0e080e25b6a1d58bfff44b95afac1e",
+    "scan-report.original.json": "ec6a44a5048dcb978a4311e29089f368186ee2012a6a852b330ab33339c05449"
+  },
+  "missing_reported_files": [],
+  "artifact_note": "report.json is fresh supported validate-review output on the same untouched DeepSeek result. scan-report.original.json preserves the original scan receipt; its git_head inherited the unrelated parent checkout and must not be used as the product commit. Product commit and per-file hashes in this run metadata are authoritative.",
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}

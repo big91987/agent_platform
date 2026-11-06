@@ -81,5 +81,11 @@
       ],
       "allow_external": []
     }
+  ],
+  "review_checks": [
+    {
+      "name": "saas_responsibilities",
+      "requirement": "For rule-rich SaaS capabilities, HTTP adapts requests to application use cases; independent domain packages own business rules, and infrastructure implements operation-level atomic storage. Preserve transactions and avoid forcing rich models on trivial CRUD."
+    }
   ]
 }

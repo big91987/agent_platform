@@ -18,6 +18,10 @@ Keep real behavior verifiable. Repair supported paths rather than patching indiv
 
 Use gofmt and go vet. Keep tests small and focused on meaningful behavior: isolation, queue ordering, cancellation, restart, deduplication, authorization and real executor continuity. Do not pile up assertions about constants, prose or implementation structure.
 
+## 架构检查
+
+[architecture.json](architecture.json) 声明当前生产代码的包边界；[使用及初检说明](docs/03-delivery/architecture-integration-2026-11-04.md)记录安装、执行、覆盖范围和限制。执行 `python3 -I examples/arch-template/tool/inspect_project.py`，报告写入忽略的 `harness-output/architecture/`。新增生产包须明确归属和依赖方向；规则通过不代表大包职责已经拆分，也不替代模型评审或真实测试。
+
 ## 工程初始化工具
 
 Kodus Agent Readiness 纳入工程工具链，用于项目接入及工程初始化时的仓库基线体检。独立运行并核对逐项建议，不默认插入进行中的研发流程，不将总分直接作为研发门禁；它不替代真实构建测试、代码审查或独立 QA。试用先固定工具和仓库版本，保存原始报告，区分配置存在、工具识别限制和已验证的工程能力；启用外部模型另行明确凭据及发送范围。

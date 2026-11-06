@@ -1,8 +1,8 @@
 # 架构检查工具
 
-本工具检查模块依赖、公开入口和循环，并提供模型架构评审及源码引用校验。Go 与 TypeScript/Vue 共用规则引擎；语言适配器负责提取事实。它不使用文件长度给仓库评“屎山分”。
+本工具检查模块依赖、公开入口和循环，并提供模型架构评审及源码引用校验。Go 与 TypeScript/Vue 共用规则引擎；语言适配器负责提取事实。它不使用文件长度给仓库评“屎山分”。本工具治理代码组织与架构规范；格式、类型、构建由项目已有工具负责，产品业务正确性由产品测试负责。
 
-版本 0.2.0。运行环境为 Linux/macOS；要求 Python 3.10+、Go 1.25+；分析 TypeScript/Vue 还需要 Node 22.12+ 和本目录锁定的 npm 依赖。没有平台服务或模型凭据也能运行确定规则检查。
+版本 0.4.1。运行环境为 Linux/macOS；要求 Python 3.10+、Go 1.25+；分析 TypeScript/Vue 还需要 Node 22.12+ 和本目录锁定的 npm 依赖。没有平台服务或模型凭据也能运行确定规则检查。
 
 ## 安装与快速使用
 
@@ -48,56 +48,85 @@ python3 archcheck.py check --root /path/to/project --out /path/to/report.json
 | 1 | review_required | 模型有待审查发现，或确定规则违规；进入现有代码审查与返工 |
 | 2 | incomplete | 缺文件/工具、未知配置、未覆盖源码、解析/解析路径失败、模型错误/超时、证据不符或评审范围不足 |
 
-报告保留 tool_version、snapshot、逐文件 hashes、扫描/排除范围、源码事实、规则发现、分析限制和模型状态。确定规则违规不会被模型无发现覆盖。CLI stdout 是 JSON，--out 同时留存相同报告。
+报告保留 tool_version、snapshot、逐文件 hashes、规则扫描/排除范围、模型上下文清单、源码事实及两类独立结果：`rules.status/findings` 是确定规则；`model_review.checks/findings` 是模型判断。模型不能清除规则违规。确定规则违规不会被模型无发现覆盖。CLI stdout 是 JSON，--out 同时留存相同报告。
 
 ## 模型评审
 
-模型接收规范、业务说明、完整选中源码、相关测试、结构事实及规则结果，评估内聚、逻辑归属、分层有效性、状态所有权和过度抽象。默认材料上限 2 MB，超过就停止，不截断。业务背景缺失必须在 limitations 说明。
-
-可先生成材料，交现有 Agent 或人工主持的模型评审：
+标准入口将材料收集、受信命令调用、JSON校验及报告留存串起来。URL、密钥、模型由调用方显式配置；不用Codex也可使用同一协议。例如采用兼容Chat Completions的服务：
 
 ```sh
-python3 archcheck.py bundle --root PROJECT --out /private/review-input.json
-python3 archcheck.py validate-review --root PROJECT \
-  --bundle /private/review-input.json --result /private/model-result.json \
-  --out /private/review-report.json
+# CODE_REVIEW_URL、CODE_REVIEW_TOKEN、CODE_REVIEW_MODEL由私有环境提供。
+python3 -I inspect_project.py --root PROJECT \
+  --review-command '["python3", "/absolute/path/to/model_reviewer.py"]' \
+  --pass-env CODE_REVIEW_URL --pass-env CODE_REVIEW_TOKEN --pass-env CODE_REVIEW_MODEL
 ```
 
-也可直接调用受信命令。命令 stdin 接收完整 bundle，stdout 返回一个 JSON 对象；不经过 shell。超时会终止该命令的进程组，不自动重试。不继承任意环境变量，所需私有配置通过 --pass-env 显式传入。
+每次独立保留review-input.json、reviewer.stdout.json、reviewer.stderr.log、model-result.json、report.json和report.md；失败也保留已有规则结果及原始回执。导出、首次安装及升级都会在.gitignore末尾保护harness-output/和.harness-output/。这两个目录是工具保留的产物目录，不放业务源码；解析器也排除它们。自定义输出若位于扫描源码内而未处于保留目录，在调用模型前明确拒绝。发布前检查敏感信息。默认仅运行规则；未配置模型时不会隐式发起调用。
 
-```sh
-python3 archcheck.py review --root PROJECT \
-  --command '["python3", "/absolute/path/to/model_reviewer.py"]' \
-  --pass-env CODE_REVIEW_URL --pass-env CODE_REVIEW_TOKEN --pass-env CODE_REVIEW_MODEL \
-  --timeout 660 --out /private/review-report.json
+独立的bundle/review/validate-review命令仍可用于其他受信模型或原生Agent。`review --command`的stdin是完整bundle，stdout必须是一个JSON对象，不经shell、不自动重试、不默认选供应商。执行超时终止整个命令组。`--pass-env`只传所列私有配置；不能让被扫仓库决定受信命令。
+
+### 要求与覆盖
+
+内置检查覆盖模块职责、业务规则归属、依赖分工、状态归属、可测试性、必要抽象和规范一致性。场景可在architecture.json增加：
+
+```json
+"review_checks": [
+  {"name": "gateway_transport", "requirement": "请求流程通过明确接口使用上游网络实现，路由不处理HTTP或SQL。"}
+]
 ```
 
-model_reviewer.py 使用与现有代码审查一致的配置名：CODE_REVIEW_URL 是完整 Chat Completions 地址，TOKEN 和 MODEL 由私有执行环境提供。它拒绝 HTTP 跳转，不将凭据转发到其他地址，不自动重试。它发送 bundle 中所有 sources；需先确认该源码范围可发送到所选服务。适配器请求 JSON 输出，不做 Agent 工具循环、不默认选供应商、不读取旧任务密钥。其他原生 Agent 可实现相同命令协议，沿用其自己的只读/沙箱权限。
+name必须唯一，不覆盖内置检查。导出场景自带对应要求，组合时保留；冲突明确报错。模型必须逐项输出conformant、deviation、not_applicable或insufficient_evidence及理由，已判断符合或偏离时附源码或规范证据。每项偏离须由finding引用其name，多个相关检查可合并成一项finding。
 
-命令具有调用者授予的执行权限，本工具不提供恶意代码隔离。不要让仓库内容指定 reviewer 命令；CI 使用受信基线中的命令与配置。
+`coverage.scanned`是确定规则分析的生产源码；`coverage.context`是提供给模型的规范、配置、选定测试及其他上下文。测试可以从依赖规则排除而同时进入上下文；HTML/CSS可通过documents纳入，不宣称已有HTML/CSS依赖解析器。reviewed_files必须完整列出bundle.sources中的所有路径，这是模型自报阅读覆盖，不是独立阅读证明。
 
-返回格式（snapshot 和 reviewed_files 必须来自本次材料）：
+正常静态评审范围写入scope_notes；缺少必需资料写入blockers或对应检查的insufficient_evidence。前者不强制incomplete，后者不能报通过。不能通过填写“未执行产品测试”把正常架构评审变成执行失败。
+
+### 发现与整改建议的范围
+
+模型可以检查业务规则放置在哪个模块、是否重复、是否与 HTTP/SQL 耦合，不能据此判定价格、配额、权限结果等业务行为正确或错误。业务背景用于理解职责，不作为扩展产品需求的依据。
+
+每项发现需要定位已有包、文件、类型或函数，指出违反的命名检查项及适用规范，并说明这些对象的职责或依赖应作的最小调整。不能只有“拆模块”“增加领域层”等原则口号；建议的新边界必须注明为建议，不冒充已有对象。没有测量的性能影响只能表述为风险。
+
+validation 应说明架构复查方法，如依赖方向、公开入口、重复规则归属或模块测试接口；已有回归仅用于保护原行为，不凭空添加产品业务验收条件。当前可读报告及模型说明统一使用简体中文，代码标识和路径保持原样。模型仍可能偏离这些要求，引用校验不能代替语义复核；工具不以业务关键词过滤或自动改写模型意见。
+
+inspect_project.py 自动生成的人类可读 Markdown 先分别展示规则结果与模型结果，再列问题、涉及位置、可定位的源码符号、依据、影响、调整和复查建议。符号来自语言解析事实，无法对应到符号的规范文件引用只显示文件位置。原始模型文字与 JSON 保持原样，执行元数据和范围放在报告末尾。JSON 返回协议未变化。
+
+### 统一返回协议
 
 ```json
 {
   "snapshot": "材料中的摘要",
-  "reviewed_files": ["internal/application/order.go", "internal/domain/order.go"],
-  "limitations": [],
+  "reviewed_files": ["材料中的所有源码和上下文路径"],
+  "scope_notes": ["静态架构评审未执行业务测试"],
+  "blockers": [],
+  "checks": [{
+    "name": "gateway_transport",
+    "status": "deviation",
+    "reason": "流程直接处理网络实现细节",
+    "evidence": [{"path": "internal/gateway/relay.go", "quote": "一段完整且唯一的原文行"}]
+  }],
   "findings": [{
-    "title": "同一订单资格规则散落在两个用例",
+    "checks": ["gateway_transport"],
+    "title": "请求协调和上游网络实现混合",
     "severity": "medium",
-    "principle": "业务规则归所属模块统一维护",
-    "impact": "修改资格规则时两个入口可能行为不一致",
-    "recommendation": "提取由订单模块维护的资格判断，两个用例共用",
-    "validation": "验证两个入口在资格边界上的相同行为",
-    "evidence": [{"path": "internal/application/order.go", "line": 10, "end": 10, "quote": "该行完整原文"}]
+    "principle": "请求流程与网络实现分工",
+    "impact": "协议改动会触及请求协调",
+    "recommendation": "由上游适配实现网络细节",
+    "validation": "通过接口验证流程并保留真实HTTP集成测试",
+    "evidence": [{"path": "internal/gateway/relay.go", "quote": "一段完整且唯一的原文行"}]
   }]
 }
 ```
 
-引用行号从 1 开始，quote 必须与指定完整行逐字一致。reviewed_files 必须与材料 coverage.scanned 完全一致；这是模型自报覆盖，不伪装成独立阅读证明。可选 reviewer 元数据由适配器记录实际模型标识、服务返回的 usage 和耗时，不估造 token 或费用。
+实际checks必须覆盖材料中的全部要求；上面的单项仅用于说明格式。模型引用提交path和逐字原文，不再计数行号；可引用长行中的连续片段或完整多行，不得改写、省略拼接。工具在同版源码中精确、唯一匹配后生成line/end；零处或多处匹配（含重叠匹配）均拒绝，不猜位置、不修改模型原始发现。规范、源码、检查要求和策略变化均使旧材料失效。旧版limitations/行号协议明确拒绝；历史报告保持原样。
 
-引用核验只证明“引用真实且版本一致”，**不能证明架构判断正确**。每个发现保持 verification=needs_review，经现有审查补读相关代码、业务约束和反例；重要发现可以要求返工。若要扩大范围，将新文件加入架构声明或 documents，再生成新材料，不把模型在范围外的猜测当证据。
+引用核验只证明原文真实和版本一致，不证明架构推断正确。标准化后的发现仍为verification=needs_review，交项目既有审查复核。规则违规与模型发现分别记录，不使用发现数量评估模型质量。
+
+### 提供商适配与预算
+
+model_reviewer.py只使用CODE_REVIEW_URL（完整Chat Completions地址）、CODE_REVIEW_TOKEN、CODE_REVIEW_MODEL。默认max_tokens=65536，可用CODE_REVIEW_MAX_TOKENS设置正整数并显式pass-env；更换模型时核对其上下文和输出上限。默认使用标准Chat Completions SSE并请求usage，避免长评审期间仅等待最终响应；只拼接content，丢弃reasoning_content。显式CODE_REVIEW_STREAM=false可选择非流式，须一并pass-env，不自动回退。缺少[DONE]、HTTP响应中断或超出接收预算均报incomplete，不自动重试。拒绝重定向、非stop结束、空白/非JSON响应，不把截断当成无发现。保存实际返回model、usage和耗时，不估造费用。不会保存reasoning_content。
+
+例如DeepSeek V4.1 Flash当前使用deepseek-flash，完整地址https://api.deepseek.com/chat/completions；以实际/models响应及[官方模型文档](https://api-docs.deepseek.com/quick_start/pricing/)为准。工具本身不内置该模型或地址。向任何服务发送源码前，明确材料范围和凭据使用授权。
 
 ## 支持边界
 

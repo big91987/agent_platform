@@ -1,0 +1,423 @@
+{
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "reviewed_files": [
+    ".github/workflows/architecture.yml",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/backend/multitenant-contracts.md",
+    ".trellis/spec/backend/routing-contracts.md",
+    ".trellis/spec/backend/runtime-contracts.md",
+    ".trellis/spec/frontend/index.md",
+    "AGENTS.md",
+    "Makefile",
+    "architecture.json",
+    "cmd/model-relay/main.go",
+    "docs/engineering/architecture-checks.md",
+    "docs/roadmap.md",
+    "go.mod",
+    "go.sum",
+    "internal/relay/accounting.go",
+    "internal/relay/admin_response.go",
+    "internal/relay/backup.go",
+    "internal/relay/billing.go",
+    "internal/relay/configuration.go",
+    "internal/relay/console.go",
+    "internal/relay/console_api.go",
+    "internal/relay/console_clock.go",
+    "internal/relay/console_contract_test.go",
+    "internal/relay/console_keys.go",
+    "internal/relay/console_overview.go",
+    "internal/relay/console_reports.go",
+    "internal/relay/console_resource_matrix_test.go",
+    "internal/relay/console_storage.go",
+    "internal/relay/console_summaries.go",
+    "internal/relay/identity.go",
+    "internal/relay/legacy_accounting.go",
+    "internal/relay/metering_regression_test.go",
+    "internal/relay/protocol.go",
+    "internal/relay/proxy.go",
+    "internal/relay/routed_proxy.go",
+    "internal/relay/routing.go",
+    "internal/relay/routing_http_test.go",
+    "internal/relay/routing_latency.go",
+    "internal/relay/routing_latency_storage.go",
+    "internal/relay/routing_latency_test.go",
+    "internal/relay/security.go",
+    "internal/relay/server.go",
+    "internal/relay/store.go",
+    "internal/relay/upgrade.go",
+    "internal/relay/web.go",
+    "internal/relay/web/app.js",
+    "internal/relay/web/index.html",
+    "internal/relay/web/style.css",
+    "internal/relay/web/workspace.css",
+    "internal/relay/web/workspace.html",
+    "internal/relay/web/workspace.js",
+    "package-lock.json",
+    "package.json",
+    "standards/arch-template/backend/go/README.md",
+    "standards/arch-template/backend/go/model-gateway/README.md",
+    "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+    "standards/arch-template/backend/go/saas/README.md",
+    "standards/arch-template/backend/go/saas/template/docs/saas.md",
+    "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+    "standards/arch-template/principles.md",
+    "standards/arch-template/verification.md"
+  ],
+  "scope_notes": [
+    "Static architecture review of the supplied snapshot; I did not run make verify, Go tests, browser journeys, or live provider calls.",
+    "Test files were read as evidence of intended interfaces and seams, not as proof that tests were executed or passed.",
+    "CSS and generated HTML assets were reviewed only for ownership/boundary structure, not visual design.",
+    "Runtime correctness of cancellation, transaction atomicity, concurrency, and supplier behavior is outside this static review."
+  ],
+  "blockers": [],
+  "checks": [
+    {
+      "name": "module_responsibilities",
+      "status": "deviation",
+      "reason": "The declared relay module covers every internal/relay/*.go file, so identity, access, catalog, accounting, billing, routing, proxy, persistence and console HTTP are one Go package with no explicit capability interfaces. The package boundary is effectively a file-name boundary, not a module boundary.",
+      "evidence": [
+        {
+          "path": "architecture.json",
+          "quote": "    {\n      \"name\": \"relay\",\n      \"paths\": [\n        \"internal/relay/*.go\"\n      ],\n      \"allow\": []\n    },"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func (server *Server) manageLimits(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role, ownerType, ownerID string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        }
+      ]
+    },
+    {
+      "name": "business_rule_ownership",
+      "status": "deviation",
+      "reason": "Rule-rich quota, admission and billing rules are embedded in HTTP handler functions that also parse requests and execute SQL directly. For example, manageLimits and tenantBills own limit/bill rules, and admit takes both *http.Request and *sql.Tx. These rules are not owned by an application/domain capability.",
+      "evidence": [
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func (server *Server) manageLimits(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role, ownerType, ownerID string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "func (store *Store) admit(record Record, snapshot routeSnapshot, payload map[string]json.RawMessage, request *http.Request) (string, int, string) {"
+        }
+      ]
+    },
+    {
+      "name": "dependency_direction",
+      "status": "deviation",
+      "reason": "The routing package imports database/sql and net/http and begins SQL transactions inside selection/dispatch code. This makes policy depend directly on transport and persistence instead of consuming explicit interfaces, and the outbound upstream HTTP request is constructed in the same routed proxy file.",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "import (\n\t\"context\"\n\t\"database/sql\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"fmt\"\n\t\"math\"\n\t\"net/http\"\n\t\"sort\"\n\t\"sync\"\n\t\"time\"\n)"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "\ttransaction, err := server.Store.DB.BeginTx(cleanup, nil)"
+        },
+        {
+          "path": "internal/relay/routed_proxy.go",
+          "quote": "\t\toutgoing, err := http.NewRequestWithContext(output.child, http.MethodPost, upstream.URL+\"/chat/completions\", bytes.NewReader(body))"
+        }
+      ]
+    },
+    {
+      "name": "state_ownership",
+      "status": "deviation",
+      "reason": "Server aggregates session/auth state, routing runtimes, health/cooldown, latency pools, checking flags, configuration epoch, success evidence and degradation state. Management handlers and routing both lock the same server.mu, so unrelated capabilities depend on one shared mutable object and one broad lock.",
+      "evidence": [
+        {
+          "path": "internal/relay/server.go",
+          "quote": "type Server struct {\n\tStore              *Store\n\tConfig             Config\n\tmu                 sync.RWMutex\n\tauthMu             sync.Mutex\n\tsessions           map[string]session\n\tattempts           []time.Time\n\tinvitationAttempts []time.Time\n\tpasswordSlots      chan struct{}\n\tdegraded           atomic.Bool\n\tclient             *http.Client\n\tconfigEpoch        uint64\n\tsuccessID          string\n\trouting            map[string]*routeRuntime\n\tchecking           map[int64]bool\n\thealth             map[string]*routeHealth\n\tdispatchSequence   int64\n\tlatency            map[string]*latencyPool\n\tlatencyClock       func() time.Time\n}"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "\tserver.mu.Lock()\n\tdefer server.mu.Unlock()\n\tif !server.advanceClock(writer) {"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "\tserver.mu.Lock()\n\tdefer server.mu.Unlock()\n\tif server.Store.advanceClock() != nil {"
+        }
+      ]
+    },
+    {
+      "name": "testability",
+      "status": "conformant",
+      "reason": "Static inspection shows pure policy helpers such as outputDelta and tests that exercise policy functions, plus HTTP/database fixtures for external behavior. This is a seam assessment only; I did not execute the tests.",
+      "evidence": [
+        {
+          "path": "internal/relay/routing_latency_test.go",
+          "quote": "func TestLatencyOutputDeltaContract(t *testing.T) {"
+        },
+        {
+          "path": "internal/relay/routing_latency.go",
+          "quote": "func outputDelta(value map[string]json.RawMessage) bool {"
+        }
+      ]
+    },
+    {
+      "name": "necessary_abstractions",
+      "status": "conformant",
+      "reason": "I found no empty layer or generic process engine. The small wrappers that do exist, such as adminResponse and attemptOutput, have concrete responsibilities around buffering and output commitment. The separation gaps in the central package are covered under other checks rather than by recommending more layers here.",
+      "evidence": [
+        {
+          "path": "internal/relay/admin_response.go",
+          "quote": "func newAdminResponse(writer http.ResponseWriter) *adminResponse {"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "func newAttemptOutput(writer http.ResponseWriter, parent context.Context, duration time.Duration) *attemptOutput {"
+        }
+      ]
+    },
+    {
+      "name": "standards_alignment",
+      "status": "deviation",
+      "reason": "Project documentation explicitly accepts a central relay package and an unsplit console, while the supplied target standards require SaaS application/domain packages and a gateway routing layer that does not handle HTTP or SQL. The executable architecture declaration therefore passes without enforcing the selected standards, which is a waiver by description rather than alignment.",
+      "evidence": [
+        {
+          "path": "docs/engineering/architecture-checks.md",
+          "quote": "architecture.json 声明 cmd、internal 中的Go与JavaScript生产代码，测试单列排除。当前启动包只依赖relay；relay和控制台分别归属。relay仍是一个集中业务包，控制台仍是原生JavaScript，本轮没有完成领域分包或Vue迁移。检查通过只证明已声明的依赖规则满足，不能作为领域设计或独立QA通过。"
+        },
+        {
+          "path": "standards/arch-template/backend/go/saas/README.md",
+          "quote": "本场景面向身份、权限、业务配置、配额及账务等管理业务。采用本模板后，业务模块必须使用独立的 application 和 domain Go 包；HTTP 与基础设施实现统一外置。前端技术栈独立选择。"
+        },
+        {
+          "path": "standards/arch-template/backend/go/model-gateway/README.md",
+          "quote": "- routing 对外提供选择和观测操作，内部拥有权重计数、评分样本和冷却状态；不处理 HTTP 响应或 SQL。"
+        }
+      ]
+    },
+    {
+      "name": "saas_responsibilities",
+      "status": "deviation",
+      "reason": "The product has rule-rich SaaS capabilities (tenant identity, access, quotas, billing), but HTTP handlers directly own the rules and SQL operations instead of calling application use cases and independent domain packages. Transactions are present, but they are not behind operation-level application/storage interfaces.",
+      "evidence": [
+        {
+          "path": "standards/arch-template/backend/go/saas/README.md",
+          "quote": "本场景面向身份、权限、业务配置、配额及账务等管理业务。采用本模板后，业务模块必须使用独立的 application 和 domain Go 包；HTTP 与基础设施实现统一外置。前端技术栈独立选择。"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func (server *Server) manageLimits(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role, ownerType, ownerID string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        }
+      ]
+    },
+    {
+      "name": "gateway_request_lifecycle",
+      "status": "conformant",
+      "reason": "generate, routedGenerate, stream and attemptOutput own the request/attempt lifecycle, including retries, cancellation/timeout handling and output commitment. This is a static ownership assessment; runtime correctness is not inferred.",
+      "evidence": [
+        {
+          "path": "internal/relay/proxy.go",
+          "quote": "func (server *Server) generate(writer http.ResponseWriter, request *http.Request) {"
+        },
+        {
+          "path": "internal/relay/routed_proxy.go",
+          "quote": "func (server *Server) routedGenerate(writer http.ResponseWriter, request *http.Request, ctx context.Context, record *Record, payload map[string]json.RawMessage, snapshot routeSnapshot, finish func(string, string) bool) {"
+        }
+      ]
+    },
+    {
+      "name": "gateway_upstream_separation",
+      "status": "deviation",
+      "reason": "Routing directly accepts *http.Request and uses the store and SQL transaction in beginAttempt, while routedGenerate constructs the outbound upstream HTTP request itself. There is no upstream adapter interface separating network/protocol details from routing policy and the gateway.",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "func (server *Server) beginAttempt(ctx context.Context, request *http.Request, record *Record, snapshot routeSnapshot, tried map[int64]bool, round int) (*Candidate, *Attempt, string) {"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "\ttransaction, err := server.Store.DB.BeginTx(cleanup, nil)"
+        },
+        {
+          "path": "internal/relay/routed_proxy.go",
+          "quote": "\t\toutgoing, err := http.NewRequestWithContext(output.child, http.MethodPost, upstream.URL+\"/chat/completions\", bytes.NewReader(body))"
+        }
+      ]
+    },
+    {
+      "name": "frontend_features",
+      "status": "deviation",
+      "reason": "workspace.js is one global script with a single mutable state object and one renderPage function branching across all business pages. Shared api also performs auth-related side effects. There are no feature-owned UI, interaction state, business API and cleanup boundaries for billing, keys, models, tenants, records or playground.",
+      "evidence": [
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const state = {user:null,csrf:'',tenant:'',tenants:[],page:'overview',epoch:0,controllers:new Set(),busy:false,call:null,invitation:'',filters:{},pageNumber:1};"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const pages = {"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "async function renderPage() {"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "module_responsibilities",
+        "business_rule_ownership",
+        "saas_responsibilities"
+      ],
+      "title": "Backend capabilities are collapsed into one relay package and HTTP handlers own rule-rich SaaS logic",
+      "severity": "high",
+      "principle": "Modules own cohesive responsibilities; rule-rich SaaS capabilities need application/domain ownership with operation-level storage.",
+      "impact": "Identity, access, catalog, accounting, billing, routing, proxy and persistence share one Go package. Quota and billing changes are made in HTTP handlers with direct SQL, so module boundaries are not enforceable and unrelated capabilities are reviewed and tested together.",
+      "recommendation": "Extract rule-rich capabilities (identity/access, accounting/billing, routing) into packages with explicit application/domain and storage interfaces; keep console and proxy handlers as adapters; update architecture.json to enforce those boundaries.",
+      "validation": "Add dependency rules that forbid HTTP/SQL in domain packages and require HTTP handlers to call application interfaces; compile and run existing package and HTTP contract tests without behavior changes.",
+      "evidence": [
+        {
+          "path": "architecture.json",
+          "quote": "    {\n      \"name\": \"relay\",\n      \"paths\": [\n        \"internal/relay/*.go\"\n      ],\n      \"allow\": []\n    },"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func (server *Server) manageLimits(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role, ownerType, ownerID string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "dependency_direction",
+        "gateway_upstream_separation"
+      ],
+      "title": "Routing depends directly on net/http and database/sql and there is no upstream adapter boundary",
+      "severity": "high",
+      "principle": "Routing owns policy and runtime state without HTTP/SQL; upstream adapters own network/protocol and the gateway consumes explicit interfaces.",
+      "impact": "Routing policy cannot be reused or tested without HTTP requests and SQLite. Vendor protocol changes and storage changes touch the same policy package, and upstream substitution is not isolated behind an adapter.",
+      "recommendation": "Move routing selection, health and cooldown into a package with no net/http or database/sql imports; inject config/evidence storage interfaces; move outbound HTTP to an upstream adapter used by the gateway.",
+      "validation": "Add architecture rules forbidding net/http and database/sql in routing; verify routing policy tests run with fake config/evidence and HTTP adapter contract tests run separately.",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "import (\n\t\"context\"\n\t\"database/sql\"\n\t\"encoding/json\"\n\t\"errors\"\n\t\"fmt\"\n\t\"math\"\n\t\"net/http\"\n\t\"sort\"\n\t\"sync\"\n\t\"time\"\n)"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "func (server *Server) beginAttempt(ctx context.Context, request *http.Request, record *Record, snapshot routeSnapshot, tried map[int64]bool, round int) (*Candidate, *Attempt, string) {"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "\ttransaction, err := server.Store.DB.BeginTx(cleanup, nil)"
+        },
+        {
+          "path": "internal/relay/routed_proxy.go",
+          "quote": "\t\toutgoing, err := http.NewRequestWithContext(output.child, http.MethodPost, upstream.URL+\"/chat/completions\", bytes.NewReader(body))"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "state_ownership"
+      ],
+      "title": "Server aggregates unrelated mutable state and one lock spans management and routing",
+      "severity": "medium",
+      "principle": "Session, request, routing, health and business state have explicit owners; unrelated capabilities do not depend on one shared mutable object.",
+      "impact": "Session/auth state, routing runtimes, health/cooldown, latency pools, checking flags, config epoch and success evidence share one Server. Management and routing paths contend on the same lock, and lifecycle/cleanup ownership is unclear.",
+      "recommendation": "Split state owners (session store, routing runtime, health registry, console operation state) behind narrow interfaces; keep a composition root; use per-owner synchronization instead of one broad server lock.",
+      "validation": "Add concurrency tests that exercise management and dispatch concurrently and assert no shared-lock coupling; dependency rules prevent packages from reaching another owner's mutable state.",
+      "evidence": [
+        {
+          "path": "internal/relay/server.go",
+          "quote": "type Server struct {\n\tStore              *Store\n\tConfig             Config\n\tmu                 sync.RWMutex\n\tauthMu             sync.Mutex\n\tsessions           map[string]session\n\tattempts           []time.Time\n\tinvitationAttempts []time.Time\n\tpasswordSlots      chan struct{}\n\tdegraded           atomic.Bool\n\tclient             *http.Client\n\tconfigEpoch        uint64\n\tsuccessID          string\n\trouting            map[string]*routeRuntime\n\tchecking           map[int64]bool\n\thealth             map[string]*routeHealth\n\tdispatchSequence   int64\n\tlatency            map[string]*latencyPool\n\tlatencyClock       func() time.Time\n}"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "\tserver.mu.Lock()\n\tdefer server.mu.Unlock()\n\tif !server.advanceClock(writer) {"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "\tserver.mu.Lock()\n\tdefer server.mu.Unlock()\n\tif server.Store.advanceClock() != nil {"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "standards_alignment"
+      ],
+      "title": "Architecture declaration and project docs accept the central relay package despite target standards requiring separation",
+      "severity": "high",
+      "principle": "Project rules and executable declarations agree with target standards and do not waive requirements merely by describing current code.",
+      "impact": "The architecture check can be green while SaaS application/domain and gateway routing/upstream separation are absent. This gives false confidence and allows new responsibilities to keep accumulating in relay.",
+      "recommendation": "Either bring the implementation to the selected standards or record an explicit, reviewed exception with scope and follow-up gates; do not present the current declaration as satisfying the standards.",
+      "validation": "Compare architecture.json modules against the SaaS/gateway standards; add negative fixtures proving a handler with direct SQL or routing with net/http fails; review exception scope.",
+      "evidence": [
+        {
+          "path": "docs/engineering/architecture-checks.md",
+          "quote": "architecture.json 声明 cmd、internal 中的Go与JavaScript生产代码，测试单列排除。当前启动包只依赖relay；relay和控制台分别归属。relay仍是一个集中业务包，控制台仍是原生JavaScript，本轮没有完成领域分包或Vue迁移。检查通过只证明已声明的依赖规则满足，不能作为领域设计或独立QA通过。"
+        },
+        {
+          "path": "standards/arch-template/backend/go/saas/README.md",
+          "quote": "本场景面向身份、权限、业务配置、配额及账务等管理业务。采用本模板后，业务模块必须使用独立的 application 和 domain Go 包；HTTP 与基础设施实现统一外置。前端技术栈独立选择。"
+        },
+        {
+          "path": "standards/arch-template/backend/go/model-gateway/README.md",
+          "quote": "- routing 对外提供选择和观测操作，内部拥有权重计数、评分样本和冷却状态；不处理 HTTP 响应或 SQL。"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "frontend_features"
+      ],
+      "title": "Workspace console is one global script with page logic, state, API side effects and cleanup coupled",
+      "severity": "medium",
+      "principle": "Features own business UI, interaction state, business API and cleanup; shared transport is business-neutral.",
+      "impact": "All pages share one mutable state object and one renderPage branch. Changes to billing, keys, models or records can affect unrelated pages; stale-request invalidation and cleanup are global, and feature-local API contracts are not enforced.",
+      "recommendation": "Split workspace.js into feature modules (billing, models, keys, tenants, records, playground) with local state/actions and cleanup; keep a thin shared transport and a composition entry.",
+      "validation": "Check that each feature can load and clean up independently, shared transport has no business/auth side effects beyond generic session expiry, and page modules expose narrow entry points.",
+      "evidence": [
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const state = {user:null,csrf:'',tenant:'',tenants:[],page:'overview',epoch:0,controllers:new Set(),busy:false,call:null,invitation:'',filters:{},pageNumber:1};"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const pages = {"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "async function renderPage() {"
+        }
+      ]
+    }
+  ],
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225333,
+      "completion_tokens": 22971,
+      "total_tokens": 248304,
+      "prompt_tokens_details": {
+        "cached_tokens": 225152
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 17888
+      },
+      "prompt_cache_hit_tokens": 225152,
+      "prompt_cache_miss_tokens": 181
+    },
+    "duration_seconds": 112.776
+  }
+}

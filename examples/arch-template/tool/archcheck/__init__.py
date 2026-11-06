@@ -1,3 +1,3 @@
 """Portable architecture facts, rules and evidence-bound semantic reviews."""
 
-VERSION = "0.2.0"
+VERSION = "0.4.1"

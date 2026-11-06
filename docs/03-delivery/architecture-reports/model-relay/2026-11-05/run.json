@@ -1,0 +1,67 @@
+{
+  "tool": "archcheck",
+  "tool_version": "0.3.1",
+  "repository": "big91987/model-relay",
+  "repository_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "template_commit": "ac1c407503281ccacb8c2b706a4237b05bbed69f",
+  "snapshot": "9590f995d2b1f3ad3e936702308f22629ed01d455616e0ce6b4dcd7b41c3f173",
+  "production_source_count": 29,
+  "bound_source_document_manifest_count": 56,
+  "workflow": "archcheck bundle -> native Codex JSON result -> archcheck validate-review",
+  "native_cli_version": "0.151.0",
+  "native_authentication": "existing ChatGPT login; CLI account default; read-only",
+  "native_command_exit": 0,
+  "validation_exit": 2,
+  "status": "incomplete",
+  "evidence_status": "citations_checked",
+  "severity_counts": {
+    "high": 2,
+    "medium": 1
+  },
+  "findings_edited_by_coordinator": false,
+  "limitations_edited_by_coordinator": false,
+  "attempts": [
+    {
+      "name": "initial native invocation",
+      "result": "failed before review: configured model unsupported by standalone CLI account",
+      "seconds": 120.275
+    },
+    {
+      "name": "account-default native review",
+      "result": "model result produced; validation rejected incorrect citation positions",
+      "seconds": 63.414
+    },
+    {
+      "name": "native citation correction",
+      "result": "citations_checked; incomplete retained due model limitations",
+      "seconds": 59.167
+    }
+  ],
+  "returned_usage": [
+    {
+      "attempt": "attempt-02",
+      "usage": {
+        "input_tokens": 252693,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2723,
+        "reasoning_output_tokens": 409
+      }
+    },
+    {
+      "attempt": "attempt-03",
+      "usage": {
+        "input_tokens": 255445,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2528,
+        "reasoning_output_tokens": 222
+      }
+    }
+  ],
+  "artifacts": {
+    "report.json": "244c6e8b4e0848123ae11f00dbdcada8d568b0e98b1da2a4ff87a7d9df09d82a",
+    "model-result.json": "7d29f9e7470917673340e91a04495744b50c8628aae97e4ddd96b703ea681e6c"
+  },
+  "scope_note": "Static architecture review of 29 selected production files with supplied standards and five selected tests. HTML/CSS and other tests excluded; full product tests and QA not run. Native histories and private command paths are not published."
+}

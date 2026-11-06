@@ -45,8 +45,8 @@ arch-template/
 
 [工具使用说明](tool/README.md)包含配置、安装、完整模型协议和退出码：
 
-- 确定规则：模块覆盖、依赖方向、公开入口、外部导入约束和循环依赖。Go 与 TypeScript/Vue 共用判定逻辑，解析失败或范围不完整不会通过。
-- 模型评审：生成绑定源码与规范摘要的完整材料；通过受信命令或所附模型 HTTP 适配器评审职责、内聚、分层及过度抽象。工具核对引用与版本，语义结论保留为待审查发现。
+- 确定规则：模块覆盖、依赖方向、公开入口、外部导入约束和循环依赖，单独输出rules结果。Go 与 TypeScript/Vue 共用判定逻辑，解析失败或范围不完整不会通过。
+- 模型评审：按通用及所选场景的检查项逐项给出结论，区分scope_notes和blockers；生成绑定源码与规范摘要的完整材料；通过受信命令或所附模型 HTTP 适配器评审职责、内聚、分层及过度抽象。工具核对引用与版本，语义结论保留为待审查发现。
 - 项目验证：导出项目的 verify.py 执行相应的类型、构建、行为测试和架构规则；模型评审是单独记录的一步。
 
 通用原则见 [principles.md](principles.md)，校验职责和验收要求见 [verification.md](verification.md)。新语言需要接入并验证事实提取，不因通用设计就宣称已支持所有语言。
@@ -56,3 +56,35 @@ arch-template/
 当前交付源码、独立初始化与工具升级、可执行规则和模型协议、三个参考切片及回归测试。验证记录见 [validation.md](validation.md)。模型协议测试、模型实际样例、目标产品验收分别记录；外部审查服务和 CI 尚需由采用项目配置并实际运行。
 
 具体项目的模板选择、迁移计划和验收证据归项目文档。Model Relay 用于后续验证，不作为通用模板类别；本轮没有改造、部署或验收该产品。
+
+## 已有仓库接入
+
+从维护源的固定提交安装工具，不覆盖项目代码、AGENTS.md 或架构声明：
+
+```sh
+python3 examples/arch-template/scaffold.py --install-tool /path/to/repository
+npm ci --ignore-scripts --prefix /path/to/repository/.harness/archcheck
+python3 -I /path/to/repository/.harness/archcheck/inspect_project.py --root /path/to/repository
+```
+
+项目维护 architecture.json 并将检查命令接到自己的固定验证入口。已有安装用 `--update-tool`，拒绝本地工具漂移；只检查 Go 的项目不必安装 npm 解析器。将 harness-output/ 加入忽略规则。[ci.yml](ci.yml) 可复制为项目的架构 CI，绑定提交、展示 Markdown 结果并保留原始报告；平台自身使用同一维护源直接运行。
+
+`inspect_project.py` 每次生成独立报告，同时更新 latest-report.json/md 两个固定普通文件，供平台按步骤归档；0=规则通过，1=规则违规，2=分析未完成；工作流包装无法保存本次报告时返回3并停止，不接受旧报告。报告保留源码摘要、实际范围和 Git HEAD，未提交修改仍以逐文件摘要为准。它不调用模型，也不代表产品 QA 通过。
+
+## 工作流与 Issue
+
+`workflow.add_check(graph)` 在固定测试的成功出口插入普通执行节点，保留后续独立审查和 QA。规则通过继续；规则违规回研发；分析不完整先归档错误，再停在处理阻塞节点，人工修复后明确重试。运行图绑定所选工具源码摘要，工具被修改、清单无效、额外 Python 模块或旧字节码不能把安装失败伪装成规则违规。
+
+现有研发图有在途任务时，独立初检使用标准安装入口，不改旧图或旧 Run：
+
+```sh
+python3 examples/arch-template/install_workflow.py \
+  --platform-url <平台地址> --token-file <既有私有API令牌文件> \
+  --source-workflow <既有研发图ID> --name '架构检查 · 项目名' \
+  --manifest <仓库外的私有安装清单>
+```
+
+该入口复用选定研发图的正式仓库准备和已授权运行完成/失败通知 Hook，不复制 Agent、模型或用户凭据。启动时通过现有 Run API/SDK 传 repository、repository_commit 和 issue_number，固定源码版本并关联 Issue；GitHub Issue 应标识为平台任务，避免旧入站重复接单。初检图成功仅表示检查执行结束，结论仍以报告为准。安装重入复用 ID，升级校验完整行为配置并分页拒绝在途 Run；旧冻结定义保持原样。采用新的工具版本后，通过明确的图升级更新其源码摘要，不在旧 Run 内更换工具。
+
+
+标准扫描入口可同时运行规则与模型：见[工具说明](tool/README.md)。`rules.findings`是确定违规，`model_review.findings`是模型提出的候选问题；不能用数量直接比较模型好坏。0.4.0评审协议采用逐项checks、scope_notes/blockers和精确唯一原文定位，不接受旧limitations/模型行号格式；历史报告不重写。导出、安装、升级均保护默认原始产物目录。

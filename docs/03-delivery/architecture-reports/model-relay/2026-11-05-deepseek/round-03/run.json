@@ -1,0 +1,27 @@
+{
+  "round": "round-03",
+  "description": "0.4 development: non-streaming HTTP body interrupted",
+  "tool_version": "0.4.0",
+  "status": "incomplete",
+  "rules": {
+    "status": "conformant",
+    "findings": []
+  },
+  "model_status": "incomplete",
+  "evidence_status": null,
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "policy_sha256": "13328089aaf50351f4aead6e74a8b3f1a39c706a9929237efdaebecb67f18f82",
+  "seconds": 150.974,
+  "provider_metadata": null,
+  "reported_checks": 0,
+  "accepted_findings": 0,
+  "raw_candidate_findings": null,
+  "errors": [
+    "reviewer failed with exit 1; no architecture conclusion"
+  ],
+  "artifacts": {
+    "report.json": "44ff59467bff4ee67d620ed30bb8e3bd54f58ae9f2098c1be90614434386b951"
+  },
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "git_metadata_note": "Use product_commit and snapshot hashes for this copied audit source; any inherited git_head in original scan receipts refers to the unrelated outer maintenance checkout."
+}
