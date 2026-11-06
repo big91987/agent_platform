@@ -32,6 +32,51 @@ class ScaffoldTests(unittest.TestCase):
         self.assertEqual(again.returncode, 2)
         self.assertIn("already", again.stderr)
 
+    def test_install_and_upgrade_manifest_match_reported_tool_version(self):
+        self.project.mkdir()
+        (self.project / "src").mkdir()
+        (self.project / "src/main.go").write_text("package app\n")
+        (self.project / "go.mod").write_text("module example.org/app\n\ngo 1.25\n")
+        (self.project / "architecture.json").write_text(
+            json.dumps(
+                {
+                    "languages": ["go"],
+                    "source_roots": ["src"],
+                    "modules": [{"name": "app", "paths": ["src/**"]}],
+                }
+            )
+        )
+        for action in ("--install-tool", "--update-tool"):
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SOURCE / "scaffold.py"),
+                    action,
+                    str(self.project),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            tool = self.project / ".harness/archcheck"
+            check = subprocess.run(
+                [
+                    sys.executable,
+                    "-I",
+                    str(tool / "archcheck.py"),
+                    "check",
+                    "--root",
+                    str(self.project),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+            manifest = json.loads((tool / "SOURCE.json").read_text())
+            self.assertEqual(
+                manifest["version"], json.loads(check.stdout)["tool_version"], action
+            )
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

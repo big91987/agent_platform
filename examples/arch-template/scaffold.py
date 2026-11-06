@@ -5,6 +5,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import runpy
 import shutil
 import sys
 import tempfile
@@ -51,7 +52,8 @@ def ignore_artifacts(project):
 
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    manifest = dict(version="0.4.0", files=hashes(dest))
+    version = runpy.run_path(str(ROOT / "tool/archcheck/__init__.py"))["VERSION"]
+    manifest = dict(version=version, files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
