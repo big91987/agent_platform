@@ -1,0 +1,508 @@
+{
+  "kind": "architecture-review",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "reviewed_files": [
+    ".github/workflows/architecture.yml",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/backend/multitenant-contracts.md",
+    ".trellis/spec/backend/routing-contracts.md",
+    ".trellis/spec/backend/runtime-contracts.md",
+    ".trellis/spec/frontend/index.md",
+    "AGENTS.md",
+    "Makefile",
+    "architecture.json",
+    "cmd/model-relay/main.go",
+    "docs/engineering/architecture-checks.md",
+    "docs/roadmap.md",
+    "go.mod",
+    "go.sum",
+    "internal/relay/accounting.go",
+    "internal/relay/admin_response.go",
+    "internal/relay/backup.go",
+    "internal/relay/billing.go",
+    "internal/relay/configuration.go",
+    "internal/relay/console.go",
+    "internal/relay/console_api.go",
+    "internal/relay/console_clock.go",
+    "internal/relay/console_contract_test.go",
+    "internal/relay/console_keys.go",
+    "internal/relay/console_overview.go",
+    "internal/relay/console_reports.go",
+    "internal/relay/console_resource_matrix_test.go",
+    "internal/relay/console_storage.go",
+    "internal/relay/console_summaries.go",
+    "internal/relay/identity.go",
+    "internal/relay/legacy_accounting.go",
+    "internal/relay/metering_regression_test.go",
+    "internal/relay/protocol.go",
+    "internal/relay/proxy.go",
+    "internal/relay/routed_proxy.go",
+    "internal/relay/routing.go",
+    "internal/relay/routing_http_test.go",
+    "internal/relay/routing_latency.go",
+    "internal/relay/routing_latency_storage.go",
+    "internal/relay/routing_latency_test.go",
+    "internal/relay/security.go",
+    "internal/relay/server.go",
+    "internal/relay/store.go",
+    "internal/relay/upgrade.go",
+    "internal/relay/web.go",
+    "internal/relay/web/app.js",
+    "internal/relay/web/index.html",
+    "internal/relay/web/style.css",
+    "internal/relay/web/workspace.css",
+    "internal/relay/web/workspace.html",
+    "internal/relay/web/workspace.js",
+    "package-lock.json",
+    "package.json",
+    "standards/arch-template/backend/go/README.md",
+    "standards/arch-template/backend/go/model-gateway/README.md",
+    "standards/arch-template/backend/go/model-gateway/template/docs/model-gateway.md",
+    "standards/arch-template/backend/go/saas/README.md",
+    "standards/arch-template/backend/go/saas/template/docs/saas.md",
+    "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+    "standards/arch-template/principles.md",
+    "standards/arch-template/verification.md"
+  ],
+  "scope_notes": [
+    "本次为静态架构评审：未执行 make verify、go test、浏览器旅程或真实上游联调；并发、事务、超时等运行时效果只作为风险描述，不作为已观测失败。",
+    "architecture.json 的 exclude 为 **/*_test.go，测试文件仅作为测试缝与既有契约证据引用，不用以证明运行时行为。",
+    "schema2 兼容界面 index.html/app.js 与 schema3 工作台 workspace.html/workspace.js 并存属当前声明中的兼容面；本评审只评估职责与依赖组织，不评估其产品功能范围。"
+  ],
+  "blockers": [],
+  "checks": [
+    {
+      "name": "module_responsibilities",
+      "status": "deviation",
+      "reason": "internal/relay 的 26 个 Go 文件同属一个包，HTTP 适配、SQL 事务、路由状态、账务、身份、备份/升级与静态资源服务并存；architecture.json 只声明 startup/relay/console 三个粗粒度模块，文件划分不产生可检查的职责边界。",
+      "evidence": [
+        {
+          "path": ".trellis/spec/backend/index.md",
+          "quote": "Single Go module; no package map is needed."
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "func (store *Store) admit(record Record, snapshot routeSnapshot, payload map[string]json.RawMessage, request *http.Request) (string, int, string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        }
+      ]
+    },
+    {
+      "name": "business_rule_ownership",
+      "status": "deviation",
+      "reason": "预算/限额与账单生命周期规则分散在多处并各自重算：admit 的准入比较、manageLimits 的软预算展示与平台上界校验、manageBill 的负额保护各写一遍，Store.Finish 又直接驱动账务结算，规则没有唯一归属。",
+      "evidence": [
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "if owner.limits.Budget != nil && (*owner.limits.Budget == 0 || owner.limits.Hard && overLimit(owner.limits.Budget, used.Fee+used.Reserved, feeReserved)) {"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "\"soft_budget_exceeded\": limits.Budget != nil && !limits.Hard && usage.Fee+usage.Reserved >= *limits.Budget"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "if originalFee+sum+input.Amount < 0 {"
+        },
+        {
+          "path": "internal/relay/store.go",
+          "quote": "if err := settleAdmission(transaction, record.ID); err != nil {"
+        }
+      ]
+    },
+    {
+      "name": "dependency_direction",
+      "status": "deviation",
+      "reason": "策略/用例与协议、存储实现同处一个编译单元：准入函数同时依赖 *http.Request 与 *sql.Tx，路由在选择流程中直接依赖 HTTP 请求对象，包依赖无法约束协议与存储细节不进入策略。",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "func (server *Server) beginAttempt(ctx context.Context, request *http.Request, record *Record, snapshot routeSnapshot, tried map[int64]bool, round int) (*Candidate, *Attempt, string) {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "\"database/sql\""
+        },
+        {
+          "path": "standards/arch-template/principles.md",
+          "quote": "业务规则与数据库、界面、网络细节分离。模块定义自己需要的接口，具体实现依赖该接口所在模块，入口负责组装。"
+        }
+      ]
+    },
+    {
+      "name": "state_ownership",
+      "status": "deviation",
+      "reason": "Server 单结构体集中会话、登录节流、配置代次、路由运行态、健康、延迟池、检查中标记与成功证据；configurationChanged 一次性重置两类互不相关的运行态，admit 又在持有 server.mu 时执行数据库写事务，使无关能力共享同一可变对象与锁。",
+      "evidence": [
+        {
+          "path": "internal/relay/console.go",
+          "quote": "server.routing = make(map[string]*routeRuntime)"
+        },
+        {
+          "path": "internal/relay/console.go",
+          "quote": "server.latency = make(map[string]*latencyPool)"
+        },
+        {
+          "path": "internal/relay/proxy.go",
+          "quote": "code, status, prior := server.Store.admit(record, snapshot, payload, request)"
+        }
+      ]
+    },
+    {
+      "name": "testability",
+      "status": "conformant",
+      "reason": "存在可注入的测试缝：Config.Clock、Server.latencyClock、server.client.Transport 的 roundTrip 替换与 fixture 直连 handler；overLimit、microAmount、outputDelta 等纯规则可独立断言，准入/结算以真实 SQLite 与 HTTP 夹具覆盖。不足在于准入规则仍需 Request 与事务对象才能验证，属风险而非本次可判定缺陷。",
+      "evidence": [
+        {
+          "path": "internal/relay/console_contract_test.go",
+          "quote": "fixture.server.client.Transport = roundTrip(func(request *http.Request) (*http.Response, error) {"
+        },
+        {
+          "path": "internal/relay/routing_latency.go",
+          "quote": "if server.latencyClock != nil {"
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "func overLimit(limit *int64, used, additional int64) bool {"
+        }
+      ]
+    },
+    {
+      "name": "necessary_abstractions",
+      "status": "deviation",
+      "reason": "多数抽象承担现职（adminResponse 缓冲管理响应、Policy.Dial 隔离出站网络、attemptOutput 表达提交点）；但 console_api.go 的 marshalSafe 在包内无调用点，identityQuery/materialQuery/rowScanner 以三个窄接口重复表达同一查询面，增加理解成本而无独立职责。",
+      "evidence": [
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func marshalSafe(value any) json.RawMessage { data, _ := json.Marshal(value); return data }"
+        },
+        {
+          "path": "internal/relay/console_keys.go",
+          "quote": "type identityQuery interface{ QueryRow(string, ...any) *sql.Row }"
+        }
+      ]
+    },
+    {
+      "name": "standards_alignment",
+      "status": "deviation",
+      "reason": "可执行声明与规范把现状写成目标：architecture.json 将 internal/relay/*.go 整体作为一个 relay 模块并声明空允许依赖，backend 规范明确不需要包地图，文档自述未完成领域分包，未按 principles 要求先更新规范、样板与检查再应用。",
+      "evidence": [
+        {
+          "path": "architecture.json",
+          "quote": "\"internal/relay/*.go\""
+        },
+        {
+          "path": ".trellis/spec/backend/index.md",
+          "quote": "Single Go module; no package map is needed."
+        },
+        {
+          "path": "docs/engineering/architecture-checks.md",
+          "quote": "relay仍是一个集中业务包，控制台仍是原生JavaScript，本轮没有完成领域分包或Vue迁移。"
+        },
+        {
+          "path": "standards/arch-template/principles.md",
+          "quote": "架构调整必须先更新规范、样板和检查，再通过明确版本应用。"
+        }
+      ]
+    },
+    {
+      "name": "saas_responsibilities",
+      "status": "deviation",
+      "reason": "计费、配额与身份等规则密集能力的 HTTP 处理函数直接接收 *sql.Tx 并拼接 SQL，事务边界由 handler 自行把握，没有独立 application/domain 包承担用例与规则，与 Go SaaS 场景的强制分层不符。",
+      "evidence": [
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func (server *Server) manageLimits(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role, ownerType, ownerID string) {"
+        },
+        {
+          "path": "standards/arch-template/backend/go/saas/README.md",
+          "quote": "HTTP 只能调用 Application，不能直接引用 Domain 或 SQLite。"
+        }
+      ]
+    },
+    {
+      "name": "gateway_request_lifecycle",
+      "status": "conformant",
+      "reason": "generate 负责请求 ID、快照取得、Start 与准入，routedGenerate 负责最多三次不同上游尝试、临时错误白名单、输出提交后停止重放与终态落库，生命周期职责由明确函数边界承担。静态评审不验证并发与超时行为，其正确性仍依赖真实 HTTP/SSE 回归。",
+      "evidence": [
+        {
+          "path": "internal/relay/proxy.go",
+          "quote": "func (server *Server) generate(writer http.ResponseWriter, request *http.Request) {"
+        },
+        {
+          "path": "internal/relay/routed_proxy.go",
+          "quote": "if !temporary {\n\t\t\trespond(status, state, errorCode)"
+        },
+        {
+          "path": "standards/arch-template/backend/go/model-gateway/README.md",
+          "quote": "明确请求、单次上游尝试和输出提交的关系。只有允许的提交前错误可以切换上游；输出已提交或请求已取消后禁止重放。"
+        }
+      ]
+    },
+    {
+      "name": "gateway_upstream_separation",
+      "status": "deviation",
+      "reason": "路由文件同时承担 HTTP 与 SQL：beginAttempt 接收 *http.Request 并在事务中写入 request_route_decisions，routing_latency.go 直接 INSERT route_latency_evidence，HTTP 输出写入器 attemptOutput 也定义在 routing.go，与“routing 不处理 HTTP 响应或 SQL”的目标契约不一致。",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "if _, err = transaction.ExecContext(cleanup, \"INSERT INTO request_route_decisions VALUES(?,?,?,?,?,?,?,?,?)\", record.ID, round, decision.UpstreamID, decision.Enabled, decision.Priority, decision.Weight, decision.Reason, decision.Observed, decision.Cooldown); err != nil {"
+        },
+        {
+          "path": "internal/relay/routing_latency.go",
+          "quote": "_, err = server.Store.DB.Exec(\"INSERT INTO route_latency_evidence VALUES(?,?,?) ON CONFLICT(request_id,ordinal) DO UPDATE SET evidence=excluded.evidence\", id, attempt.Ordinal, string(raw))"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "type attemptOutput struct {"
+        },
+        {
+          "path": "standards/arch-template/backend/go/model-gateway/README.md",
+          "quote": "routing 对外提供选择和观测操作，内部拥有权重计数、评分样本和冷却状态；不处理 HTTP 响应或 SQL。"
+        }
+      ]
+    },
+    {
+      "name": "frontend_features",
+      "status": "deviation",
+      "reason": "workspace.js 以单一全局 state 与一组顶层函数承载全部页面、编辑器、筛选与调用测试，api() 同时承担传输与 401/403 会话处置；app.js 另有一套完整控制台实现，与 workspace.js 在概览、密钥、记录、调用测试等功能面重复，缺少按 feature 的状态与清理边界。",
+      "evidence": [
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const state = {user:null,csrf:'',tenant:'',tenants:[],page:'overview',epoch:0,controllers:new Set(),busy:false,call:null,invitation:'',filters:{},pageNumber:1};"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "if(response.status===403)clearSensitive();"
+        },
+        {
+          "path": "internal/relay/web/app.js",
+          "quote": "function signedOut() {"
+        },
+        {
+          "path": "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+          "quote": "src/app 负责组装；features/quotas 拥有页面、局部状态和业务 API；shared/api 不含业务规则。"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "checks": [
+        "module_responsibilities",
+        "saas_responsibilities",
+        "dependency_direction"
+      ],
+      "title": "internal/relay 单包混合 HTTP 适配、SQL 与业务规则，缺少规范要求的 application/domain 边界",
+      "severity": "high",
+      "principle": "module_responsibilities / saas_responsibilities / dependency_direction：标准要求规则密集能力由独立 application/domain 包承担规则与用例，HTTP 适配不直接引用 SQL，协议与外部实现细节与策略分离（standards/arch-template/backend/go/saas/README.md、principles.md）。",
+      "impact": "准入、限额、账单、身份、路由、协议校验与备份升级共用同一包，修改一条配额或结算规则需要同时检查 handler、会计与存储文件；包依赖无法阻止 net/http 与 database/sql 进入策略代码，评审只能依赖人工通读；这与文档自述的“集中业务包”一致，可维护性与边界可验证性都受限。",
+      "recommendation": "以最小职责迁移为起点：把 admit/usageFor/limitsFor 及账务结算用例移出 HTTP handler，由 internal/<capability>/application 声明操作级原子存储接口、domain 持有比较与判定规则；把 tenantBills/manageBill/reconcileUsage 的结账与更正校验迁入同一用例；HTTP 适配仅保留解码、鉴权入口与响应映射；routing 独立为不导入 database/sql 与 net/http 的包。新边界是建议，需先按 principles 更新规范与架构声明，而非以当前文件划分充当目标设计。",
+      "validation": "拆分后执行 make architecture-check，并用 go list -deps 核对 adapters 之外的包不再导入 database/sql 与 net/http；以现有 go test -race 与真实 HTTP/SSE 回归作为行为保护；本变更不新增业务规则或阈值。",
+      "evidence": [
+        {
+          "path": ".trellis/spec/backend/index.md",
+          "quote": "Single Go module; no package map is needed."
+        },
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "func (store *Store) admit(record Record, snapshot routeSnapshot, payload map[string]json.RawMessage, request *http.Request) (string, int, string) {"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "func (server *Server) tenantBills(writer http.ResponseWriter, request *http.Request, transaction *sql.Tx, principal Principal, tenantID, role string) {"
+        },
+        {
+          "path": "standards/arch-template/backend/go/saas/README.md",
+          "quote": "HTTP 只能调用 Application，不能直接引用 Domain 或 SQLite。"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "gateway_upstream_separation"
+      ],
+      "title": "routing 承担 HTTP 请求与 SQL 证据写入，输出写入器也不在请求流程侧",
+      "severity": "high",
+      "principle": "gateway_upstream_separation：网关经明确接口协调，routing 拥有策略与运行状态但不处理 HTTP 响应或 SQL（standards/arch-template/backend/go/model-gateway/README.md）。",
+      "impact": "选择策略与派发登记、证据落库、HTTP 输出提交耦合在同一组文件中，替换存储或调整证据表会牵动选路逻辑；attemptOutput 的提交语义与 routing 的运行态更新交织，使“输出提交后禁止重放”的规则难以在单一职责处复核；这会削弱该契约的可检查性。",
+      "recommendation": "将 request_route_decisions 与 route_latency_evidence 的写入下沉到存储适配（由请求流程声明的记录接口实现），routing.go/routing_latency.go 只保留候选选择、权重计数、冷却与样本状态；把 attemptOutput 及 setWriteDeadline 归入请求流程文件（proxy.go/routed_proxy.go 侧），使提交点与派发流程同处一处。",
+      "validation": "重跑 make architecture-check，并在拆分后确认 routing 相关包不再导入 database/sql 与 net/http；保留 routing_http_test.go 与 SSE 终态归属回归作为行为保护；不新增路由策略或错误码。",
+      "evidence": [
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "if _, err = transaction.ExecContext(cleanup, \"INSERT INTO request_route_decisions VALUES(?,?,?,?,?,?,?,?,?)\", record.ID, round, decision.UpstreamID, decision.Enabled, decision.Priority, decision.Weight, decision.Reason, decision.Observed, decision.Cooldown); err != nil {"
+        },
+        {
+          "path": "internal/relay/routing_latency.go",
+          "quote": "_, err = server.Store.DB.Exec(\"INSERT INTO route_latency_evidence VALUES(?,?,?) ON CONFLICT(request_id,ordinal) DO UPDATE SET evidence=excluded.evidence\", id, attempt.Ordinal, string(raw))"
+        },
+        {
+          "path": "internal/relay/routing.go",
+          "quote": "type attemptOutput struct {"
+        },
+        {
+          "path": "standards/arch-template/backend/go/model-gateway/README.md",
+          "quote": "routing 对外提供选择和观测操作，内部拥有权重计数、评分样本和冷却状态；不处理 HTTP 响应或 SQL。"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "business_rule_ownership"
+      ],
+      "title": "预算与账单规则在准入、管理接口和存储之间各写一遍",
+      "severity": "medium",
+      "principle": "business_rule_ownership：规则属于其所属能力，不应在 HTTP、SQL 或用例中被复制（standards/arch-template/principles.md“规则、状态和验证尽量集中在负责的模块”）。",
+      "impact": "同一预算语义在 accounting.go 的准入比较、console_api.go 的展示字段与平台上限校验、billing.go 的结账/更正保护中以不同表达式出现；Store.Finish 直接调用账务结算，使结算规则的实际触发点隐藏在持久化方法里。修改一处比较条件容易遗漏其他副本，评审也无法定位唯一权威实现。",
+      "recommendation": "把预算/限额比较收敛为会计能力的单一判定函数，准入路径与管理读取复用同一结果而非各自重写；把账单结账/更正校验从 tenantBills、manageBill 抽为会计用例，handler 只处理输入输出；Store.Finish 不再自行决定结算，改由请求流程显式调用账务用例或在用例内完成，保持原有事务边界。",
+      "validation": "核对调用点：预算比较与结账校验应只出现在会计用例一处，handler 与 store 只调用；以现有 console_contract_test.go 与 metering_regression_test.go 的既有断言作为行为保护，不新增金额或阈值规则。",
+      "evidence": [
+        {
+          "path": "internal/relay/accounting.go",
+          "quote": "if owner.limits.Budget != nil && (*owner.limits.Budget == 0 || owner.limits.Hard && overLimit(owner.limits.Budget, used.Fee+used.Reserved, feeReserved)) {"
+        },
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "\"soft_budget_exceeded\": limits.Budget != nil && !limits.Hard && usage.Fee+usage.Reserved >= *limits.Budget"
+        },
+        {
+          "path": "internal/relay/billing.go",
+          "quote": "if originalFee+sum+input.Amount < 0 {"
+        },
+        {
+          "path": "internal/relay/store.go",
+          "quote": "if err := settleAdmission(transaction, record.ID); err != nil {"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "state_ownership"
+      ],
+      "title": "Server 单结构体汇聚会话、配置代次、路由运行态与成功证据",
+      "severity": "medium",
+      "principle": "state_ownership：会话、请求、路由、健康与业务状态应有明确持有者，无关能力不应依赖同一共享可变对象（standards/arch-template/principles.md“模块定义自己需要的接口”“事务、并发与副作用必须保持业务操作所需的一致性”）。",
+      "impact": "配置变更时 configurationChanged 同时重置路由运行态与延迟池，登录节流、会话与路由/健康状态共用一把配置锁之外的同一对象；proxy.go 在持有 server.mu 时执行 admit 的数据库写事务，把本地锁与存储访问耦合，管理端整段事务也被同一锁序列化，后续拆分能力时状态边界不可分离。",
+      "recommendation": "按能力拆出状态持有者：路由运行态、健康与延迟池归 routing 结构并由其自持锁；会话与登录/邀请节流归独立认证组件；配置代次与成功证据归配置快照服务。admit 的存储事务应在其自身锁/事务边界内完成，而非包在 server.mu 内；管理事务不持有配置锁。",
+      "validation": "以导入与字段访问核对各状态只被其持有者读写（如 server.routing、server.latency 不再由 console.go 的配置刷新函数直接重置）；保留现有并发/SSE 回归与真实 HTTP 用例作为行为保护；不改变准入判定本身。",
+      "evidence": [
+        {
+          "path": "internal/relay/console.go",
+          "quote": "server.routing = make(map[string]*routeRuntime)"
+        },
+        {
+          "path": "internal/relay/console.go",
+          "quote": "server.latency = make(map[string]*latencyPool)"
+        },
+        {
+          "path": "internal/relay/proxy.go",
+          "quote": "code, status, prior := server.Store.admit(record, snapshot, payload, request)"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "standards_alignment"
+      ],
+      "title": "可执行架构声明把现状写成目标，未表达所选场景的分层要求",
+      "severity": "medium",
+      "principle": "standards_alignment：项目规则与可执行声明应与所采用的目标标准一致，不能仅靠描述当前代码来免除要求（principles.md、docs/engineering/architecture-checks.md 自述“检查通过只证明已声明的依赖规则满足”）。",
+      "impact": "architecture.json 以 internal/relay/*.go 作为单一 relay 模块并声明空允许依赖，backend 规范直接声明不需要包地图，评审工具只能报“已声明规则 0 违规”，无法表达 Go SaaS/模型网关场景的应用、领域与适配层约束；这使架构检查在规则层面对本次评审的主要问题不可见。",
+      "recommendation": "先按 principles 更新规范与 architecture.json：声明拆分后的模块与允许依赖（含路由不得依赖 HTTP/SQL 的约束），再据新声明迁移代码；把“no package map is needed”改为说明当前阶段与目标差异，而不是作为最终契约。",
+      "validation": "核对 architecture.json 中模块路径与允许依赖是否覆盖 Go SaaS/模型网关场景的实际边界，并保留一次如实记录未通过项的检查；不修改工具本体，工具升级走其唯一维护源。",
+      "evidence": [
+        {
+          "path": "architecture.json",
+          "quote": "\"internal/relay/*.go\""
+        },
+        {
+          "path": ".trellis/spec/backend/index.md",
+          "quote": "Single Go module; no package map is needed."
+        },
+        {
+          "path": "docs/engineering/architecture-checks.md",
+          "quote": "relay仍是一个集中业务包，控制台仍是原生JavaScript，本轮没有完成领域分包或Vue迁移。"
+        },
+        {
+          "path": "standards/arch-template/principles.md",
+          "quote": "架构调整必须先更新规范、样板和检查，再通过明确版本应用。"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "frontend_features"
+      ],
+      "title": "workspace.js 以单一全局状态承载全部页面，并与 app.js 重复同一控制台功能面",
+      "severity": "medium",
+      "principle": "frontend_features：feature 拥有业务 UI、交互状态、业务 API 与清理，shared transport 保持业务中立，公共入口约束依赖（admin-console.md 参考；principles.md 页面/交互/异步数据分工）。",
+      "impact": "页面渲染、编辑器、筛选、调用测试与密钥展示共用一个全局 state 与顶层函数集合，页面切换靠递增 epoch 统一作废；api() 同时承担传输与 401/403 会话处置，使业务策略进入共享传输层；app.js 与 workspace.js 各自实现概览、密钥与调用测试，修一处交互需在两套实现中同步，清理逻辑（clearSecrets/clearSensitive）各写一份。",
+      "recommendation": "按页面/业务域把 workspace.js 拆为 feature 模块，各自持有 DOM、局部状态、业务 API 调用与清理；把 api() 收敛为业务中立的传输（会话失效处置上移到会话入口）；对 app.js 与 workspace.js 的重复功能面明确唯一实现或抽出共享模块承载差异，避免两套并存而无明确边界说明。",
+      "validation": "以模块边界核对各页面的状态与请求清理不再共享顶层可变对象；保留现有浏览器旅程与 UI 单测作为行为保护；不新增页面或产品交互设计。",
+      "evidence": [
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "const state = {user:null,csrf:'',tenant:'',tenants:[],page:'overview',epoch:0,controllers:new Set(),busy:false,call:null,invitation:'',filters:{},pageNumber:1};"
+        },
+        {
+          "path": "internal/relay/web/workspace.js",
+          "quote": "if(response.status===403)clearSensitive();"
+        },
+        {
+          "path": "internal/relay/web/app.js",
+          "quote": "function signedOut() {"
+        },
+        {
+          "path": "standards/arch-template/frontend/vue/admin-console/template/docs/admin-console.md",
+          "quote": "src/app 负责组装；features/quotas 拥有页面、局部状态和业务 API；shared/api 不含业务规则。"
+        }
+      ]
+    },
+    {
+      "checks": [
+        "necessary_abstractions"
+      ],
+      "title": "存在无调用点的辅助函数与三处重复的窄查询接口",
+      "severity": "low",
+      "principle": "necessary_abstractions：每层、接口与共享模块都必须承担当前存在的责任，不建立空层或仅为转发增加成本（principles.md“新增层、接口或共享模块必须承担当前存在的责任”）。",
+      "impact": "console_api.go 的 marshalSafe 在包内没有调用点，读者需额外判断其是否仍属契约；identityQuery、materialQuery、rowScanner 三处各自定义最小查询面，使同一存储能力出现三套调用签名，新增调用点需先判断该用哪一个，未带来可验证的隔离收益。",
+      "recommendation": "删除无调用点的 marshalSafe；把 identityQuery/materialQuery/rowScanner 合并为单一查询接口，或直接由调用方接受 *sql.DB/*sql.Tx 并保留必要的 rowScanner，以减少重复抽象而非新增层。",
+      "validation": "以编译器与 go vet 确认删除后无悬空引用，检查调用点是否收敛到单一查询接口；不改变任何 SQL 语句或业务判定。",
+      "evidence": [
+        {
+          "path": "internal/relay/console_api.go",
+          "quote": "func marshalSafe(value any) json.RawMessage { data, _ := json.Marshal(value); return data }"
+        },
+        {
+          "path": "internal/relay/console_keys.go",
+          "quote": "type identityQuery interface{ QueryRow(string, ...any) *sql.Row }"
+        }
+      ]
+    }
+  ],
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225685,
+      "completion_tokens": 19756,
+      "total_tokens": 245441,
+      "prompt_tokens_details": {
+        "cached_tokens": 223616
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 12907
+      },
+      "prompt_cache_hit_tokens": 223616,
+      "prompt_cache_miss_tokens": 2069
+    },
+    "duration_seconds": 104.239
+  }
+}

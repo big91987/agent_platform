@@ -11,6 +11,134 @@ from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 
+RULE_NAMES = {
+    "dependency": "依赖方向",
+    "forbidden_import": "禁止的依赖",
+    "external_dependency": "第三方依赖",
+    "private_entry": "绕过公开入口",
+    "cycle": "循环依赖",
+}
+
+
+def location(report, path, line, end=None):
+    end = end or line
+    span = str(line) if line == end else f"{line}-{end}"
+    names = [
+        symbol["name"]
+        for file in report.get("facts", {}).get("files", [])
+        if file["path"] == path
+        for symbol in file.get("symbols", [])
+        if symbol["line"] <= line and end <= symbol["end"]
+    ]
+    label = f"`{path}:{span}`"
+    if names:
+        label += " · " + "、".join(f"`{name}`" for name in names)
+    return label
+
+
+def render(report):
+    rules = report.get("rules", {})
+    model = report.get("model_review", {})
+    findings = model.get("findings", [])
+    rule_status = {
+        "conformant": "未发现规则违规（仅限已声明的规则）",
+        "violations": "存在规则违规",
+    }.get(rules.get("status"), "规则检查未完成")
+    model_status = {
+        "not_run": "未执行模型评审",
+        "no_findings": "模型未提出候选问题",
+        "findings": f"发现 {len(findings)} 项待复核的架构问题",
+        "incomplete": "模型评审未完成",
+    }.get(model.get("status"), "未执行模型评审")
+    lines = [
+        "# 代码与架构规范检查",
+        "",
+        f"- 规则扫描：{rule_status}。",
+        f"- 模型评审：{model_status}。",
+        "",
+        "规则检查依据已声明的依赖约束；模型意见需复核。本报告不判定产品业务功能通过或失败。",
+        "",
+        "## 规则违规",
+        "",
+    ]
+    for finding in rules.get("findings", []):
+        name = RULE_NAMES.get(finding["rule"], finding["rule"])
+        lines += [
+            f"- **{name}** · " + location(report, finding["source"], finding["line"]),
+            "",
+            "  " + finding["message"],
+            "",
+        ]
+    if not rules.get("findings"):
+        lines.append(
+            "声明范围内未发现规则违规。"
+            if rules.get("status") == "conformant"
+            else "没有可列出的规则违规；不能据此判定通过。"
+        )
+    for error in report.get("errors", []):
+        lines += ["", "检查未完成：" + error]
+    lines += ["", "## 模型架构发现（待复核）", ""]
+    for index, finding in enumerate(findings, 1):
+        severity = {"high": "高", "medium": "中", "low": "低"}.get(
+            finding["severity"], finding["severity"]
+        )
+        lines += [
+            f"### {index}. {finding['title']}（{severity}）",
+            "",
+            "**涉及位置与源码对象**",
+            "",
+        ]
+        for evidence in finding["evidence"]:
+            lines.append(
+                "- "
+                + location(report, evidence["path"], evidence["line"], evidence["end"])
+            )
+        for label, key in (
+            ("问题依据", "principle"),
+            ("影响", "impact"),
+            ("调整建议", "recommendation"),
+            ("复查建议", "validation"),
+        ):
+            lines += ["", f"**{label}**", "", finding[key]]
+        lines += ["", "**原文证据**", ""]
+        for evidence in finding["evidence"]:
+            # Indent source so embedded Markdown fences cannot hide later findings.
+            lines += [
+                location(report, evidence["path"], evidence["line"], evidence["end"]),
+                "",
+                *("    " + line for line in evidence["quote"].splitlines()),
+                "",
+            ]
+    if not findings:
+        lines.append(model_status + "。")
+    lines += ["", "## 逐项评审与限制", ""]
+    status_names = {
+        "conformant": "符合",
+        "deviation": "存在偏差",
+        "not_applicable": "不适用",
+        "insufficient_evidence": "证据不足",
+    }
+    for check in model.get("checks", []):
+        status = status_names.get(check["status"], check["status"])
+        lines.append(f"- `{check['name']}`：{status}。{check['reason']}")
+    for key, label in (("scope_notes", "范围说明"), ("blockers", "未完成原因")):
+        for note in model.get(key, []):
+            lines.append(f"- {label}：{note}")
+    lines += [
+        "",
+        "## 执行记录与检查范围",
+        "",
+        f"工具版本：{report.get('tool_version', '未记录')}",
+        f"Git HEAD：{report.get('git_head') or '无'}",
+        f"源码摘要：{report.get('snapshot', '未生成')}",
+        "",
+        "```json",
+        json.dumps(report.get("coverage", {}), ensure_ascii=False, indent=2),
+        "```",
+        "",
+    ]
+    return "\n".join(lines)
+
 
 def inspect_project(
     root, config, output, review_command=None, review_timeout=660, pass_env=()
@@ -104,58 +232,8 @@ def inspect_project(
         )
         raw = folder / "report.json"
         raw.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
-        lines = [
-            "# 架构检查",
-            "",
-            f"结果：{report['status']}",
-            f"Git HEAD：{report['git_head'] or '无'}",
-            f"源码摘要：{report.get('snapshot', '未生成')}",
-            "",
-            "仅检查 architecture.json 声明的范围；规则通过不代表领域划分合理或产品验收通过。",
-            "",
-            "## 规则扫描",
-            "",
-            "结果：" + report.get("rules", {}).get("status", "incomplete"),
-            "",
-        ]
-        for finding in report.get("rules", {}).get("findings", []):
-            lines.append("- " + json.dumps(finding, ensure_ascii=False))
-        for error in report.get("errors", []):
-            lines.append("- 分析未完成：" + error)
-        if not report.get("rules", {}).get("findings") and not report.get("errors"):
-            lines.append("声明范围内未发现规则违规。")
-        model = report.get("model_review", {})
-        lines += ["", "## 模型评审", "", "结果：" + model.get("status", "not_run"), ""]
-        for check in model.get("checks", []):
-            lines.append(
-                "- " + check["name"] + "：" + check["status"] + " — " + check["reason"]
-            )
-        for finding in model.get("findings", []):
-            lines += ["", "### " + finding["severity"] + " · " + finding["title"], ""]
-            for key in ("principle", "impact", "recommendation", "validation"):
-                lines.append(key + "：" + finding[key])
-            for evidence in finding["evidence"]:
-                lines += [
-                    "",
-                    f"{evidence['path']}:{evidence['line']}-{evidence['end']}",
-                    "```",
-                    evidence["quote"],
-                    "```",
-                ]
-        for key in ("scope_notes", "blockers"):
-            for note in model.get(key, []):
-                lines.append("- " + key + "：" + note)
-        lines += [
-            "",
-            "## 检查范围",
-            "",
-            "```json",
-            json.dumps(report.get("coverage", {}), ensure_ascii=False, indent=2),
-            "```",
-            "",
-        ]
         summary = folder / "report.md"
-        summary.write_text("\n".join(lines))
+        summary.write_text(render(report))
         # Workflow archives accept fixed regular files, and retain each step
         # independently. UUID copies also preserve repeated local inspections.
         for name, source in [

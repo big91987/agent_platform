@@ -1,0 +1,32 @@
+{
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "tool_version": "0.4.1",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "request_sha256": "c5450d98b8bef7760174eca08d0a23e615d328f0c676c3ebf37afc8362c68761",
+  "status": "review_required",
+  "source_and_context_files": 61,
+  "review_checks": 11,
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225662,
+      "completion_tokens": 28684,
+      "total_tokens": 254346,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 22574
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 225662
+    },
+    "duration_seconds": 145.052
+  },
+  "note": "开发轮：未明确中文，返回英文；有模型过度概括仍需复核。",
+  "artifact_sha256": {
+    "report.json": "7323088efeb090712a7d62dba92fbaebe2e9fbf9a040e8252a9d89af8d734726",
+    "report.md": "5d3fdffafb89998a2b5bfd32c918b259c0d7364a133a1a3c01c6a4e5437aa9d6",
+    "model-result.json": "256d47f9ea582959a6a7716473c40adea27134a9f3d5570523d87f0e63c8488c"
+  }
+}

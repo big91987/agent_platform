@@ -299,6 +299,15 @@ class ReviewTests(unittest.TestCase):
         code, report = self.run_cli("bundle", "--max-bytes", "10")
         self.assertEqual(code, 2, report)
 
+    def test_request_metadata_in_response_is_rejected_without_cleaning_raw_result(self):
+        request = self.bundle()
+        response = self.result(request)
+        response["kind"] = request["kind"]
+        code, report = self.validate(response)
+        self.assertEqual(code, 2, report)
+        self.assertIn("response contract", " ".join(report["errors"]))
+        self.assertEqual(json.loads((self.root / "review.json").read_text()), response)
+
 
 if __name__ == "__main__":
     unittest.main()

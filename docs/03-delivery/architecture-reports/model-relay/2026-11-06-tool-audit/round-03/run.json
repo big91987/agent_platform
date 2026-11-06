@@ -1,0 +1,32 @@
+{
+  "product_commit": "d03fe5b6843ea6a274a43411a92dad237b902313",
+  "tool_version": "0.4.1",
+  "snapshot": "21389dcd501435bf5eb7b559d1665425f43d13554d09c32015f00b8f7bc6da1a",
+  "request_sha256": "91c1ea4c49866cfcb26dc1d7d87d21195c56bcbf217de71d9f85b05bc703eff6",
+  "status": "incomplete",
+  "source_and_context_files": 61,
+  "review_checks": 11,
+  "reviewer": {
+    "model": "deepseek-flash",
+    "usage": {
+      "prompt_tokens": 225741,
+      "completion_tokens": 13708,
+      "total_tokens": 239449,
+      "prompt_tokens_details": {
+        "cached_tokens": 223360
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 8725
+      },
+      "prompt_cache_hit_tokens": 223360,
+      "prompt_cache_miss_tokens": 2381
+    },
+    "duration_seconds": 80.061
+  },
+  "note": "最终指令返回中文和正确顶层字段，但 checks 中的一段 testability 引用在同文件出现两次，被精确唯一引用校验拒绝。未猜位置或修改模型原文。",
+  "artifact_sha256": {
+    "report.json": "83b97a44f2be5047aa5a190adf1ff0e091e7e6fb528f20b6298dccd011c6f947",
+    "report.md": "45f5f8e793759f4669e5f06a0017a4f09ec8c6f530492404dbe27d488c575928",
+    "model-result.json": "c046b96392ad12a37d5bdace72ffd653390f1e0ea9f877bd82f4676bc2866d9e"
+  }
+}

@@ -1,4 +1,6 @@
+import fcntl
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -95,7 +97,10 @@ class InspectionTests(unittest.TestCase):
             folder = (root / receipt["report"]).parent
             self.assertTrue((folder / "review-input.json").exists())
             self.assertTrue((folder / "model-result.json").exists())
-            self.assertIn("## 模型评审", (root / receipt["summary"]).read_text())
+            self.assertIn(
+                report["rules"]["findings"][0]["message"],
+                (root / receipt["summary"]).read_text(),
+            )
             reviewer.write_text("raise SystemExit(7)\n")
             failed = subprocess.run(cmd, capture_output=True, text=True)
             self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
@@ -191,3 +196,100 @@ class InspectionTests(unittest.TestCase):
                 (root / json.loads(result.stdout)["report"]).read_text()
             )
             self.assertIsNone(report["git_head"])
+
+    def test_model_finding_is_presented_with_real_parser_symbol_and_untouched_text(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src/http.go").write_text(
+                'package app\nfunc Handle() {\n println("storage detail")\n}\n'
+            )
+            (root / "go.mod").write_text("module example.org/app\n\ngo 1.25\n")
+            (root / "architecture.json").write_text(
+                json.dumps(
+                    {
+                        "languages": ["go"],
+                        "source_roots": ["src"],
+                        "modules": [{"name": "app", "paths": ["src/**"]}],
+                    }
+                )
+            )
+            evidence = {"path": "src/http.go", "quote": 'println("storage detail")'}
+            finding = {
+                "checks": ["module_responsibilities"],
+                "title": "Fixture architecture observation",
+                "severity": "medium",
+                "principle": "module_responsibilities",
+                "impact": "Boundary coupling",
+                "recommendation": "Move storage detail out of Handle.",
+                "validation": "Recheck imports at the module boundary.",
+                "evidence": [evidence],
+            }
+            script = (
+                "import sys,json; b=json.load(sys.stdin); finding="
+                + repr(finding)
+                + '; json.dump(dict(snapshot=b["snapshot"], reviewed_files=sorted(b["sources"]),'
+                'scope_notes=["Controlled protocol fixture, not model-quality evidence"], blockers=[],'
+                'checks=[dict(name=c["name"],status="deviation" if i==0 else "not_applicable",'
+                'reason="Fixture only",evidence=finding["evidence"] if i==0 else []) '
+                'for i,c in enumerate(b["review_checks"])],findings=[finding]),sys.stdout)'
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(TOOL / "inspect_project.py"),
+                    "--root",
+                    str(root),
+                    "--review-command",
+                    json.dumps([sys.executable, "-c", script]),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            receipt = json.loads(result.stdout)
+            summary = (root / receipt["summary"]).read_text()
+            self.assertIn("src/http.go:3", summary)
+            self.assertIn("`Handle`", summary)
+            self.assertIn(finding["recommendation"], summary)
+            raw = json.loads(
+                (root / receipt["report"])
+                .parent.joinpath("model-result.json")
+                .read_text()
+            )
+            self.assertEqual(raw["findings"][0], finding)
+
+    def test_isolated_entry_preserves_incomplete_receipt_during_tool_upgrade_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installed = root / ".harness/archcheck"
+            shutil.copytree(
+                TOOL,
+                installed,
+                ignore=shutil.ignore_patterns("node_modules", "__pycache__"),
+            )
+            manifest = installed / "SOURCE.json"
+            manifest.write_text('{"version":"fixture"}')
+            with manifest.open("rb") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-I",
+                        str(installed / "inspect_project.py"),
+                        "--root",
+                        str(root),
+                    ],
+                    capture_output=True,
+                    text=True,
+                )
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            receipt = json.loads(result.stdout)
+            self.assertEqual(receipt["status"], "incomplete")
+            report = json.loads((root / receipt["report"]).read_text())
+            self.assertTrue(report["errors"])
+            self.assertIn("规则检查未完成", (root / receipt["summary"]).read_text())
+            latest = root / "harness-output/architecture/latest-report.json"
+            self.assertEqual(json.loads(latest.read_text()), report)
