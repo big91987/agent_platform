@@ -11,6 +11,7 @@ import json
 import mimetypes
 import os
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -91,8 +92,6 @@ def extract(repo, sha, directory):
     raw = subprocess.check_output(["git", "-C", str(repo), "archive", sha])
     with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
         for member in archive.getmembers():
-            if member.name.split("/")[0] not in ("app", "deploy", "tests"):
-                continue
             if not (member.isfile() or member.isdir()):
                 raise ValueError("release input contains a link or special file")
             archive.extract(member, directory, filter="data")
@@ -109,15 +108,35 @@ def prepare(root, repo, sha, force_review=False):
             (app / name).is_file() for name in ("index.html", "app.js", "styles.css")
         ):
             raise ValueError("unsupported application: expected static app entry files")
-        for file in app.rglob("*.js"):
-            subprocess.run(
-                ["node", "--check", str(file)], check=True, capture_output=True
-            )
-        tests = sorted((source / "tests").glob("*.test.cjs"))
-        if tests:
-            subprocess.run(
-                ["node", "--test", *map(str, tests)], check=True, capture_output=True
-            )
+        # Validate the exact complete commit; only app/ is copied to the release.
+        logs = root / "logs/validation"
+        logs.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w", prefix=sha + "-", suffix=".log", dir=logs, delete=False
+        ) as log:
+            print("Deployment validation log: " + log.name, flush=True)
+            commands = [
+                ["node", "--check", str(file)] for file in sorted(app.rglob("*.js"))
+            ]
+            tests = sorted((source / "tests").glob("*.test.cjs"))
+            if tests:
+                commands.append(["node", "--test", *map(str, tests)])
+            for command in commands:
+                log.write("$ " + shlex.join(command) + "\n")
+                log.flush()
+                result = subprocess.run(
+                    command,
+                    cwd=source,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    errors="replace",
+                )
+                log.write(result.stdout)
+                log.flush()
+                if result.stdout:
+                    print(result.stdout, end="", flush=True)
+                result.check_returncode()
         checksum = fingerprint(app)
         previous = current(root)
         try:
