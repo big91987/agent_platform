@@ -5,14 +5,14 @@ import argparse
 import fcntl
 import hashlib
 import json
+import runpy
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
-from tool.archcheck import VERSION
-
 ROOT = Path(__file__).resolve().parent
+VERSION = runpy.run_path(str(ROOT / "tool/archcheck/__init__.py"))["VERSION"]
 SKIP = {"node_modules", "__pycache__", "dist", ".DS_Store", "SOURCE.json"}
 
 
