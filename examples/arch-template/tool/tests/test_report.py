@@ -8,9 +8,25 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from inspect_project import render
+from test_scoring import add_finding, reviewed
 
 
 class ReportTests(unittest.TestCase):
+    def test_score_shows_deduction_evidence_and_does_not_change_model_judgment(self):
+        report = reviewed()
+        add_finding(report, ["module_responsibilities"], title="入口管理路由和计费状态")
+        original = copy.deepcopy(report)
+        text = render(report)
+        self.assertIn("98.2 / 100", text)
+        self.assertIn("87.5 / 100", text)
+        self.assertIn("50 / 100", text)
+        self.assertIn("入口管理路由和计费状态", text)
+        self.assertIn("src/app.go:2", text)
+        self.assertIn("7 / 7", text)
+        self.assertIn("28 / 28", text)
+        self.assertIn("职责内聚", text)
+        self.assertEqual(report, original)
+
     def report(self):
         return {
             "status": "review_required",

@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from tool.archcheck import VERSION
+
 ROOT = Path(__file__).resolve().parent
 SKIP = {"node_modules", "__pycache__", "dist", ".DS_Store", "SOURCE.json"}
 
@@ -51,7 +53,7 @@ def ignore_artifacts(project):
 
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    manifest = dict(version="0.4.0", files=hashes(dest))
+    manifest = dict(version=VERSION, files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
@@ -253,7 +255,7 @@ def export(destination, backends, frontend):
         (project / "template-source.json").write_text(
             json.dumps(
                 dict(
-                    version="0.4.0",
+                    version=VERSION,
                     backends=backends,
                     frontend="vue" if frontend else None,
                     files=hashes(project),

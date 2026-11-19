@@ -11,6 +11,43 @@ TOOL = Path(__file__).resolve().parents[1] / "archcheck.py"
 sys.path.insert(0, str(TOOL.parent))
 
 
+def plan_for(bundle, findings=()):
+    paths = [f["path"] for f in bundle["facts"]["files"]]
+
+    def evidence(path):
+        return [dict(path=path, quote=bundle["sources"][path])]
+
+    return dict(
+        summary="保留边界并调整现有职责" if findings else "保留当前结构",
+        modules=[
+            dict(
+                name=path,
+                current_responsibility="现有规则",
+                responsibility="现有规则",
+                current_paths=[path],
+                target_paths=[path],
+                finding_refs=list(range(1, len(findings) + 1)),
+                evidence=evidence(path),
+            )
+            for path in paths
+        ],
+        changes=[
+            dict(
+                action="adjust",
+                source_path=f["evidence"][0]["path"],
+                source_symbol=None,
+                target_path=f["evidence"][0]["path"],
+                responsibility="保持规则归属",
+                reason="按证据调整职责",
+                dependency_change="保持接口与依赖方向",
+                finding_refs=[i],
+                evidence=f["evidence"],
+            )
+            for i, f in enumerate(findings, 1)
+        ],
+    )
+
+
 class ReviewTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -50,7 +87,7 @@ class ReviewTests(unittest.TestCase):
         return bundle
 
     def result(self, bundle):
-        return dict(
+        result = dict(
             snapshot=bundle["snapshot"],
             reviewed_files=sorted(bundle["sources"]),
             scope_notes=[],
@@ -93,6 +130,90 @@ class ReviewTests(unittest.TestCase):
                 )
             ],
         )
+        for check, spec in zip(result["checks"], bundle["review_checks"]):
+            check["criteria"] = [
+                dict(
+                    name=p["name"],
+                    status="deviation"
+                    if check["status"] == "deviation" and j == 0
+                    else "conformant",
+                    reason="验证该固定检查点",
+                    evidence=check["evidence"],
+                    finding_refs=[1]
+                    if check["status"] == "deviation" and j == 0
+                    else [],
+                )
+                for j, p in enumerate(spec["criteria"])
+            ]
+        result["architecture_plan"] = plan_for(bundle, result["findings"])
+        return result
+
+    def test_model_receives_fixed_scoring_points_in_each_base_check(self):
+        bundle = self.bundle()
+        self.assertEqual(len(bundle["review_checks"][0].get("criteria", [])), 4)
+        self.assertIn(
+            "finding_refs", bundle["response_contract"]["checks"][0]["criteria"][0]
+        )
+
+    def test_invalid_missing_and_unexplained_criteria_cannot_be_scored(self):
+        bundle = self.bundle()
+        for kind in [
+            "missing",
+            "unknown",
+            "duplicate",
+            "bad_ref",
+            "bool_ref",
+            "wrong_parent",
+            "no_ref",
+            "parent_status",
+            "fake_evidence",
+        ]:
+            result = self.result(bundle)
+            points = result["checks"][0]["criteria"]
+            if kind == "missing":
+                points.pop()
+            elif kind == "unknown":
+                points[0]["name"] = "invented"
+            elif kind == "duplicate":
+                points[1]["name"] = points[0]["name"]
+            elif kind == "bad_ref":
+                points[0]["finding_refs"] = [99]
+            elif kind == "bool_ref":
+                points[0]["finding_refs"] = [True]
+            elif kind == "wrong_parent":
+                result["checks"][1]["criteria"][0].update(
+                    status="deviation", finding_refs=[1]
+                )
+            elif kind == "no_ref":
+                points[0]["finding_refs"] = []
+            elif kind == "parent_status":
+                points[0].update(status="conformant", finding_refs=[])
+            else:
+                points[0]["evidence"] = [dict(path="src/rules.ts", quote="fake code")]
+            with self.subTest(kind=kind):
+                code, report = self.validate(result)
+                self.assertEqual(code, 2, report)
+                self.assertIsNone(report["score"]["total"])
+
+    def test_incomplete_point_prevents_total_without_hiding_existing_finding(self):
+        bundle = self.bundle()
+        result = self.result(bundle)
+        result["checks"][0]["criteria"][1]["status"] = "insufficient_evidence"
+        result["checks"][0]["status"] = "insufficient_evidence"
+        code, report = self.validate(result)
+        self.assertEqual(code, 2, report)
+        self.assertEqual(len(report["model_review"]["findings"]), 1)
+        self.assertIsNone(report["score"]["total"])
+
+    def test_criterion_can_add_normative_evidence_from_another_file(self):
+        bundle = self.bundle()
+        result = self.result(bundle)
+        result["checks"][0]["criteria"][0]["evidence"] = [
+            dict(path="AGENTS.md", quote=bundle["sources"]["AGENTS.md"])
+        ]
+        code, report = self.validate(result)
+        self.assertEqual(code, 1, report)
+        self.assertIsNotNone(report["score"]["total"])
 
     def validate(self, result):
         (self.root / "review.json").write_text(json.dumps(result))
@@ -110,6 +231,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(code, 1, report)
         self.assertEqual(report["model_review"]["status"], "findings")
         self.assertEqual(report["model_review"]["evidence_status"], "citations_checked")
+        self.assertEqual(report["score"]["total"], 98.2)
         self.assertEqual(
             report["model_review"]["findings"][0]["verification"], "needs_review"
         )
@@ -129,8 +251,11 @@ class ReviewTests(unittest.TestCase):
         bundle = self.bundle()
         result = self.result(bundle)
         result["findings"] = []
+        result["architecture_plan"] = plan_for(bundle)
         for check in result["checks"]:
             check["status"] = "conformant"
+            for p in check["criteria"]:
+                p.update(status="conformant", finding_refs=[])
         result["reviewed_files"] = []
         self.assertEqual(self.validate(result)[0], 2)
         result["reviewed_files"] = sorted(bundle["sources"])
@@ -173,7 +298,7 @@ class ReviewTests(unittest.TestCase):
         script = self.root / "reviewer.py"
         # A deterministic fixture tests the process contract, not model review quality.
         script.write_text(
-            'import sys,json\nb=json.load(sys.stdin)\njson.dump(dict(snapshot=b["snapshot"], reviewed_files=sorted(b["sources"]), findings=[],scope_notes=[],blockers=[],checks=[dict(name=c["name"],status="not_applicable",reason="Transport fixture only",evidence=[]) for c in b["review_checks"]]),sys.stdout)\n'
+            "import sys,json\nb=json.load(sys.stdin)\njson.dump(dict(snapshot=b[\"snapshot\"], reviewed_files=sorted(b[\"sources\"]), findings=[],architecture_plan=dict(summary='保留当前结构',modules=[dict(name=f['path'],current_responsibility='协议夹具',responsibility='协议夹具',current_paths=[f['path']],target_paths=[f['path']],finding_refs=[],evidence=[dict(path=f['path'],quote=b['sources'][f['path']])]) for f in b['facts']['files']],changes=[]),scope_notes=[],blockers=[],checks=[dict(name=c[\"name\"],status=\"not_applicable\",reason=\"Transport fixture only\",evidence=[],criteria=[dict(name=p[\"name\"],status=\"not_applicable\",reason=\"Transport fixture\",evidence=[],finding_refs=[]) for p in c[\"criteria\"]]) for c in b[\"review_checks\"]]),sys.stdout)\n"
         )
         code, report = self.run_cli(
             "review", "--command", json.dumps([sys.executable, str(script)])
@@ -253,6 +378,7 @@ class ReviewTests(unittest.TestCase):
         self.assertIn("AGENTS.md", bundle["coverage"]["context"])
         result = self.result(bundle)
         result["findings"] = []
+        result["architecture_plan"] = plan_for(bundle)
         self.assertEqual(self.validate(result)[0], 2)
         result = self.result(bundle)
         result["checks"][-1]["status"] = "insufficient_evidence"
@@ -271,8 +397,11 @@ class ReviewTests(unittest.TestCase):
         request = self.bundle()
         result = self.result(request)
         result["findings"] = []
+        result["architecture_plan"] = plan_for(request)
         for check in result["checks"]:
             check["status"] = "conformant"
+            for p in check["criteria"]:
+                p.update(status="conformant", finding_refs=[])
         code, report = self.validate(result)
         self.assertEqual(code, 1, report)
         self.assertEqual(report["rules"]["status"], "violations")
@@ -298,6 +427,36 @@ class ReviewTests(unittest.TestCase):
     def test_bundle_limit_does_not_truncate(self):
         code, report = self.run_cli("bundle", "--max-bytes", "10")
         self.assertEqual(code, 2, report)
+
+    def test_missing_or_invalid_plan_preserves_validated_diagnosis_without_a_score(
+        self,
+    ):
+        request = self.bundle()
+        for invalid in (None, {"summary": "empty"}):
+            response = self.result(request)
+            if invalid is None:
+                response.pop("architecture_plan")
+            else:
+                response["architecture_plan"] = invalid
+            code, report = self.validate(response)
+            self.assertEqual(code, 2, report)
+            self.assertEqual(report["rules"]["status"], "conformant")
+            self.assertEqual(len(report["model_review"]["findings"]), 1)
+            self.assertEqual(
+                report["model_review"]["evidence_status"], "citations_checked"
+            )
+            self.assertEqual(
+                report["model_review"]["architecture_plan"]["status"], "incomplete"
+            )
+            self.assertIsNone(report["score"]["total"])
+
+    def test_fabricated_plan_symbol_is_rejected_at_formal_cli(self):
+        request = self.bundle()
+        response = self.result(request)
+        response["architecture_plan"]["changes"][0]["source_symbol"] = "Invented"
+        code, report = self.validate(response)
+        self.assertEqual(code, 2, report)
+        self.assertIn("source_symbol", " ".join(report["errors"]))
 
     def test_request_metadata_in_response_is_rejected_without_cleaning_raw_result(self):
         request = self.bundle()

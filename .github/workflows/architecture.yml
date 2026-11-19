@@ -23,7 +23,7 @@ jobs:
       - name: Install locked architecture analyzers
         run: npm ci --ignore-scripts --no-audit --no-fund --prefix examples/arch-template/tool
       - name: Inspect declared architecture
-        run: python3 -I examples/arch-template/tool/inspect_project.py
+        run: python3 -I examples/arch-template/tool/inspect_project.py --rules-only
       - name: Attach readable result
         if: always()
         run: |

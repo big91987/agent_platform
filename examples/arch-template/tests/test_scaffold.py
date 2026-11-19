@@ -69,6 +69,12 @@ class ScaffoldTests(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("docs/engineering-principles.md", json.loads(r.stdout)["hashes"])
+        installed_report = json.loads(r.stdout)
+        manifest = json.loads(
+            (self.project / ".harness/archcheck/SOURCE.json").read_text()
+        )
+        self.assertEqual(manifest["version"], installed_report["tool_version"])
+        self.assertIsNone(installed_report["score"]["total"])
         frontend = subprocess.run(
             [
                 sys.executable,

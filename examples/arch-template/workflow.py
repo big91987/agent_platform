@@ -55,7 +55,7 @@ except (OSError,ValueError,TypeError,KeyError):
     incomplete('Install the selected architecture tool version before running this workflow.')
 try:
     with tempfile.TemporaryDirectory(prefix='archcheck-import-') as cache:
-        result=subprocess.run([sys.executable,'-I','-X','pycache_prefix='+cache,str(tool/'inspect_project.py'),'--root',str(root)],capture_output=True,text=True,timeout=240)
+        result=subprocess.run([sys.executable,'-I','-X','pycache_prefix='+cache,str(tool/'inspect_project.py'),'--root',str(root),'--rules-only'],capture_output=True,text=True,timeout=240)
     if result.stderr: print(result.stderr,file=sys.stderr,end='')
     summary=json.loads(result.stdout)
     expected_status={0:'conformant',1:'violations',2:'incomplete'}.get(result.returncode)
