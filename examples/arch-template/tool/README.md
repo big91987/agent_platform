@@ -2,7 +2,7 @@
 
 本工具检查模块依赖、公开入口和循环，并提供模型架构评审及源码引用校验。Go 与 TypeScript/Vue 共用规则引擎；语言适配器负责提取事实。它不使用文件长度给仓库评“屎山分”。本工具治理代码组织与架构规范；格式、类型、构建由项目已有工具负责，产品业务正确性由产品测试负责。
 
-版本 0.4.1。运行环境为 Linux/macOS；要求 Python 3.10+、Go 1.25+；分析 TypeScript/Vue 还需要 Node 22.12+ 和本目录锁定的 npm 依赖。没有平台服务或模型凭据也能运行确定规则检查。
+版本 0.7.0。运行环境为 Linux/macOS；要求 Python 3.10+、Go 1.25+；分析 TypeScript/Vue 还需要 Node 22.12+ 和本目录锁定的 npm 依赖。没有平台服务或模型凭据也能运行确定规则检查。
 
 ## 安装与快速使用
 
@@ -50,6 +50,59 @@ python3 archcheck.py check --root /path/to/project --out /path/to/report.json
 
 报告保留 tool_version、snapshot、逐文件 hashes、规则扫描/排除范围、模型上下文清单、源码事实及两类独立结果：`rules.status/findings` 是确定规则；`model_review.checks/findings` 是模型判断。模型不能清除规则违规。确定规则违规不会被模型无发现覆盖。CLI stdout 是 JSON，--out 同时留存相同报告。
 
+## 架构评分
+
+标准检查入口和 CLI 的最终报告在 `score` 中提供总分、维度分、固定检查点分、扣分证据、规则违规数和评审完整度；Markdown 展示同一份数据。当前评分口径为 `2.0`，不修改规则门禁或退出码。
+
+七个基础维度保持等权；每维固定四个检查点，由模型逐点提供结论、理由、原文证据和关联发现。检查点定义维护在 `archcheck/rubric.py`，不能由被扫仓库增删或调权。额外场景检查独立展示，未完成仍阻止总分，不增加计分分母。
+
+| 维度 | 四个固定检查点 |
+| --- | --- |
+| 模块职责 | 职责内聚、接口边界、协议与用例分工、装配职责 |
+| 规则归属 | 规则归属、规则唯一性、规则与I/O分离、规则变更范围 |
+| 分层与依赖 | 依赖方向、模块封装、技术依赖隔离、循环依赖 |
+| 状态归属 | 状态负责人、状态生命周期、状态修改边界、状态权威来源 |
+| 可测试性 | 规则验证入口、外部依赖替换、失败可定位、验证状态控制 |
+| 抽象合理性 | 抽象有实际职责、复杂度适当、复用边界、变化点明确 |
+| 规范一致性 | 规范可定位、编码规范一致、架构规范一致、可执行约束一致 |
+
+| 检查点结论 | 检查点得分 | 判定依据 |
+| --- | ---: | --- |
+| 符合 | 100 | 有证据支持该点符合要求 |
+| 轻微偏差 | 80 | 该点存在局部命名、轻量重复或封装偏差 |
+| 中度偏差 | 50 | 该点存在具体职责或依赖混合，阻碍独立修改或验证 |
+| 严重偏差 | 0 | 该点的关键边界失效；不代表整个维度失效 |
+
+同一检查点按其关联发现的最严重档计分，不按问题条数累扣。维度分是该维度适用点的均值，总分再对适用维度等权平均；最后显示一位小数。例：一个严重偏差点、其余三点符合，维度分为 `(0 + 100 + 100 + 100) / 4 = 75`。只有所有适用检查点均为0时，维度才为0。模型不能直接填写数值，也不能为了目标分数制造或扩散问题。
+
+每个偏差点必须引用同一维度中的发现并提供证据；每个发现必须在其声明影响的每个维度至少对应一个偏差点。同一问题影响多个点时，每点必须说明具体影响，不能自动将整个维度降档。逐字引文、合法引用和父子状态一致由工具校验；影响及严重度仍是待复核模型判断。
+
+确定规则违规只使对应依赖检查点为0：dependency/forbidden_import/external_dependency 对应“依赖方向”，private_entry 对应“模块封装”，cycle 对应“循环依赖”。模型将该点判为符合或不适用也不能覆盖确定规则。规则违规数量、红色结果与退出码独立保留，不能由较高总分抵消。
+
+不适用必须说明具体范围理由，并从分母排除；证据不足、缺点、重复/未知点、非法引用、模型未执行或评审未完成时不发总分。全部不适用也不发总分。完成度同时列维度数和固定检查点数（28）；这是评审回报及引用核验，不等于测试覆盖率或模型实际阅读率。
+
+“规范一致性”只评编码和架构约定；README 的业务承诺、配额/价格等产品口径由产品QA评估。临时观察配置不作为目标仓库的既有规范扣分。不能仅凭相似分支要求合并不同协议、用例或SQL方言。
+
+0.7.0要求完整的逐点回执，缺失不推断、不补齐、不保留旧计分执行分支。旧原始回执和报告保留历史事实；不能将旧模型判断手工分配给检查点来产生新评分。新旧口径的分数变化不表示代码改善；即使同口径，多轮模型判断仍可能波动，不把此指数当作产品质量、研发效率或绝对成熟度测量。
+
+## 结构方案与原生报告
+
+0.6.0 的模型返回必须包含 `architecture_plan`，不接受缺少结构字段的旧回执。历史模型原件保持原样，不手工添加字段来冒充新评审。
+
+- `summary`：当前到推荐方案的职责和依赖变化；无发现时明确保留当前结构。
+- `modules`：模块名称、当前职责、推荐职责、当前路径、推荐路径、关联发现及证据。当前路径必须覆盖所有扫描生产源码且互不重复；规则分组不能自动冒充业务模块。
+- `changes`：动作、现有源文件、可选解析符号、目标文件、责任变化、理由、依赖/接口及事务影响、关联发现和证据。每个发现有对应调整；不需要搬文件时用原地调整，不能强制重构。迁移项可以关联跨模块问题，不要求该发现只能属于源模块。
+
+动作语义：`move` 是整文件移动，符号必须为 null；`extract` 提取对象或职责，原文件保留；`merge` 可汇入已有文件，符号为 null 时表示整个源文件合并；`adjust` 保持原路径。上下文规范文件仅允许原地调整，并在报告中标注为上下文，不纳入生产结构树。
+
+所有路径都以 `--root` 为根，即使配置位于子目录。源文件、目录祖先与符号依据解析事实核验；符号重名时证据须唯一落在一个符号范围内。无法被解析器定位的对象使用 `source_symbol: null` 并在证据中给出实际代码，报告不伪造符号定位。新目标可尚不存在，但不能越界、制造文件/目录冲突或用整文件移动覆盖现有文件；合并到一个目标属于合法操作。
+
+`report.model_review.architecture_plan` 保存校验后的模块和调整数据。现状树从 `facts.files` 生成；推荐树从现状加结构化方案生成，不接收模型的 ASCII 图作为事实。Markdown 在长证据前展示带问题注释的现状树、推荐树、模块职责对照和文件/函数调整表。JSON 与 Markdown 使用同一份数据，模型原回执不被渲染器改写。只跑规则时仍展示现状，推荐区明确未运行模型。
+
+结构方案缺失或非法时，结构状态为 `incomplete`，保留已验证的诊断、原始回执、事实及规则；总报告返回 incomplete，沿用既有未完成不出总分的规则。结构建议不增加评分项，不预测改造后的分数。路径和引文核验不表示目标方案已经编译、实施或证明最优。
+
+标准入口支持 `--max-bytes`，与 `bundle/review` 使用相同字节计数口径，默认 2,000,000，可显式提高并记录在报告中。预算必须是正整数，超出预算在调用模型前失败，不截断、不少扫源码。字节预算不等于模型 token 容量；调用方还须选用能容纳材料与输出的模型。
+
 ## 模型评审
 
 标准入口将材料收集、受信命令调用、JSON校验及报告留存串起来。URL、密钥、模型由调用方显式配置；不用Codex也可使用同一协议。例如采用兼容Chat Completions的服务：
@@ -57,11 +110,10 @@ python3 archcheck.py check --root /path/to/project --out /path/to/report.json
 ```sh
 # CODE_REVIEW_URL、CODE_REVIEW_TOKEN、CODE_REVIEW_MODEL由私有环境提供。
 python3 -I inspect_project.py --root PROJECT \
-  --review-command '["python3", "/absolute/path/to/model_reviewer.py"]' \
-  --pass-env CODE_REVIEW_URL --pass-env CODE_REVIEW_TOKEN --pass-env CODE_REVIEW_MODEL
+  --max-bytes 4000000
 ```
 
-每次独立保留review-input.json、reviewer.stdout.json、reviewer.stderr.log、model-result.json、report.json和report.md；失败也保留已有规则结果及原始回执。导出、首次安装及升级都会在.gitignore末尾保护harness-output/和.harness-output/。这两个目录是工具保留的产物目录，不放业务源码；解析器也排除它们。自定义输出若位于扫描源码内而未处于保留目录，在调用模型前明确拒绝。发布前检查敏感信息。默认仅运行规则；未配置模型时不会隐式发起调用。
+每次独立保留review-input.json、reviewer.stdout.json、reviewer.stderr.log、model-result.json、report.json和report.md；失败也保留已有规则结果及原始回执。导出、首次安装及升级都会在.gitignore末尾保护harness-output/和.harness-output/。这两个目录是工具保留的产物目录，不放业务源码；解析器也排除它们。自定义输出若位于扫描源码内而未处于保留目录，在调用模型前明确拒绝。发布前检查敏感信息。标准评测入口默认调用配置的模型并生成评分、诊断和结构建议。未配置 CODE_REVIEW_URL、CODE_REVIEW_TOKEN、CODE_REVIEW_MODEL 时明确 incomplete，不退化成仅规则报告；这些配置仍由调用方显式提供，工具不内置供应商或凭据。仅规则检查须显式指定 --rules-only，或使用专门的 archcheck.py check。
 
 独立的bundle/review/validate-review命令仍可用于其他受信模型或原生Agent。`review --command`的stdin是完整bundle，stdout必须是一个JSON对象，不经shell、不自动重试、不默认选供应商。执行超时终止整个命令组。`--pass-env`只传所列私有配置；不能让被扫仓库决定受信命令。
 
@@ -89,7 +141,7 @@ name必须唯一，不覆盖内置检查。导出场景自带对应要求，组�
 
 validation 应说明架构复查方法，如依赖方向、公开入口、重复规则归属或模块测试接口；已有回归仅用于保护原行为，不凭空添加产品业务验收条件。当前可读报告及模型说明统一使用简体中文，代码标识和路径保持原样。模型仍可能偏离这些要求，引用校验不能代替语义复核；工具不以业务关键词过滤或自动改写模型意见。
 
-inspect_project.py 自动生成的人类可读 Markdown 先分别展示规则结果与模型结果，再列问题、涉及位置、可定位的源码符号、依据、影响、调整和复查建议。符号来自语言解析事实，无法对应到符号的规范文件引用只显示文件位置。原始模型文字与 JSON 保持原样，执行元数据和范围放在报告末尾。JSON 返回协议未变化。
+inspect_project.py 自动生成的人类可读 Markdown 先分别展示规则结果与模型结果，再列问题、涉及位置、可定位的源码符号、依据、影响、调整和复查建议。符号来自语言解析事实，无法对应到符号的规范文件引用只显示文件位置。原始模型文字与 JSON 保持原样，执行元数据和范围放在报告末尾。当前返回协议包含逐点评审和结构方案。
 
 ### 统一返回协议
 
@@ -103,7 +155,8 @@ inspect_project.py 自动生成的人类可读 Markdown 先分别展示规则结
     "name": "gateway_transport",
     "status": "deviation",
     "reason": "流程直接处理网络实现细节",
-    "evidence": [{"path": "internal/gateway/relay.go", "quote": "一段完整且唯一的原文行"}]
+    "evidence": [{"path": "internal/gateway/relay.go", "quote": "一段完整且唯一的原文行"}],
+    "criteria": []
   }],
   "findings": [{
     "checks": ["gateway_transport"],
@@ -114,11 +167,34 @@ inspect_project.py 自动生成的人类可读 Markdown 先分别展示规则结
     "recommendation": "由上游适配实现网络细节",
     "validation": "通过接口验证流程并保留真实HTTP集成测试",
     "evidence": [{"path": "internal/gateway/relay.go", "quote": "一段完整且唯一的原文行"}]
-  }]
+  }],
+  "architecture_plan": {
+    "summary": "保留网关流程，提取上游网络实现，通过接口调用。",
+    "modules": [{
+      "name": "gateway",
+      "current_responsibility": "请求协调与网络调用混合",
+      "responsibility": "请求协调与上游适配分工",
+      "current_paths": ["internal/gateway"],
+      "target_paths": ["internal/gateway", "internal/upstream"],
+      "finding_refs": [1],
+      "evidence": [{"path": "internal/gateway/relay.go", "quote": "该文件中完整且唯一的原文"}]
+    }],
+    "changes": [{
+      "action": "extract",
+      "source_path": "internal/gateway/relay.go",
+      "source_symbol": null,
+      "target_path": "internal/upstream/request.go",
+      "responsibility": "上游网络调用；原文件保留请求协调",
+      "reason": "隔离网络实现与协调职责",
+      "dependency_change": "通过已有或必要的窄接口注入，保留取消及流式生命周期",
+      "finding_refs": [1],
+      "evidence": [{"path": "internal/gateway/relay.go", "quote": "该文件中完整且唯一的原文"}]
+    }]
+  }
 }
 ```
 
-实际checks必须覆盖材料中的全部要求；上面的单项仅用于说明格式。模型引用提交path和逐字原文，不再计数行号；可引用长行中的连续片段或完整多行，不得改写、省略拼接。工具在同版源码中精确、唯一匹配后生成line/end；零处或多处匹配（含重叠匹配）均拒绝，不猜位置、不修改模型原始发现。规范、源码、检查要求和策略变化均使旧材料失效。旧版limitations/行号协议明确拒绝；历史报告保持原样。
+实际checks必须覆盖材料中的全部要求；上面的gateway_transport是额外场景检查，criteria为空。七个内置维度每项必须带四个criteria结果，每个结果包含name、status、reason、evidence及finding_refs；模型请求response_contract列出完整固定名称与字段。status与父项使用相同枚举；偏差点的finding_refs为对应findings的1起始索引，其他状态为空。父项状态按证据不足、偏差、符合、不适用的优先序汇总。缺项、错引、偏差无依据或父子状态不一致明确incomplete。模型引用提交path和逐字原文，不再计数行号；可引用长行中的连续片段或完整多行，不得改写、省略拼接。工具在同版源码中精确、唯一匹配后生成line/end；零处或多处匹配（含重叠匹配）均拒绝，不猜位置、不修改模型原始发现。规范、源码、检查要求和策略变化均使旧材料失效。旧版limitations/行号协议明确拒绝；历史报告保持原样。
 
 引用核验只证明原文真实和版本一致，不证明架构推断正确。标准化后的发现仍为verification=needs_review，交项目既有审查复核。规则违规与模型发现分别记录，不使用发现数量评估模型质量。
 

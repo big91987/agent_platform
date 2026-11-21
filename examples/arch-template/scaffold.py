@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+VERSION = runpy.run_path(str(ROOT / "tool/archcheck/__init__.py"))["VERSION"]
 SKIP = {"node_modules", "__pycache__", "dist", ".DS_Store", "SOURCE.json"}
 
 
@@ -52,8 +53,7 @@ def ignore_artifacts(project):
 
 def install_tool(dest):
     copy(ROOT / "tool", dest)
-    version = runpy.run_path(str(ROOT / "tool/archcheck/__init__.py"))["VERSION"]
-    manifest = dict(version=version, files=hashes(dest))
+    manifest = dict(version=VERSION, files=hashes(dest))
     (dest / "SOURCE.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
@@ -255,7 +255,7 @@ def export(destination, backends, frontend):
         (project / "template-source.json").write_text(
             json.dumps(
                 dict(
-                    version="0.4.0",
+                    version=VERSION,
                     backends=backends,
                     frontend="vue" if frontend else None,
                     files=hashes(project),

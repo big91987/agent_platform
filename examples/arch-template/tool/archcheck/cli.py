@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .engine import analyze
 from .review import bundle, execute, validate
+from .scoring import score_report
 
 
 def main(argv=None):
@@ -76,6 +77,8 @@ def main(argv=None):
             ),
         )
         code = 2
+    if report.get("kind") != "architecture-review":
+        report["score"] = score_report(report)
     text = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

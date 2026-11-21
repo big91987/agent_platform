@@ -4,6 +4,7 @@
 import argparse
 import fcntl
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -36,6 +37,96 @@ def location(report, path, line, end=None):
     return label
 
 
+def render_score(report):
+    from archcheck.scoring import score_report
+
+    score = score_report(report)
+    complete = score["completeness"]
+    total = f"{score['total']:.1f} / 100" if score["total"] is not None else "暂不评分"
+    lines = [
+        "## 架构评分（模型初评）",
+        "",
+        f"**{total}** · 规则违规 {score['rule_violations']} 项 · 逐项评审 {complete['completed']} / {complete['expected']}。",
+        f"固定检查点评审：{complete['criteria_completed']} / {complete['criteria_expected']}。",
+        "",
+        score["formula"],
+        "",
+        score["note"],
+        "完成度依据模型逐项回报与引用核验，不是独立阅读或产品测试覆盖率。额外场景检查单列，不改变七个基础维度权重。",
+        "",
+        "| 维度 | 得分 | 判断与扣分依据 |",
+        "| --- | ---: | --- |",
+    ]
+    for dimension in score["dimensions"]:
+        points = dimension["points"]
+        display = (
+            f"{points} / 100"
+            if points is not None
+            else ("不适用" if dimension["status"] == "not_applicable" else "未完成")
+        )
+        basis = [dimension["reason"]]
+        if points is not None and points < 100:
+            basis.append("维度分为下列适用检查点的平均值；单个问题不自动使整维度归零。")
+        seen = set()
+        for deduction in dimension["deductions"]:
+            key = (deduction["source"], deduction["finding"])
+            if key in seen:
+                continue
+            seen.add(key)
+            origin = "规则违规" if deduction["source"] == "rule" else "模型发现"
+            severity = {"low": "轻微", "medium": "中度", "high": "严重"}[
+                deduction["severity"]
+            ]
+            refs = "、".join(
+                location(report, e["path"], e["line"], e.get("end"))
+                for e in deduction["evidence"]
+            )
+            basis.append(
+                f"{origin} {deduction['finding']}：{deduction['title']}（{severity}）；{refs}"
+            )
+        cell = "<br>".join(s.replace("|", "\\|").replace("\n", " ") for s in basis)
+        lines.append(f"| {dimension['label']} | {display} | {cell} |")
+    lines += [
+        "",
+        "### 固定检查点与计分依据",
+        "",
+        "| 维度 | 检查点 | 得分 | 判断、证据与关联问题 |",
+        "| --- | --- | ---: | --- |",
+    ]
+    for dimension in score["dimensions"]:
+        for point in dimension["criteria"]:
+            value = point["points"]
+            display = (
+                f"{value} / 100"
+                if value is not None
+                else ("不适用" if point["status"] == "not_applicable" else "未完成")
+            )
+            basis = [point["reason"]]
+            for d in point["deductions"]:
+                origin = "规则违规" if d["source"] == "rule" else "模型发现"
+                basis.append(f"{origin} {d['finding']}：{d['title']}")
+            basis += [
+                location(report, e["path"], e["line"], e.get("end"))
+                for e in point["evidence"]
+            ]
+            cell = "<br>".join(s.replace("|", "\\|").replace("\n", " ") for s in basis)
+            lines.append(
+                f"| {dimension['label']} | {point['label']} | {display} | {cell} |"
+            )
+    lines += ["", "**评分档位（每个检查点）**", ""]
+    for level, band in score["rubric"].items():
+        label = {
+            "conformant": "符合",
+            "low": "轻微偏差",
+            "medium": "中度偏差",
+            "high": "严重偏差",
+        }[level]
+        lines.append(f"- {band['points']} 分 · {label}：{band['description']}")
+    for reason in score["reasons"]:
+        lines += ["", "暂不评分原因：" + reason]
+    return lines + ["", f"评分口径版本：{score['rubric_version']}。", ""]
+
+
 def render(report):
     rules = report.get("rules", {})
     model = report.get("model_review", {})
@@ -58,9 +149,10 @@ def render(report):
         "",
         "规则检查依据已声明的依赖约束；模型意见需复核。本报告不判定产品业务功能通过或失败。",
         "",
-        "## 规则违规",
-        "",
     ]
+    from archcheck.structure import render_structure
+
+    lines += render_score(report) + render_structure(report) + ["## 规则违规", ""]
     for finding in rules.get("findings", []):
         name = RULE_NAMES.get(finding["rule"], finding["rule"])
         lines += [
@@ -141,8 +233,32 @@ def render(report):
 
 
 def inspect_project(
-    root, config, output, review_command=None, review_timeout=660, pass_env=()
+    root,
+    config,
+    output,
+    review_command=None,
+    review_timeout=660,
+    pass_env=(),
+    max_bytes=2_000_000,
+    rules_only=False,
 ):
+    if rules_only and review_command is not None:
+        raise ValueError("rules-only cannot be combined with a model reviewer")
+    if not rules_only and review_command is None:
+        review_command = [
+            sys.executable,
+            "-I",
+            str(Path(__file__).resolve().parent / "model_reviewer.py"),
+        ]
+        required = ("CODE_REVIEW_URL", "CODE_REVIEW_TOKEN", "CODE_REVIEW_MODEL")
+        optional = tuple(
+            k
+            for k in ("CODE_REVIEW_MAX_TOKENS", "CODE_REVIEW_STREAM")
+            if k in os.environ
+        )
+        pass_env = tuple(dict.fromkeys((*pass_env, *required, *optional)))
+    if type(max_bytes) is not int or max_bytes <= 0:
+        raise ValueError("max_bytes must be a positive integer")
     root = root.resolve(strict=True)
     if output.is_absolute() or ".." in output.parts:
         raise ValueError("output must be a repository-relative directory")
@@ -152,6 +268,7 @@ def inspect_project(
         raise ValueError("output escapes repository")
     folder = folder / uuid.uuid4().hex
     folder.mkdir()
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
     report = {"status": "incomplete", "model_review": {"status": "not_run"}}
     with ExitStack() as resources:
         try:
@@ -159,7 +276,6 @@ def inspect_project(
             if manifest.exists():
                 lock = resources.enter_context(manifest.open("rb"))
                 fcntl.flock(lock, fcntl.LOCK_SH | fcntl.LOCK_NB)
-            sys.path.insert(0, str(Path(__file__).resolve().parent))
             from archcheck.engine import IGNORED, analyze, load_config
 
             if review_command is not None:
@@ -177,9 +293,9 @@ def inspect_project(
                 from archcheck.review import execute, make_request, validate
 
                 request = make_request(report, texts, config, root)
-                if len(json.dumps(request).encode()) > 2_000_000:
+                if len(json.dumps(request).encode()) > max_bytes:
                     raise ValueError(
-                        "review bundle exceeds 2 MB; narrow scope explicitly"
+                        "review bundle exceeds max bytes; no source was truncated"
                     )
                 (folder / "review-input.json").write_text(
                     json.dumps(request, ensure_ascii=False, indent=2) + "\n"
@@ -224,12 +340,16 @@ def inspect_project(
             and Path(top.stdout.strip()).resolve() == root
             else None
         )
+        report["max_input_bytes"] = max_bytes
         report["checked_at"] = datetime.now(timezone.utc).isoformat()
         report["scope_note"] = (
             "Static architecture review of declared source and context; product acceptance was not performed."
             if review_command is not None
             else "Only declared dependency rules were checked; model review and product acceptance were not performed."
         )
+        from archcheck.scoring import score_report
+
+        report["score"] = score_report(report)
         raw = folder / "report.json"
         raw.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         summary = folder / "report.md"
@@ -252,6 +372,7 @@ def inspect_project(
     return {
         "status": report["status"],
         "snapshot": report.get("snapshot"),
+        "score": report["score"]["total"],
         "report": raw.relative_to(root).as_posix(),
         "summary": summary.relative_to(root).as_posix(),
     }, code
@@ -269,6 +390,12 @@ def main():
         help="JSON argv of the trusted provider-independent reviewer",
     )
     parser.add_argument("--review-timeout", type=float, default=660)
+    parser.add_argument("--max-bytes", type=int, default=2_000_000)
+    parser.add_argument(
+        "--rules-only",
+        action="store_true",
+        help="Explicitly skip model assessment and scoring",
+    )
     parser.add_argument("--pass-env", action="append", default=[])
     args = parser.parse_args()
     try:
@@ -281,6 +408,8 @@ def main():
             else None,
             args.review_timeout,
             args.pass_env,
+            args.max_bytes,
+            args.rules_only,
         )
     except (ValueError, OSError) as error:
         result, code = {"status": "incomplete", "errors": [str(error)]}, 2

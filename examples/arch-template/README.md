@@ -69,7 +69,7 @@ python3 -I /path/to/repository/.harness/archcheck/inspect_project.py --root /pat
 
 项目维护 architecture.json 并将检查命令接到自己的固定验证入口。已有安装用 `--update-tool`，拒绝本地工具漂移；只检查 Go 的项目不必安装 npm 解析器。将 harness-output/ 加入忽略规则。[ci.yml](ci.yml) 可复制为项目的架构 CI，绑定提交、展示 Markdown 结果并保留原始报告；平台自身使用同一维护源直接运行。
 
-`inspect_project.py` 每次生成独立报告，同时更新 latest-report.json/md 两个固定普通文件，供平台按步骤归档；0=规则通过，1=规则违规，2=分析未完成；工作流包装无法保存本次报告时返回3并停止，不接受旧报告。报告保留源码摘要、实际范围和 Git HEAD，未提交修改仍以逐文件摘要为准。它不调用模型，也不代表产品 QA 通过。
+`inspect_project.py` 每次生成独立报告，同时更新 latest-report.json/md 两个固定普通文件，供平台按步骤归档；0=评测通过，1=存在规则违规或待复核发现，2=分析未完成；工作流包装无法保存本次报告时返回3并停止，不接受旧报告。报告保留源码摘要、实际范围和 Git HEAD，未提交修改仍以逐文件摘要为准。标准入口默认使用 CODE_REVIEW_URL、CODE_REVIEW_TOKEN、CODE_REVIEW_MODEL 指定的模型，输出评分、诊断及结构方案；配置缺失或模型失败返回未完成，不静默降为仅规则结果。显式 --rules-only 才跳过模型。[ci.yml](ci.yml) 与固定工作流节点明确选择仅规则门禁，不冒充完整评测；模型评测不代表产品 QA 通过。
 
 ## 工作流与 Issue
 
@@ -88,3 +88,9 @@ python3 examples/arch-template/install_workflow.py \
 
 
 标准扫描入口可同时运行规则与模型：见[工具说明](tool/README.md)。`rules.findings`是确定违规，`model_review.findings`是模型提出的候选问题；不能用数量直接比较模型好坏。0.4.0评审协议采用逐项checks、scope_notes/blockers和精确唯一原文定位，不接受旧limitations/模型行号格式；历史报告不重写。导出、安装、升级均保护默认原始产物目录。
+
+0.5.0 在最终 JSON 与 Markdown 报告中增加七维架构评分、逐项扣分依据及评审完整度。完整且引用核验通过的模型评审才生成总分；规则门禁保持独立。评分不按发现条数累扣，具体档位与限制见[评分说明](tool/README.md#架构评分)。
+
+0.6.0 将结构方案纳入正式返回协议。标准报告原生展示扫描现状、推荐结构、职责对照和对象调整表；无发现保留现状，结构输出失败明确 incomplete 并保留有效诊断。完整字段、动作语义和可调输入预算见[工具说明](tool/README.md#结构方案与原生报告)。
+
+0.7.0 将评分口径升级为2.0：七维各四个固定检查点，模型逐点提供证据，工具在点内去重计档、维度内平均、七维等权汇总。单个严重问题不再自动使整个维度归零；规则违规门禁独立保留。旧报告不改写，新旧分数不作为整改效果对比。详见[评分说明](tool/README.md#架构评分)。

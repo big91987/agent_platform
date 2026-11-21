@@ -31,6 +31,7 @@ class InspectionTests(unittest.TestCase):
                 str(TOOL / "inspect_project.py"),
                 "--root",
                 str(root),
+                "--rules-only",
             ]
             first = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
@@ -42,6 +43,8 @@ class InspectionTests(unittest.TestCase):
             self.assertNotEqual(first_summary["report"], second_summary["report"])
             report = json.loads((root / second_summary["report"]).read_text())
             self.assertEqual(report["status"], "violations")
+            self.assertIsNone(report["score"]["total"])
+            self.assertEqual(report["score"]["rule_violations"], 1)
             self.assertTrue(report["snapshot"])
             self.assertIn("src/main.go", report["hashes"])
             self.assertIn("net/http", (root / second_summary["summary"]).read_text())
@@ -53,6 +56,7 @@ class InspectionTests(unittest.TestCase):
                 (root / "harness-output/architecture/latest-report.json").read_text()
             )
             self.assertEqual(latest["status"], "incomplete")
+            self.assertIsNone(latest["score"]["total"])
             self.assertTrue((root / first_summary["report"]).exists())
 
     def test_scan_retains_native_result_and_preserves_rules_on_reviewer_failure(self):
@@ -78,7 +82,7 @@ class InspectionTests(unittest.TestCase):
             )
             reviewer = root / "reviewer.py"
             reviewer.write_text(
-                'import sys,json\nb=json.load(sys.stdin)\njson.dump(dict(snapshot=b["snapshot"],reviewed_files=sorted(b["sources"]),scope_notes=["Protocol fixture, not model quality evidence"],blockers=[],checks=[dict(name=c["name"],status="not_applicable",reason="Isolated transport fixture",evidence=[]) for c in b["review_checks"]],findings=[]),sys.stdout)\n'
+                "import sys,json\nb=json.load(sys.stdin)\njson.dump(dict(snapshot=b[\"snapshot\"],reviewed_files=sorted(b[\"sources\"]),scope_notes=[\"Protocol fixture, not model quality evidence\"],blockers=[],checks=[dict(name=c[\"name\"],status=\"not_applicable\",reason=\"Transport fixture\",evidence=[],criteria=[dict(name=p[\"name\"],status=\"not_applicable\",reason=\"Transport fixture\",evidence=[],finding_refs=[]) for p in c[\"criteria\"]]) for c in b[\"review_checks\"]],findings=[],architecture_plan=dict(summary='保留当前结构',modules=[dict(name=f['path'],current_responsibility='协议夹具',responsibility='协议夹具',current_paths=[f['path']],target_paths=[f['path']],finding_refs=[],evidence=[dict(path=f['path'],quote=b['sources'][f['path']])]) for f in b['facts']['files']],changes=[])),sys.stdout)\n"
             )
             cmd = [
                 sys.executable,
@@ -125,7 +129,7 @@ class InspectionTests(unittest.TestCase):
                     )
                 )
             )
-            script = 'import sys,json;b=json.load(sys.stdin);json.dump(dict(snapshot=b["snapshot"],reviewed_files=sorted(b["sources"]),scope_notes=[],blockers=[],checks=[dict(name=c["name"],status="not_applicable",reason="Isolated command fixture",evidence=[]) for c in b["review_checks"]],findings=[]),sys.stdout)'
+            script = "import sys,json;b=json.load(sys.stdin);json.dump(dict(snapshot=b[\"snapshot\"],reviewed_files=sorted(b[\"sources\"]),scope_notes=[],blockers=[],checks=[dict(name=c[\"name\"],status=\"not_applicable\",reason=\"Transport fixture\",evidence=[],criteria=[dict(name=p[\"name\"],status=\"not_applicable\",reason=\"Transport fixture\",evidence=[],finding_refs=[]) for p in c[\"criteria\"]]) for c in b[\"review_checks\"]],findings=[],architecture_plan=dict(summary='保留当前结构',modules=[dict(name=f['path'],current_responsibility='协议夹具',responsibility='协议夹具',current_paths=[f['path']],target_paths=[f['path']],finding_refs=[],evidence=[dict(path=f['path'],quote=b['sources'][f['path']])]) for f in b['facts']['files']],changes=[])),sys.stdout)"
             command = [
                 sys.executable,
                 str(TOOL / "inspect_project.py"),
@@ -187,7 +191,13 @@ class InspectionTests(unittest.TestCase):
                 )
             )
             result = subprocess.run(
-                [sys.executable, str(TOOL / "inspect_project.py"), "--root", str(root)],
+                [
+                    sys.executable,
+                    str(TOOL / "inspect_project.py"),
+                    "--root",
+                    str(root),
+                    "--rules-only",
+                ],
                 capture_output=True,
                 text=True,
             )
@@ -233,8 +243,8 @@ class InspectionTests(unittest.TestCase):
                 + '; json.dump(dict(snapshot=b["snapshot"], reviewed_files=sorted(b["sources"]),'
                 'scope_notes=["Controlled protocol fixture, not model-quality evidence"], blockers=[],'
                 'checks=[dict(name=c["name"],status="deviation" if i==0 else "not_applicable",'
-                'reason="Fixture only",evidence=finding["evidence"] if i==0 else []) '
-                'for i,c in enumerate(b["review_checks"])],findings=[finding]),sys.stdout)'
+                'reason="Fixture only",evidence=finding["evidence"] if i==0 else [],criteria=[dict(name=p["name"],status="deviation" if i==0 and j==0 else "not_applicable",reason="Fixture",evidence=finding["evidence"] if i==0 and j==0 else [],finding_refs=[1] if i==0 and j==0 else []) for j,p in enumerate(c["criteria"])]) '
+                "for i,c in enumerate(b[\"review_checks\"])],findings=[finding],architecture_plan=dict(summary='原地调整职责',modules=[dict(name='app',current_responsibility='HTTP 与流程混合',responsibility='HTTP 适配',current_paths=['src'],target_paths=['src'],finding_refs=[1],evidence=finding['evidence'])],changes=[dict(action='adjust',source_path='src/http.go',source_symbol='Handle',target_path='src/http.go',responsibility='HTTP 适配',reason='调整职责',dependency_change='保持依赖',finding_refs=[1],evidence=finding['evidence'])])),sys.stdout)"
             )
             result = subprocess.run(
                 [
@@ -254,12 +264,69 @@ class InspectionTests(unittest.TestCase):
             self.assertIn("src/http.go:3", summary)
             self.assertIn("`Handle`", summary)
             self.assertIn(finding["recommendation"], summary)
+            report = json.loads((root / receipt["report"]).read_text())
+            self.assertEqual(report["score"]["total"], 50.0)
+            self.assertIn("50.0 / 100", summary)
+            self.assertIn("模块职责", summary)
+            self.assertIn("模型发现 1", summary)
             raw = json.loads(
                 (root / receipt["report"])
                 .parent.joinpath("model-result.json")
                 .read_text()
             )
             self.assertEqual(raw["findings"][0], finding)
+
+    def test_explicit_input_budget_runs_complete_material_and_default_never_truncates(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            (root / "src/main.go").write_text("package app\n")
+            (root / "go.mod").write_text("module example.org/app\n\ngo 1.25\n")
+            (root / "large.md").write_text("X" * 2_050_000)
+            (root / "architecture.json").write_text(
+                json.dumps(
+                    dict(
+                        languages=["go"],
+                        source_roots=["src"],
+                        modules=[dict(name="app", paths=["src/**"])],
+                        documents=["large.md"],
+                    )
+                )
+            )
+            marker = root / "reviewer-invoked"
+            reviewer = root / "reviewer.py"
+            reviewer.write_text(
+                "import sys,json;from pathlib import Path;b=json.load(sys.stdin);Path('reviewer-invoked').write_text(str(len(b['sources']['large.md'])));"
+                + "json.dump(dict(snapshot=b['snapshot'],reviewed_files=sorted(b['sources']),scope_notes=['Transport fixture'],blockers=[],checks=[dict(name=c['name'],status='not_applicable',reason='Fixture',evidence=[],criteria=[dict(name=p['name'],status='not_applicable',reason='Transport fixture',evidence=[],finding_refs=[]) for p in c['criteria']]) for c in b['review_checks']],findings=[],architecture_plan=dict(summary='保留当前结构',modules=[dict(name='app',current_responsibility='现有职责',responsibility='现有职责',current_paths=['src'],target_paths=['src'],finding_refs=[],evidence=[dict(path='src/main.go',quote='package app')])],changes=[])),sys.stdout)"
+            )
+            command = [
+                sys.executable,
+                str(TOOL / "inspect_project.py"),
+                "--root",
+                str(root),
+                "--review-command",
+                json.dumps([sys.executable, str(reviewer)]),
+            ]
+            default = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(default.returncode, 2, default.stdout + default.stderr)
+            self.assertFalse(marker.exists())
+            explicit = subprocess.run(
+                command + ["--max-bytes", "4000000"], capture_output=True, text=True
+            )
+            self.assertEqual(explicit.returncode, 0, explicit.stdout + explicit.stderr)
+            self.assertEqual(marker.read_text(), "2050000")
+            report = json.loads(
+                (root / json.loads(explicit.stdout)["report"]).read_text()
+            )
+            self.assertEqual(report["max_input_bytes"], 4_000_000)
+            self.assertEqual(
+                report["model_review"]["architecture_plan"]["status"], "ready"
+            )
+            self.assertIn(
+                "现状结构", (root / json.loads(explicit.stdout)["summary"]).read_text()
+            )
 
     def test_isolated_entry_preserves_incomplete_receipt_during_tool_upgrade_lock(self):
         with tempfile.TemporaryDirectory() as directory:
