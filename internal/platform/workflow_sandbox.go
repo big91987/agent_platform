@@ -27,13 +27,14 @@ type RunEnvironment struct {
 	Image          string             `json:"image"`
 	TTL            int                `json:"ttl_seconds"`
 	MemoryMiB      int                `json:"memory_mib,omitempty"`
+	CPU            int                `json:"cpu"`
 	Error          string             `json:"error,omitempty"`
 	Updated        string             `json:"updated_at"`
 	ConnectionHash string             `json:"-"`
 }
 
 // ConfigureSandbox is a startup setting, not task input or an Agent permission.
-func (s *Store) ConfigureSandbox(config, image string, ttl int, memoryMiB ...int) error {
+func (s *Store) ConfigureSandbox(config, image string, ttl, memoryMiB int, cpu ...int) error {
 	if s.sandbox != nil {
 		return errors.New("OpenSandbox is already configured")
 	}
@@ -41,11 +42,15 @@ func (s *Store) ConfigureSandbox(config, image string, ttl int, memoryMiB ...int
 	if err != nil {
 		return err
 	}
-	if len(memoryMiB) > 1 || (len(memoryMiB) == 1 && (memoryMiB[0] < 256 || memoryMiB[0] > 65536)) {
+	if memoryMiB < 256 || memoryMiB > 65536 {
 		return errors.New("OpenSandbox memory must be between 256 and 65536 MiB")
 	}
-	if len(memoryMiB) == 1 {
-		client.memoryMiB = memoryMiB[0]
+	client.memoryMiB = memoryMiB
+	if len(cpu) > 1 || (len(cpu) == 1 && (cpu[0] < 0 || cpu[0] > 1024)) {
+		return errors.New("OpenSandbox CPU must be between 0 (no limit) and 1024")
+	}
+	if len(cpu) == 1 {
+		client.cpu = cpu[0]
 	}
 	s.sandbox = client
 	return nil
@@ -76,11 +81,21 @@ func (s *Store) initRunEnvironments() error {
 	if err := s.initCommandOutputExports(); err != nil {
 		return err
 	}
+	var cpuColumn int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM pragma_table_info('workflow_run_environments') WHERE name='cpu'`).Scan(&cpuColumn); err != nil {
+		return err
+	}
+	if cpuColumn == 0 {
+		// Existing Runs promised two CPUs. An explicit zero belongs only to new Runs.
+		if _, err := s.DB.Exec(`ALTER TABLE workflow_run_environments ADD COLUMN cpu INTEGER NOT NULL DEFAULT 2`); err != nil {
+			return err
+		}
+	}
 	return s.initSandboxNativeProcesses()
 }
 func loadRunEnvironment(tx *sql.Tx, id string) (*RunEnvironment, error) {
 	var env RunEnvironment
-	err := tx.QueryRow(`SELECT sandbox_id,status,image,ttl,connection_hash,error,updated,memory_mib FROM workflow_run_environments WHERE run_id=?`, id).Scan(&env.ID, &env.Status, &env.Image, &env.TTL, &env.ConnectionHash, &env.Error, &env.Updated, &env.MemoryMiB)
+	err := tx.QueryRow(`SELECT sandbox_id,status,image,ttl,connection_hash,error,updated,memory_mib,cpu FROM workflow_run_environments WHERE run_id=?`, id).Scan(&env.ID, &env.Status, &env.Image, &env.TTL, &env.ConnectionHash, &env.Error, &env.Updated, &env.MemoryMiB, &env.CPU)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -159,6 +174,10 @@ func (s *Store) sandboxFor(r WorkflowRun) (*OpenSandbox, error) {
 		}
 		client.memoryMiB = r.Environment.MemoryMiB
 	}
+	if r.Environment.CPU < 0 || r.Environment.CPU > 1024 {
+		return nil, errors.New("Run has an invalid OpenSandbox CPU limit")
+	}
+	client.cpu = r.Environment.CPU
 	return &client, nil
 }
 func (s *OpenSandbox) waitReady(ctx context.Context, id, run string) error {

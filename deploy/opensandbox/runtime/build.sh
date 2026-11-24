@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+check_cpu=${2:-2}
+if [[ ! "$check_cpu" =~ ^[0-9]+$ ]] || ((10#$check_cpu > 1024)); then
+  echo 'Check CPU must be 0 (no CPU limit) or a positive integer up to 1024.' >&2
+  exit 1
+fi
+cpu_args=()
+if ((10#$check_cpu > 0)); then cpu_args=(--cpus "$check_cpu"); fi
 source_dir=$(cd "$(dirname "$0")" && pwd)
 output_dir=${1:?Usage: build.sh NEW_OUTPUT_DIRECTORY}
 if [[ -e "$output_dir" ]]; then
@@ -28,5 +35,5 @@ for proxy_name in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_prox
 done
 docker build "${build_args[@]}" --platform linux/amd64 --iidfile "$output_dir/image-id" --tag "$image_tag" "$output_dir/context" > "$output_dir/build.log" 2>&1
 image_id=$(cat "$output_dir/image-id")
-timeout --signal=TERM --kill-after=10s 300s docker run --rm --network none --pids-limit 256 --memory 2g --cpus 2 --security-opt no-new-privileges "$image_id" python3 /opt/agent-runtime/check.py > "$output_dir/check.jsonl" 2> "$output_dir/check.log"
+timeout --signal=TERM --kill-after=10s 300s docker run --rm --network none --pids-limit 256 --memory 2g "${cpu_args[@]}" --security-opt no-new-privileges "$image_id" python3 /opt/agent-runtime/check.py > "$output_dir/check.jsonl" 2> "$output_dir/check.log"
 printf 'RUNTIME_BUILD_PASS %s\n' "$image_id"

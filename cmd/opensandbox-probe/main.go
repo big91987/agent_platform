@@ -14,6 +14,7 @@ func main() {
 	report := flag.String("report", "", "new private JSONL report path")
 	image := flag.String("image", "python:3.12-slim", "probe container image")
 	runtime := flag.Bool("runtime", false, "also verify TypeScript and credential-free native service transport")
+	cpu := flag.Int("cpu", 2, "CPU limit; 0 omits the CPU resource field")
 	flag.Parse()
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
@@ -21,7 +22,7 @@ func main() {
 	if *runtime {
 		probe = platform.ProbeOpenSandboxRuntime
 	}
-	if err := probe(ctx, *config, *image, *report); err != nil {
+	if err := probe(ctx, *config, *image, *report, *cpu); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

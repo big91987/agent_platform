@@ -163,3 +163,15 @@ Issue输入或Agent原生TOML里自行开启；宿主执行仍使用原workspace
 112默认容器的同源无凭据probe07已实际证明externalSandbox command/exec读写、
 原生Skill范围、进程停止与环境删除404，不涉及模型登录/turn、正式平台角色会话
 或产品验收。真实Pipeline进度仍以交付计划及正式运行回执为准。
+
+### 无特权 Docker 与可选 CPU 限额
+
+运行用户使用 rootless Docker 时，使用独立安装目录/控制面端口，显式选择该账号的 Unix socket：
+
+```sh
+python3 deploy/opensandbox/install.py --root "$HOME/agent-platform-opensandbox" --port 8096 --docker-host "unix:///run/user/$(id -u)/docker.sock"
+```
+
+安装器将选择写入私有 `docker.env`，用户服务显式读取；升级省略参数时保留。已安装实例不能借此切换Docker后端，防止丢失旧环境归属。CLI的Docker context不会自动传给Python Docker SDK，不能仅用`docker ps`成功判断服务已接通。配置网络代理时分别检查包安装、Docker daemon拉镜像和任务自身出口，不将代理认证写入报告。
+
+若主机只委派memory/pids且运维已明确接受不限制CPU，平台安装使用`--sandbox-cpu 0`，生命周期探针使用`--cpu 0`；创建请求保留memory而省略cpu，不发送非法的cpu=0，也不在失败后自动放松限制。运行镜像构建检查可用`build.sh NEW_DIRECTORY 0`选择同一策略。内存、PID限制、默认Docker隔离和无宿主挂载保持。这个选择不证明CPU隔离，不等于产品测试通过；上线前必须通过真实创建/执行/清理及原生工具链验证。

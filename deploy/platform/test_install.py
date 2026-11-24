@@ -63,6 +63,52 @@ class InstallationTest(unittest.TestCase):
             self.assertIn('"--sandbox-memory-mib" "8192"', unit)
             self.assertIn('"--sandbox-ttl" "14400"', unit)
 
+    def test_cpu_omission_is_explicit_and_preserved_on_upgrade(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            result = self.invoke(parent)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = self.invoke(parent, "b" * 40, "--sandbox-cpu", "0")
+            self.assertNotEqual(result.returncode, 0)
+            result = self.invoke(
+                parent, "b" * 40, "--sandbox-cpu", "0", "--update-environment"
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = self.invoke(parent, "c" * 40)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            root = parent / "instance"
+            config = json.loads((root / "instance.json").read_text())
+            self.assertEqual(config["cpu"], 0)
+            self.assertEqual(config["memory_mib"], 2048)
+            self.assertIn(
+                '"--sandbox-cpu" "0"',
+                (root / "agent-platform-8795.service").read_text(),
+            )
+
+    def test_invalid_cpu_is_rejected_before_creating_instance(self):
+        for value in ["-1", "1025", "no-limit"]:
+            with self.subTest(cpu=value), tempfile.TemporaryDirectory() as directory:
+                parent = Path(directory)
+                result = self.invoke(parent, "a" * 40, "--sandbox-cpu", value)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((parent / "instance").exists())
+
+    def test_old_installation_preserves_two_cpus_during_upgrade(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            result = self.invoke(parent)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            root = parent / "instance"
+            config = root / "instance.json"
+            old = json.loads(config.read_text())
+            old.pop("cpu")
+            config.write_text(json.dumps(old))
+            unit = root / "agent-platform-8795.service"
+            unit.write_bytes(installer.service_unit(root.resolve(), old, cpu=False))
+            result = self.invoke(parent, "b" * 40)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('"--sandbox-cpu" "2"', unit.read_text())
+
     def test_invalid_memory_is_rejected_before_creating_an_instance(self):
         for value in ["0", "255", "65537"]:
             with self.subTest(memory=value), tempfile.TemporaryDirectory() as directory:

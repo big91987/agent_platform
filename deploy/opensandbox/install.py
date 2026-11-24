@@ -4,7 +4,9 @@
 import argparse
 import json
 import os
+import re
 import secrets
+import stat
 import subprocess
 import sys
 import uuid
@@ -105,14 +107,70 @@ def install(root: Path) -> None:
     subprocess.run([python, "-c", "import opensandbox_server.cli"], check=True)
     with (root / "installed-packages.txt").open("w", encoding="utf-8") as output:
         subprocess.run([python, "-m", "pip", "freeze"], stdout=output, check=True)
-    unit = f'''[Unit]
+    (root / "agent-platform-opensandbox.service").write_text(
+        service_unit(root), encoding="utf-8"
+    )
+
+
+def docker_environment(root: Path, endpoint: str | None) -> None:
+    path = root / "docker.env"
+
+    def encoded(value):
+        if not re.fullmatch(r"unix:///[A-Za-z0-9_./-]+", value):
+            raise ValueError("choose an explicit local Docker Unix socket")
+        return f"DOCKER_HOST={value}\n"
+
+    requested = encoded(endpoint) if endpoint is not None else None
+    if path.exists() or path.is_symlink():
+        if path.is_symlink():
+            raise ValueError("Docker environment must not be a symlink")
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(descriptor) as source:
+            info = os.fstat(source.fileno())
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.getuid()
+                or info.st_mode & 0o077
+            ):
+                raise ValueError("Docker environment must be private and owned")
+            previous = source.read(4097)
+        if (
+            not previous.startswith("DOCKER_HOST=")
+            or encoded(previous.removeprefix("DOCKER_HOST=").removesuffix("\n"))
+            != previous
+        ):
+            raise ValueError("invalid Docker environment")
+        if requested is not None and requested != previous:
+            raise ValueError(
+                "Docker backend changes require a separate installation; retain existing environments"
+            )
+        return
+    if requested is None:
+        return
+    if (root / "installed-packages.txt").exists():
+        raise ValueError(
+            "Docker backend changes require a separate installation; retain existing environments"
+        )
+    with path.open("x", encoding="utf-8") as output:
+        os.chmod(path, 0o600)
+        output.write(requested)
+
+
+def service_unit(root: Path) -> str:
+    docker_environment(root, None)
+    docker_line = (
+        f"EnvironmentFile={root / 'docker.env'}\n"
+        if (root / "docker.env").exists()
+        else ""
+    )
+    return f'''[Unit]
 Description=Agent Platform isolated OpenSandbox
 After=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory={root}
-ExecStart="{root}/venv/bin/opensandbox-server" --config "{root}/sandbox.toml"
+{docker_line}ExecStart="{root}/venv/bin/opensandbox-server" --config "{root}/sandbox.toml"
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -120,17 +178,21 @@ UMask=0077
 [Install]
 WantedBy=default.target
 '''
-    (root / "agent-platform-opensandbox.service").write_text(unit, encoding="utf-8")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--port", type=int, default=8095)
+    parser.add_argument(
+        "--docker-host",
+        help="explicit local Docker socket for a new installation, including rootless Docker",
+    )
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     os.umask(0o077)
     root = prepare(args.root, args.port)
+    docker_environment(root, args.docker_host)
     if not args.prepare_only:
         install(root)
     print(f"Prepared {root}; existing configuration and API key are preserved.")

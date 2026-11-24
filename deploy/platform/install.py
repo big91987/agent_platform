@@ -70,7 +70,7 @@ def installation_lock(root):
         os.close(descriptor)
 
 
-def service_unit(root, settings, *, memory=True, runtime=True):
+def service_unit(root, settings, *, memory=True, runtime=True, cpu=True):
     port = int(settings["listen"].rpartition(":")[2])
     command = [
         str(root / "agent-platform"),
@@ -91,6 +91,8 @@ def service_unit(root, settings, *, memory=True, runtime=True):
     ]
     if memory:
         command.extend(["--sandbox-memory-mib", str(settings.get("memory_mib", 2048))])
+    if cpu:
+        command.extend(["--sandbox-cpu", str(settings.get("cpu", 2))])
     optional = f"EnvironmentFile=-{root / 'runtime.env'}\n" if runtime else ""
     return f"""[Unit]
 Description=Isolated Agent Platform {port}
@@ -169,6 +171,7 @@ def prepare(
     auth_home,
     *,
     memory_mib=None,
+    cpu=None,
     update_environment=False,
     activate_service=False,
 ):
@@ -212,13 +215,20 @@ def prepare(
             raise ValueError("invalid instance configuration")
         old_memory = old_settings.get("memory_mib", 2048)
         old_ttl = old_settings.get("ttl")
+        old_cpu = old_settings.get("cpu", 2)
         if (
-            type(old_memory) is not int
+            type(old_cpu) is not int
+            or not 0 <= old_cpu <= 1024
+            or type(old_memory) is not int
             or not 256 <= old_memory <= 65536
             or type(old_ttl) is not int
             or not 60 <= old_ttl <= 86400
         ):
             raise ValueError("invalid existing environment configuration")
+    if cpu is None:
+        cpu = old_settings.get("cpu", 2) if old_settings else 2
+    if type(cpu) is not int or not 0 <= cpu <= 1024:
+        raise ValueError("CPU must be between 0 (no limit) and 1024")
     if ttl is None:
         ttl = old_settings.get("ttl", 3600) if old_settings else 3600
     if memory_mib is None:
@@ -252,17 +262,24 @@ def prepare(
         ttl=ttl,
         auth_home=str(auth_home),
         memory_mib=memory_mib,
+        cpu=cpu,
     )
     change_config = original_config is None
     if old_settings is not None:
-        normalized = dict(old_settings, memory_mib=old_settings.get("memory_mib", 2048))
+        normalized = dict(
+            old_settings,
+            memory_mib=old_settings.get("memory_mib", 2048),
+            cpu=old_settings.get("cpu", 2),
+        )
         if normalized != settings:
             changed = {
                 key
                 for key in normalized.keys() | settings.keys()
                 if normalized.get(key) != settings.get(key)
             }
-            if not update_environment or not changed.issubset({"ttl", "memory_mib"}):
+            if not update_environment or not changed.issubset(
+                {"ttl", "memory_mib", "cpu"}
+            ):
                 raise ValueError(
                     "existing instance configuration differs; inspect before upgrading"
                 )
@@ -330,13 +347,21 @@ def prepare(
             if replacement_needed:
                 prior = old_settings or settings
                 accepted = {
-                    service_unit(root, prior, runtime=enabled)
+                    service_unit(root, prior, runtime=enabled, cpu=include_cpu)
                     for enabled in (True, False)
+                    for include_cpu in (
+                        (True, False) if "cpu" not in prior else (True,)
+                    )
                 }
                 if "memory_mib" not in prior:
                     accepted.update(
-                        service_unit(root, prior, memory=False, runtime=enabled)
+                        service_unit(
+                            root, prior, memory=False, runtime=enabled, cpu=include_cpu
+                        )
                         for enabled in (True, False)
+                        for include_cpu in (
+                            (True, False) if "cpu" not in prior else (True,)
+                        )
                     )
                 if previous not in accepted:
                     raise ValueError("existing service configuration differs")
@@ -433,9 +458,12 @@ def main():
     parser.add_argument("--sandbox-ttl", type=int)
     parser.add_argument("--sandbox-memory-mib", type=int)
     parser.add_argument(
+        "--sandbox-cpu", type=int, help="CPU limit; 0 omits the CPU resource field"
+    )
+    parser.add_argument(
         "--update-environment",
         action="store_true",
-        help="explicitly update lifetime and memory defaults for new Runs",
+        help="explicitly update lifetime, memory and CPU defaults for new Runs",
     )
     parser.add_argument("--auth-home", type=Path, default=Path.home() / ".codex")
     parser.add_argument("--activate", action="store_true")
@@ -452,6 +480,7 @@ def main():
         args.sandbox_ttl,
         args.auth_home,
         memory_mib=args.sandbox_memory_mib,
+        cpu=args.sandbox_cpu,
         update_environment=args.update_environment,
         activate_service=args.activate,
     )

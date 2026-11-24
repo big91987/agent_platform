@@ -28,6 +28,7 @@ type OpenSandbox struct {
 	image          string
 	ttl            int
 	memoryMiB      int
+	cpu            int
 }
 
 type SandboxCommandResult struct {
@@ -88,7 +89,7 @@ func newOpenSandbox(endpoint, key, image string, ttl int) (*OpenSandbox, error) 
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
 	client := &http.Client{Transport: sandboxCommandTransport{transport}, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("OpenSandbox redirects are refused") }}
-	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl, memoryMiB: 2048}, nil
+	return &OpenSandbox{connectionHash: hashText(endpoint + "\x00" + key), lifecycle: opensandbox.NewLifecycleClient(endpoint, key, opensandbox.WithHTTPClient(client)), httpClient: client, image: image, ttl: ttl, memoryMiB: 2048, cpu: 2}, nil
 }
 
 func sandboxError(operation string, err error) error {
@@ -129,7 +130,14 @@ func (s *OpenSandbox) create(ctx context.Context, run string) (*opensandbox.Sand
 		}
 		memory = strconv.Itoa(s.memoryMiB) + "Mi"
 	}
-	result, err := s.lifecycle.CreateSandbox(ctx, opensandbox.CreateSandboxRequest{Image: &opensandbox.ImageSpec{URI: s.image}, Entrypoint: []string{"tail", "-f", "/dev/null"}, Timeout: &s.ttl, ResourceLimits: opensandbox.ResourceLimits{"cpu": "2", "memory": memory}, Metadata: map[string]string{"agent-platform-run": run}})
+	if s.cpu < 0 || s.cpu > 1024 {
+		return nil, errors.New("OpenSandbox CPU must be between 0 (no limit) and 1024")
+	}
+	limits := opensandbox.ResourceLimits{"memory": memory}
+	if s.cpu != 0 {
+		limits["cpu"] = strconv.Itoa(s.cpu)
+	}
+	result, err := s.lifecycle.CreateSandbox(ctx, opensandbox.CreateSandboxRequest{Image: &opensandbox.ImageSpec{URI: s.image}, Entrypoint: []string{"tail", "-f", "/dev/null"}, Timeout: &s.ttl, ResourceLimits: limits, Metadata: map[string]string{"agent-platform-run": run}})
 	if err != nil {
 		return nil, sandboxError("creation result is unconfirmed; reconcile before continuing", err)
 	}

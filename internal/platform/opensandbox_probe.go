@@ -77,18 +77,24 @@ func (s *OpenSandbox) remove(ctx context.Context, id, run string) error {
 // ProbeOpenSandbox is a bounded infrastructure check using the same client as
 // Run execution. It never performs product acceptance or supplies credentials to
 // the sandbox. The report is exclusive, private and retains uncertain outcomes.
-func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string) error {
-	return probeOpenSandbox(ctx, config, image, reportPath, false)
+func ProbeOpenSandbox(ctx context.Context, config, image, reportPath string, cpu ...int) error {
+	return probeOpenSandbox(ctx, config, image, reportPath, false, cpu...)
 }
 
-func ProbeOpenSandboxRuntime(ctx context.Context, config, image, reportPath string) error {
-	return probeOpenSandbox(ctx, config, image, reportPath, true)
+func ProbeOpenSandboxRuntime(ctx context.Context, config, image, reportPath string, cpu ...int) error {
+	return probeOpenSandbox(ctx, config, image, reportPath, true, cpu...)
 }
 
-func probeOpenSandbox(ctx context.Context, config, image, reportPath string, runtime bool) (probeErr error) {
+func probeOpenSandbox(ctx context.Context, config, image, reportPath string, runtime bool, cpu ...int) (probeErr error) {
 	service, err := loadOpenSandboxConfig(config, image, 600)
 	if err != nil {
 		return err
+	}
+	if len(cpu) > 1 || (len(cpu) == 1 && (cpu[0] < 0 || cpu[0] > 1024)) {
+		return errors.New("CPU must be between 0 (no limit) and 1024")
+	}
+	if len(cpu) == 1 {
+		service.cpu = cpu[0]
 	}
 	report, err := os.OpenFile(reportPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {

@@ -54,6 +54,37 @@ func TestConfiguredSandboxMemoryReachesOfficialCreateRequest(t *testing.T) {
 	}
 }
 
+func TestSandboxCPUCanBeOmittedFromCreate(t *testing.T) {
+	observed := make(chan opensandbox.ResourceLimits, 1)
+	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request opensandbox.CreateSandboxRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			w.WriteHeader(400)
+			return
+		}
+		observed <- request.ResourceLimits
+		json.NewEncoder(w).Encode(opensandbox.SandboxInfo{ID: request.Metadata["agent-platform-run"], Metadata: request.Metadata})
+	}))
+	defer remote.Close()
+	u, _ := url.Parse(remote.URL)
+	config := filepath.Join(t.TempDir(), "sandbox.toml")
+	if err := os.WriteFile(config, []byte(fmt.Sprintf("[server]\nhost=%q\nport=%s\napi_key='fixture'\n", u.Hostname(), u.Port())), 0600); err != nil {
+		t.Fatal(err)
+	}
+	store := testStore(t)
+	if err := store.ConfigureSandbox(config, "runtime", 120, 8192, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.sandbox.create(context.Background(), strings.Repeat("b", 32)); err != nil {
+		t.Fatal(err)
+	}
+	limits := <-observed
+	if _, exists := limits["cpu"]; exists || limits["memory"] != "8192Mi" {
+		t.Fatalf("CPU must be omitted and memory retained: %v", limits)
+	}
+}
+
 func TestLegacyEnvironmentMigrationKeepsOriginalMemory(t *testing.T) {
 	store := testStore(t)
 	caller, graph, _, _ := sandboxWorkflowFixture(t, store, false, false)
@@ -79,6 +110,39 @@ func TestLegacyEnvironmentMigrationKeepsOriginalMemory(t *testing.T) {
 	}
 	if retained.Definition.Revision != run.Definition.Revision || retained.Environment.TTL != run.Environment.TTL {
 		t.Fatal("migration changed the original Run")
+	}
+}
+
+func TestSandboxCPUIsFrozenAndLegacyRunsKeepTwoCPUs(t *testing.T) {
+	store := testStore(t)
+	caller, graph, _, _ := sandboxWorkflowFixture(t, store, false, false)
+	store.sandbox.cpu = 0
+	run, err := store.StartWorkflow(caller, WorkflowStart{WorkflowID: graph.ID, Input: "unlimited CPU"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.sandbox.cpu = 4
+	retained, err := store.WorkflowRun(caller, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := store.sandboxFor(retained)
+	if err != nil || client.cpu != 0 || retained.Environment.CPU != 0 {
+		t.Fatalf("new defaults changed frozen CPU: %v", err)
+	}
+	if _, err := store.DB.Exec(`ALTER TABLE workflow_run_environments DROP COLUMN cpu`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.initRunEnvironments(); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := store.WorkflowRun(caller, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err = store.sandboxFor(legacy)
+	if err != nil || client.cpu != 2 || legacy.Environment.CPU != 2 {
+		t.Fatalf("legacy CPU changed during migration: %v", err)
 	}
 }
 

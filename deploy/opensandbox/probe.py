@@ -21,7 +21,15 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--image", default="python:3.12-slim")
+    parser.add_argument(
+        "--cpu", type=int, default=1, help="CPU limit; 0 omits the CPU field"
+    )
     args = parser.parse_args()
+    if not 0 <= args.cpu <= 1024:
+        raise ValueError("CPU must be between 0 and 1024")
+    limits = {"memory": "512Mi"}
+    if args.cpu:
+        limits["cpu"] = str(args.cpu)
     os.umask(0o077)
     with args.config.open("rb") as source:
         settings = tomllib.load(source)
@@ -66,7 +74,7 @@ def main():
                     "image": {"uri": args.image},
                     "entrypoint": ["tail", "-f", "/dev/null"],
                     "timeout": 600,
-                    "resourceLimits": {"cpu": "1", "memory": "512Mi"},
+                    "resourceLimits": limits,
                     "metadata": {"agent-platform-probe": probe_id},
                 },
             )
