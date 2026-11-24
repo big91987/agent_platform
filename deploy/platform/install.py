@@ -278,7 +278,7 @@ def prepare(
                 if normalized.get(key) != settings.get(key)
             }
             if not update_environment or not changed.issubset(
-                {"ttl", "memory_mib", "cpu"}
+                {"ttl", "memory_mib", "cpu", "sandbox_config", "image"}
             ):
                 raise ValueError(
                     "existing instance configuration differs; inspect before upgrading"
@@ -463,7 +463,7 @@ def main():
     parser.add_argument(
         "--update-environment",
         action="store_true",
-        help="explicitly update lifetime, memory and CPU defaults for new Runs",
+        help="explicitly update sandbox connection, image and resource defaults for new Runs",
     )
     parser.add_argument("--auth-home", type=Path, default=Path.home() / ".codex")
     parser.add_argument("--activate", action="store_true")

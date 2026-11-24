@@ -85,6 +85,38 @@ class InstallationTest(unittest.TestCase):
                 (root / "agent-platform-8795.service").read_text(),
             )
 
+    def test_explicit_environment_replacement_preserves_platform_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            result = self.invoke(parent)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            root = parent / "instance"
+            credentials = (root / "credentials.env").read_bytes()
+            data = root / "data" / "history.fixture"
+            data.write_bytes(b"old run history")
+            replacement = parent / "new-sandbox.toml"
+            replacement.write_text(
+                "[server]\nhost='127.0.0.1'\nport=8096\napi_key='new-fixture'\n"
+            )
+            replacement.chmod(0o600)
+            options = (
+                "--sandbox-config",
+                str(replacement),
+                "--sandbox-image",
+                "sha256:" + "d" * 64,
+                "--sandbox-cpu",
+                "0",
+            )
+            rejected = self.invoke(parent, "b" * 40, *options)
+            self.assertNotEqual(rejected.returncode, 0)
+            result = self.invoke(parent, "b" * 40, *options, "--update-environment")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((root / "credentials.env").read_bytes(), credentials)
+            self.assertEqual(data.read_bytes(), b"old run history")
+            settings = json.loads((root / "instance.json").read_text())
+            self.assertEqual(settings["sandbox_config"], str(replacement.resolve()))
+            self.assertEqual(settings["cpu"], 0)
+
     def test_invalid_cpu_is_rejected_before_creating_instance(self):
         for value in ["-1", "1025", "no-limit"]:
             with self.subTest(cpu=value), tempfile.TemporaryDirectory() as directory:
