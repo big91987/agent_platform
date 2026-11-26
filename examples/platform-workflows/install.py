@@ -575,7 +575,7 @@ def main():
         args.upgrade,
     )
     if args.template == "claude-delivery":
-        from asset_snapshot import snapshot
+        from asset_snapshot import snapshot, snapshot_arch
 
         asset_root = args.manifest.resolve().parent / (args.manifest.stem + "-assets")
         if asset_root.is_symlink() or asset_root.resolve().is_relative_to(root):
@@ -593,7 +593,12 @@ def main():
             skills[role] = [
                 install_asset(role + "/" + path.name, path) for path in paths
             ]
-        args.arch_tool_root = install_asset("archcheck", args.arch_tool_root)
+        args.arch_tool_root, assets["archcheck"] = snapshot_arch(
+            args.arch_tool_root,
+            asset_root,
+            args.upgrade,
+            previous_assets.get("archcheck"),
+        )
         args.arch_digest = assets["archcheck"]["sha256"]
         installation.data["claude_assets"] = assets
     if args.notification_token_env is None:

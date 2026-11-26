@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import plistlib
 import subprocess
 import tempfile
@@ -77,14 +78,40 @@ class InstallTest(unittest.TestCase):
 
             def fail_new_start(argv, **_options):
                 attempts.append(argv[1])
-                if attempts == ["print", "bootout", "bootstrap"]:
+                if argv[1] == "kickstart":
+                    self.assertEqual(
+                        argv[2:],
+                        ["-k", f"gui/{os.getuid()}/com.agent-platform.local.8797"],
+                    )
+                    expected = b"new" if len(attempts) == 2 else b"old"
+                    self.assertEqual(binary.read_bytes(), expected)
+                    build = json.loads((root / "instance.json").read_bytes())["build"]
+                    self.assertEqual(build["sha256"], m.digest(expected))
+                if attempts == ["print", "kickstart"]:
                     raise subprocess.CalledProcessError(1, argv)
                 return subprocess.CompletedProcess(argv, 0)
 
             with patch.object(m.subprocess, "run", side_effect=fail_new_start):
                 with self.assertRaises(subprocess.CalledProcessError):
                     m.upgrade(root, new, {"revision": "new"}, 8797, True, True, plist)
-            self.assertEqual(attempts, ["print", "bootout", "bootstrap", "bootstrap"])
+            self.assertEqual(attempts, ["print", "kickstart", "kickstart"])
+            self.assertEqual(binary.read_bytes(), b"old")
+            self.assertEqual((root / "instance.json").read_bytes(), original)
+
+            with patch.object(
+                m.subprocess,
+                "run",
+                side_effect=[
+                    subprocess.CompletedProcess([], 113),
+                    subprocess.CalledProcessError(5, ["launchctl", "bootstrap"]),
+                ],
+            ) as unloaded:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    m.upgrade(root, new, {"revision": "new"}, 8797, True, False, plist)
+                self.assertEqual(
+                    [c.args[0][1] for c in unloaded.call_args_list],
+                    ["print", "bootstrap"],
+                )
             self.assertEqual(binary.read_bytes(), b"old")
             self.assertEqual((root / "instance.json").read_bytes(), original)
 
@@ -102,14 +129,14 @@ class InstallTest(unittest.TestCase):
                 )
                 self.assertEqual(
                     [call.args[0][1] for call in control.call_args_list],
-                    ["print", "bootout", "bootstrap"],
+                    ["print", "kickstart"],
                 )
                 self.assertFalse(
                     m.upgrade(root, new, {"revision": "new"}, 8797, True, True, plist)
                 )
                 self.assertEqual(
                     [call.args[0][1] for call in control.call_args_list],
-                    ["print", "bootout", "bootstrap"],
+                    ["print", "kickstart"],
                 )
                 current = json.loads((root / "instance.json").read_text())
                 self.assertEqual(current["build"]["revision"], "new")

@@ -13,7 +13,7 @@ import uuid
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from asset_snapshot import tree_digest
+from asset_snapshot import tree_digest, verify_arch_parsers
 
 
 def decision(ocr_code, arch_code, model_status, unchanged):
@@ -62,6 +62,7 @@ def main():
     arch = args.arch_tool_root.resolve(strict=True)
     if tree_digest(arch) != args.arch_digest:
         raise ValueError("Installed architecture tool differs from its recorded digest")
+    verify_arch_parsers(arch)
     output = Path("harness-output")
     output.mkdir(exist_ok=True)
     if ocr.OUTPUT.exists():
@@ -136,6 +137,7 @@ def main():
         == ocr.git(Path("."), "rev-parse", after + "^{tree}")
         and tree_digest(arch) == args.arch_digest
     )
+    verify_arch_parsers(arch)
     status = report.get("model_review", {}).get("status")
     code = decision(codes["ocr"], codes["archcheck"], status, unchanged)
     summary = {

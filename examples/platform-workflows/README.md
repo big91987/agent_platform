@@ -485,7 +485,7 @@ Agent 的 `turn_timeout_seconds` 限制单轮实际执行；从领取消息开�
 
 `install.py --template claude-delivery` 创建独立的本机角色流程，不修改既有 Run：需求（产品定义与 batch-grill-me）→架构→开发→固定测试→代码审查（Open Code Review 与 archcheck 均启用模型）→QA 计划→独立计划评审→独立 QA 执行→交付 Gate→报告与 PR。开发和报告不挂额外 Skill；QA 使用 `--qa-skill` 指定的验收 Skill 加 SaaS/MaaS/UI 查漏范围。架构阶段需提供与项目真实语言相符的 `architecture.json`。计划评审交接 READY 与计划摘要，执行前核对摘要，实质改动范围或断言须返回计划节点。此配置不强制初始化 Trellis，也不挂仅支持静态页面的旧浏览器工具。
 
-除安装器原有仓库、证据、工作区、Skill 路径及私有 GitHub 配置参数外，指定 `--arch-tool-root /absolute/trusted/arch-template/tool`。安装器在清单旁保存内容寻址的 Skill 和架构工具副本，清单记录各来源路径及 SHA-256。使用 `--upgrade` 安装变更版本，保留旧副本供冻结 Run 使用。archcheck 执行前后都会核对摘要。平台须已支持 `executor=claude`；模型省略时沿用服务端 CC 连接默认值，审批使用平台正式用户审批路径。需要实际网页测试时由 QA 使用任务环境内的浏览器能力，不把无工具的文档审查当验收。
+除安装器原有仓库、证据、工作区、Skill 路径及私有 GitHub 配置参数外，指定 `--arch-tool-root /absolute/trusted/arch-template/tool`。安装器在清单旁保存内容寻址的 Skill 和架构工具副本，清单记录各来源路径及 SHA-256。使用 `--upgrade` 安装变更版本，保留旧副本供冻结 Run 使用。archcheck 执行前后都会核对源码与依赖摘要。对含 npm 锁文件的架构工具，安装器在私有副本中运行有时限的 `npm ci --ignore-scripts`，验证锁定的 TypeScript 与 Vue 解析器可以实际解析，再记录依赖 SHA-256、Node/npm 版本和锁文件摘要。原工具目录的 `node_modules` 不进入源码快照，也不被修改。安装器和本机服务使用同一套 Node/npm。切换任一版本时，使用 `--upgrade` 为新运行时安装独立副本。旧副本和收据保留，冻结 Run 仍需匹配原运行时。安装失败时查看快照旁的私有 npm 日志。平台须已支持 `executor=claude`；模型省略时沿用服务端 CC 连接默认值，审批使用平台正式用户审批路径。需要实际网页测试时由 QA 使用任务环境内的浏览器能力，不把无工具的文档审查当验收。
 
 审查节点从平台服务端读取 `REVIEW_URL`（完整 Chat Completions URL）、`REVIEW_TOKEN`、`REVIEW_MODEL`、`REVIEW_PROTOCOL`，节点只保存环境变量引用。两工具各自完整报告后才可前进；任何工具错误、模型未执行或候选变动均停止。发现问题返回开发。源码来源和报告分别保存，QA 判断业务验收，不能以模型无发现替代测试。
 

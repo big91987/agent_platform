@@ -2,8 +2,15 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from asset_snapshot import snapshot
+from asset_snapshot import (
+    PARSERS,
+    prepare_arch_parsers,
+    snapshot,
+    snapshot_arch,
+    tree_digest,
+)
 from claude_profile import configure, role_skills
 from repository import ReviewedSourceChanged, git, task_docs, verify_reviewed_tree
 from review_pair import decision, prepared_head
@@ -191,6 +198,96 @@ class ClaudeProfileTest(unittest.TestCase):
             (new / "SKILL.md").write_text("drift")
             with self.assertRaisesRegex(ValueError, "recorded digest"):
                 snapshot(source, root / "installed", True, previous)
+
+    def test_parser_runtime_upgrade_preserves_frozen_copy_and_checks_drift(self):
+        versions = dict.fromkeys(PARSERS, "1.0.0")
+        packages = {
+            "node_modules/" + name: {"version": v} for name, v in versions.items()
+        }
+
+        def locked_install(argv, *, cwd, **kwargs):
+            self.assertEqual(argv[:2], ["npm", "ci"])
+            modules = cwd / "node_modules"
+            modules.mkdir()
+            (modules / "parser").write_text("locked dependency")
+
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch(
+                "asset_snapshot.parser_runtime", return_value={"node": "a", "npm": "x"}
+            ) as runtime,
+            patch(
+                "asset_snapshot.subprocess.run", side_effect=locked_install
+            ) as installs,
+            patch(
+                "asset_snapshot.subprocess.check_output",
+                return_value=json.dumps(versions),
+            ),
+        ):
+            root = Path(temporary)
+            source = root / "tool"
+            source.mkdir()
+            (source / "package.json").write_text(json.dumps({"dependencies": versions}))
+            (source / "package-lock.json").write_text(
+                json.dumps({"packages": packages})
+            )
+            assets = root / "assets"
+            # Exercise an installation made before runtime-specific copies existed.
+            old, previous = snapshot(source, assets, False)
+            previous["parser_installation"] = prepare_arch_parsers(old)
+            old_receipt = old.with_name("tool-parsers.json").read_bytes()
+            self.assertEqual(
+                snapshot_arch(source, assets, False, previous), (old, previous)
+            )
+            runtime.return_value = {"node": "b", "npm": "x"}
+            with self.assertRaisesRegex(ValueError, "--upgrade"):
+                snapshot_arch(source, assets, False, previous)
+            dependency = old / "node_modules/parser"
+            dependency.write_text("tamper")
+            with self.assertRaisesRegex(ValueError, "parser files"):
+                snapshot_arch(source, assets, True, previous)
+            dependency.write_text("locked dependency")
+            new, current = snapshot_arch(source, assets, True, previous)
+            self.assertNotEqual(old, new)
+            self.assertEqual(previous["sha256"], current["sha256"])
+            self.assertEqual(
+                current["parser_installation"]["runtime"], runtime.return_value
+            )
+            self.assertEqual(
+                snapshot_arch(source, assets, False, current), (new, current)
+            )
+            self.assertEqual(snapshot_arch(source, assets, False), (new, current))
+            self.assertEqual(
+                old.with_name("tool-parsers.json").read_bytes(), old_receipt
+            )
+            self.assertEqual(installs.call_count, 2)
+            (new / "node_modules/parser").write_text("tamper")
+            with self.assertRaisesRegex(ValueError, "parser files"):
+                snapshot_arch(source, assets, True, current)
+
+    def test_source_snapshot_ignores_generated_dependencies_and_private_environment(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "tool"
+            source.mkdir()
+            (source / "package-lock.json").write_text("{}")
+            (source / ".env.local").write_text("private fixture")
+            dependencies = source / "node_modules"
+            (dependencies / ".bin").mkdir(parents=True)
+            (dependencies / "parser").write_text("generated fixture")
+            link = dependencies / ".bin" / "parser"
+            link.symlink_to("../parser")
+            installed, receipt = snapshot(source, root / "installed", False)
+            self.assertTrue(link.is_symlink())
+            self.assertFalse((installed / "node_modules").exists())
+            self.assertFalse((installed / ".env.local").exists())
+            (dependencies / "parser").write_text("updated generated fixture")
+            self.assertEqual(tree_digest(source), receipt["sha256"])
+            self.assertEqual(
+                snapshot(source, root / "installed", False, receipt)[0], installed
+            )
 
     def test_review_uses_completed_platform_receipt_not_agent_result(self):
         row = {

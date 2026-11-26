@@ -16,6 +16,6 @@ python3 deploy/local/install.py --root /absolute/private/instance --binary /abso
 python3 deploy/local/install.py --upgrade --root /absolute/private/instance --binary /absolute/new/agent-platform --port 8797 --activate --confirm-idle
 ```
 
-升级保留启动参数、LaunchAgent、数据和凭据。若已安装二进制与实例记录的摘要不符，升级会停止。旧二进制和旧版本记录保存在实例的 `previous-builds/<sha256>/` 中。同一二进制重复升级不重启实例。安装或升级后核对 `/api/health` 与二进制版本、实际原生会话及角色交接后才恢复产品任务投递。
+升级保留启动参数、LaunchAgent、数据和凭据。对于已加载的服务，安装器替换文件后通过 `launchctl kickstart -k` 重启已注册的任务。若已安装二进制与实例记录的摘要不符，升级会停止。旧二进制和旧版本记录保存在实例的 `previous-builds/<sha256>/` 中。同一二进制重复升级不重启实例。安装或升级后核对 `/api/health` 与二进制版本、实际原生会话及角色交接后才恢复产品任务投递。
 
 服务标识 `com.agent-platform.local.<port>`。停止使用 `launchctl bootout gui/<uid>/com.agent-platform.local.<port>`；保留实例目录即可保留历史。启动用 `launchctl bootstrap gui/<uid> ~/Library/LaunchAgents/com.agent-platform.local.<port>.plist`。不要把服务目录或凭据提交到 Git。

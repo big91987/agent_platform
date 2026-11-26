@@ -62,6 +62,10 @@ def boot(plist):
     )
 
 
+def restart(target):
+    subprocess.run(["launchctl", "kickstart", "-k", target], check=True, timeout=30)
+
+
 def upgrade(root, source, version, port, activate, confirm_idle, plist):
     config_path = root / "instance.json"
     config = read_private(config_path)
@@ -119,18 +123,18 @@ def upgrade(root, source, version, port, activate, confirm_idle, plist):
         if not path.exists():
             write(path, data, mode)
     config["build"] = {**version, "sha256": new_digest}
-    if loaded:
-        subprocess.run(["launchctl", "bootout", target], check=True, timeout=30)
     try:
         write(binary, new_binary, 0o700)
         write(config_path, (json.dumps(config, indent=2) + "\n").encode())
-        if activate:
+        if loaded:
+            restart(target)
+        elif activate:
             boot(plist)
     except (OSError, ValueError, subprocess.SubprocessError):
         write(binary, old_binary, 0o700)
         write(config_path, old_config)
         if loaded:
-            boot(plist)
+            restart(target)
         raise
     return True
 
