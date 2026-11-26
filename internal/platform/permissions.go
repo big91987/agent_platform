@@ -148,7 +148,7 @@ func (s *Scheduler) ApplyAgentPermissions(id string) error {
 	c.Snapshot.NetworkAccess = a.NetworkAccess
 	c.Snapshot.AllowElevation = a.AllowElevation
 	c.Snapshot.ApprovalsReviewer = a.ApprovalsReviewer
-	if _, err := nativeConfig(c.Snapshot); err != nil {
+	if err := validateExecutor(c.Snapshot); err != nil {
 		return err
 	}
 	return s.saveConversationPermissions(c)
@@ -172,7 +172,7 @@ func (s *Scheduler) SetConversationPermissions(id string, network, elevation boo
 		}
 		c.Snapshot.ApprovalsReviewer = *reviewer
 	}
-	if _, err := nativeConfig(c.Snapshot); err != nil {
+	if err := validateExecutor(c.Snapshot); err != nil {
 		return err
 	}
 	return s.saveConversationPermissions(c)

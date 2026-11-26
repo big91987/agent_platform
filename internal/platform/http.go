@@ -244,7 +244,7 @@ func (h *Server) saveAgent(w http.ResponseWriter, r *http.Request, c Caller) {
 	} else {
 		a.ID = ""
 	}
-	if _, e := nativeConfig(a); e != nil {
+	if e := validateExecutor(a); e != nil {
 		fail(w, e)
 		return
 	}

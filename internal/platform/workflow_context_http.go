@@ -120,7 +120,9 @@ func (h *Server) workflowContextRoutes() {
 		}
 		sort.Strings(tools)
 		project := []string{fmt.Sprintf("%s 原生项目指令发现，工作目录：%s；平台不复制或修改 AGENTS.md", conv.Snapshot.Executor, conv.workspace(h.store.Dir))}
-		if conv.Snapshot.Executor != "codex" {
+		if conv.Snapshot.Executor == "claude" {
+			project = []string{fmt.Sprintf("Claude Code 原生引用工作区 AGENTS.md：%s", conv.workspace(h.store.Dir))}
+		} else if conv.Snapshot.Executor != "codex" {
 			project = []string{"当前执行器的项目指令发现能力未在本次验收验证"}
 		}
 		// Private native options/env/auth never enter this endpoint. Reuse the executor

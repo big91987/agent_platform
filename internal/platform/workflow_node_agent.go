@@ -11,10 +11,7 @@ func validateWorkflowAgent(q rowQuerier, a Agent) error {
 	if a.ID != "" || a.Name != "" || a.Enabled || len(a.AuthorizedUsers) > 0 || len(a.ResolvedTools) > 0 {
 		return errors.New("node agent accepts execution settings only; identity and authorization belong to the workflow")
 	}
-	if a.Executor != "codex" {
-		return errors.New("only Codex is supported")
-	}
-	if _, err := nativeConfig(a); err != nil {
+	if err := validateExecutor(a); err != nil {
 		return err
 	}
 	if _, err := executorEnv(a, "managed"); err != nil {

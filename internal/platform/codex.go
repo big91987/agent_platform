@@ -20,9 +20,10 @@ import (
 )
 
 type Codex struct {
-	Root, Binary, AuthHome string
-	Store                  *Store
-	Approve                func(context.Context, Conversation, Message, json.RawMessage) (string, error)
+	Root, Binary, AuthHome         string
+	ClaudeBinary, ClaudeConfigHome string
+	Store                          *Store
+	Approve                        func(context.Context, Conversation, Message, json.RawMessage) (string, error)
 }
 type CheckResult struct {
 	Ready   bool     `json:"ready"`
@@ -554,6 +555,9 @@ func (x *Codex) catalog(ctx context.Context, dir string, env []string) ([]native
 	return result.Data[0].Skills, nil
 }
 func (x *Codex) Check(ctx context.Context, a Agent) (CheckResult, error) {
+	if a.Executor == "claude" {
+		return x.claude().Check(ctx, a)
+	}
 	if a.Executor != "codex" {
 		return CheckResult{}, errors.New("only Codex is implemented")
 	}
@@ -599,6 +603,9 @@ func nativeRecord(home, id string) bool {
 	return found
 }
 func (x *Codex) Execute(ctx context.Context, c Conversation, m Message, onEvent func([]byte) error) error {
+	if c.Snapshot.Executor == "claude" {
+		return x.claude().Execute(ctx, c, m, onEvent)
+	}
 	if x.Store != nil {
 		run, err := x.Store.sandboxRunForConversation(c.ID)
 		if err != nil {
@@ -636,4 +643,8 @@ func (x *Codex) Execute(ctx context.Context, c Conversation, m Message, onEvent 
 		return e
 	}
 	return x.executeAppServer(ctx, c, m, workspace, home, env, onEvent)
+}
+
+func (x *Codex) claude() *Claude {
+	return &Claude{Root: x.Root, Store: x.Store, Binary: x.ClaudeBinary, ConfigHome: x.ClaudeConfigHome, Approve: x.Approve}
 }

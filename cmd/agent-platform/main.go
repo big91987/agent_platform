@@ -23,6 +23,8 @@ func main() {
 	base := flag.String("base-url", "", "public URL for conversation links")
 	concurrency := flag.Int("concurrency", 2, "maximum simultaneous local executions")
 	binary := flag.String("codex", "codex", "native Codex binary")
+	claude := flag.String("claude", "claude", "native Claude Code binary")
+	claudeHome := flag.String("claude-config-home", "", "local Claude provider configuration directory")
 	auth := flag.String("auth-home", "", "native Codex authentication directory")
 	sandboxConfig := flag.String("sandbox-config", "", "private OpenSandbox service configuration")
 	sandboxImage := flag.String("sandbox-image", "agent-platform-runtime:0.1.0", "fixed image for new OpenSandbox Runs")
@@ -64,7 +66,7 @@ func main() {
 			log.Fatal(e)
 		}
 	}
-	x := &platform.Codex{Root: s.Dir, Store: s, Binary: *binary, AuthHome: *auth, Approve: s.AwaitToolApproval}
+	x := &platform.Codex{Root: s.Dir, Store: s, Binary: *binary, ClaudeBinary: *claude, ClaudeConfigHome: *claudeHome, AuthHome: *auth, Approve: s.AwaitToolApproval}
 	scheduler := platform.NewScheduler(s, x, *concurrency)
 	scheduler.Start()
 	defer scheduler.Close()

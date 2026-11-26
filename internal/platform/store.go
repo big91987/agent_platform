@@ -128,8 +128,8 @@ func (s *Store) SaveAgent(a Agent) (Agent, error) {
 	if strings.TrimSpace(a.Name) == "" {
 		return a, errors.New("Agent name is required")
 	}
-	if a.Executor != "codex" {
-		return a, errors.New("only Codex is implemented in this experiment")
+	if err := validateExecutor(a); err != nil {
+		return a, err
 	}
 	if a.ID == "" {
 		a.ID = newID()

@@ -85,7 +85,7 @@ func (s *Scheduler) dispatch() {
 			ctx, cancel = context.WithTimeout(s.ctx, time.Duration(c.Snapshot.TurnTimeoutSeconds)*time.Second)
 		}
 		s.active[c.ID] = cancel
-		if x, ok := s.executor.(interface{ SupportsSteering() bool }); ok && x.SupportsSteering() {
+		if x, ok := s.executor.(interface{ SupportsSteering() bool }); ok && x.SupportsSteering() && c.Snapshot.Executor != "claude" {
 			ch := make(chan steeringInput, 16)
 			s.steering[c.ID] = ch
 			ctx = context.WithValue(ctx, steeringKey{}, ch)
