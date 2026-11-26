@@ -428,7 +428,7 @@ func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
 	defer os.Remove(outside)
 	for _, escape := range []bool{false, true} {
 		c.ID = "outside-" + fmt.Sprint(escape)
-		attempted, blocked := false, false
+		attemptedID, blocked := "", false
 		instruction := "Use Bash exactly once with command " + fmt.Sprintf("printf forbidden > %q", outside) + ". Stop immediately after its result, even if the operation is denied. Do not use any other tools."
 		if escape {
 			instruction += " Set the Bash input dangerouslyDisableSandbox to true for this boundary test."
@@ -438,9 +438,11 @@ func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
 				Native struct {
 					Message struct {
 						Content []struct {
-							Type  string `json:"type"`
-							Name  string `json:"name"`
-							Input struct {
+							Type      string `json:"type"`
+							Name      string `json:"name"`
+							ID        string `json:"id"`
+							ToolUseID string `json:"tool_use_id"`
+							Input     struct {
 								Command     string `json:"command"`
 								Unsandboxed bool   `json:"dangerouslyDisableSandbox"`
 							} `json:"input"`
@@ -452,9 +454,9 @@ func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
 			json.Unmarshal(raw, &e)
 			for _, b := range e.Native.Message.Content {
 				if b.Type == "tool_use" && b.Name == "Bash" && strings.Contains(b.Input.Command, outside) && (!escape || b.Input.Unsandboxed) {
-					attempted = true
+					attemptedID = b.ID
 				}
-				if b.Type == "tool_result" && b.IsError {
+				if b.Type == "tool_result" && b.IsError && attemptedID != "" && b.ToolUseID == attemptedID {
 					blocked = true
 				}
 			}
@@ -463,8 +465,8 @@ func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !attempted || !blocked {
-			t.Fatalf("outside Bash escape=%v attempted=%v blocked=%v", escape, attempted, blocked)
+		if attemptedID == "" || !blocked {
+			t.Fatalf("outside Bash escape=%v attempted=%v blocked=%v", escape, attemptedID != "", blocked)
 		}
 		if _, err = os.Stat(outside); !os.IsNotExist(err) {
 			t.Fatalf("outside Bash escaped isolation (escape=%v)", escape)
@@ -472,5 +474,72 @@ func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
 	}
 	if approvals != 0 {
 		t.Fatalf("outside Bash was stopped by platform approval rather than native isolation: %d callbacks", approvals)
+	}
+}
+
+func TestClaudeNamedBearerInEventAndApproval(t *testing.T) {
+	root := t.TempDir()
+	home := t.TempDir()
+	script := `#!/bin/sh
+read -r init
+echo '{"type":"control_response","response":{"request_id":"initialize","subtype":"success"}}'
+read -r msg
+echo '{"type":"assistant","session_id":"native-thread-id","message":{"content":[{"type":"text","text":"thread demo-value-long"}]}}'
+echo '{"type":"control_request","request_id":"approve","request":{"subtype":"can_use_tool","tool_name":"Read","input":{"thread":"demo-value-long"}}}'
+read -r reply
+echo '{"type":"result","session_id":"native-thread-id","subtype":"success"}'
+`
+	binary := filepath.Join(root, "native")
+	if err := os.WriteFile(binary, []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	var approval struct {
+		Privileged bool              `json:"platform_permission_request"`
+		Tool       string            `json:"tool"`
+		Arguments  map[string]string `json:"arguments"`
+	}
+	x := &Claude{Binary: binary, Approve: func(_ context.Context, _ Conversation, _ Message, raw json.RawMessage) (string, error) {
+		return "deny", json.Unmarshal(raw, &approval)
+	}}
+	a := Agent{AllowElevation: true, ResolvedTools: map[string]ResolvedToolServer{}}
+	env := []string{"API_KEY=demo-value"}
+	for key, value := range map[string]string{"ROUTE_HEADER": "demo-value-long", "ROUTE_B": "thread", "ROUTE_C": "tool", "ROUTE_D": "Read"} {
+		a.ResolvedTools[key] = ResolvedToolServer{Connection: MCPConnection{URL: "https://example.invalid", BearerTokenEnvVar: key}}
+		env = append(env, key+"="+value)
+	}
+	var started, projected bool
+	err := x.run(context.Background(), Conversation{Snapshot: a}, Message{}, root, home, "native-thread-id", nil, env, nil, func(raw []byte) error {
+		var event struct {
+			Type     string          `json:"type"`
+			ThreadID string          `json:"thread_id"`
+			Native   json.RawMessage `json:"native"`
+			Item     struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"item"`
+		}
+		if err := json.Unmarshal(raw, &event); err != nil {
+			return err
+		}
+		if !started {
+			if event.Type != "thread.started" || event.ThreadID != "native-thread-id" {
+				return errors.New("missing exact session identity before input")
+			}
+			started = true
+		}
+		if strings.Contains(string(event.Native), "demo-value") || strings.Contains(string(event.Native), "thread") {
+			return errors.New("native payload credential was exposed")
+		}
+		if event.Type == "item.completed" && event.Item.Type == "agent_message" {
+			projected = event.Item.Text == "[redacted] [redacted]"
+		}
+		return nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "without a durable native session") {
+		t.Fatalf("unexpected fixture result: %v", err)
+	}
+	if !started || !projected || !approval.Privileged || approval.Tool != "Read" ||
+		len(approval.Arguments) != 1 || approval.Arguments["[redacted]"] != "[redacted]" {
+		t.Fatal("typed lifecycle, presentation or approval fields did not survive payload redaction")
 	}
 }

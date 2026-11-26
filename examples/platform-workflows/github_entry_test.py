@@ -4,28 +4,120 @@ import copy
 import json
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
+from unittest.mock import Mock, patch
 
-from github_entry import check_legacy_intake, event_input
+from github_entry import APIError, event_input, forward
 
 
-class LegacyIntakeTest(unittest.TestCase):
-    def test_existing_or_uncertain_legacy_start_cannot_cross_to_new_store(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            state = root / "state"
-            state.mkdir()
-            config = root / "legacy.json"
-            config.write_text(
-                json.dumps({"repository": "owner/repo", "state_root": str(state)})
+class SharedIntakeTest(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        self.configs = []
+        self.paths = []
+        self.clients = []
+        self.current = {}
+        for route in ("legacy", "claude"):
+            config = dict(
+                repository="owner/repo",
+                workflow_id=route,
+                base_url="http://localhost",
+                state_root=str(root / (route + "-state")),
+                workspace_root=str(root / (route + "-work")),
             )
-            check_legacy_intake(config, "owner/repo", 1)
-            for receipt in ("1-start.json", "1-run.json"):
-                path = state / receipt
-                path.write_text("{}")
-                with self.assertRaisesRegex(ValueError, "existing Run"):
-                    check_legacy_intake(config, "owner/repo", 1)
-                path.unlink()
+            if route == "claude":
+                config["issue_label"] = "harness-claude"
+            self.configs.append(config)
+            path = root / (route + ".json")
+            path.write_text(json.dumps(config))
+            self.paths.append(path)
+            client = Mock()
+
+            def lookup(key, route=route):
+                if route not in self.current:
+                    raise APIError(404, "no run")
+                return self.current[route]
+
+            def start(workflow, *args, **kw):
+                self.current[workflow] = dict(
+                    id=workflow, status="running", workflow_id=workflow
+                )
+                return self.current[workflow]
+
+            client.workflow_by_request.side_effect = lookup
+            client.start_workflow.side_effect = start
+            self.clients.append(client)
+        self.issue = dict(
+            id=123, number=7, title="Example", user={"login": "owner"}, state="open"
+        )
+        for name in ("notify", "prepare_workspace", "report_run"):
+            patcher = patch("github_entry." + name)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def submit(self, index):
+        return forward(
+            self.configs[index],
+            self.clients[index],
+            7,
+            legacy_config=self.paths[0] if index else None,
+            claude_config=self.paths[1] if not index else None,
+        )
+
+    def issue_for(self, index):
+        return dict(self.issue, labels=[{"name": "harness-claude"}] if index else [])
+
+    def check_transition(self, first):
+        with patch("github_entry.github", return_value=self.issue_for(first)):
+            self.assertEqual(self.submit(first), self.submit(first))
+        with patch("github_entry.github", return_value=self.issue_for(1 - first)):
+            with self.assertRaisesRegex(ValueError, "existing Run"):
+                self.submit(1 - first)
+        self.assertEqual(sum(c.start_workflow.call_count for c in self.clients), 1)
+
+    def test_claude_then_legacy(self):
+        self.check_transition(1)
+
+    def test_legacy_then_claude(self):
+        self.check_transition(0)
+
+    def test_existing_or_uncertain_private_receipts_prevent_cross_service_intake(self):
+        for first in (0, 1):
+            state = Path(self.configs[first]["state_root"])
+            state.mkdir(exist_ok=True)
+            with patch("github_entry.github", return_value=self.issue_for(1 - first)):
+                for suffix in ("-start.json", "-run.json"):
+                    receipt = state / ("123" + suffix)
+                    receipt.write_text("{}")
+                    with self.assertRaisesRegex(ValueError, "existing Run"):
+                        self.submit(1 - first)
+                    receipt.unlink()
+        for client in self.clients:
+            client.workflow_by_request.assert_not_called()
+
+    def test_concurrent_label_transition_only_starts_one_service(self):
+        barrier = Barrier(2)
+
+        def transport(config):
+            def read_issue(*args):
+                barrier.wait(timeout=4)
+                return self.issue_for(config["workflow_id"] == "claude")
+
+            return read_issue
+
+        with (
+            patch("github_entry.configured_github_call", side_effect=transport),
+            ThreadPoolExecutor(2) as pool,
+        ):
+            futures = [pool.submit(self.submit, i) for i in (0, 1)]
+            errors = [f.exception(timeout=8) for f in futures]
+        self.assertEqual(len(self.current), 1)
+        self.assertEqual(sum(error is None for error in errors), 1)
+        self.assertIn("existing Run", str(next(e for e in errors if e)))
 
 
 class FailureDiagnosticTest(unittest.TestCase):

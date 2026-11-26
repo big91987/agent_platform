@@ -1,4 +1,6 @@
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +15,7 @@ from asset_snapshot import (
 )
 from claude_profile import configure, role_skills
 from repository import ReviewedSourceChanged, git, task_docs, verify_reviewed_tree
-from review_pair import decision, prepared_head
+from review_pair import decision, expose_artifacts, load_ocr_runtime, prepared_head
 
 
 class ClaudeProfileTest(unittest.TestCase):
@@ -29,6 +31,184 @@ class ClaudeProfileTest(unittest.TestCase):
         ):
             with self.subTest(args=args):
                 self.assertEqual(decision(*args), 20)
+
+    def test_artifact_export_refuses_linked_parent_and_replaces_linked_destination(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            outside = root / "outside"
+            outside.mkdir()
+            sentinel = outside / "review-pair.json"
+            sentinel.write_text("unchanged")
+            private = root / "private"
+            private.mkdir()
+            (private / "review-pair.json").write_text("new report")
+            workspace = root / "work"
+            workspace.mkdir()
+            fd = os.open(workspace, os.O_DIRECTORY)
+            self.addCleanup(os.close, fd)
+            output = workspace / "harness-output"
+            output.symlink_to(outside)
+            with self.assertRaises(OSError):
+                expose_artifacts(fd, private)
+            self.assertEqual(sentinel.read_text(), "unchanged")
+            output.unlink()
+            output.mkdir()
+            (output / sentinel.name).symlink_to(sentinel)
+            expose_artifacts(fd, private)
+            self.assertEqual(sentinel.read_text(), "unchanged")
+            self.assertEqual((output / sentinel.name).read_text(), "new report")
+
+    def test_connector_reviews_private_checkout_and_returns_incomplete_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            work = root / "checkout"
+            work.mkdir()
+            git(work, "init", "-q")
+            git(work, "config", "user.name", "Test")
+            git(work, "config", "user.email", "test@localhost")
+            source = work / "app.py"
+            source.write_text("initial")
+            git(work, "add", "-A")
+            git(work, "commit", "-qm", "base")
+            base = git(work, "rev-parse", "HEAD")
+            source.write_text("candidate")
+            old_state = root / "old-state"
+            old_state.mkdir()
+            (work / ".git/agent-platform-review").symlink_to(old_state)
+            cache = root / "cache"
+            cache.mkdir()
+            # Fail the pinned binary digest locally, before any provider call.
+            (cache / "ocr").write_text("unavailable")
+            arch = root / "arch"
+            arch.mkdir()
+            (arch / "inspect_project.py").write_text(
+                "import json,subprocess\nfrom pathlib import Path\n"
+                "head = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()\n"
+                "Path('harness-output/architecture/latest-report.json').write_text(json.dumps({"
+                "'git_head':head,'model_review':{'status':'not_run'},'root':str(Path.cwd()),"
+                "'input':Path('app.py').read_text()}))\n"
+            )
+            context = dict(
+                workspace_path=str(work),
+                previous_results=[
+                    dict(
+                        node_id="prepare",
+                        status="completed",
+                        connector_receipt=dict(
+                            exit_code=0, output=json.dumps({"head": base})
+                        ),
+                    )
+                ],
+            )
+            result = subprocess.run(
+                [
+                    os.sys.executable,
+                    str(Path(__file__).with_name("review_pair.py").resolve()),
+                    "--arch-tool-root",
+                    str(arch),
+                    "--arch-digest",
+                    tree_digest(arch),
+                    "--ocr-cache",
+                    str(cache),
+                ],
+                cwd=work,
+                input=json.dumps(context),
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 20, result.stderr)
+            receipt = json.loads(result.stdout)
+            report = json.loads(
+                (work / "harness-output/architecture/latest-report.json").read_text()
+            )
+            self.assertEqual(report["git_head"], receipt["candidate"])
+            self.assertEqual(report["input"], "candidate")
+            self.assertFalse(Path(report["root"]).is_relative_to(work))
+            self.assertTrue(receipt["source_unchanged"])
+            self.assertEqual(list(old_state.iterdir()), [])
+
+    def test_publish_entry_pushes_exact_reviewed_files_with_ignored_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            work = root / "checkout"
+            remote = root / "remote.git"
+            work.mkdir()
+            git(root, "init", "--bare", str(remote))
+            git(work, "init", "-q")
+            git(work, "config", "user.name", "Test")
+            git(work, "config", "user.email", "test@localhost")
+            run = {
+                "run_id": "a" * 32,
+                "workspace_path": str(work.resolve()),
+                "previous_results": [],
+            }
+            branch = "workflow/" + run["run_id"]
+            git(work, "switch", "-c", branch)
+            origin = "https://github.com/owner/example.git"
+            git(work, "remote", "add", "origin", origin)
+            git(work, "config", "remote.origin.pushurl", str(remote))
+            (work / ".gitignore").write_text("harness-output/\n")
+            (work / "remove").write_text("original")
+            git(work, "add", "-A")
+            git(work, "commit", "-qm", "base")
+            (work / "remove").unlink()
+            special = ":(glob)*\nexample.py"
+            (work / special).write_text("pass")
+            (work / "harness-output").mkdir()
+            (work / "harness-output/excluded").write_text("private output")
+            candidate = load_ocr_runtime().candidate_commit(work)
+            run["previous_results"].append(
+                dict(
+                    node_id="code_review",
+                    status="completed",
+                    connector_receipt={
+                        "exit_code": 0,
+                        "output": json.dumps(
+                            dict(
+                                candidate=candidate, exit_code=0, source_unchanged=True
+                            )
+                        ),
+                    },
+                )
+            )
+            directory = task_docs(run)
+            (work / directory).mkdir(parents=True)
+            for node in ("qa_plan", "qa_plan_review", "qa", "report"):
+                name = directory + "/" + ("pr.md" if node == "report" else node + ".md")
+                (work / name).write_text("Reviewed evidence")
+                run["previous_results"].append(
+                    dict(
+                        node_id=node,
+                        status="completed",
+                        result=dict(route="next", artifacts=[name]),
+                    )
+                )
+            receipt = json.loads(
+                subprocess.check_output(
+                    [
+                        os.sys.executable,
+                        str(Path(__file__).with_name("repository.py").resolve()),
+                        "publish",
+                        "--repository",
+                        "owner/example",
+                        "--reviewed-source",
+                        "--task-docs",
+                    ],
+                    cwd=work,
+                    input=json.dumps(run),
+                    text=True,
+                )
+            )
+            self.assertEqual(receipt["head"], git(remote, "rev-parse", branch))
+            names = subprocess.check_output(
+                ["git", "-C", str(remote), "ls-tree", "-rz", "--name-only", branch]
+            ).split(b"\0")
+            self.assertIn(os.fsencode(special), names)
+            self.assertNotIn(b"remove", names)
+            self.assertNotIn(b"harness-output/excluded", names)
+            self.assertIn(os.fsencode(directory + "/pr.md"), names)
 
     def test_role_flow_requires_tests_reviews_qa_and_delivery_gate(self):
         graph = json.loads(

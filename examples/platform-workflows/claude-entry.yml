@@ -18,7 +18,7 @@ permissions:
   contents: read
   issues: write
 concurrency:
-  group: claude-entry-${{ github.repository }}-${{ github.event.issue.number || inputs.issue }}
+  group: platform-entry-${{ github.repository }}-${{ github.event.issue.number || inputs.issue }}
   cancel-in-progress: false
   queue: max
 jobs:

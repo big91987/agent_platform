@@ -78,7 +78,11 @@ def repository_command(role, repository, base, test_command):
     return command
 
 
-def stage_instructions(role, common, command_label):
+def stage_instructions(role, common, command_label, template=None, introduction=""):
+    if template == "claude-delivery" and role in ("development", "report"):
+        responsibilities = (HERE / f"prompts/claude-{role}.md").read_text()
+        return responsibilities.replace("{{verification_command}}", command_label)
+
     roles = json.loads((HERE / "prompts/roles.json").read_text())
     responsibilities = (HERE / f"prompts/{role}.md").read_text()
     if role.startswith("e2e_"):
@@ -88,7 +92,9 @@ def stage_instructions(role, common, command_label):
         if role == "collaboration"
         else (roles[role], common, responsibilities)
     )
-    return "\n\n".join(guidance).replace("{{verification_command}}", command_label)
+    return "\n\n".join(filter(None, (introduction, *guidance))).replace(
+        "{{verification_command}}", command_label
+    )
 
 
 class API:
@@ -697,14 +703,12 @@ def main():
             if args.agent_turn_timeout is not None
             else prior.get("turn_timeout_seconds", 1800 if not prior else 0),
             "inherit_env": False,
-            "instructions": "\n\n".join(
-                filter(
-                    None,
-                    (
-                        node.get("agent", {}).get("instructions", ""),
-                        stage_instructions(role, common, command_label),
-                    ),
-                )
+            "instructions": stage_instructions(
+                role,
+                common,
+                command_label,
+                args.template,
+                node.get("agent", {}).get("instructions", ""),
             ),
             "skills": [str(path.resolve()) for path in skills.get(role, [])],
             "env": {
@@ -750,6 +754,7 @@ def main():
         review_command, review_refs = review_connector(
             args.arch_tool_root, args.review_model_prefix, args.arch_digest
         )
+        review_command += ["--ocr-cache", str(asset_root / "ocr")]
     connectors = {}
     connector_roles = ["prepare", "issue", "tests", "publish", "pr", "comment"]
     if args.template == "claude-delivery":

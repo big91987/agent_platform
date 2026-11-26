@@ -494,7 +494,9 @@ def publish(workspace, run, scoped_docs=False, materials=False, reviewed_source=
         )
     check_publish_files(workspace, exclude_runtime=reviewed_source)
     if reviewed_source:
-        git(workspace, "add", "--all", "--", ".", ":(exclude)harness-output")
+        from review_pair import load_ocr_runtime
+
+        load_ocr_runtime().stage_candidate(workspace)
         verify_reviewed_tree(workspace, run, git(workspace, "write-tree"))
     else:
         git(workspace, "add", "--all")

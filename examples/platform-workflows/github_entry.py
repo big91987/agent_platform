@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.parse
+from contextlib import ExitStack
 from functools import partial
 from pathlib import Path
 
@@ -287,35 +288,18 @@ def configured_github_call(config, call=None):
     return call
 
 
-def check_legacy_intake(legacy_config, repository, issue_id):
-    if not legacy_config:
-        return
-    try:
-        legacy = json.loads(Path(legacy_config).read_text())
-        if (
-            legacy["repository"] != repository
-            or legacy.get("issue_label") == "harness-claude"
-        ):
-            raise ValueError(
-                "Legacy adapter configuration does not match this repository"
-            )
-        state = Path(legacy["state_root"]).resolve()
-        if not state.exists():
-            return
-        with (state / (str(issue_id) + ".lock")).open("a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            if any(
-                (state / (str(issue_id) + suffix)).exists()
-                for suffix in ("-start.json", "-run.json")
-            ):
-                raise ValueError(
-                    "This Issue was already submitted through the legacy entry. Continue from its existing Run."
-                )
-    except (OSError, KeyError) as error:
-        raise ValueError("Cannot verify legacy adapter intake state") from error
+def entry_state(config):
+    state = Path(config["state_root"]).resolve()
+    workspace = Path(config["workspace_root"]).resolve()
+    if state.is_relative_to(workspace) or workspace.is_relative_to(state):
+        raise ValueError("Adapter state must be outside Agent workspaces")
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return state
 
 
-def forward(config, client, number, comment_id=0, legacy_config=None):
+def forward(
+    config, client, number, comment_id=0, legacy_config=None, claude_config=None
+):
     github_call = configured_github_call(config)
     repo = config["repository"]
     owner = repo.split("/")[0]
@@ -345,17 +329,50 @@ def forward(config, client, number, comment_id=0, legacy_config=None):
         x["name"] for x in issue.get("labels", [])
     }:
         raise ValueError("Issue does not select this Pipeline")
-    if config.get("issue_label") == "harness-claude":
-        check_legacy_intake(legacy_config, repo, issue["id"])
+    is_claude = config.get("issue_label") == "harness-claude"
+    owner_entry = "claude" if is_claude else "legacy"
+    peer_path = legacy_config if is_claude else claude_config
+    state = entry_state(config)
+    peer_state = None
+    if peer_path:
+        try:
+            peer = json.loads(Path(peer_path).read_text())
+        except (OSError, ValueError) as error:
+            raise ValueError(
+                "Cannot read the private peer entry configuration"
+            ) from error
+        if (
+            peer["repository"] != repo
+            or (peer.get("issue_label") == "harness-claude") == is_claude
+        ):
+            raise ValueError(
+                "Peer entry configuration does not match this repository and route"
+            )
+        peer_state = entry_state(peer)
+        if peer_state == state:
+            raise ValueError("Each entry needs its own private receipt directory")
     key = f"github:{repo}:issue:{issue['id']}"
-    state = Path(config["state_root"]).resolve()
-    workspace_root = Path(config["workspace_root"]).resolve()
-    if state.is_relative_to(workspace_root) or workspace_root.is_relative_to(state):
-        raise ValueError("Adapter state must be outside Agent workspaces")
-    state.mkdir(parents=True, exist_ok=True, mode=0o700)
-    lockpath = state / (str(issue["id"]) + ".lock")
-    with lockpath.open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    # Always lock legacy first, including its historical per-Issue lock.
+    # Keep both locks until the frozen request and its acceptance are recorded.
+    roots = (peer_state, state) if is_claude else (state, peer_state)
+    with ExitStack() as locks:
+        for root in filter(None, roots):
+            lock = locks.enter_context((root / (str(issue["id"]) + ".lock")).open("a"))
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        claim = (roots[0] or state) / (str(issue["id"]) + "-entry.json")
+        peer_receipts = ("-start.json", "-run.json")
+        if peer_state and peer_state != claim.parent:
+            peer_receipts += ("-entry.json",)
+        if (claim.exists() and json.loads(claim.read_text()) != owner_entry) or (
+            peer_state
+            and any(
+                (peer_state / (str(issue["id"]) + suffix)).exists()
+                for suffix in peer_receipts
+            )
+        ):
+            raise ValueError(
+                "This Issue belongs to the other entry. Continue from its existing Run."
+            )
         current = accepted_run(client, key)
         if (
             current
@@ -363,6 +380,8 @@ def forward(config, client, number, comment_id=0, legacy_config=None):
             and current.get("workflow_id") != config["workflow_id"]
         ):
             raise ValueError("Existing Issue Run belongs to a different workflow")
+        if current and not claim.exists():
+            save(claim, owner_entry)
         if comment_id:
             if not current:
                 raise ValueError(
@@ -439,6 +458,7 @@ def forward(config, client, number, comment_id=0, legacy_config=None):
                     }
                     save(snapshot, payload)
                 workspace = prepare_workspace(config, issue["id"])
+                save(claim, owner_entry)
                 current = client.start_workflow(
                     payload["workflow_id"],
                     payload["message"],
@@ -473,6 +493,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--legacy-config")
+    parser.add_argument("--claude-config")
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
@@ -483,7 +504,9 @@ def main():
     token = Path(config["token_file"]).read_text().strip()
     client = Client(config["base_url"], token, timeout=60)
     number, comment_id = entry
-    result = forward(config, client, number, comment_id, args.legacy_config)
+    result = forward(
+        config, client, number, comment_id, args.legacy_config, args.claude_config
+    )
     if comment_id:
         report_run(config, result)
 

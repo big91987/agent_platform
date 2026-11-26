@@ -67,8 +67,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_WORKFLOW_CONFIG }}
+          AGENT_PLATFORM_CLAUDE_CONFIG: ${{ vars.AGENT_PLATFORM_CLAUDE_CONFIG }}
         run: |
           export PATH="/opt/homebrew/bin:$PATH"
           test -n "$AGENT_PLATFORM_CONFIG"
+          if test -f .github/workflows/agent-platform-claude-entry.yml && test -z "$AGENT_PLATFORM_CLAUDE_CONFIG"; then
+            echo "Configure the Claude runner before forwarding this Issue" >&2
+            exit 1
+          fi
           python3 -I .harness/agent-platform/examples/platform-workflows/run_entry.py legacy \
-            --config "$AGENT_PLATFORM_CONFIG"
+            --config "$AGENT_PLATFORM_CONFIG" --claude-config "$AGENT_PLATFORM_CLAUDE_CONFIG"

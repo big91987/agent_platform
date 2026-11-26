@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -397,50 +398,18 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 	scanner := bufio.NewScanner(output)
 	scanner.Buffer(make([]byte, 65536), 16*1024*1024)
 	initialized, started, result := false, false, false
-	secrets := []string{}
-	for _, entry := range env {
-		k, v, _ := strings.Cut(entry, "=")
-		if len(v) >= 8 && (strings.Contains(k, "TOKEN") || strings.Contains(k, "KEY") || strings.Contains(k, "SECRET") || strings.Contains(k, "PASSWORD")) {
-			secrets = append(secrets, v)
-		}
-	}
-	// Native credential files can be used by this host through a reference.
-	// Their token values receive the same export redaction as provider env.
-	if raw, e := os.ReadFile(filepath.Join(home, ".credentials.json")); e == nil {
-		var value any
-		var collect func(any)
-		collect = func(v any) {
-			switch item := v.(type) {
-			case string:
-				if len(item) >= 12 {
-					secrets = append(secrets, item)
-				}
-			case map[string]any:
-				for _, child := range item {
-					collect(child)
-				}
-			case []any:
-				for _, child := range item {
-					collect(child)
-				}
-			}
-		}
-		if json.Unmarshal(raw, &value) == nil {
-			collect(value)
-		}
-	}
-	redact := func(text string) string {
-		for _, secret := range secrets {
-			text = strings.ReplaceAll(text, secret, "[redacted]")
-		}
-		return text
+	redact := claudeRedactor(c.Snapshot, env, home)
+	// Only redact exported content. The scheduler and approval router consume
+	// the exact envelope fields, tool names and native identifiers.
+	payload := func(raw json.RawMessage) json.RawMessage {
+		return redactJSONContent(raw, redact, true)
 	}
 	emit := func(v any) error {
 		raw, e := json.Marshal(v)
 		if e != nil {
 			return e
 		}
-		return onEvent(redactJSON(raw, redact))
+		return onEvent(raw)
 	}
 	for scanner.Scan() {
 		raw := append([]byte(nil), scanner.Bytes()...)
@@ -486,8 +455,8 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 			if req.Request.Subtype == "can_use_tool" {
 				allow, ask := claudeToolDecision(c, req.Request.ToolName, req.Request.Input)
 				if ask && x.Approve != nil {
-					safe, _ := json.Marshal(map[string]any{"platform_permission_request": !strings.HasPrefix(req.Request.ToolName, "mcp__"), "tool": req.Request.ToolName, "arguments": req.Request.Input})
-					decision, e := x.Approve(ctx, c, m, redactJSON(safe, redact))
+					safe, _ := json.Marshal(map[string]any{"platform_permission_request": !strings.HasPrefix(req.Request.ToolName, "mcp__"), "tool": req.Request.ToolName, "arguments": payload(req.Request.Input)})
+					decision, e := x.Approve(ctx, c, m, safe)
 					if e != nil {
 						return e
 					}
@@ -510,7 +479,8 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 		if (session != "" && session != id) || ((kind == "assistant" || kind == "result") && session == "") {
 			return errors.New("Claude native session identity changed")
 		}
-		if err = emit(map[string]any{"type": "claude." + kind, "native": json.RawMessage(raw)}); err != nil {
+		native := payload(raw)
+		if err = emit(map[string]any{"type": "claude." + kind, "native": native}); err != nil {
 			return err
 		}
 		if kind == "assistant" || kind == "user" {
@@ -535,16 +505,16 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 						if kind != "assistant" {
 							continue
 						}
-						item = map[string]any{"id": fmt.Sprintf("%s-%d", msg.ID, i), "type": "agent_message", "text": b.Text}
+						item = map[string]any{"id": fmt.Sprintf("%s-%d", msg.ID, i), "type": "agent_message", "text": redact(b.Text)}
 					case "tool_use":
 						typ = "item.started"
-						item = map[string]any{"id": b.ID, "type": "mcp_tool_call", "tool": b.Name, "arguments": b.Input}
+						item = map[string]any{"id": b.ID, "type": "mcp_tool_call", "tool": b.Name, "arguments": payload(b.Input)}
 					case "tool_result":
-						item = map[string]any{"id": b.ToolUseID, "type": "mcp_tool_call", "result": b.Content}
+						item = map[string]any{"id": b.ToolUseID, "type": "mcp_tool_call", "result": payload(b.Content)}
 					default:
 						continue
 					}
-					if err = emit(map[string]any{"type": typ, "item": item, "native": json.RawMessage(raw)}); err != nil {
+					if err = emit(map[string]any{"type": typ, "item": item, "native": native}); err != nil {
 						return err
 					}
 				}
@@ -662,4 +632,52 @@ func claudeMCPServers(a Agent, workspace string, env []string) (map[string]any, 
 		servers[name] = v
 	}
 	return servers, nil
+}
+
+func claudeRedactor(agent Agent, env []string, home string) func(string) string {
+	secrets := []string{}
+	bearerNames := map[string]bool{}
+	for _, binding := range agent.ResolvedTools {
+		if conn := binding.Connection; conn.URL != "" && conn.BearerTokenEnvVar != "" {
+			bearerNames[conn.BearerTokenEnvVar] = true
+		}
+	}
+	for _, entry := range env {
+		k, v, _ := strings.Cut(entry, "=")
+		if (v != "" && bearerNames[k]) || len(v) >= 8 && (strings.Contains(k, "TOKEN") || strings.Contains(k, "KEY") || strings.Contains(k, "SECRET") || strings.Contains(k, "PASSWORD")) {
+			secrets = append(secrets, v)
+		}
+	}
+	// Native credential files can be used by this host through a reference.
+	// Their token values receive the same export redaction as provider env.
+	if raw, e := os.ReadFile(filepath.Join(home, ".credentials.json")); e == nil {
+		var value any
+		var collect func(any)
+		collect = func(v any) {
+			switch item := v.(type) {
+			case string:
+				if len(item) >= 12 {
+					secrets = append(secrets, item)
+				}
+			case map[string]any:
+				for _, child := range item {
+					collect(child)
+				}
+			case []any:
+				for _, child := range item {
+					collect(child)
+				}
+			}
+		}
+		if json.Unmarshal(raw, &value) == nil {
+			collect(value)
+		}
+	}
+	sort.Slice(secrets, func(i, j int) bool { return len(secrets[i]) > len(secrets[j]) })
+	return func(text string) string {
+		for _, secret := range secrets {
+			text = strings.ReplaceAll(text, secret, "[redacted]")
+		}
+		return text
+	}
 }

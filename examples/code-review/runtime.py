@@ -7,6 +7,7 @@ import os
 import platform
 import re
 import subprocess
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -53,7 +54,8 @@ def candidate_snapshot(root=Path(".")):
     return inventory
 
 
-def install_ocr(directory=STATE):
+def install_ocr(directory=None):
+    directory = STATE if directory is None else directory
     architecture = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(
         platform.machine()
     )
@@ -69,8 +71,10 @@ def install_ocr(directory=STATE):
             data = response.read(100 * 1024 * 1024 + 1)
         if hashlib.sha256(data).hexdigest() != expected:
             raise ValueError("OCR binary digest differs from pinned release")
-        binary.write_bytes(data)
-        binary.chmod(0o700)
+        with tempfile.NamedTemporaryFile(dir=directory, delete=False) as pending:
+            pending.write(data)
+            os.fchmod(pending.fileno(), 0o700)
+        os.replace(pending.name, binary)
     if (
         binary.is_symlink()
         or hashlib.sha256(binary.read_bytes()).hexdigest() != expected
@@ -177,13 +181,51 @@ def run_tool(arguments, destination, *, llm=False, timeout=120):
     return code, round(time.monotonic() - started, 3)
 
 
+def stage_candidate(root, env=None):
+    # Literal NUL-separated paths preserve unusual filenames and tracked deletions.
+    env = {**(os.environ if env is None else env), "GIT_LITERAL_PATHSPECS": "1"}
+    names = subprocess.check_output(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+        ],
+        env=env,
+        timeout=60,
+    )
+    selected = [
+        name
+        for name in names.split(b"\0")
+        if name
+        and name != b"harness-output"
+        and not name.startswith(b"harness-output/")
+    ]
+    if selected:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "add",
+                "-A",
+                "--pathspec-from-file=-",
+                "--pathspec-file-nul",
+            ],
+            env=env,
+            input=b"\0".join(selected) + b"\0",
+            timeout=60,
+            check=True,
+        )
+
+
 def candidate_commit(root=Path(".")):
     """Freeze worktree changes without altering HEAD or the caller's index."""
-    import tempfile
-
-    directory = root / ".git/agent-platform-review"
-    directory.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=directory) as temporary:
+    with tempfile.TemporaryDirectory() as temporary:
         env = dict(
             os.environ,
             GIT_INDEX_FILE=str((Path(temporary) / "index").resolve()),
@@ -204,38 +246,7 @@ def candidate_commit(root=Path(".")):
             )
 
         command("read-tree", "HEAD")
-        # Negative pathspecs naming an ignored directory still make git add
-        # fail. Select actual tracked/unignored files before staging; runtime
-        # outputs must not even be written into the private index/object store.
-        names = subprocess.check_output(
-            [
-                "git",
-                "-C",
-                str(root),
-                "ls-files",
-                "-z",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-            ],
-            env=env,
-            timeout=60,
-        )
-        selected = [
-            name
-            for name in names.split(b"\0")
-            if name
-            and name != b"harness-output"
-            and not name.startswith(b"harness-output/")
-        ]
-        if selected:
-            command(
-                "add",
-                "-A",
-                "--pathspec-from-file=-",
-                "--pathspec-file-nul",
-                input=b"\0".join(selected) + b"\0",
-            )
+        stage_candidate(root, env)
         tree = command("write-tree")
         return command(
             "commit-tree", tree, "-p", "HEAD", "-m", "Local immutable review candidate"

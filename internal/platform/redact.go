@@ -56,6 +56,10 @@ func (x *Codex) redactor(a Agent) func(string) string {
 	}
 }
 func redactJSON(raw []byte, redact func(string) string) []byte {
+	return redactJSONContent(raw, redact, false)
+}
+
+func redactJSONContent(raw []byte, redact func(string) string, redactKeys bool) []byte {
 	var value any
 	if json.Unmarshal(raw, &value) != nil {
 		return raw
@@ -66,9 +70,14 @@ func redactJSON(raw []byte, redact func(string) string) []byte {
 		case string:
 			return redact(item)
 		case map[string]any:
+			clean := make(map[string]any, len(item))
 			for k, v := range item {
-				item[k] = walk(v)
+				if redactKeys {
+					k = redact(k)
+				}
+				clean[k] = walk(v)
 			}
+			return clean
 		case []any:
 			for i, v := range item {
 				item[i] = walk(v)
