@@ -395,3 +395,82 @@ func TestClaudeUnknownNativeToolNeverRequestsApproval(t *testing.T) {
 		}
 	}
 }
+
+func TestClaudeLiveCompoundBashBoundary(t *testing.T) {
+	if os.Getenv("AGENT_PLATFORM_CLAUDE_LIVE") != "1" {
+		t.Skip("explicit live provider opt-in")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	workspace, _ := filepath.EvalSymlinks(t.TempDir())
+	os.WriteFile(filepath.Join(workspace, "release.md"), []byte("## 验收记录\n校验通过\n"), 0600)
+	approvals := 0
+	x := &Claude{Root: t.TempDir(), Binary: "/opt/homebrew/bin/claude", Approve: func(context.Context, Conversation, Message, json.RawMessage) (string, error) {
+		approvals++
+		return "decline", nil
+	}}
+	c := Conversation{ID: "compound", WorkspacePath: workspace, Snapshot: Agent{Executor: "claude", InheritEnv: true, NetworkAccess: true, AllowElevation: true}}
+	command := `echo "--- grep 验收记录 ---"; grep -c "## 验收记录" release.md; echo "exit=$?"; echo "--- grep 校验通过 ---"; grep -c "校验通过" release.md; echo "exit=$?"; wc -c release.md; printf command-ok > compound-proof.txt`
+	if err := x.Execute(ctx, c, Message{Content: "Use Bash once to run this exact command, without rewriting or splitting it. Stop after the tool result, including if denied. Command: " + command}, func([]byte) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if approvals != 0 {
+		t.Fatalf("ordinary compound Bash requested %d approvals", approvals)
+	}
+	if raw, err := os.ReadFile(filepath.Join(workspace, "compound-proof.txt")); err != nil || string(raw) != "command-ok" {
+		t.Fatalf("compound command did not finish: %v", err)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(home, ".agent-platform-boundary-"+newID())
+	defer os.Remove(outside)
+	for _, escape := range []bool{false, true} {
+		c.ID = "outside-" + fmt.Sprint(escape)
+		attempted, blocked := false, false
+		instruction := "Use Bash exactly once with command " + fmt.Sprintf("printf forbidden > %q", outside) + ". Stop immediately after its result, even if the operation is denied. Do not use any other tools."
+		if escape {
+			instruction += " Set the Bash input dangerouslyDisableSandbox to true for this boundary test."
+		}
+		err = x.Execute(ctx, c, Message{Content: instruction}, func(raw []byte) error {
+			var e struct {
+				Native struct {
+					Message struct {
+						Content []struct {
+							Type  string `json:"type"`
+							Name  string `json:"name"`
+							Input struct {
+								Command     string `json:"command"`
+								Unsandboxed bool   `json:"dangerouslyDisableSandbox"`
+							} `json:"input"`
+							IsError bool `json:"is_error"`
+						} `json:"content"`
+					} `json:"message"`
+				} `json:"native"`
+			}
+			json.Unmarshal(raw, &e)
+			for _, b := range e.Native.Message.Content {
+				if b.Type == "tool_use" && b.Name == "Bash" && strings.Contains(b.Input.Command, outside) && (!escape || b.Input.Unsandboxed) {
+					attempted = true
+				}
+				if b.Type == "tool_result" && b.IsError {
+					blocked = true
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !attempted || !blocked {
+			t.Fatalf("outside Bash escape=%v attempted=%v blocked=%v", escape, attempted, blocked)
+		}
+		if _, err = os.Stat(outside); !os.IsNotExist(err) {
+			t.Fatalf("outside Bash escaped isolation (escape=%v)", escape)
+		}
+	}
+	if approvals != 0 {
+		t.Fatalf("outside Bash was stopped by platform approval rather than native isolation: %d callbacks", approvals)
+	}
+}

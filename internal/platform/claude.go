@@ -244,7 +244,14 @@ func (x *Claude) Execute(ctx context.Context, c Conversation, m Message, onEvent
 	if nativeSandboxMode(c) == "read-only" {
 		mode = "default"
 	}
-	settings["permissions"] = map[string]any{"defaultMode": mode, "ask": []string{"Skill", "mcp__*"}}
+	permissions := map[string]any{"defaultMode": mode, "ask": []string{"Skill", "mcp__*"}}
+	// Native auto-allow still prompts for some compound commands. The explicit
+	// Bash rule removes that prompt; mandatory OS sandboxing below remains the
+	// filesystem/network boundary, with no excluded commands or escape hatch.
+	if nativeSandboxMode(c) != "read-only" {
+		permissions["allow"] = []string{"Bash"}
+	}
+	settings["permissions"] = permissions
 	domains := []string{}
 	if c.Snapshot.NetworkAccess {
 		domains = []string{"*"}
