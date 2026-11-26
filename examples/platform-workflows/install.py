@@ -79,9 +79,11 @@ def repository_command(role, repository, base, test_command):
 
 
 def stage_instructions(role, common, command_label, template=None, introduction=""):
-    if template == "claude-delivery" and role in ("development", "report"):
+    if template == "claude-delivery":
         responsibilities = (HERE / f"prompts/claude-{role}.md").read_text()
-        return responsibilities.replace("{{verification_command}}", command_label)
+        return (common.strip() + "\n\n" + responsibilities).replace(
+            "{{verification_command}}", command_label
+        )
 
     roles = json.loads((HERE / "prompts/roles.json").read_text())
     responsibilities = (HERE / f"prompts/{role}.md").read_text()
@@ -634,6 +636,10 @@ def main():
         "software-delivery" if args.template == "claude-delivery" else args.template
     )
     graph = json.loads((HERE / (graph_template + ".json")).read_text())
+    if args.template == "claude-delivery":
+        from claude_profile import configure, review_connector
+
+        graph = configure(graph)
     previous_nodes = {node["id"]: node for node in prior_graph.get("nodes", [])}
     prior_configs = {}
     for node in graph["nodes"]:
@@ -679,13 +685,17 @@ def main():
             or HERE.parents[1] / ".data/shared-browser-install.json",
             args.browser_evidence,
         )
-    common = (HERE / "prompts/common.md").read_text()
-    command_label = shlex.join(test_command)
-    common += (
-        "\n本项目由管理员配置的固定验证入口为 `"
-        + command_label
-        + "`。阶段实现和 QA 以此命令的真实结果为依据。\n"
+    common_file = (
+        "claude-common.md" if args.template == "claude-delivery" else "common.md"
     )
+    common = (HERE / "prompts" / common_file).read_text()
+    command_label = shlex.join(test_command)
+    if args.template != "claude-delivery":
+        common += (
+            "\n本项目由管理员配置的固定验证入口为 `"
+            + command_label
+            + "`。阶段实现和 QA 以此命令的真实结果为依据。\n"
+        )
     for node in graph["nodes"]:
         if node["kind"] != "agent":
             continue
@@ -748,9 +758,6 @@ def main():
         node["continuation_limit"] = 3
         node["execution_timeout_seconds"] = 14400
     if args.template == "claude-delivery":
-        from claude_profile import configure, review_connector
-
-        graph = configure(graph, common)
         review_command, review_refs = review_connector(
             args.arch_tool_root, args.review_model_prefix, args.arch_digest
         )

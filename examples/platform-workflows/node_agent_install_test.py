@@ -527,17 +527,21 @@ class NodeAgentInstallTest(unittest.TestCase):
         nodes = {n["id"]: n for n in graph["nodes"]}
         self.assertEqual(nodes["development"]["agent"]["skills"], [])
         self.assertEqual(nodes["report"]["agent"]["skills"], [])
-        for node_id in ("development", "report"):
-            self.assertNotIn("Skill", nodes[node_id]["agent"]["instructions"])
-            self.assertNotIn("Trellis", nodes[node_id]["agent"]["instructions"])
-        self.assertIn(
-            "仅写 prepare 回执 document_root 下的 pr.md",
-            nodes["report"]["agent"]["instructions"],
+        self.assertEqual(
+            {node["id"] for node in graph["nodes"] if node["kind"] == "agent"},
+            {"requirements", "design", "development", "qa", "report"},
         )
+        for node_id in ("requirements", "design", "development", "qa", "report"):
+            self.assertNotIn("Trellis", nodes[node_id]["agent"]["instructions"])
+        qa = nodes["qa"]["agent"]
+        self.assertEqual([Path(path).name for path in qa["skills"]], ["qa"])
+        self.assertNotIn("READY", qa["instructions"])
+        self.assertIn("architecture.json", nodes["design"]["agent"]["instructions"])
+        self.assertIn("pr.md", nodes["report"]["agent"]["instructions"])
         report_targets = {
             edge["target"] for edge in graph["edges"] if edge["source"] == "report"
         }
-        self.assertEqual(report_targets, {"qa_plan", "publish_check"})
+        self.assertEqual(report_targets, {"qa", "publish_check"})
         for target in report_targets:
             self.assertIn("target=" + target, nodes["report"]["agent"]["instructions"])
         self.assertEqual(nodes["requirements"]["agent"]["executor"], "claude")

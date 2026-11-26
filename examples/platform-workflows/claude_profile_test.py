@@ -175,7 +175,7 @@ class ClaudeProfileTest(unittest.TestCase):
             )
             directory = task_docs(run)
             (work / directory).mkdir(parents=True)
-            for node in ("qa_plan", "qa_plan_review", "qa", "report"):
+            for node in ("qa", "report"):
                 name = directory + "/" + ("pr.md" if node == "report" else node + ".md")
                 (work / name).write_text("Reviewed evidence")
                 run["previous_results"].append(
@@ -185,11 +185,27 @@ class ClaudeProfileTest(unittest.TestCase):
                         result=dict(route="next", artifacts=[name]),
                     )
                 )
+            repository = str(Path(__file__).with_name("repository.py").resolve())
+            precheck = [os.sys.executable, repository, "check-reviewed"]
+            (work / "unexpected.py").write_text("pass")
+            rejected = subprocess.run(
+                precheck,
+                cwd=work,
+                input=json.dumps(run),
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(rejected.returncode, 10, rejected.stderr)
+            self.assertIn("unexpected.py", rejected.stdout)
+            (work / "unexpected.py").unlink()
+            subprocess.run(
+                precheck, cwd=work, input=json.dumps(run), text=True, check=True
+            )
             receipt = json.loads(
                 subprocess.check_output(
                     [
                         os.sys.executable,
-                        str(Path(__file__).with_name("repository.py").resolve()),
+                        repository,
                         "publish",
                         "--repository",
                         "owner/example",
@@ -208,6 +224,7 @@ class ClaudeProfileTest(unittest.TestCase):
             self.assertIn(os.fsencode(special), names)
             self.assertNotIn(b"remove", names)
             self.assertNotIn(b"harness-output/excluded", names)
+            self.assertIn(os.fsencode(directory + "/qa.md"), names)
             self.assertIn(os.fsencode(directory + "/pr.md"), names)
 
     def test_role_flow_requires_tests_reviews_qa_and_delivery_gate(self):
@@ -216,15 +233,45 @@ class ClaudeProfileTest(unittest.TestCase):
         )
         modified = configure(graph)
         self.assertIn("intake", [n["id"] for n in graph["nodes"]])
-        self.assertNotIn("intake", [n["id"] for n in modified["nodes"]])
+        self.assertEqual(
+            [n["id"] for n in modified["nodes"]],
+            [
+                "prepare",
+                "issue",
+                "requirements",
+                "design",
+                "development",
+                "tests",
+                "code_review",
+                "qa",
+                "approval",
+                "report",
+                "publish_check",
+                "publish",
+                "pr",
+                "done",
+            ],
+        )
+        self.assertEqual(
+            {
+                (e["source"], e["target"])
+                for e in modified["edges"]
+                if e["route"] != "next"
+            },
+            {
+                ("design", "requirements"),
+                ("development", "design"),
+                ("tests", "development"),
+                ("qa", "development"),
+                ("report", "qa"),
+            },
+        )
         for blocked in (
             "requirements",
             "design",
             "development",
             "tests",
             "code_review",
-            "qa_plan",
-            "qa_plan_review",
             "qa",
             "approval",
             "publish_check",
@@ -262,55 +309,60 @@ class ClaudeProfileTest(unittest.TestCase):
             run = {"run_id": "a" * 32, "previous_results": []}
             directory = task_docs(run)
             evidence = directory + "/evidence.html"
-            plan = directory + "/qa-plan-1.md"
-            assessment = directory + "/qa-plan-review-1.md"
-            run["previous_results"] = [
-                {
-                    "node_id": "code_review",
-                    "status": "completed",
-                    "connector_receipt": {
-                        "exit_code": 0,
-                        "output": json.dumps(
-                            {
-                                "candidate": candidate,
-                                "exit_code": 0,
-                                "source_unchanged": True,
-                            }
-                        ),
-                    },
+            pr = directory + "/pr.md"
+            review = {
+                "node_id": "code_review",
+                "status": "completed",
+                "connector_receipt": {
+                    "exit_code": 0,
+                    "output": json.dumps(
+                        {
+                            "candidate": candidate,
+                            "exit_code": 0,
+                            "source_unchanged": True,
+                        }
+                    ),
                 },
-                {
-                    "node": "qa_plan",
-                    "status": "completed",
-                    "result": {"route": "next", "artifacts": [plan]},
-                },
-                {
-                    "node": "qa_plan_review",
-                    "status": "completed",
-                    "result": {"route": "next", "artifacts": [assessment]},
-                },
-                {
-                    "node": "qa",
-                    "status": "completed",
-                    "result": {"route": "next", "artifacts": [evidence]},
-                },
-            ]
+            }
+            run["previous_results"].append(review)
             (root / directory).mkdir(parents=True)
-            for name in (evidence, plan, assessment, directory + "/pr.md"):
+            for name in (evidence, pr):
                 (root / name).write_text("Evidence")
+            qa = {
+                "node_id": "qa",
+                "status": "completed",
+                "result": {"route": "next", "artifacts": [evidence]},
+            }
+            run["previous_results"].append(qa)
             git(root, "add", "--all")
             verify_reviewed_tree(root, run, git(root, "write-tree"))
-            # Development fixed a QA defect and a fresh reviewed candidate
-            # already includes the first round's plan and review evidence.
+
+            # A report can ask QA to supplement the evidence without a source
+            # change or a fresh code review. Both declared additions still belong.
+            supplement = directory + "/evidence-supplement.html"
+            (root / supplement).write_text("Supplemented evidence")
+            run["previous_results"].extend(
+                [
+                    {
+                        "node_id": "report",
+                        "status": "completed",
+                        "result": {"route": "qa"},
+                    },
+                    {**qa, "result": {"route": "next", "artifacts": [supplement]}},
+                ]
+            )
+            git(root, "add", "--all")
+            verify_reviewed_tree(root, run, git(root, "write-tree"))
+
+            # A source fix needs a new approval from QA after the new review.
             specification = directory + "/requirements.md"
             (root / specification).write_text("Approved requirements")
             source.write_text("print('fixed')\n")
             git(root, "add", "--all")
             next_candidate = git(root, "write-tree")
-            next_round = [
+            run["previous_results"].append(
                 {
-                    "node_id": "code_review",
-                    "status": "completed",
+                    **review,
                     "connector_receipt": {
                         "exit_code": 0,
                         "output": json.dumps(
@@ -321,31 +373,25 @@ class ClaudeProfileTest(unittest.TestCase):
                             }
                         ),
                     },
-                },
-            ]
-            for node, name in (
-                ("qa_plan", "qa-plan-2.md"),
-                ("qa_plan_review", "qa-plan-review-2.md"),
-                ("qa", "evidence-2.html"),
-            ):
-                artifact = directory + "/" + name
-                (root / artifact).write_text("Second round evidence")
-                next_round.append(
-                    {
-                        "node": node,
-                        "status": "completed",
-                        "result": {"route": "next", "artifacts": [artifact]},
-                    }
-                )
-            run["previous_results"].extend(next_round)
+                }
+            )
+            with self.assertRaisesRegex(ValueError, "QA handoff"):
+                verify_reviewed_tree(root, run, next_candidate)
+
+            artifact = directory + "/evidence-2.html"
+            (root / artifact).write_text("Second round evidence")
+            verdict = {"route": "development", "artifacts": [artifact]}
+            run["previous_results"].append({**qa, "result": verdict})
             git(root, "add", "--all")
             tree = git(root, "write-tree")
-            verify_reviewed_tree(root, run, tree)
-            verdict = next_round[2]["result"]
-            verdict["route"] = "revise"
-            with self.assertRaisesRegex(ValueError, "qa_plan_review"):
+            with self.assertRaisesRegex(ValueError, "QA handoff"):
                 verify_reviewed_tree(root, run, tree)
             verdict["route"] = "next"
+            verdict["artifacts"] = [evidence]
+            with self.assertRaisesRegex(ValueError, "no new evidence"):
+                verify_reviewed_tree(root, run, next_candidate)
+            verdict["artifacts"] = [artifact]
+            verify_reviewed_tree(root, run, tree)
             verdict["artifacts"].append(specification)
             (root / specification).write_text("Modified after code review")
             git(root, "add", "--all")

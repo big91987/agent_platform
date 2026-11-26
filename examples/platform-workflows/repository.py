@@ -421,26 +421,23 @@ def verify_reviewed_tree(workspace, run, tree):
         ".webp",
         ".pdf",
     }
-    qa_stages = ("qa_plan", "qa_plan_review", "qa")
-    previous_index = review_index
-    for node in qa_stages:
-        index = positions.get(node, -1)
-        if index <= previous_index:
-            raise ValueError("Missing ordered QA delivery handoff: " + node)
-        step = steps[index]
-        if (
-            step.get("status") != "completed"
-            or (step.get("result") or {}).get("route") != "next"
-        ):
-            raise ValueError("Missing completed QA delivery handoff: " + node)
-        previous_index = index
-
+    qa_steps = [
+        step
+        for step in steps[review_index + 1 :]
+        if step.get("node_id", step.get("node")) == "qa"
+    ]
+    if (
+        not qa_steps
+        or qa_steps[-1].get("status") != "completed"
+        or (qa_steps[-1].get("result") or {}).get("route") != "next"
+    ):
+        raise ValueError("Missing completed QA handoff after the current code review")
+    latest_artifacts = set(qa_steps[-1]["result"].get("artifacts", []))
     evidence = set()
-    for step in steps[review_index + 1 :]:
-        if (
-            step.get("node_id", step.get("node")) not in qa_stages
-            or step.get("status") != "completed"
-        ):
+    # Report can request additional QA for the same candidate. Retain evidence
+    # already handed off against that review; a new review resets the scope.
+    for step in qa_steps:
+        if step.get("status") != "completed":
             continue
         for name in (step.get("result") or {}).get("artifacts", []):
             path = Path(name)
@@ -459,18 +456,23 @@ def verify_reviewed_tree(workspace, run, tree):
     )
     fields = raw.rstrip("\0").split("\0") if raw else []
     changed = []
+    added_evidence = set()
     for metadata, name in zip(fields[::2], fields[1::2], strict=True):
         _, new_mode, _, _, status = metadata.split()
-        if new_mode == "100644" and (
-            (status in ("A", "M") and name == pr)
-            or (status == "A" and name in evidence)
-        ):
+        if new_mode == "100644" and name == pr and status in ("A", "M"):
+            continue
+        if new_mode == "100644" and status == "A" and name in evidence:
+            added_evidence.add(name)
             continue
         changed.append(name)
     if changed:
         raise ReviewedSourceChanged(
             "Reviewed source changed. Return through development, fixed tests and both reviews: "
             + ", ".join(changed[:20])
+        )
+    if latest_artifacts.isdisjoint(added_evidence):
+        raise ValueError(
+            "Latest QA handoff has no new evidence for the reviewed candidate"
         )
 
 
