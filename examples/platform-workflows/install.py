@@ -440,12 +440,19 @@ def main():
         default=None,
         help="Optional Git clone proxy URL; empty disables the recorded proxy",
     )
+    parser.add_argument(
+        "--arch-tool-root",
+        type=Path,
+        help="Trusted archcheck tool directory for claude-delivery",
+    )
+    parser.add_argument("--review-model-prefix", default="REVIEW")
     parser.add_argument("--prefix", default="software-delivery")
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument(
         "--template",
         choices=[
             "software-delivery",
+            "claude-delivery",
             "qa-rework",
             "collaboration-check",
             "product-e2e",
@@ -465,16 +472,18 @@ def main():
         r"[A-Za-z_][A-Za-z0-9_]*", args.notification_token_env
     ):
         parser.error("notification token must be an environment credential name")
-    if not args.trellis_executable:
-        parser.error("Trellis CLI is required; install @mindfoldhq/trellis@0.6.15")
-    trellis_path = str(Path(args.trellis_executable).resolve(strict=True))
-    trellis_version = subprocess.check_output(
-        [trellis_path, "--version"], text=True, timeout=15
-    ).strip()
-    if trellis_version != "0.6.15":
-        parser.error(
-            "This installer is verified with Trellis 0.6.15; use the documented version"
-        )
+    trellis_path, trellis_version = "", ""
+    if args.template != "claude-delivery":
+        if not args.trellis_executable:
+            parser.error("Trellis CLI is required; install @mindfoldhq/trellis@0.6.15")
+        trellis_path = str(Path(args.trellis_executable).resolve(strict=True))
+        trellis_version = subprocess.check_output(
+            [trellis_path, "--version"], text=True, timeout=15
+        ).strip()
+        if trellis_version != "0.6.15":
+            parser.error(
+                "This installer is verified with Trellis 0.6.15; use the documented version"
+            )
     try:
         test_command = verification_command(args.test_command_json)
         if not 1 <= args.test_timeout_seconds <= 1800:
@@ -507,6 +516,19 @@ def main():
         "qa": [args.qa_skill],
         "report": [args.skill_root / "managing-engineering-delivery-cn"],
     }
+    if args.template == "claude-delivery":
+        from claude_profile import role_skills
+
+        skills = role_skills(args.skill_root, args.qa_skill)
+        if not args.arch_tool_root:
+            parser.error("claude-delivery requires --arch-tool-root")
+        if args.executor not in (
+            None,
+            "claude",
+        ) or args.agent_approvals_reviewer not in (None, "user"):
+            parser.error("claude-delivery requires Claude with platform user approval")
+        args.executor = "claude"
+        args.agent_approvals_reviewer = "user"
     if args.template == "product-e2e":
         skills.update(
             e2e_plan=[args.qa_skill],
@@ -552,6 +574,28 @@ def main():
         },
         args.upgrade,
     )
+    if args.template == "claude-delivery":
+        from asset_snapshot import snapshot
+
+        asset_root = args.manifest.resolve().parent / (args.manifest.stem + "-assets")
+        if asset_root.is_symlink() or asset_root.resolve().is_relative_to(root):
+            raise ValueError("Installed assets must be outside task workspaces")
+        previous_assets = installation.data.get("claude_assets", {})
+        assets = {}
+
+        def install_asset(key, source):
+            path, assets[key] = snapshot(
+                source, asset_root, args.upgrade, previous_assets.get(key)
+            )
+            return path
+
+        for role, paths in skills.items():
+            skills[role] = [
+                install_asset(role + "/" + path.name, path) for path in paths
+            ]
+        args.arch_tool_root = install_asset("archcheck", args.arch_tool_root)
+        args.arch_digest = assets["archcheck"]["sha256"]
+        installation.data["claude_assets"] = assets
     if args.notification_token_env is None:
         args.notification_token_env = (
             installation.data["objects"]
@@ -575,7 +619,10 @@ def main():
         args.git_proxy = (prior_entry or {}).get("config", {}).get("git_proxy", "")
     check_upgrade_runs(api, installation)
     installation.check("workflows", workflow_key)
-    graph = json.loads((HERE / (args.template + ".json")).read_text())
+    graph_template = (
+        "software-delivery" if args.template == "claude-delivery" else args.template
+    )
+    graph = json.loads((HERE / (graph_template + ".json")).read_text())
     previous_nodes = {node["id"]: node for node in prior_graph.get("nodes", [])}
     prior_configs = {}
     for node in graph["nodes"]:
@@ -612,12 +659,15 @@ def main():
             parser.error("base Agent not found")
     if args.browser_evidence.resolve().is_relative_to(root):
         parser.error("browser evidence must be outside task workspaces")
-    browser = install_shared_browser(
-        api,
-        installation,
-        args.browser_manifest or HERE.parents[1] / ".data/shared-browser-install.json",
-        args.browser_evidence,
-    )
+    browser = None
+    if args.template != "claude-delivery":
+        browser = install_shared_browser(
+            api,
+            installation,
+            args.browser_manifest
+            or HERE.parents[1] / ".data/shared-browser-install.json",
+            args.browser_evidence,
+        )
     common = (HERE / "prompts/common.md").read_text()
     command_label = shlex.join(test_command)
     common += (
@@ -677,7 +727,7 @@ def main():
             "native_config": "",
             "seed_dir": "",
         }
-        if role in ("design", "development", "qa"):
+        if browser and role in ("design", "development", "qa"):
             node["agent"]["tool_servers"] = [
                 {
                     "server_id": browser["id"],
@@ -688,8 +738,17 @@ def main():
         node["allow_user_input"] = True
         node["continuation_limit"] = 3
         node["execution_timeout_seconds"] = 14400
+    if args.template == "claude-delivery":
+        from claude_profile import configure, review_connector
+
+        graph = configure(graph, common)
+        review_command, review_refs = review_connector(
+            args.arch_tool_root, args.review_model_prefix, args.arch_digest
+        )
     connectors = {}
     connector_roles = ["prepare", "issue", "tests", "publish", "pr", "comment"]
+    if args.template == "claude-delivery":
+        connector_roles.extend(("code_review", "publish_check"))
     if args.template == "product-e2e":
         connector_roles.append("report_publish")
     for role in connector_roles:
@@ -714,6 +773,13 @@ def main():
             )
         else:
             command = repository_command(role, args.repository, args.base, test_command)
+            if role == "code_review":
+                command = review_command
+                spec["timeout_seconds"] = 1800
+            if role == "publish_check":
+                command = [str(HERE / "repository.py"), "check-reviewed"]
+            if role == "publish" and args.template == "claude-delivery":
+                command.append("--reviewed-source")
             if role == "report_publish":
                 state_root = args.manifest.resolve().parent / "report-publication"
                 if state_root.is_relative_to(root):
@@ -732,7 +798,7 @@ def main():
                 executable=sys.executable,
                 args=command,
             )
-            if role == "prepare":
+            if role == "prepare" and trellis_path:
                 spec["args"] += [
                     "--trellis-executable",
                     trellis_path,
@@ -746,7 +812,9 @@ def main():
                 .get("env_refs", {}),
                 os.environ,
             )
-            if role != "tests":
+            if role == "code_review":
+                spec["env_refs"].update(review_refs)
+            if role not in ("tests", "code_review", "publish_check"):
                 spec["env_refs"]["GH_TOKEN"] = args.token_env
         connectors[role] = installation.apply("connectors", "connector-" + role, spec)[
             "id"
@@ -770,7 +838,7 @@ def main():
     )
     if args.github_config:
         if (
-            args.template != "software-delivery"
+            args.template not in ("software-delivery", "claude-delivery")
             or not args.github_token_file
             or not args.github_token_file.is_file()
         ):
@@ -792,6 +860,8 @@ def main():
             "token_file": str(token_path),
             "state_root": str(config_path.parent / (config_path.stem + "-state")),
         }
+        if args.template == "claude-delivery":
+            config["issue_label"] = "harness-claude"
         config["git_proxy"] = args.git_proxy
         previous = installation.data.get("github_entry")
         if config_path.exists():

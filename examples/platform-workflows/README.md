@@ -480,3 +480,19 @@ Agent 的 `turn_timeout_seconds` 限制单轮实际执行；从领取消息开�
 报告节点可先运行 `python3 .harness/agent-platform/examples/platform-workflows/sandbox_publish.py --repository OWNER/REPO --check`，复用最终 publisher 的本地校验，不修改索引/提交/交付目录、不联网。最终发布会重新校验；预检通过不代表 QA、远端 PR 或部署通过。
 
 标准安装器的 `--agent-turn-timeout SECONDS` 为本次安装的 Agent 节点显式设置单轮超时；升级时省略则保留原值，0 关闭。
+
+## 本机 Claude 分角色研发入口
+
+`install.py --template claude-delivery` 创建独立的本机角色流程，不修改既有 Run：需求（产品定义与 batch-grill-me）→架构→开发→固定测试→代码审查（Open Code Review 与 archcheck 均启用模型）→QA 计划→独立计划评审→独立 QA 执行→交付 Gate→报告与 PR。开发和报告不挂额外 Skill；QA 使用 `--qa-skill` 指定的验收 Skill 加 SaaS/MaaS/UI 查漏范围。架构阶段需提供与项目真实语言相符的 `architecture.json`。计划评审交接 READY 与计划摘要，执行前核对摘要，实质改动范围或断言须返回计划节点。此配置不强制初始化 Trellis，也不挂仅支持静态页面的旧浏览器工具。
+
+除安装器原有仓库、证据、工作区、Skill 路径及私有 GitHub 配置参数外，指定 `--arch-tool-root /absolute/trusted/arch-template/tool`。安装器在清单旁保存内容寻址的 Skill 和架构工具副本，清单记录各来源路径及 SHA-256。使用 `--upgrade` 安装变更版本，保留旧副本供冻结 Run 使用。archcheck 执行前后都会核对摘要。平台须已支持 `executor=claude`；模型省略时沿用服务端 CC 连接默认值，审批使用平台正式用户审批路径。需要实际网页测试时由 QA 使用任务环境内的浏览器能力，不把无工具的文档审查当验收。
+
+审查节点从平台服务端读取 `REVIEW_URL`（完整 Chat Completions URL）、`REVIEW_TOKEN`、`REVIEW_MODEL`、`REVIEW_PROTOCOL`，节点只保存环境变量引用。两工具各自完整报告后才可前进；任何工具错误、模型未执行或候选变动均停止。发现问题返回开发。源码来源和报告分别保存，QA 判断业务验收，不能以模型无发现替代测试。
+
+`install_github_entry.py --template claude` 安装独立的 `.github/workflows/agent-platform-claude-entry.yml` 和 Issue 表单。入口标签为 `harness-claude`，私有配置变量为 `AGENT_PLATFORM_CLAUDE_CONFIG`；现有本机 Runner 转发到同机 loopback 平台。如果仓库已启用 legacy 入口，先运行 `install_github_entry.py --template legacy --upgrade`，核对现有 Runner 变量仍指向原私有配置。按下述方式同步仓库内的 Harness，之后再安装 Claude 入口。Claude 安装器核对旧 workflow 的排除规则及打包适配器源码，发现旧版即停止。Claude Runner 使用现有私有 legacy 配置检查原提交和受理记录；已提交或结论不确定的 Issue 使用原 Run，需要替代时创建明确关联原 Issue 的新任务。不要给同一 Issue 同时添加新入口和 `harness-opensandbox`。
+
+升级已有 Harness 时，从已评审的平台提交运行 `export.py --ref <commit> --destination <新目录>`。在测试仓分支中对照导出目录，合入当前导出中完整的 Harness 变更和 `SOURCE.json`，同时保留仓库有意维护并核实的自定义配置。核对并提交旧 workflow、更新后的 Harness 和新入口，待分支落入默认分支，Runner 才使用新路由。
+
+发布前以平台双审查回执里的 Git 候选树核对源码。每轮 QA 计划、独立评审和执行产物采用新路径，保留历次文件。当前任务文档目录内允许新增这三个阶段交接列出的 Markdown、JSON、CSV、文本、HTML、图片和 PDF 证据，以及新增或更新对外正文 `pr.md`。审查工具的 `harness-output/` 保存在本次工作区，Connector 回执记录候选与审查结果。本机双审查与发布核对使用管理员配置的固定命令 Connector。只有退出码 0 才继续。发现问题或源码变化时，核对回执后由有权限的操作者使用运行页的返回操作回到开发，再重走固定测试、双审查和 QA。模型或工具失败时保留回执，由操作者处理实际故障后重试对应节点。发布 Connector 在提交及推送前再次核验同一候选。
+
+这些文件是接入工具，不意味着 CC 原生执行、双审查实际模型调用、GitHub 入站或产品验收已经通过；按真实安装和执行回执分别核验。

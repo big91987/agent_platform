@@ -513,6 +513,42 @@ class NodeAgentInstallTest(unittest.TestCase):
             self.api.objects["workflows"][1]["authorized_users"], ["operator"]
         )
 
+    def test_claude_profile_keeps_roles_and_needs_no_trellis_or_browser(self):
+        role = self.root / "skills/batch-grill-me"
+        role.mkdir()
+        (role / "SKILL.md").write_text("fixture")
+        arch = self.root / "arch"
+        arch.mkdir()
+        for name in ("inspect_project.py", "model_reviewer.py"):
+            (arch / name).write_text("")
+        self.run_install("--template", "claude-delivery", "--arch-tool-root", str(arch))
+        graph = self.api.objects["workflows"][0]
+        self.assertEqual(self.api.objects["tool-servers"], [])
+        nodes = {n["id"]: n for n in graph["nodes"]}
+        self.assertEqual(nodes["development"]["agent"]["skills"], [])
+        self.assertEqual(nodes["report"]["agent"]["skills"], [])
+        self.assertEqual(nodes["requirements"]["agent"]["executor"], "claude")
+        installed = next(
+            Path(path)
+            for path in nodes["requirements"]["agent"]["skills"]
+            if Path(path).name == role.name
+        )
+        self.assertNotEqual(installed, role)
+        self.assertEqual((installed / "SKILL.md").read_text(), "fixture")
+        prepare = next(
+            c
+            for c in self.api.objects["connectors"]
+            if c["name"].endswith(" · prepare")
+        )
+        self.assertNotIn("--trellis-executable", prepare["args"])
+        review = next(
+            c
+            for c in self.api.objects["connectors"]
+            if c["id"] == nodes["code_review"]["connector_id"]
+        )
+        self.assertEqual(review["env_refs"]["OCR_LLM_TOKEN"], "REVIEW_TOKEN")
+        self.assertNotIn("GH_TOKEN", review["env_refs"])
+
 
 if __name__ == "__main__":
     unittest.main()

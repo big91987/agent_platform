@@ -95,7 +95,12 @@ def event_input(config, env, event):
         if selected not in labels:
             return None
     elif labels.intersection(
-        config.get("excluded_issue_labels", ["harness-opensandbox"])
+        config.get(
+            "excluded_issue_labels",
+            ["harness-opensandbox", "harness-claude"]
+            if config.get("issue_label") != "harness-claude"
+            else ["harness-opensandbox"],
+        )
     ):
         return None
     if kind == "issues" and event.get("action") in ("opened", "labeled"):
@@ -282,13 +287,45 @@ def configured_github_call(config, call=None):
     return call
 
 
-def forward(config, client, number, comment_id=0):
+def check_legacy_intake(legacy_config, repository, issue_id):
+    if not legacy_config:
+        return
+    try:
+        legacy = json.loads(Path(legacy_config).read_text())
+        if (
+            legacy["repository"] != repository
+            or legacy.get("issue_label") == "harness-claude"
+        ):
+            raise ValueError(
+                "Legacy adapter configuration does not match this repository"
+            )
+        state = Path(legacy["state_root"]).resolve()
+        if not state.exists():
+            return
+        with (state / (str(issue_id) + ".lock")).open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if any(
+                (state / (str(issue_id) + suffix)).exists()
+                for suffix in ("-start.json", "-run.json")
+            ):
+                raise ValueError(
+                    "This Issue was already submitted through the legacy entry. Continue from its existing Run."
+                )
+    except (OSError, KeyError) as error:
+        raise ValueError("Cannot verify legacy adapter intake state") from error
+
+
+def forward(config, client, number, comment_id=0, legacy_config=None):
     github_call = configured_github_call(config)
     repo = config["repository"]
     owner = repo.split("/")[0]
     issue = github_call(f"repos/{repo}/issues/{number}")
     if {x["name"] for x in issue.get("labels", [])}.intersection(
-        {"harness-opensandbox"}.union(config.get("excluded_issue_labels", []))
+        (
+            {"harness-opensandbox", "harness-claude"}
+            if config.get("issue_label") != "harness-claude"
+            else {"harness-opensandbox"}
+        ).union(config.get("excluded_issue_labels", []))
     ):
         raise ValueError(
             "Issue selects another Pipeline; the legacy entry must not start or forward it"
@@ -304,6 +341,12 @@ def forward(config, client, number, comment_id=0):
             "This Issue is output of an existing platform Run; continue from that Run's page, "
             "or create a new Issue for new work. It cannot start a second Run."
         )
+    if config.get("issue_label") and config["issue_label"] not in {
+        x["name"] for x in issue.get("labels", [])
+    }:
+        raise ValueError("Issue does not select this Pipeline")
+    if config.get("issue_label") == "harness-claude":
+        check_legacy_intake(legacy_config, repo, issue["id"])
     key = f"github:{repo}:issue:{issue['id']}"
     state = Path(config["state_root"]).resolve()
     workspace_root = Path(config["workspace_root"]).resolve()
@@ -314,6 +357,12 @@ def forward(config, client, number, comment_id=0):
     with lockpath.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         current = accepted_run(client, key)
+        if (
+            current
+            and config.get("issue_label") == "harness-claude"
+            and current.get("workflow_id") != config["workflow_id"]
+        ):
+            raise ValueError("Existing Issue Run belongs to a different workflow")
         if comment_id:
             if not current:
                 raise ValueError(
@@ -423,6 +472,7 @@ def forward(config, client, number, comment_id=0):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--legacy-config")
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
@@ -433,7 +483,7 @@ def main():
     token = Path(config["token_file"]).read_text().strip()
     client = Client(config["base_url"], token, timeout=60)
     number, comment_id = entry
-    result = forward(config, client, number, comment_id)
+    result = forward(config, client, number, comment_id, args.legacy_config)
     if comment_id:
         report_run(config, result)
 

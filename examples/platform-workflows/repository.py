@@ -284,7 +284,7 @@ def prepare_trellis(workspace, executable, version):
     }
 
 
-def check_publish_files(workspace):
+def check_publish_files(workspace, exclude_runtime=False):
     # Inspect what git add --all would include, including currently staged files.
     names = (
         subprocess.check_output(
@@ -294,6 +294,8 @@ def check_publish_files(workspace):
         .split("\0")
     )
     for name in set(filter(None, names)):
+        if exclude_runtime and Path(name).is_relative_to("harness-output"):
+            continue
         file = workspace / name
         if not file.exists():
             continue
@@ -375,7 +377,104 @@ def delivery_artifacts(workspace, run):
             raise ValueError("Empty delivery artifact: " + name)
 
 
-def publish(workspace, run, scoped_docs=False, materials=False):
+class ReviewedSourceChanged(ValueError):
+    pass
+
+
+def verify_reviewed_tree(workspace, run, tree):
+    steps = run["previous_results"]
+
+    positions = {
+        step.get("node_id", step.get("node")): index for index, step in enumerate(steps)
+    }
+    if "code_review" not in positions:
+        raise ValueError("Missing completed platform code-review receipt")
+    review_index = positions["code_review"]
+    review = steps[review_index]
+    receipt = review.get("connector_receipt") or {}
+    if (
+        review.get("status") != "completed"
+        or receipt.get("exit_code") != 0
+        or receipt.get("log", {}).get("truncated")
+    ):
+        raise ValueError("Missing completed platform code-review receipt")
+    summary = json.loads(receipt["output"])
+    candidate = summary.get("candidate", "")
+    if (
+        summary.get("exit_code") != 0
+        or summary.get("source_unchanged") is not True
+        or not re.fullmatch("[0-9a-f]{40}", candidate)
+    ):
+        raise ValueError("Code-review receipt does not identify a reviewed candidate")
+
+    directory = task_docs(run)
+    pr = directory + "/pr.md"
+    extensions = {
+        ".md",
+        ".json",
+        ".csv",
+        ".txt",
+        ".html",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".pdf",
+    }
+    qa_stages = ("qa_plan", "qa_plan_review", "qa")
+    previous_index = review_index
+    for node in qa_stages:
+        index = positions.get(node, -1)
+        if index <= previous_index:
+            raise ValueError("Missing ordered QA delivery handoff: " + node)
+        step = steps[index]
+        if (
+            step.get("status") != "completed"
+            or (step.get("result") or {}).get("route") != "next"
+        ):
+            raise ValueError("Missing completed QA delivery handoff: " + node)
+        previous_index = index
+
+    evidence = set()
+    for step in steps[review_index + 1 :]:
+        if (
+            step.get("node_id", step.get("node")) not in qa_stages
+            or step.get("status") != "completed"
+        ):
+            continue
+        for name in (step.get("result") or {}).get("artifacts", []):
+            path = Path(name)
+            if (
+                path.is_relative_to(directory)
+                and ".." not in path.parts
+                and path.as_posix() == name
+                and path.suffix.lower() in extensions
+            ):
+                evidence.add(name)
+
+    # Use Git's tree modes and blob IDs, so executable-bit changes, links,
+    # staged content and deletions cannot hide behind equal file bytes.
+    raw = git(
+        workspace, "diff-tree", "-r", "-z", "--raw", "--no-renames", candidate, tree
+    )
+    fields = raw.rstrip("\0").split("\0") if raw else []
+    changed = []
+    for metadata, name in zip(fields[::2], fields[1::2], strict=True):
+        _, new_mode, _, _, status = metadata.split()
+        if new_mode == "100644" and (
+            (status in ("A", "M") and name == pr)
+            or (status == "A" and name in evidence)
+        ):
+            continue
+        changed.append(name)
+    if changed:
+        raise ReviewedSourceChanged(
+            "Reviewed source changed. Return through development, fixed tests and both reviews: "
+            + ", ".join(changed[:20])
+        )
+
+
+def publish(workspace, run, scoped_docs=False, materials=False, reviewed_source=False):
     if materials:
         verify_material(workspace, run)
     branch = branch_for(run)
@@ -393,8 +492,12 @@ def publish(workspace, run, scoped_docs=False, materials=False):
         raise ValueError(
             "Base integration has unresolved conflicts; no publication attempted"
         )
-    check_publish_files(workspace)
-    git(workspace, "add", "--all")
+    check_publish_files(workspace, exclude_runtime=reviewed_source)
+    if reviewed_source:
+        git(workspace, "add", "--all", "--", ".", ":(exclude)harness-output")
+        verify_reviewed_tree(workspace, run, git(workspace, "write-tree"))
+    else:
+        git(workspace, "add", "--all")
     pending_merge = subprocess.run(
         ["git", "-C", str(workspace), "rev-parse", "--verify", "MERGE_HEAD"],
         capture_output=True,
@@ -407,10 +510,13 @@ def publish(workspace, run, scoped_docs=False, materials=False):
     ):
         title = run.get("input", "Workflow delivery").splitlines()[0][:120]
         git(workspace, "commit", "-m", title)
-    git(workspace, "push", "origin", "HEAD:refs/heads/" + branch)
+    head = git(workspace, "rev-parse", "HEAD")
+    if reviewed_source:
+        verify_reviewed_tree(workspace, run, head)
+    git(workspace, "push", "origin", head + ":refs/heads/" + branch)
     return {
         "branch": branch,
-        "head": git(workspace, "rev-parse", "HEAD"),
+        "head": head,
         "pushed": True,
     }
 
@@ -478,8 +584,11 @@ def prepare_material(workspace, run, repository):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=["prepare", "publish", "verify"])
-    parser.add_argument("--repository", required=True)
+    parser.add_argument(
+        "operation", choices=["prepare", "publish", "verify", "check-reviewed"]
+    )
+    parser.add_argument("--repository")
+    parser.add_argument("--reviewed-source", action="store_true")
     parser.add_argument("--base", default="main")
     parser.add_argument("--task-docs", action="store_true")
     parser.add_argument("--materials", action="store_true")
@@ -487,6 +596,20 @@ def main():
     parser.add_argument("--trellis-executable")
     parser.add_argument("--trellis-version")
     args = parser.parse_args()
+    if args.operation == "check-reviewed":
+        from review_pair import load_ocr_runtime
+
+        run = json.load(sys.stdin)
+        if Path(run["workspace_path"]).resolve() != Path.cwd():
+            raise ValueError("Run workspace and process directory differ")
+        try:
+            verify_reviewed_tree(Path.cwd(), run, load_ocr_runtime().candidate_commit())
+        except ReviewedSourceChanged as error:
+            print(error)
+            raise SystemExit(10)
+        return
+    if not args.repository:
+        parser.error("--repository is required")
     run = json.load(sys.stdin)
     workspace = Path(run["workspace_path"]).resolve()
     if workspace != Path.cwd().resolve():
@@ -505,7 +628,9 @@ def main():
     result = (
         prepare(workspace, run, args.base, args.task_docs)
         if args.operation == "prepare"
-        else publish(workspace, run, args.task_docs, args.materials)
+        else publish(
+            workspace, run, args.task_docs, args.materials, args.reviewed_source
+        )
     )
     if args.operation == "prepare" and args.materials:
         material = prepare_material(workspace, run, args.repository)

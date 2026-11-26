@@ -1,0 +1,79 @@
+name: Claude role workflow Issue entry
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Original Issue number (retry uses the same Run)
+        type: string
+        required: true
+      comment_id:
+        description: Optional original comment ID to retry
+        type: string
+        default: ''
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: claude-entry-${{ github.repository }}-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+  queue: max
+jobs:
+  forward:
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && !github.event.issue.pull_request && !contains(github.event.issue.labels.*.name, 'harness-opensandbox') && (github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'harness-claude'))
+    runs-on: [self-hosted, macOS, ARM64, he-full]
+    timeout-minutes: 5
+    steps:
+      - name: Configure GitHub transport
+        id: github_transport
+        env:
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CLAUDE_CONFIG }}
+        run: |
+          python3 -I - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          try:
+              config = json.loads(Path(os.environ["AGENT_PLATFORM_CONFIG"]).read_text())
+              proxy = config.get("git_proxy", "")
+              if not isinstance(proxy, str) or any(ord(c) <= 32 or ord(c) == 127 for c in proxy):
+                  raise ValueError()
+              if proxy:
+                  parsed = urlsplit(proxy)
+                  if parsed.scheme not in ("http", "https", "socks5", "socks5h") or not parsed.hostname or parsed.username is not None or parsed.password is not None:
+                      raise ValueError()
+                  parsed.port
+          except (OSError, ValueError, TypeError, KeyError, AttributeError):
+              raise SystemExit("Invalid private GitHub transport configuration")
+          values = {name: proxy or os.environ.get(name) or os.environ.get(name.upper(), "") for name in ("http_proxy", "https_proxy")}
+          if any(any(ord(c) <= 32 or ord(c) == 127 for c in value) for value in values.values()):
+              raise SystemExit("Invalid Runner proxy environment")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for name, value in values.items():
+                  if value:
+                      print("::add-mask::" + value.replace("%", "%25"))
+                  output.write(name + "=" + value + "\n")
+          PYTHON
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          http_proxy: ${{ steps.github_transport.outputs.http_proxy }}
+          https_proxy: ${{ steps.github_transport.outputs.https_proxy }}
+        with:
+          persist-credentials: false
+      - name: Submit event through Workflow SDK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENT_PLATFORM_CONFIG: ${{ vars.AGENT_PLATFORM_CLAUDE_CONFIG }}
+          AGENT_PLATFORM_LEGACY_CONFIG: ${{ vars.AGENT_PLATFORM_WORKFLOW_CONFIG }}
+        run: |
+          export PATH="/opt/homebrew/bin:$PATH"
+          test -n "$AGENT_PLATFORM_CONFIG"
+          if test -f .github/workflows/agent-platform-entry.yml && test -z "$AGENT_PLATFORM_LEGACY_CONFIG"; then
+            echo "Configure the existing legacy runner before enabling this entry" >&2
+            exit 1
+          fi
+          python3 -I .harness/agent-platform/examples/platform-workflows/run_entry.py legacy \
+            --config "$AGENT_PLATFORM_CONFIG" --legacy-config "$AGENT_PLATFORM_LEGACY_CONFIG"

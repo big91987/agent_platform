@@ -19,7 +19,7 @@
 
 ### Task 2: 可复用角色流程、双审查和新 Issue 入口
 
-负责 examples/platform-workflows、examples/code-review 及 QA 附件。基于 Task1 executor=claude 创建新图，不覆盖旧图。prepare→requirements→architecture→development→tests→code_review→qa→approval→report→publish→done，返工/缺输入走现有 handoff/wait。报告节点不用额外 Skill。编排角色指令不复制项目 AGENTS.md。每种审查分别处理规则/模型失败及发现，以同一候选绑定。新入口用独立 Issue form/label 和专用受信 Actions 路由，确保旧入口不重复受理；使用 request_id 幂等。本机服务使用显式选择的Skill资产，并记录版本/摘要。仓库现有本机Runner转发Issue到loopback；不暴露端口到外网。
+负责 examples/platform-workflows、examples/code-review 及 QA 附件。基于 Task1 executor=claude 创建新图，不覆盖旧图。prepare→requirements→architecture→development→tests→code_review→qa_plan→qa_plan_review→qa→approval→report→publish_check→publish→done，返工/缺输入走现有 handoff/wait。报告节点不用额外 Skill。编排角色指令不复制项目 AGENTS.md。每种审查分别处理规则/模型失败及发现，以同一候选绑定。 本机双审查与发布核对使用管理员配置的固定命令 Connector，仅退出码 0 时继续。发现问题或源码变化时，有权限的操作者检查回执后从正式入口返回开发；模型或工具不完整时先处理实际故障。新入口用独立 Issue form/label 和专用受信 Actions 路由，确保旧入口不重复受理；使用 request_id 幂等。本机服务使用显式选择的Skill资产，并记录版本/摘要。仓库现有本机Runner转发Issue到loopback；不暴露端口到外网。
 
 - [ ] 配置生成与入站路由/去重测试；QA 补充 RPM/TPM/次数/金额/并发各自阈值、租户隔离、真实普通/SSE、UI 首次/窄屏/恢复。
 - [ ] 实现并独立审查模板与安装升级，密钥不入图/Issue/源码。

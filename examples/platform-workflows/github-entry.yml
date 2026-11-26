@@ -23,7 +23,7 @@ concurrency:
   queue: max
 jobs:
   forward:
-    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && !github.event.issue.pull_request && !contains(github.event.issue.labels.*.name, 'harness-opensandbox')
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && !github.event.issue.pull_request && !contains(github.event.issue.labels.*.name, 'harness-opensandbox') && !contains(github.event.issue.labels.*.name, 'harness-claude')
     runs-on: [self-hosted, macOS, ARM64, he-full]
     timeout-minutes: 5
     steps:

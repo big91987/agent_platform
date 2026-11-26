@@ -32,22 +32,28 @@ def install(project, repository, upgrade=False, template="legacy"):
         f"git@github.com:{repository}.git",
     ):
         raise ValueError("Project origin does not match configured repository")
-    if template not in ("legacy", "sandbox"):
-        raise ValueError("Choose the legacy or sandbox Issue entry")
+    if template not in ("legacy", "sandbox", "claude"):
+        raise ValueError("Choose legacy, sandbox or claude Issue entry")
     source = (
         Path(__file__)
-        .with_name("github-entry.yml" if template == "legacy" else "sandbox-entry.yml")
+        .with_name(
+            {
+                "legacy": "github-entry.yml",
+                "sandbox": "sandbox-entry.yml",
+                "claude": "claude-entry.yml",
+            }[template]
+        )
         .read_bytes()
     )
     workflow = (
         WORKFLOW
         if template == "legacy"
-        else Path(".github/workflows/agent-platform-sandbox-entry.yml")
+        else Path(".github/workflows/agent-platform-" + template + "-entry.yml")
     )
     manifest_path = (
         MANIFEST
         if template == "legacy"
-        else Path(".github/agent-platform-sandbox-entry-source.json")
+        else Path(".github/agent-platform-" + template + "-entry-source.json")
     )
     target, manifest = project / workflow, project / manifest_path
     if not target.resolve().is_relative_to(
@@ -75,7 +81,28 @@ def install(project, repository, upgrade=False, template="legacy"):
         raise ValueError(
             "Workflow missing; recover using its recorded source version first"
         )
+    if template == "claude":
+        legacy = project / WORKFLOW
+        if (
+            legacy.exists() or legacy.is_symlink() or (project / MANIFEST).exists()
+        ) and (
+            legacy.is_symlink()
+            or not legacy.is_file()
+            or legacy.read_bytes()
+            != Path(__file__).with_name("github-entry.yml").read_bytes()
+        ):
+            raise ValueError("Upgrade the managed legacy entry before enabling Claude")
     created = ensure_bundle(project)
+    if template == "claude":
+        bundle = project / ".harness/agent-platform/examples/platform-workflows"
+        for name in ("github_entry.py", "run_entry.py"):
+            if (bundle / name).read_bytes() != Path(__file__).with_name(
+                name
+            ).read_bytes():
+                raise ValueError(
+                    "Upgrade the repository-owned Harness adapter from the reviewed export before enabling Claude"
+                )
+        install_claude_form(project, upgrade)
     if actual == digest(source) and recorded == expected:
         return created
     # Both writes are atomic. If interrupted between them, rerunning the same
@@ -84,6 +111,32 @@ def install(project, repository, upgrade=False, template="legacy"):
         atomic_write(target, source)
     atomic_write(manifest, (json.dumps(expected, indent=2) + "\n").encode())
     return True
+
+
+def install_claude_form(project, upgrade):
+    relative = Path(".github/ISSUE_TEMPLATE/agent-platform-claude.yml")
+    target = project / relative
+    manifest = project / ".github/agent-platform-claude-form-source.json"
+    if (
+        target.is_symlink()
+        or manifest.is_symlink()
+        or not target.resolve().is_relative_to(project)
+    ):
+        raise ValueError("Issue form path escapes project")
+    source = Path(__file__).with_name("claude-issue.yml").read_bytes()
+    expected = {"path": str(relative), "sha256": digest(source)}
+    recorded = json.loads(manifest.read_text()) if manifest.exists() else None
+    actual = digest(target.read_bytes()) if target.exists() else None
+    if (
+        actual
+        and actual != expected["sha256"]
+        and (not recorded or recorded.get("sha256") != actual)
+    ):
+        raise ValueError("Issue form drift; reconcile before upgrading")
+    if recorded and recorded != expected and not upgrade:
+        raise ValueError("Issue form source change requires --upgrade")
+    atomic_write(target, source)
+    atomic_write(manifest, (json.dumps(expected, indent=2) + "\n").encode())
 
 
 def ensure_bundle(project):
@@ -128,7 +181,9 @@ def main():
     parser.add_argument("--project", type=Path, required=True)
     parser.add_argument("--repository", required=True)
     parser.add_argument("--upgrade", action="store_true")
-    parser.add_argument("--template", choices=("legacy", "sandbox"), default="legacy")
+    parser.add_argument(
+        "--template", choices=("legacy", "sandbox", "claude"), default="legacy"
+    )
     args = parser.parse_args()
     print(
         "Installed"

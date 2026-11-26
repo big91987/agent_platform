@@ -1,9 +1,31 @@
 """Boundary tests for event forwarding; not real GitHub/Agent acceptance."""
 
 import copy
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from github_entry import event_input
+from github_entry import check_legacy_intake, event_input
+
+
+class LegacyIntakeTest(unittest.TestCase):
+    def test_existing_or_uncertain_legacy_start_cannot_cross_to_new_store(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            state = root / "state"
+            state.mkdir()
+            config = root / "legacy.json"
+            config.write_text(
+                json.dumps({"repository": "owner/repo", "state_root": str(state)})
+            )
+            check_legacy_intake(config, "owner/repo", 1)
+            for receipt in ("1-start.json", "1-run.json"):
+                path = state / receipt
+                path.write_text("{}")
+                with self.assertRaisesRegex(ValueError, "existing Run"):
+                    check_legacy_intake(config, "owner/repo", 1)
+                path.unlink()
 
 
 class FailureDiagnosticTest(unittest.TestCase):

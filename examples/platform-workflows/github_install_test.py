@@ -66,6 +66,68 @@ class GitHubInstallTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 install(root, "other/repo")
 
+    def test_claude_requires_current_bundle_and_legacy_exclusion(self):
+        from install_github_entry import digest
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/owner/repo.git",
+                ],
+                check=True,
+            )
+            install(root, "owner/repo")
+            source = Path(__file__).resolve().parent
+            for name in ("github-entry.yml", "github_entry.py"):
+                old = (
+                    (source / name)
+                    .read_text()
+                    .replace(
+                        " && !contains(github.event.issue.labels.*.name, 'harness-claude')",
+                        "",
+                    )
+                    .replace(', "harness-claude"', "")
+                    .encode()
+                )
+                if name == "github-entry.yml":
+                    target = root / ".github/workflows/agent-platform-entry.yml"
+                    target.write_bytes(old)
+                    manifest = root / ".github/agent-platform-entry-source.json"
+                    manifest.write_text(
+                        json.dumps(
+                            {
+                                "path": target.relative_to(root).as_posix(),
+                                "sha256": digest(old),
+                            }
+                        )
+                    )
+                else:
+                    adapter = (
+                        root
+                        / ".harness/agent-platform/examples/platform-workflows"
+                        / name
+                    )
+                    adapter.write_bytes(old)
+            with self.assertRaisesRegex(ValueError, "legacy"):
+                install(root, "owner/repo", template="claude")
+            install(root, "owner/repo", upgrade=True)
+            with self.assertRaisesRegex(ValueError, "Harness adapter"):
+                install(root, "owner/repo", template="claude")
+            self.assertFalse(
+                (root / ".github/ISSUE_TEMPLATE/agent-platform-claude.yml").exists()
+            )
+            shutil.copyfile(source / adapter.name, adapter)
+            self.assertTrue(install(root, "owner/repo", template="claude"))
+            self.assertFalse(install(root, "owner/repo", template="claude"))
+
     def test_interrupted_first_install_resumes_without_manual_manifest(self):
         from unittest.mock import patch
 

@@ -1,0 +1,34 @@
+name: CC 分角色研发需求
+description: 需求、架构、实现分别处理，经过双工具审查与独立 QA 后交付。
+title: "【产品功能】"
+labels: [harness-claude]
+body:
+  - type: markdown
+    attributes:
+      value: "请在标题类别后写清具体目标。修复用【产品修复】，测试用【产品测试】，平台验证用【Harness验证】。不要填写密钥、密码或私有素材；私有材料使用已配置的引用。"
+  - type: textarea
+    id: problem
+    attributes:
+      label: 为什么做
+      description: 谁在什么场景遇到什么问题，或缺少什么能力？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 要做什么
+      description: 完成后用户如何使用，能观察到什么变化？说明本次范围。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 怎样算完成
+      description: 正常路径、边界和失败恢复；附已有 PRD、设计或测试报告链接。
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖和关联任务
+      description: 哪些 Issue 必须先完成，哪些可以并行？已有同目标任务请继续原 Issue。
