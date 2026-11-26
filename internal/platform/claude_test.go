@@ -193,18 +193,37 @@ func TestClaudeLiveSelectedSkill(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
+	x := &Claude{Root: t.TempDir(), Binary: "/opt/homebrew/bin/claude", Approve: func(context.Context, Conversation, Message, json.RawMessage) (string, error) {
+		return "", errors.New("the selected Skill reference unexpectedly required approval")
+	}}
+	workspace, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	skill := filepath.Join(t.TempDir(), "role-proof")
-	os.MkdirAll(skill, 0700)
-	os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("---\nname: role-proof\ndescription: Use for the selected role proof.\n---\nWhen invoked reply exactly SELECTED_SKILL_PROOF_4917. Do not use any further tools.\n"), 0600)
-	x := &Claude{Root: t.TempDir(), Binary: "/opt/homebrew/bin/claude", Approve: func(context.Context, Conversation, Message, json.RawMessage) (string, error) { return "accept", nil }}
-	workspace, _ := filepath.EvalSymlinks(t.TempDir())
-	ambient := filepath.Join(workspace, ".claude", "skills", "unselected")
-	os.MkdirAll(ambient, 0700)
-	os.WriteFile(filepath.Join(ambient, "SKILL.md"), []byte("---\nname: unselected\ndescription: Ambient skill that must not load for this role.\n---\nReply AMBIENT_SKILL_LEAK.\n"), 0600)
 	c := Conversation{ID: "skill", WorkspacePath: workspace, Snapshot: Agent{Executor: "claude", InheritEnv: true, NetworkAccess: true, AllowElevation: true, Skills: []string{skill}}}
+	_, home := x.paths(c)
+	attachment := filepath.Join(home, "role-plugin", "skills", "role-proof", "references", "proof.md")
+	if err := os.MkdirAll(filepath.Join(skill, "references"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skill, "references", "proof.md"), []byte("SELECTED_SKILL_PROOF_4917\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	instructions := "---\nname: role-proof\ndescription: Use for the selected role proof.\n---\nUse the Read tool to read " + attachment + " and reply with its exact contents.\n"
+	if err := os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte(instructions), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ambient := filepath.Join(workspace, ".claude", "skills", "unselected")
+	if err := os.MkdirAll(ambient, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ambient, "SKILL.md"), []byte("---\nname: unselected\ndescription: Ambient skill that must not load for this role.\n---\nReply AMBIENT_SKILL_LEAK.\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	var output strings.Builder
 	names := []string{}
-	err := x.Execute(ctx, c, Message{ID: 1, Content: "Invoke the platform-role:role-proof skill and follow its instructions."}, func(raw []byte) error {
+	err = x.Execute(ctx, c, Message{ID: 1, Content: "Invoke the platform-role:role-proof skill and follow its instructions."}, func(raw []byte) error {
 		var e struct {
 			Item struct {
 				Text string `json:"text"`
@@ -241,12 +260,61 @@ func TestClaudeToolGrantIsolation(t *testing.T) {
 		name, input string
 		allow, ask  bool
 	}{{"Skill", `{"skill":"platform-role:chosen"}`, true, false}, {"Skill", `{"skill":"debug"}`, false, false}, {"mcp__test__read", `{}`, true, false}, {"mcp__test__save", `{}`, false, true}, {"mcp__test__hidden", `{}`, false, false}, {"WebFetch", `{}`, false, false}} {
-		allow, ask := claudeToolDecision(c, tt.name, json.RawMessage(tt.input))
+		allow, ask := claudeToolDecision(c, "", tt.name, json.RawMessage(tt.input))
 		if allow != tt.allow || ask != tt.ask {
 			t.Fatalf("%s allow=%v ask=%v", tt.name, allow, ask)
 		}
 	}
 }
+func TestClaudeReadsSelectedSkillReferences(t *testing.T) {
+	root := t.TempDir()
+	skill := filepath.Join(root, "selected")
+	unselected := filepath.Join(root, "unselected")
+	for _, dir := range []string{skill, unselected} {
+		if err := os.MkdirAll(filepath.Join(dir, "references"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		for _, rel := range []string{"SKILL.md", "references/guide.md"} {
+			if err := os.WriteFile(filepath.Join(dir, rel), []byte("guide"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	plugin := filepath.Join(root, "native", "role-plugin")
+	if err := os.MkdirAll(filepath.Join(plugin, "skills"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{skill, unselected} {
+		if err := os.Symlink(dir, filepath.Join(plugin, "skills", filepath.Base(dir))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join(unselected, "references", "guide.md"), filepath.Join(skill, "references", "outside.md")); err != nil {
+		t.Fatal(err)
+	}
+	c := Conversation{Snapshot: Agent{Skills: []string{skill}, AllowElevation: true}}
+	for _, test := range []struct {
+		name, tool, path string
+		allow            bool
+	}{
+		{"selected reference", "Read", filepath.Join(plugin, "skills", "selected", "references", "guide.md"), true},
+		{"unselected reference", "Read", filepath.Join(plugin, "skills", "unselected", "references", "guide.md"), false},
+		{"outside asset", "Read", filepath.Join(plugin, "skills", "selected", "references", "outside.md"), false},
+		{"asset modification", "Edit", filepath.Join(plugin, "skills", "selected", "references", "guide.md"), false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			args, err := json.Marshal(map[string]string{"file_path": test.path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			allow, ask := claudeToolDecision(c, plugin, test.tool, args)
+			if allow != test.allow || ask == test.allow {
+				t.Fatalf("allow=%v ask=%v", allow, ask)
+			}
+		})
+	}
+}
+
 func TestClaudeCancellationReapsProcess(t *testing.T) {
 	root := t.TempDir()
 	binary := filepath.Join(root, "cli")
@@ -383,13 +451,13 @@ func TestClaudeMissingBearerFailsBeforeLaunch(t *testing.T) {
 func TestClaudeUnknownNativeToolNeverRequestsApproval(t *testing.T) {
 	c := Conversation{Snapshot: Agent{AllowElevation: true, NetworkAccess: true}}
 	for _, name := range []string{"UnknownTool", "Agent", "PowerShell", "mcp__unknown__write", ""} {
-		allow, ask := claudeToolDecision(c, name, json.RawMessage(`{}`))
+		allow, ask := claudeToolDecision(c, "", name, json.RawMessage(`{}`))
 		if allow || ask {
 			t.Fatalf("unknown tool %q received permission or approval route", name)
 		}
 	}
 	for _, name := range []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch"} {
-		allow, ask := claudeToolDecision(c, name, json.RawMessage(`{}`))
+		allow, ask := claudeToolDecision(c, "", name, json.RawMessage(`{}`))
 		if allow || !ask {
 			t.Fatalf("supported tool %q lost approval route", name)
 		}

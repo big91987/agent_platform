@@ -453,7 +453,7 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 			}
 			answer := map[string]any{"behavior": "deny", "message": "Tool is not authorized"}
 			if req.Request.Subtype == "can_use_tool" {
-				allow, ask := claudeToolDecision(c, req.Request.ToolName, req.Request.Input)
+				allow, ask := claudeToolDecision(c, filepath.Join(home, "role-plugin"), req.Request.ToolName, req.Request.Input)
 				if ask && x.Approve != nil {
 					safe, _ := json.Marshal(map[string]any{"platform_permission_request": !strings.HasPrefix(req.Request.ToolName, "mcp__"), "tool": req.Request.ToolName, "arguments": payload(req.Request.Input)})
 					decision, e := x.Approve(ctx, c, m, safe)
@@ -547,7 +547,7 @@ func (x *Claude) run(ctx context.Context, c Conversation, m Message, workspace, 
 	}
 	return nil
 }
-func claudeToolDecision(c Conversation, name string, input json.RawMessage) (bool, bool) {
+func claudeToolDecision(c Conversation, plugin, name string, input json.RawMessage) (bool, bool) {
 	if name == "Skill" {
 		var request struct {
 			Skill string `json:"skill"`
@@ -585,9 +585,42 @@ func claudeToolDecision(c Conversation, name string, input json.RawMessage) (boo
 	if !c.Snapshot.NetworkAccess && (name == "WebFetch" || name == "WebSearch") {
 		return false, false
 	}
+	if name == "Read" && plugin != "" && claudeSelectedSkillRead(plugin, c.Snapshot.Skills, input) {
+		return true, false
+	}
 	// Native sandbox is the automatic write boundary. Requests reaching this
 	// callback require explicit administrator permission, never blanket bypass.
 	return false, c.Snapshot.AllowElevation
+}
+
+// Claude opens Skill attachments through its private native plugin. The
+// requested file must belong to the mounted Skill before and after resolving
+// symlinks, and this authorization is for reading a regular file only.
+func claudeSelectedSkillRead(plugin string, skills []string, input json.RawMessage) bool {
+	var request struct {
+		FilePath string `json:"file_path"`
+	}
+	if json.Unmarshal(input, &request) != nil || !filepath.IsAbs(request.FilePath) || filepath.Clean(request.FilePath) != request.FilePath {
+		return false
+	}
+	for _, selected := range skills {
+		skill, err := normalizeSkill(selected)
+		if err != nil {
+			continue
+		}
+		mount := filepath.Join(plugin, "skills", filepath.Base(skill))
+		rel, err := filepath.Rel(mount, request.FilePath)
+		if err != nil || rel == "." || !filepath.IsLocal(rel) {
+			continue
+		}
+		actual, err := filepath.EvalSymlinks(request.FilePath)
+		if err != nil || actual != filepath.Join(skill, rel) {
+			return false
+		}
+		file, err := os.Stat(actual)
+		return err == nil && file.Mode().IsRegular()
+	}
+	return false
 }
 
 // Each MCP subprocess receives its declared environment explicitly; Claude's
