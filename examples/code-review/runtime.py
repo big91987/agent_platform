@@ -400,7 +400,7 @@ def cli_review(binary=None):
             "--timeout",
             "30",
             "--max-tokens-budget",
-            "3000000",
+            "0",
         ],
         OUTPUT / "raw.json",
         llm=True,

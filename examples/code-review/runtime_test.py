@@ -22,6 +22,35 @@ class ReviewResultTest(unittest.TestCase):
             },
         }
 
+    def test_cli_reviews_all_files_without_aggregate_token_cutoff(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        import runtime
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+
+            def execute(args, destination, *, llm, timeout):
+                # The pinned CLI treats 0 as unlimited. A numeric cap can
+                # stop dispatch while native coverage still has pending files.
+                self.assertEqual(args[args.index("--max-tokens-budget") + 1], "0")
+                destination.write_text(json.dumps(self.envelope()))
+                return 0, 1.0
+
+            source = {"base": "a" * 40, "head": "b" * 40, "expected": ["app.go"]}
+            with (
+                patch.object(runtime, "STATE", output),
+                patch.object(runtime, "OUTPUT", output),
+                patch.object(runtime, "trusted_source", return_value=source),
+                patch.object(runtime, "run_tool", side_effect=execute),
+                patch.object(runtime, "finish", return_value=0) as finish,
+            ):
+                self.assertEqual(runtime.cli_review(binary="ocr"), 0)
+            self.assertEqual(finish.call_args.args[:3], ("ocr-cli", self.envelope(), 0))
+
     def test_exit_zero_does_not_accept_partial_coverage(self):
         value = self.envelope()
         value["manifest"]["coverage"]["completed"] = []
