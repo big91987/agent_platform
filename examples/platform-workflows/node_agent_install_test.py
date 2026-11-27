@@ -565,6 +565,13 @@ class NodeAgentInstallTest(unittest.TestCase):
         )
         self.assertEqual(review["env_refs"]["OCR_LLM_TOKEN"], "REVIEW_TOKEN")
         self.assertNotIn("GH_TOKEN", review["env_refs"])
+        feedback = next(
+            c
+            for c in self.api.objects["connectors"]
+            if c["id"] == nodes["review_feedback"]["connector_id"]
+        )
+        self.assertEqual(feedback["args"][-1], "review-feedback")
+        self.assertEqual(feedback["env_refs"], {})
 
 
 if __name__ == "__main__":

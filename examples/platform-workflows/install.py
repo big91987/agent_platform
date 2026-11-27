@@ -765,7 +765,7 @@ def main():
     connectors = {}
     connector_roles = ["prepare", "issue", "tests", "publish", "pr", "comment"]
     if args.template == "claude-delivery":
-        connector_roles.extend(("code_review", "publish_check"))
+        connector_roles.extend(("code_review", "review_feedback", "publish_check"))
     if args.template == "product-e2e":
         connector_roles.append("report_publish")
     for role in connector_roles:
@@ -793,6 +793,8 @@ def main():
             if role == "code_review":
                 command = review_command
                 spec["timeout_seconds"] = 1800
+            if role == "review_feedback":
+                command = [str(HERE / "repository.py"), "review-feedback"]
             if role == "publish_check":
                 command = [str(HERE / "repository.py"), "check-reviewed"]
             if role == "publish" and args.template == "claude-delivery":
@@ -831,7 +833,9 @@ def main():
             )
             if role == "code_review":
                 spec["env_refs"].update(review_refs)
-            if role not in ("tests", "code_review", "publish_check"):
+            if role == "review_feedback":
+                spec["env_refs"] = {}
+            if role not in ("tests", "code_review", "review_feedback", "publish_check"):
                 spec["env_refs"]["GH_TOKEN"] = args.token_env
         connectors[role] = installation.apply("connectors", "connector-" + role, spec)[
             "id"

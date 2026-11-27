@@ -589,7 +589,8 @@ def prepare_material(workspace, run, repository):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "operation", choices=["prepare", "publish", "verify", "check-reviewed"]
+        "operation",
+        choices=["prepare", "publish", "verify", "check-reviewed", "review-feedback"],
     )
     parser.add_argument("--repository")
     parser.add_argument("--reviewed-source", action="store_true")
@@ -600,6 +601,15 @@ def main():
     parser.add_argument("--trellis-executable")
     parser.add_argument("--trellis-version")
     args = parser.parse_args()
+    if args.operation == "review-feedback":
+        from review_pair import review_feedback
+
+        run = json.load(sys.stdin)
+        if Path(run["workspace_path"]).resolve() != Path.cwd():
+            raise ValueError("Run workspace and process directory differ")
+        feedback = review_feedback(run)
+        print(json.dumps(feedback, ensure_ascii=False))
+        raise SystemExit(0 if feedback["reason"] == "review_findings" else 20)
     if args.operation == "check-reviewed":
         from review_pair import load_ocr_runtime
 

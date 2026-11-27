@@ -493,7 +493,7 @@ Agent 的 `turn_timeout_seconds` 限制单轮实际执行；从领取消息开�
 
 除安装器原有仓库、证据、工作区、Skill 路径及私有 GitHub 配置参数外，指定 `--arch-tool-root /absolute/trusted/arch-template/tool`。安装器在清单旁保存内容寻址的 Skill 和架构工具副本，清单记录各来源路径及 SHA-256。使用 `--upgrade` 安装变更版本，保留旧副本供冻结 Run 使用。archcheck 执行前后都会核对源码与依赖摘要。对含 npm 锁文件的架构工具，安装器在私有副本中运行有时限的 `npm ci --ignore-scripts`，验证锁定的 TypeScript 与 Vue 解析器可以实际解析，再记录依赖 SHA-256、Node/npm 版本和锁文件摘要。原工具目录的 `node_modules` 不进入源码快照，也不被修改。安装器和本机服务使用同一套 Node/npm。切换任一版本时，使用 `--upgrade` 为新运行时安装独立副本。旧副本和收据保留，冻结 Run 仍需匹配原运行时。安装失败时查看快照旁的私有 npm 日志。平台须已支持 `executor=claude`；模型省略时沿用服务端 CC 连接默认值，审批使用平台正式用户审批路径。需要实际网页测试时由 QA 使用任务环境内的浏览器能力，不把无工具的文档审查当验收。
 
-审查节点从平台服务端读取 `REVIEW_URL`（完整 Chat Completions URL）、`REVIEW_TOKEN`、`REVIEW_MODEL`、`REVIEW_PROTOCOL`，节点只保存环境变量引用。两工具各自完整报告后才可前进；任何工具错误、模型未执行或候选变动均停止。发现问题返回开发。两个工具在工作区外新建的私有 checkout 中读取同一候选。首次运行按固定 SHA-256 下载 OCR，后续复用清单资产目录的已校验二进制。工具结束后把报告复制到工作区 harness-output，保留以前的结果。QA 判断业务验收，不能以模型无发现替代测试。
+审查节点从平台服务端读取 `REVIEW_URL`（完整 Chat Completions URL）、`REVIEW_TOKEN`、`REVIEW_MODEL`、`REVIEW_PROTOCOL`，节点只保存环境变量引用。双工具报告完整且无发现后进入独立验收。任一工具错误、模型未完成、日志截断或候选变动会停止。两个工具在工作区外新建的私有 checkout 中读取同一候选。首次运行按固定 SHA-256 下载 OCR，后续复用清单资产目录的已校验二进制。工具结束后把报告复制到工作区 harness-output，保留以前的结果。QA 判断业务验收，不能以模型无发现替代测试。
 
 `install_github_entry.py --template claude` 安装独立的 `.github/workflows/agent-platform-claude-entry.yml` 和 Issue 表单。入口标签为 `harness-claude`，私有配置变量为 `AGENT_PLATFORM_CLAUDE_CONFIG`；现有本机 Runner 转发到同机 loopback 平台。如果仓库已启用 legacy 入口，先运行 `install_github_entry.py --template legacy --upgrade`，核对现有 Runner 变量仍指向原私有配置。按下述方式同步仓库内的 Harness，之后再安装 Claude 入口。Claude 安装器核对旧 workflow 的排除规则及打包适配器源码，发现旧版即停止。两个同机 Runner 都需要能读取双方的私有配置与回执目录。两个入口按相同顺序锁定该 Issue，检查双方旧回执，在平台调用前保存归属，再记录受理结果。移除或切换标签仍沿用原归属；已提交或结论不确定的 Issue 使用原 Run，需要替代时创建明确关联原 Issue 的新任务。不要给同一 Issue 同时添加新入口和 `harness-opensandbox`。
 
@@ -501,7 +501,7 @@ Agent 的 `turn_timeout_seconds` 限制单轮实际执行；从领取消息开�
 
 发布前核对平台双审查回执里的 Git 候选树。最近一次代码审查之后，最新独立验收必须已完成并交接通过。本次任务文档目录允许新增该候选上由验收交接声明的 Markdown、JSON、CSV、文本、HTML、图片和 PDF 证据，以及新增或更新对外正文 `pr.md`。返工产生新审查候选后，需要该候选的验收和新证据。报告请求补证时，独立验收使用新路径并保留同一候选的原证据。
 
-双审查和源码核对通过管理员配置的固定命令执行，退出码为 0 时前进。审查输出保存在工作区的 `harness-output/`，发布提交排除该目录。发现问题或源码变化时，操作者核对回执后可在运行页返回开发，再经过自动化回归、双审查和验收。模型或工具失败时，按回执处理故障后可重试。发布 Connector 在提交及推送前再次核验候选。
+双工具审查和发布前源码核对通过管理员配置的固定命令执行。审查有发现时，框架核对该执行的完整回执，并自动返工一次。研发 Agent 收到原审查执行号、候选和基线、源码摘要、两个工具的退出码与报告文件路径。修正后仍从全量回归重新进入双审查，通过后才到独立验收。再次发现问题时保留回执并停止。工具或模型未完成时保留失败原因，等待故障处理。原始审查报告位于 `harness-output/`，该目录不进入发布提交。发布 Connector 在提交及推送前再次核验同版候选及独立 QA。
 
 已有安装从当前受支持的导出版本运行原安装命令并加 `--upgrade`，沿用原清单和工作流 ID。新版定义供新 Run 使用，历史 Run 仍显示其冻结流程。
 

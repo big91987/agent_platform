@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,6 +32,91 @@ class ClaudeProfileTest(unittest.TestCase):
         ):
             with self.subTest(args=args):
                 self.assertEqual(decision(*args), 20)
+
+    def test_review_feedback_reworks_only_a_complete_findings_receipt_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory).resolve()
+            pair = {
+                "candidate": "a" * 40,
+                "base": "b" * 40,
+                "source_inventory_sha256": "c" * 64,
+                "source_unchanged": True,
+                "tool_exit_codes": {"ocr": 10, "archcheck": 0},
+                "architecture_model_status": "no_findings",
+                "exit_code": 10,
+            }
+
+            def invoke(code, summary, prior_feedback=None, truncated=False):
+                previous = [] if prior_feedback is None else [prior_feedback]
+                previous.append(
+                    {
+                        "node_id": "code_review",
+                        "seq": 4,
+                        "status": "completed",
+                        "result": {"route": "failed"},
+                        "connector_receipt": {
+                            "kind": "command",
+                            "exit_code": code,
+                            "log": {"truncated": truncated},
+                            "output": json.dumps(summary),
+                        },
+                    }
+                )
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-B",
+                        str(Path(__file__).with_name("repository.py")),
+                        "review-feedback",
+                    ],
+                    input=json.dumps(
+                        {"workspace_path": str(workspace), "previous_results": previous}
+                    ),
+                    cwd=workspace,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.stderr, "")
+                return result.returncode, json.loads(result.stdout)
+
+            code, feedback = invoke(10, pair)
+            self.assertEqual(code, 0)
+            self.assertEqual(feedback["candidate"], pair["candidate"])
+            self.assertEqual(feedback["review_seq"], 4)
+            self.assertEqual(feedback["tool_exit_codes"], pair["tool_exit_codes"])
+            self.assertEqual(
+                feedback["report_files"],
+                {
+                    "ocr": "harness-output/code-review/report.md",
+                    "archcheck": "harness-output/architecture/latest-report.json",
+                },
+            )
+            prior = {
+                "node_id": "review_feedback",
+                "seq": 2,
+                "status": "completed",
+                "result": {"route": "next"},
+                "connector_receipt": {"kind": "command", "exit_code": 0},
+            }
+            for actual_code, summary, prior_feedback, truncated, reason in (
+                (20, {**pair, "exit_code": 20}, None, False, "review_incomplete"),
+                (
+                    10,
+                    {**pair, "source_unchanged": False},
+                    None,
+                    False,
+                    "invalid_review_receipt",
+                ),
+                (10, pair, None, True, "invalid_review_receipt"),
+                (10, pair, prior, False, "automatic_rework_used"),
+            ):
+                with self.subTest(reason=reason, truncated=truncated):
+                    code, feedback = invoke(
+                        actual_code, summary, prior_feedback, truncated
+                    )
+                    self.assertNotEqual(code, 0)
+                    self.assertEqual(feedback["reason"], reason)
 
     def test_artifact_export_refuses_linked_parent_and_replaces_linked_destination(
         self,
@@ -243,6 +329,7 @@ class ClaudeProfileTest(unittest.TestCase):
                 "development",
                 "tests",
                 "code_review",
+                "review_feedback",
                 "qa",
                 "approval",
                 "report",
@@ -262,9 +349,14 @@ class ClaudeProfileTest(unittest.TestCase):
                 ("design", "requirements"),
                 ("development", "design"),
                 ("tests", "development"),
+                ("code_review", "review_feedback"),
                 ("qa", "development"),
                 ("report", "qa"),
             },
+        )
+        self.assertIn(
+            ("review_feedback", "next", "development"),
+            {(e["source"], e["route"], e["target"]) for e in modified["edges"]},
         )
         for blocked in (
             "requirements",

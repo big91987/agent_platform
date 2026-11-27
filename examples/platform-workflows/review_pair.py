@@ -30,6 +30,85 @@ def decision(ocr_code, arch_code, model_status, unchanged):
     return 10 if ocr_code == 10 or arch_code == 1 or model_status == "findings" else 0
 
 
+def review_feedback(run):
+    """Use the immediately preceding platform receipt to admit one automatic rework."""
+    steps = run["previous_results"]
+    previous = steps[-1] if steps else {}
+    receipt = previous.get("connector_receipt") or {}
+    feedback = {"reason": "invalid_review_receipt"}
+
+    if (
+        previous.get("node_id") != "code_review"
+        or previous.get("status") != "completed"
+        or (previous.get("result") or {}).get("route") != "failed"
+        or receipt.get("kind") != "command"
+    ):
+        return feedback
+
+    feedback.update(
+        review_seq=previous["seq"], review_exit_code=receipt.get("exit_code")
+    )
+    code = receipt.get("exit_code")
+    if code != 10:
+        return dict(feedback, reason="review_incomplete")
+    if (receipt.get("log") or {}).get("truncated") is not False:
+        return feedback
+
+    try:
+        summary = json.loads(receipt["output"])
+        if not isinstance(summary, dict):
+            return feedback
+        codes = summary["tool_exit_codes"]
+        if (
+            summary.get("exit_code") != 10
+            or summary.get("source_unchanged") is not True
+            or not isinstance(codes, dict)
+            or set(codes) != {"ocr", "archcheck"}
+            or any(type(value) is not int for value in codes.values())
+            or decision(
+                codes["ocr"],
+                codes["archcheck"],
+                summary.get("architecture_model_status"),
+                True,
+            )
+            != 10
+            or any(
+                not isinstance(summary.get(field), str)
+                or not re.fullmatch("[0-9a-f]{" + str(length) + "}", summary[field])
+                for field, length in (
+                    ("candidate", 40),
+                    ("base", 40),
+                    ("source_inventory_sha256", 64),
+                )
+            )
+        ):
+            return feedback
+    except (KeyError, ValueError, TypeError):
+        return feedback
+
+    feedback.update(
+        candidate=summary["candidate"],
+        base=summary["base"],
+        source_inventory_sha256=summary["source_inventory_sha256"],
+        tool_exit_codes=codes,
+        architecture_model_status=summary["architecture_model_status"],
+        report_files={
+            "ocr": "harness-output/code-review/report.md",
+            "archcheck": "harness-output/architecture/latest-report.json",
+        },
+    )
+    already_reworked = any(
+        step.get("node_id") == "review_feedback"
+        and step.get("status") == "completed"
+        and (step.get("result") or {}).get("route") == "next"
+        for step in steps[:-1]
+    )
+    return dict(
+        feedback,
+        reason="automatic_rework_used" if already_reworked else "review_findings",
+    )
+
+
 def prepared_head(context):
     rows = [
         row

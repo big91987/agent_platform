@@ -64,6 +64,7 @@ def configure(graph):
     }
     for node_id, label in (
         ("code_review", "代码审查"),
+        ("review_feedback", "处理审查发现"),
         ("publish_check", "核对待发布源码"),
     ):
         nodes[node_id] = dict(
@@ -77,6 +78,7 @@ def configure(graph):
         "development",
         "tests",
         "code_review",
+        "review_feedback",
         "qa",
         "approval",
         "report",
@@ -105,6 +107,8 @@ def configure(graph):
             ("development", "next", "tests", "实现完成"),
             ("tests", "next", "code_review", "回归通过"),
             ("code_review", "next", "qa", "双审查通过"),
+            ("code_review", "failed", "review_feedback", "核对审查失败回执"),
+            ("review_feedback", "next", "development", "交接同版审查发现"),
             ("qa", "next", "approval", "验收通过"),
             ("approval", "next", "report", "同意交付"),
             ("report", "next", "publish_check", "交付说明就绪"),
