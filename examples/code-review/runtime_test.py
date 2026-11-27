@@ -51,6 +51,64 @@ class ReviewResultTest(unittest.TestCase):
                 self.assertEqual(runtime.cli_review(binary="ocr"), 0)
             self.assertEqual(finish.call_args.args[:3], ("ocr-cli", self.envelope(), 0))
 
+    def test_cli_resumes_incomplete_group_once_with_bound_coverage(self):
+        import copy
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        import runtime
+
+        first = self.envelope()
+        first["status"] = "partial"
+        sid = "905bef8d-29fd-4cdc-8ad2-378a7c883977"
+        first["session_id"] = sid
+        m = first["manifest"]
+        m.update(run_id=sid, terminal_state="partial", input={"mode": "range"})
+        covered = {"path": "app.go", "item_id": "a", "fingerprint": "old"}
+        pending = {"path": "ui.js", "item_id": "b", "fingerprint": "new"}
+        m["coverage"].update(
+            selected=[covered, pending], completed=[covered],
+            failed=[dict(pending, reason="reached the maximum tool-request rounds without finishing")],
+        )
+        second = copy.deepcopy(first)
+        second["status"] = "complete"
+        second["manifest"].update(terminal_state="complete", parent_run_id=sid)
+        second["manifest"]["coverage"].update(completed=[pending], reused=[covered], failed=[])
+        for case in ("valid", "wrong-parent", "wrong-reuse", "different-failure"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:
+                output = Path(folder)
+                initial, resumed = copy.deepcopy(first), copy.deepcopy(second)
+                if case == "wrong-parent":
+                    resumed["manifest"]["parent_run_id"] = "other"
+                if case == "wrong-reuse":
+                    resumed["manifest"]["coverage"]["reused"][0]["fingerprint"] = "changed"
+                if case == "different-failure":
+                    initial["manifest"]["coverage"]["failed"][0]["reason"] = "model unavailable"
+                calls = []
+
+                def execute(args, destination, **kwargs):
+                    calls.append(args)
+                    value = resumed if "--resume" in args else initial
+                    destination.write_text(json.dumps(value))
+                    destination.with_suffix(".stderr.log").write_text("native log")
+                    return 0, 1.0
+
+                source = {"base": "a" * 40, "head": "b" * 40, "expected": ["app.go", "ui.js"], "files": {}}
+                with (
+                    patch.object(runtime, "STATE", output), patch.object(runtime, "OUTPUT", output),
+                    patch.object(runtime, "trusted_source", return_value=source),
+                    patch.object(runtime, "candidate_snapshot", return_value={}),
+                    patch.object(runtime, "run_tool", side_effect=execute),
+                ):
+                    (output / "source.json").write_text(json.dumps(source))
+                    self.assertEqual(runtime.cli_review(binary="ocr"), 0 if case == "valid" else 20)
+                self.assertEqual(len(calls), 1 if case == "different-failure" else 2)
+                if len(calls) == 2:
+                    self.assertEqual(calls[1][-2:], ["--resume", sid])
+                    self.assertEqual(json.loads((output / "raw-initial.json").read_text()), initial)
+
     def test_exit_zero_does_not_accept_partial_coverage(self):
         value = self.envelope()
         value["manifest"]["coverage"]["completed"] = []

@@ -377,41 +377,83 @@ def finish(engine, value, code=0, elapsed=None):
     return {"clean": 0, "findings": 10, "incomplete": 20, "error": 30}[result["status"]]
 
 
+def read_cli_result(path, code):
+    try:
+        value = json.loads(path.read_text())
+        if isinstance(value, dict):
+            return value, code
+    except (ValueError, UnicodeError):
+        pass
+    return {}, code or 1
+
+
+def resumable_group_failure(value, code, expected):
+    if code or value.get("status") != "partial":
+        return False
+    manifest = value.get("manifest") or {}
+    session_id = value.get("session_id", "")
+    if (
+        manifest.get("schema_version") != "ocr.run-manifest/v1"
+        or manifest.get("terminal_state") != "partial"
+        or manifest.get("run_failure")
+        or not re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", session_id)
+        or session_id != manifest.get("run_id")
+    ):
+        return False
+    coverage = manifest.get("coverage") or {}
+    completed, failed = coverage.get("completed") or [], coverage.get("failed") or []
+    reasons = {
+        "stopped because context compression exceeded its threshold",
+        "reached the maximum tool-request rounds without finishing",
+    }
+    return (
+        completed and failed
+        and not coverage.get("reused") and not coverage.get("waived")
+        and sorted(item["path"] for item in coverage.get("selected", [])) == sorted(expected)
+        and sorted(item["path"] for item in completed + failed) == sorted(expected)
+        and all(item.get("reason") in reasons for item in failed)
+    )
+
+
+def same_resume_lineage(first, second):
+    parent = first["manifest"]
+    manifest = second.get("manifest") or {}
+    reused = (manifest.get("coverage") or {}).get("reused") or []
+    return (
+        manifest.get("parent_run_id") == parent["run_id"]
+        and all(manifest.get(key) == parent.get(key) for key in ("input", "execution", "repository"))
+        and sorted(reused, key=lambda item: item["path"])
+        == sorted(parent["coverage"]["completed"], key=lambda item: item["path"])
+    )
+
+
 def cli_review(binary=None):
     source = trusted_source()
-    code, elapsed = run_tool(
-        [
-            binary or install_ocr(),
-            "review",
-            "--format",
-            "json",
-            "--audience",
-            "human",
-            "--from",
-            source["base"],
-            "--to",
-            source["head"],
-            "--rule",
-            str((STATE / "rules.json").resolve()),
-            "--effort",
-            "low",
-            "--concurrency",
-            "2",
-            "--timeout",
-            "30",
-            "--max-tokens-budget",
-            "0",
-        ],
-        OUTPUT / "raw.json",
-        llm=True,
-        timeout=2700,
-    )
-    try:
-        value = json.loads((OUTPUT / "raw.json").read_text())
-        if not isinstance(value, dict):
-            raise ValueError()
-    except (ValueError, UnicodeError):
-        value, code = {}, code or 1
+    argv = [
+        binary or install_ocr(), "review", "--format", "json", "--audience", "human",
+        "--from", source["base"], "--to", source["head"],
+        "--rule", str((STATE / "rules.json").resolve()),
+        "--effort", "low", "--concurrency", "2", "--timeout", "30",
+        "--max-tokens-budget", "0",
+    ]
+    raw = OUTPUT / "raw.json"
+    started = time.monotonic()
+    code, elapsed = run_tool(argv, raw, llm=True, timeout=2700)
+    value, code = read_cli_result(raw, code)
+    remaining = 2700 - (time.monotonic() - started)
+    if (
+        remaining > 0
+        and resumable_group_failure(value, code, source["expected"])
+        and candidate_snapshot() == source["files"]
+    ):
+        raw.replace(OUTPUT / "raw-initial.json")
+        raw.with_suffix(".stderr.log").replace(OUTPUT / "raw-initial.stderr.log")
+        first = value
+        code, _ = run_tool([*argv, "--resume", first["session_id"]], raw, llm=True, timeout=remaining)
+        value, code = read_cli_result(raw, code)
+        elapsed = time.monotonic() - started
+        if not same_resume_lineage(first, value):
+            value, code = first, 0
     return finish("ocr-cli", value, code, elapsed)
 
 
