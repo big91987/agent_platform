@@ -31,7 +31,7 @@ def decision(ocr_code, arch_code, model_status, unchanged):
 
 
 def review_feedback(run):
-    """Use the immediately preceding platform receipt to admit one automatic rework."""
+    """Hand back findings from the immediately preceding completed review."""
     steps = run["previous_results"]
     previous = steps[-1] if steps else {}
     receipt = previous.get("connector_receipt") or {}
@@ -97,16 +97,7 @@ def review_feedback(run):
             "archcheck": "harness-output/architecture/latest-report.json",
         },
     )
-    already_reworked = any(
-        step.get("node_id") == "review_feedback"
-        and step.get("status") == "completed"
-        and (step.get("result") or {}).get("route") == "next"
-        for step in steps[:-1]
-    )
-    return dict(
-        feedback,
-        reason="automatic_rework_used" if already_reworked else "review_findings",
-    )
+    return dict(feedback, reason="review_findings")
 
 
 def prepared_head(context):

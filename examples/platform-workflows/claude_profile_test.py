@@ -33,7 +33,7 @@ class ClaudeProfileTest(unittest.TestCase):
             with self.subTest(args=args):
                 self.assertEqual(decision(*args), 20)
 
-    def test_review_feedback_reworks_only_a_complete_findings_receipt_once(self):
+    def test_review_feedback_reworks_on_findings_regardless_of_prior_rework(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory).resolve()
             pair = {
@@ -99,6 +99,11 @@ class ClaudeProfileTest(unittest.TestCase):
                 "result": {"route": "next"},
                 "connector_receipt": {"kind": "command", "exit_code": 0},
             }
+            for candidate in (pair["candidate"], "d" * 40):
+                with self.subTest(candidate=candidate):
+                    code, feedback = invoke(10, {**pair, "candidate": candidate}, prior)
+                    self.assertEqual(code, 0)
+                    self.assertEqual(feedback["reason"], "review_findings")
             for actual_code, summary, prior_feedback, truncated, reason in (
                 (20, {**pair, "exit_code": 20}, None, False, "review_incomplete"),
                 (
@@ -109,7 +114,13 @@ class ClaudeProfileTest(unittest.TestCase):
                     "invalid_review_receipt",
                 ),
                 (10, pair, None, True, "invalid_review_receipt"),
-                (10, pair, prior, False, "automatic_rework_used"),
+                (
+                    10,
+                    {**pair, "tool_exit_codes": {"ocr": 0, "archcheck": 0}},
+                    prior,
+                    False,
+                    "invalid_review_receipt",
+                ),
             ):
                 with self.subTest(reason=reason, truncated=truncated):
                     code, feedback = invoke(
