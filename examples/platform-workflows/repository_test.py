@@ -1,6 +1,9 @@
 """Real local Git repositories exercise publish boundaries; no remote API mock."""
 
+import contextlib
 import importlib.util
+import io
+import sys
 import json
 import os
 import subprocess
@@ -46,6 +49,44 @@ class RepositoryTest(unittest.TestCase):
             "input": "Add a feature",
             "workspace_path": str(self.workspace),
         }
+
+    def test_fixed_tests_reuse_only_same_input_after_a_complete_pass(self):
+        record = self.root / "checks"
+        command = [sys.executable, "-c", (
+            "from pathlib import Path; path = Path(" + repr(str(record)) +
+            "); path.write_text((path.read_text() if path.exists() else '') + 'x')"
+        )]
+        docs = self.workspace / repo.task_docs(self.run)
+        docs.mkdir(parents=True)
+        note = docs / "implementation.md"
+        note.write_text("Initial report")
+        self.run["previous_results"] = []
+
+        def verify():
+            stream = io.StringIO()
+            with contextlib.redirect_stdout(stream):
+                code = repo.run_tests(self.workspace, self.run, command, reuse_pass=True)
+            self.assertEqual(code, 0)
+            return stream.getvalue()
+
+        self.assertIn("reuse_pass", repo.run_tests.__kwdefaults__ or {})
+        output = verify()
+        self.run["previous_results"] = [{
+            "seq": 3, "node_id": "tests", "status": "completed",
+            "result": {"route": "next"},
+            "connector_receipt": {"kind": "command", "exit_code": 0,
+                                  "log": {"truncated": False}, "output": output},
+        }]
+        note.write_text("Updated report")
+        self.assertEqual(json.loads(verify().splitlines()[0])["original_seq"], 3)
+        self.assertEqual(record.read_text(), "x")
+        (self.workspace / "README.md").write_text("Different input")
+        verify()
+        self.assertEqual(record.read_text(), "xx")
+        (self.workspace / "README.md").write_text("Example\n")
+        self.run["previous_results"][0]["connector_receipt"]["log"]["truncated"] = True
+        verify()
+        self.assertEqual(record.read_text(), "xxx")
 
     def test_prepare_and_publish_preserve_main_and_reject_wrong_branch(self):
         repo.prepare(self.workspace, self.run, "main")

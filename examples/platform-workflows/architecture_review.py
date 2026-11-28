@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from collections import Counter
 from contextlib import chdir, contextmanager
 from pathlib import Path
 
@@ -27,6 +28,60 @@ def decision(arch_code, model_status, unchanged):
     ):
         return 20
     return 10 if arch_code == 1 or model_status == "findings" else 0
+
+
+def rule_identity(finding):
+    return tuple(finding[field] for field in ("rule", "source", "target", "message"))
+
+
+def finding_identity(finding):
+    return (
+        tuple(sorted(finding["checks"])),
+        tuple(sorted((item["path"], item["quote"]) for item in finding["evidence"])),
+    )
+
+
+def compare_findings(base_input, candidate_input, candidate_report, base_report=None):
+    same_input = base_input == candidate_input
+    rules = Counter(
+        rule_identity(finding) for finding in base_input["rules"]["findings"]
+    )
+    dispositions = []
+    for finding in candidate_input["rules"]["findings"]:
+        key = rule_identity(finding)
+        existing = rules[key] > 0
+        if existing:
+            rules[key] -= 1
+        dispositions.append(dict(
+            kind="rule", disposition="existing" if existing else "new_or_extended",
+            finding=finding,
+        ))
+
+    severity = {"low": 1, "medium": 2, "high": 3}
+    baseline = {}
+    same_standards = base_input["review_checks"] == candidate_input["review_checks"]
+    if base_report and same_standards:
+        for f in base_report["model_review"]["findings"]:
+            key = finding_identity(f)
+            baseline[key] = max(baseline.get(key, 0), severity[f["severity"]])
+    for finding in candidate_report["model_review"]["findings"]:
+        anchors = finding_identity(finding)
+        source_counts = [
+            base_input["sources"].get(path, "").count(quote) for path, quote in anchors[1]
+        ]
+        previous = baseline.get(anchors, 0)
+        if same_input:
+            value = "existing"
+        elif 0 in source_counts:
+            value = "new_or_extended"
+        elif previous and all(count == 1 for count in source_counts):
+            value = "worsened" if severity[finding["severity"]] > previous else "existing"
+        else:
+            # An unchanged quotation alone does not establish that a problem
+            # existed before, or that a change elsewhere did not make it worse.
+            value = "unresolved"
+        dispositions.append(dict(kind="model", disposition=value, finding=finding))
+    return dispositions
 
 
 def review_feedback(run):
@@ -61,6 +116,8 @@ def review_feedback(run):
         if (
             summary.get("exit_code") != 10
             or summary.get("source_unchanged") is not True
+            or type(summary.get("regressions")) is not int
+            or summary["regressions"] <= 0
             or not isinstance(codes, dict)
             or set(codes) != {"archcheck"}
             or any(type(value) is not int for value in codes.values())
@@ -90,8 +147,10 @@ def review_feedback(run):
         source_inventory_sha256=summary["source_inventory_sha256"],
         tool_exit_codes=codes,
         architecture_model_status=summary["architecture_model_status"],
+        regressions=summary["regressions"],
         report_files={
             "archcheck": "harness-output/architecture/latest-report.json",
+            "comparison": "harness-output/architecture-disposition.json",
         },
     )
     return dict(feedback, reason="review_findings")
@@ -109,9 +168,10 @@ def prepared_head(context):
     if receipt.get("exit_code") != 0 or receipt.get("log", {}).get("truncated"):
         raise ValueError("preparation receipt failed or truncated")
     value = json.loads(receipt["output"])
-    if not re.fullmatch("[0-9a-f]{40}", str(value.get("head", ""))):
+    head = value.get("integration_base", value.get("head", ""))
+    if not isinstance(head, str) or not re.fullmatch("[0-9a-f]{40}", head):
         raise ValueError("preparation receipt lacks fixed head")
-    return value["head"]
+    return head
 
 
 def load_candidate_runtime():
@@ -207,8 +267,7 @@ def review(args, candidate_git, workspace, private):
         )
 
 
-def run_archcheck(args, candidate_git, arch, output, workspace, base, before, candidate):
-    frozen = candidate_git.candidate_snapshot()
+def inspect_architecture(arch, checkout, output):
     arch_exit_code = 2
     errors = []
     arch_output = output / "architecture"
@@ -223,9 +282,9 @@ def run_archcheck(args, candidate_git, arch, output, workspace, base, before, ca
         "-I",
         str(arch / "inspect_project.py"),
         "--root",
-        str(Path.cwd()),
+        str(checkout),
         "--output",
-        "harness-output/architecture",
+        arch_output.relative_to(checkout).as_posix(),
         "--review-command",
         json.dumps([sys.executable, "-I", str(arch / "model_reviewer.py")]),
     ]
@@ -254,6 +313,79 @@ def run_archcheck(args, candidate_git, arch, output, workspace, base, before, ca
         report = json.loads((arch_output / "latest-report.json").read_text())
     except (OSError, ValueError):
         pass
+    return arch_exit_code, report, errors
+
+
+def compare_review(arch, checkout, output, candidate_git, base, report):
+    inputs = list((output / "architecture").glob("*/review-input.json"))
+    if len(inputs) != 1:
+        raise ValueError("Expected one candidate architecture input")
+    candidate_input = json.loads(inputs[0].read_text())
+    if candidate_input["snapshot"] != report["snapshot"]:
+        raise ValueError("Architecture report does not belong to the candidate input")
+
+    baseline = checkout.parent / "baseline"
+    candidate_git.git(checkout, "worktree", "add", "--detach", str(baseline), base)
+    baseline_input = json.loads(subprocess.check_output(
+        [sys.executable, "-I", str(arch / "archcheck.py"), "bundle", "--root", str(baseline)],
+        timeout=120,
+    ))
+    if baseline_input.get("kind") != "architecture-review":
+        raise ValueError("Architecture baseline input failed")
+    same_input = baseline_input == candidate_input
+    baseline_report = None
+    if not same_input and report["model_review"]["findings"]:
+        baseline_output = baseline / "harness-output"
+        if os.path.lexists(baseline_output):
+            baseline_output.rename(baseline.parent / "tracked-baseline-output")
+        code, baseline_report, errors = inspect_architecture(arch, baseline, baseline_output)
+        if (errors or baseline_report.get("git_head") != base
+                or baseline_report.get("snapshot") != baseline_input["snapshot"]
+                or decision(code, baseline_report.get("model_review", {}).get("status"), True) == 20):
+            raise ValueError("Architecture baseline review is incomplete")
+        (output / "architecture-baseline.json").write_text(
+            json.dumps(baseline_report, ensure_ascii=False, indent=2) + "\n"
+        )
+
+    findings = compare_findings(baseline_input, candidate_input, report, baseline_report)
+    counts = Counter(finding["disposition"] for finding in findings)
+    evidence = {
+        "base": base, "candidate": report["git_head"], "same_input": same_input,
+        "base_snapshot": baseline_input["snapshot"], "candidate_snapshot": candidate_input["snapshot"],
+        "findings": findings,
+    }
+    (output / "architecture-disposition.json").write_text(
+        json.dumps(evidence, ensure_ascii=False, indent=2) + "\n"
+    )
+    return dict(
+        baseline_findings=counts["existing"],
+        regressions=counts["new_or_extended"] + counts["worsened"],
+        unresolved=counts["unresolved"],
+        baseline_input_identical=same_input,
+    )
+
+
+def run_archcheck(args, candidate_git, arch, output, workspace, base, before, candidate):
+    checkout = Path.cwd()
+    frozen = candidate_git.candidate_snapshot()
+    arch_exit_code, report, errors = inspect_architecture(arch, checkout, output)
+    status = report.get("model_review", {}).get("status")
+    code = decision(arch_exit_code, status, report.get("git_head") == candidate)
+    comparison = {}
+    if code == 10:
+        try:
+            comparison = compare_review(arch, checkout, output, candidate_git, base, report)
+        except (OSError, KeyError, ValueError, TypeError, subprocess.SubprocessError) as exc:
+            errors.append("Architecture comparison incomplete: " + str(exc))
+            code = 20
+        else:
+            if comparison["regressions"]:
+                code = 10
+            elif comparison["unresolved"]:
+                code = 20
+            else:
+                code = 0
+
     after = candidate_git.candidate_commit(workspace)
     unchanged = (
         frozen == candidate_git.candidate_snapshot()
@@ -263,8 +395,8 @@ def run_archcheck(args, candidate_git, arch, output, workspace, base, before, ca
         and tree_digest(arch) == args.arch_digest
     )
     verify_arch_parsers(arch)
-    status = report.get("model_review", {}).get("status")
-    code = decision(arch_exit_code, status, unchanged)
+    if not unchanged:
+        code = 20
     summary = {
         "candidate": candidate,
         "base": base,
@@ -274,6 +406,7 @@ def run_archcheck(args, candidate_git, arch, output, workspace, base, before, ca
         "source_unchanged": unchanged,
         "tool_exit_codes": {"archcheck": arch_exit_code},
         "architecture_model_status": status,
+        **comparison,
         "errors": errors,
         "exit_code": code,
     }

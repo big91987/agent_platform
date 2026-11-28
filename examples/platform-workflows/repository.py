@@ -2,6 +2,7 @@
 """Fixed repository operations for the platform Workflow example, not CI routing."""
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -525,7 +526,64 @@ def publish(workspace, run, scoped_docs=False, materials=False, reviewed_source=
     }
 
 
-def run_tests(workspace, run, command, base="main"):
+def regression_input(workspace, run, command):
+    from architecture_review import load_candidate_runtime
+
+    runtime = load_candidate_runtime()
+    directory = task_docs(run)
+    report = directory + "/implementation.md"
+    candidate = runtime.candidate_commit(workspace)
+    tree = runtime.git(workspace, "ls-tree", "-r", "-z", candidate)
+    # Reuse applies only to this Run's implementation note. Preserve content,
+    # executable bits, paths, config and all other inputs in the fingerprint.
+    entries = [entry for entry in tree.split(b"\0") if entry]
+    fingerprint = dict(
+        commit=git(workspace, "rev-parse", "HEAD"),
+        integrations=git(workspace, "rev-parse", "--revs-only", "MERGE_HEAD"),
+        command=command,
+        files=runtime.candidate_snapshot(workspace),
+    )
+    note = [
+        entry for entry in entries
+        if entry.partition(b"\t")[2] == os.fsencode(report)
+        and entry.startswith(b"100644 blob ")
+    ]
+    if note and not (workspace / report).is_symlink():
+        fingerprint["files"].pop(report, None)
+        entries.remove(note[0])
+    data = json.dumps(fingerprint, sort_keys=True).encode()
+    return hashlib.sha256(data + b"\0" + b"\0".join(entries)).hexdigest()
+
+
+def previous_regression(run, digest):
+    for step in reversed(run.get("previous_results", [])):
+        if step.get("node_id") != "tests":
+            continue
+        receipt = step.get("connector_receipt") or {}
+        if (
+            step.get("status") != "completed"
+            or (step.get("result") or {}).get("route") != "next"
+            or receipt.get("kind") != "command"
+            or receipt.get("exit_code") != 0
+            or (receipt.get("log") or {}).get("truncated") is not False
+        ):
+            break
+        try:
+            header = json.loads(receipt["output"].splitlines()[0])
+            if header.get("fixed_test_input") == digest:
+                seq = step["seq"]
+                if header.get("mode") == "executed" and type(seq) is int and seq > 0:
+                    return seq
+                origin = header.get("original_seq")
+                if header.get("mode") == "reused" and type(origin) is int and 0 < origin < seq:
+                    return origin
+        except (AttributeError, IndexError, KeyError, TypeError, ValueError):
+            pass
+        break
+    return None
+
+
+def run_tests(workspace, run, command, base="main", *, reuse_pass=False):
     verify_material(workspace, run)
     if (
         not isinstance(command, list)
@@ -550,6 +608,16 @@ def run_tests(workspace, run, command, base="main"):
         if pending.returncode == 0
         else []
     )
+    digest = regression_input(workspace, run, command) if reuse_pass and not conflicts else None
+    if digest:
+        original = previous_regression(run, digest)
+        print(json.dumps({
+            "fixed_test_input": digest,
+            "mode": "reused" if original else "executed",
+            **({"original_seq": original} if original else {}),
+        }), flush=True)
+        if original:
+            return 0
     if conflicts:
         branch = branch_for(run)
         if (
@@ -566,9 +634,12 @@ def run_tests(workspace, run, command, base="main"):
         print(json.dumps({"integration_resolution_staged": conflicts}), flush=True)
     environment = dict(os.environ)
     environment.pop("GH_TOKEN", None)
-    return subprocess.run(
+    code = subprocess.run(
         command, cwd=workspace, stdin=subprocess.DEVNULL, env=environment
     ).returncode
+    if code == 0 and digest and regression_input(workspace, run, command) != digest:
+        raise ValueError("Fixed regression inputs changed during execution")
+    return code
 
 
 def prepare_material(workspace, run, repository):
@@ -598,6 +669,7 @@ def main():
     parser.add_argument("--task-docs", action="store_true")
     parser.add_argument("--materials", action="store_true")
     parser.add_argument("--test-command")
+    parser.add_argument("--reuse-passed-tests", action="store_true")
     parser.add_argument("--trellis-executable")
     parser.add_argument("--trellis-version")
     args = parser.parse_args()
@@ -637,7 +709,10 @@ def main():
         if not args.test_command:
             raise ValueError("Fixed test argv required")
         raise SystemExit(
-            run_tests(workspace, run, json.loads(args.test_command), args.base)
+            run_tests(
+                workspace, run, json.loads(args.test_command), args.base,
+                reuse_pass=args.reuse_passed_tests,
+            )
         )
     result = (
         prepare(workspace, run, args.base, args.task_docs)

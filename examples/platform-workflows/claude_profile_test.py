@@ -16,10 +16,34 @@ from asset_snapshot import (
 )
 from claude_profile import configure, role_skills
 from repository import ReviewedSourceChanged, git, task_docs, verify_reviewed_tree
+import architecture_review
 from architecture_review import decision, expose_artifacts, load_candidate_runtime, prepared_head
 
 
 class ClaudeProfileTest(unittest.TestCase):
+    def test_architecture_disposition_preserves_baseline_and_routes_regressions(self):
+        anchor = {"path": "app.go", "quote": "badDependency()"}
+        existing = {"checks": ["imports"], "severity": "medium", "evidence": [anchor]}
+        worse = dict(existing, severity="high")
+        new = dict(existing, evidence=[{"path": "app.go", "quote": "newDependency()"}])
+        unknown = dict(existing, checks=["different-check"])
+        bundle = {
+            "sources": {"app.go": "badDependency()"},
+            "review_checks": [{"name": "imports", "requirement": "Own dependencies"}],
+            "rules": {"findings": []},
+        }
+        report = {"model_review": {"findings": [existing, worse, new, unknown]}}
+        self.assertTrue(hasattr(architecture_review, "compare_findings"))
+        counts = architecture_review.compare_findings(
+            bundle, {**bundle, "sources": {"app.go": "badDependency(); newDependency()"}},
+            report, {"model_review": {"findings": [existing]}},
+        )
+        self.assertEqual([x["disposition"] for x in counts], [
+            "existing", "worsened", "new_or_extended", "unresolved"
+        ])
+        self.assertTrue(all(x["disposition"] == "existing" for x in
+                            architecture_review.compare_findings(bundle, bundle, report)))
+
     def test_architecture_review_cannot_pass_incomplete_or_changed_source(self):
         self.assertEqual(decision(0, "no_findings", True), 0)
         self.assertEqual(decision(1, "findings", True), 10)
@@ -41,6 +65,7 @@ class ClaudeProfileTest(unittest.TestCase):
                 "source_unchanged": True,
                 "tool_exit_codes": {"archcheck": 1},
                 "architecture_model_status": "findings",
+                "regressions": 1,
                 "exit_code": 10,
             }
 
@@ -87,6 +112,7 @@ class ClaudeProfileTest(unittest.TestCase):
                 feedback["report_files"],
                 {
                     "archcheck": "harness-output/architecture/latest-report.json",
+                    "comparison": "harness-output/architecture-disposition.json",
                 },
             )
             prior = {

@@ -789,6 +789,8 @@ def main():
             )
         else:
             command = repository_command(role, args.repository, args.base, test_command)
+            if role == "tests" and args.template == "claude-delivery":
+                command.append("--reuse-passed-tests")
             if role == "code_review":
                 command = review_command
                 spec["timeout_seconds"] = 1800
