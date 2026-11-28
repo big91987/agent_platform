@@ -531,7 +531,10 @@ def regression_input(workspace, run, command):
 
     runtime = load_candidate_runtime()
     directory = task_docs(run)
-    report = directory + "/implementation.md"
+    reports = {
+        directory + "/implementation.md",
+        directory + "/development/implementation.md",
+    }
     candidate = runtime.candidate_commit(workspace)
     tree = runtime.git(workspace, "ls-tree", "-r", "-z", candidate)
     # Reuse applies only to this Run's implementation note. Preserve content,
@@ -543,14 +546,12 @@ def regression_input(workspace, run, command):
         command=command,
         files=runtime.candidate_snapshot(workspace),
     )
-    note = [
-        entry for entry in entries
-        if entry.partition(b"\t")[2] == os.fsencode(report)
-        and entry.startswith(b"100644 blob ")
-    ]
-    if note and not (workspace / report).is_symlink():
-        fingerprint["files"].pop(report, None)
-        entries.remove(note[0])
+    for entry in entries[:]:
+        mode, _, raw_path = entry.partition(b"\t")
+        path = os.fsdecode(raw_path)
+        if path in reports and mode.startswith(b"100644 blob ") and not (workspace / path).is_symlink():
+            fingerprint["files"].pop(path, None)
+            entries.remove(entry)
     data = json.dumps(fingerprint, sort_keys=True).encode()
     return hashlib.sha256(data + b"\0" + b"\0".join(entries)).hexdigest()
 
