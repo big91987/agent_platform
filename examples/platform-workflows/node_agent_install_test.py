@@ -563,7 +563,9 @@ class NodeAgentInstallTest(unittest.TestCase):
             for c in self.api.objects["connectors"]
             if c["id"] == nodes["code_review"]["connector_id"]
         )
-        self.assertEqual(review["env_refs"]["OCR_LLM_TOKEN"], "REVIEW_TOKEN")
+        self.assertEqual(review["env_refs"]["CODE_REVIEW_TOKEN"], "REVIEW_TOKEN")
+        self.assertFalse(any(key.startswith("OCR_LLM_") for key in review["env_refs"]))
+        self.assertNotIn("--ocr-cache", review["args"])
         self.assertNotIn("GH_TOKEN", review["env_refs"])
         feedback = next(
             c

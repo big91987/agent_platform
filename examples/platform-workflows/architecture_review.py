@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute both model-backed reviews on one unchanged candidate; never publish."""
+"""Execute model-backed architecture review on one unchanged candidate; never publish."""
 
 import argparse
 import hashlib
@@ -13,21 +13,20 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from contextlib import chdir, contextmanager, redirect_stdout
+from contextlib import chdir, contextmanager
 from pathlib import Path
 
 from asset_snapshot import tree_digest, verify_arch_parsers
 
 
-def decision(ocr_code, arch_code, model_status, unchanged):
+def decision(arch_code, model_status, unchanged):
     if (
         not unchanged
-        or ocr_code not in (0, 10)
         or arch_code not in (0, 1)
         or model_status not in ("no_findings", "findings")
     ):
         return 20
-    return 10 if ocr_code == 10 or arch_code == 1 or model_status == "findings" else 0
+    return 10 if arch_code == 1 or model_status == "findings" else 0
 
 
 def review_feedback(run):
@@ -63,10 +62,9 @@ def review_feedback(run):
             summary.get("exit_code") != 10
             or summary.get("source_unchanged") is not True
             or not isinstance(codes, dict)
-            or set(codes) != {"ocr", "archcheck"}
+            or set(codes) != {"archcheck"}
             or any(type(value) is not int for value in codes.values())
             or decision(
-                codes["ocr"],
                 codes["archcheck"],
                 summary.get("architecture_model_status"),
                 True,
@@ -93,7 +91,6 @@ def review_feedback(run):
         tool_exit_codes=codes,
         architecture_model_status=summary["architecture_model_status"],
         report_files={
-            "ocr": "harness-output/code-review/report.md",
             "archcheck": "harness-output/architecture/latest-report.json",
         },
     )
@@ -117,9 +114,9 @@ def prepared_head(context):
     return value["head"]
 
 
-def load_ocr_runtime():
+def load_candidate_runtime():
     source = Path(__file__).resolve().parents[1] / "code-review/runtime.py"
-    spec = importlib.util.spec_from_file_location("trusted_ocr_runtime", source)
+    spec = importlib.util.spec_from_file_location("trusted_candidate_runtime", source)
     ocr = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ocr)
     return ocr
@@ -180,7 +177,7 @@ def expose_artifacts(workspace_fd, output):
         os.rmdir(stage, dir_fd=dest)
 
 
-def review(args, ocr, workspace, private):
+def review(args, candidate_git, workspace, private):
     arch = args.arch_tool_root.resolve(strict=True)
     if tree_digest(arch) != args.arch_digest:
         raise ValueError("Installed architecture tool differs from its recorded digest")
@@ -189,42 +186,31 @@ def review(args, ocr, workspace, private):
     if Path(context["workspace_path"]).resolve() != workspace:
         raise ValueError("Run workspace and process directory differ")
     base = prepared_head(context)
-    before = ocr.candidate_snapshot(workspace)
-    candidate = ocr.candidate_commit(workspace)
+    before = candidate_git.candidate_snapshot(workspace)
+    candidate = candidate_git.candidate_commit(workspace)
     checkout = private / "candidate"
     checkout.mkdir()
-    ocr.git(checkout, "init", "--quiet")
-    ocr.git(
+    candidate_git.git(checkout, "init", "--quiet")
+    candidate_git.git(
         checkout, "fetch", "--quiet", "--no-tags", "--", workspace.as_uri(), candidate
     )
-    ocr.git(checkout, "checkout", "--quiet", "--detach", candidate)
+    candidate_git.git(checkout, "checkout", "--quiet", "--detach", candidate)
     # The checkout can already track old runtime files, including links.
-    # Move their top-level entry without traversing it before either tool writes.
+    # Move their top-level entry without traversing it before the reviewer writes.
     output = checkout / "harness-output"
     if os.path.lexists(output):
         output.rename(private / "tracked-output")
     output.mkdir(mode=0o700)
-    ocr.STATE = private / "state"
-    ocr.OUTPUT = output / "code-review"
-    ocr.STATE.mkdir()
-    (ocr.STATE / "rules.json").write_bytes(
-        Path(ocr.__file__).with_name("rules.json").read_bytes()
-    )
     with chdir(checkout):
-        return run_tools(args, ocr, arch, output, workspace, base, before, candidate)
+        return run_archcheck(
+            args, candidate_git, arch, output, workspace, base, before, candidate
+        )
 
 
-def run_tools(args, ocr, arch, output, workspace, base, before, candidate):
-    frozen = ocr.candidate_snapshot()
-    codes = {"ocr": 30, "archcheck": 2}
+def run_archcheck(args, candidate_git, arch, output, workspace, base, before, candidate):
+    frozen = candidate_git.candidate_snapshot()
+    arch_exit_code = 2
     errors = []
-    try:
-        binary = ocr.install_ocr(args.ocr_cache)
-        ocr.preview(base, candidate, binary=binary)
-        with (ocr.OUTPUT / "summary.stdout.log").open("w") as log, redirect_stdout(log):
-            codes["ocr"] = ocr.cli_review(binary=binary)
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
-        errors.append("Open Code Review incomplete: " + type(exc).__name__)
     arch_output = output / "architecture"
     arch_output.mkdir(exist_ok=True)
     env = {
@@ -258,7 +244,7 @@ def run_tools(args, ocr, arch, output, workspace, base, before, candidate):
             (arch_output / "stdout.log").open("wb") as stdout,
             (arch_output / "stderr.log").open("wb") as stderr,
         ):
-            codes["archcheck"] = subprocess.run(
+            arch_exit_code = subprocess.run(
                 command, env=env, stdout=stdout, stderr=stderr, timeout=900
             ).returncode
     except (OSError, subprocess.SubprocessError) as exc:
@@ -268,17 +254,17 @@ def run_tools(args, ocr, arch, output, workspace, base, before, candidate):
         report = json.loads((arch_output / "latest-report.json").read_text())
     except (OSError, ValueError):
         pass
-    after = ocr.candidate_commit(workspace)
+    after = candidate_git.candidate_commit(workspace)
     unchanged = (
-        frozen == ocr.candidate_snapshot()
-        and before == ocr.candidate_snapshot(workspace)
-        and ocr.git(workspace, "rev-parse", candidate + "^{tree}")
-        == ocr.git(workspace, "rev-parse", after + "^{tree}")
+        frozen == candidate_git.candidate_snapshot()
+        and before == candidate_git.candidate_snapshot(workspace)
+        and candidate_git.git(workspace, "rev-parse", candidate + "^{tree}")
+        == candidate_git.git(workspace, "rev-parse", after + "^{tree}")
         and tree_digest(arch) == args.arch_digest
     )
     verify_arch_parsers(arch)
     status = report.get("model_review", {}).get("status")
-    code = decision(codes["ocr"], codes["archcheck"], status, unchanged)
+    code = decision(arch_exit_code, status, unchanged)
     summary = {
         "candidate": candidate,
         "base": base,
@@ -286,12 +272,12 @@ def run_tools(args, ocr, arch, output, workspace, base, before, candidate):
             json.dumps(before, sort_keys=True).encode()
         ).hexdigest(),
         "source_unchanged": unchanged,
-        "tool_exit_codes": codes,
+        "tool_exit_codes": {"archcheck": arch_exit_code},
         "architecture_model_status": status,
         "errors": errors,
         "exit_code": code,
     }
-    (output / "review-pair.json").write_text(json.dumps(summary, indent=2) + "\n")
+    (output / "review.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
 
@@ -299,18 +285,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--arch-tool-root", type=Path, required=True)
     parser.add_argument("--arch-digest", required=True)
-    parser.add_argument("--ocr-cache", type=Path)
     args = parser.parse_args()
     workspace = Path.cwd()
-    if args.ocr_cache and args.ocr_cache.resolve().is_relative_to(workspace):
-        raise ValueError("OCR cache must be outside the Run workspace")
     fd = os.open(".", os.O_DIRECTORY)
     try:
         with tempfile.TemporaryDirectory(prefix="platform-review-") as tmp:
             private = Path(tmp).resolve()
             if private.is_relative_to(workspace):
                 raise ValueError("Review attempt must be outside the Run workspace")
-            summary = review(args, load_ocr_runtime(), workspace, private)
+            summary = review(args, load_candidate_runtime(), workspace, private)
             expose_artifacts(fd, private / "candidate/harness-output")
     finally:
         os.close(fd)

@@ -1,5 +1,5 @@
 name: CC 分角色研发需求
-description: 需求、架构、实现分别处理，经过双工具审查与独立 QA 后交付。
+description: 需求、架构、实现分别处理，经过架构审查与独立 QA 后交付。
 title: "【产品功能】"
 labels: [harness-claude]
 body:

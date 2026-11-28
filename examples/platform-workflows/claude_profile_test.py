@@ -16,19 +16,17 @@ from asset_snapshot import (
 )
 from claude_profile import configure, role_skills
 from repository import ReviewedSourceChanged, git, task_docs, verify_reviewed_tree
-from review_pair import decision, expose_artifacts, load_ocr_runtime, prepared_head
+from architecture_review import decision, expose_artifacts, load_candidate_runtime, prepared_head
 
 
 class ClaudeProfileTest(unittest.TestCase):
-    def test_dual_review_cannot_pass_incomplete_or_changed_source(self):
-        self.assertEqual(decision(0, 0, "no_findings", True), 0)
-        self.assertEqual(decision(10, 0, "no_findings", True), 10)
-        self.assertEqual(decision(0, 1, "findings", True), 10)
+    def test_architecture_review_cannot_pass_incomplete_or_changed_source(self):
+        self.assertEqual(decision(0, "no_findings", True), 0)
+        self.assertEqual(decision(1, "findings", True), 10)
         for args in (
-            (20, 0, "no_findings", True),
-            (0, 2, "no_findings", True),
-            (0, 0, "not_run", True),
-            (0, 0, "no_findings", False),
+            (2, "no_findings", True),
+            (0, "not_run", True),
+            (0, "no_findings", False),
         ):
             with self.subTest(args=args):
                 self.assertEqual(decision(*args), 20)
@@ -36,13 +34,13 @@ class ClaudeProfileTest(unittest.TestCase):
     def test_review_feedback_reworks_on_findings_regardless_of_prior_rework(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory).resolve()
-            pair = {
+            review = {
                 "candidate": "a" * 40,
                 "base": "b" * 40,
                 "source_inventory_sha256": "c" * 64,
                 "source_unchanged": True,
-                "tool_exit_codes": {"ocr": 10, "archcheck": 0},
-                "architecture_model_status": "no_findings",
+                "tool_exit_codes": {"archcheck": 1},
+                "architecture_model_status": "findings",
                 "exit_code": 10,
             }
 
@@ -80,15 +78,14 @@ class ClaudeProfileTest(unittest.TestCase):
                 self.assertEqual(result.stderr, "")
                 return result.returncode, json.loads(result.stdout)
 
-            code, feedback = invoke(10, pair)
+            code, feedback = invoke(10, review)
             self.assertEqual(code, 0)
-            self.assertEqual(feedback["candidate"], pair["candidate"])
+            self.assertEqual(feedback["candidate"], review["candidate"])
             self.assertEqual(feedback["review_seq"], 4)
-            self.assertEqual(feedback["tool_exit_codes"], pair["tool_exit_codes"])
+            self.assertEqual(feedback["tool_exit_codes"], review["tool_exit_codes"])
             self.assertEqual(
                 feedback["report_files"],
                 {
-                    "ocr": "harness-output/code-review/report.md",
                     "archcheck": "harness-output/architecture/latest-report.json",
                 },
             )
@@ -99,24 +96,24 @@ class ClaudeProfileTest(unittest.TestCase):
                 "result": {"route": "next"},
                 "connector_receipt": {"kind": "command", "exit_code": 0},
             }
-            for candidate in (pair["candidate"], "d" * 40):
+            for candidate in (review["candidate"], "d" * 40):
                 with self.subTest(candidate=candidate):
-                    code, feedback = invoke(10, {**pair, "candidate": candidate}, prior)
+                    code, feedback = invoke(10, {**review, "candidate": candidate}, prior)
                     self.assertEqual(code, 0)
                     self.assertEqual(feedback["reason"], "review_findings")
             for actual_code, summary, prior_feedback, truncated, reason in (
-                (20, {**pair, "exit_code": 20}, None, False, "review_incomplete"),
+                (20, {**review, "exit_code": 20}, None, False, "review_incomplete"),
                 (
                     10,
-                    {**pair, "source_unchanged": False},
+                    {**review, "source_unchanged": False},
                     None,
                     False,
                     "invalid_review_receipt",
                 ),
-                (10, pair, None, True, "invalid_review_receipt"),
+                (10, review, None, True, "invalid_review_receipt"),
                 (
                     10,
-                    {**pair, "tool_exit_codes": {"ocr": 0, "archcheck": 0}},
+                    {**review, "tool_exit_codes": {"archcheck": 2}},
                     prior,
                     False,
                     "invalid_review_receipt",
@@ -136,11 +133,11 @@ class ClaudeProfileTest(unittest.TestCase):
             root = Path(temporary)
             outside = root / "outside"
             outside.mkdir()
-            sentinel = outside / "review-pair.json"
+            sentinel = outside / "review.json"
             sentinel.write_text("unchanged")
             private = root / "private"
             private.mkdir()
-            (private / "review-pair.json").write_text("new report")
+            (private / "review.json").write_text("new report")
             workspace = root / "work"
             workspace.mkdir()
             fd = os.open(workspace, os.O_DIRECTORY)
@@ -174,10 +171,6 @@ class ClaudeProfileTest(unittest.TestCase):
             old_state = root / "old-state"
             old_state.mkdir()
             (work / ".git/agent-platform-review").symlink_to(old_state)
-            cache = root / "cache"
-            cache.mkdir()
-            # Fail the pinned binary digest locally, before any provider call.
-            (cache / "ocr").write_text("unavailable")
             arch = root / "arch"
             arch.mkdir()
             (arch / "inspect_project.py").write_text(
@@ -202,13 +195,11 @@ class ClaudeProfileTest(unittest.TestCase):
             result = subprocess.run(
                 [
                     os.sys.executable,
-                    str(Path(__file__).with_name("review_pair.py").resolve()),
+                    str(Path(__file__).with_name("architecture_review.py").resolve()),
                     "--arch-tool-root",
                     str(arch),
                     "--arch-digest",
                     tree_digest(arch),
-                    "--ocr-cache",
-                    str(cache),
                 ],
                 cwd=work,
                 input=json.dumps(context),
@@ -221,6 +212,8 @@ class ClaudeProfileTest(unittest.TestCase):
                 (work / "harness-output/architecture/latest-report.json").read_text()
             )
             self.assertEqual(report["git_head"], receipt["candidate"])
+            self.assertEqual(receipt["tool_exit_codes"], {"archcheck": 0})
+            self.assertFalse((work / "harness-output/code-review").exists())
             self.assertEqual(report["input"], "candidate")
             self.assertFalse(Path(report["root"]).is_relative_to(work))
             self.assertTrue(receipt["source_unchanged"])
@@ -255,7 +248,7 @@ class ClaudeProfileTest(unittest.TestCase):
             (work / special).write_text("pass")
             (work / "harness-output").mkdir()
             (work / "harness-output/excluded").write_text("private output")
-            candidate = load_ocr_runtime().candidate_commit(work)
+            candidate = load_candidate_runtime().candidate_commit(work)
             run["previous_results"].append(
                 dict(
                     node_id="code_review",

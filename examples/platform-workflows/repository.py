@@ -467,7 +467,7 @@ def verify_reviewed_tree(workspace, run, tree):
         changed.append(name)
     if changed:
         raise ReviewedSourceChanged(
-            "Reviewed source changed. Return through development, fixed tests and both reviews: "
+            "Reviewed source changed. Return through development, fixed tests and architecture review: "
             + ", ".join(changed[:20])
         )
     if latest_artifacts.isdisjoint(added_evidence):
@@ -496,9 +496,9 @@ def publish(workspace, run, scoped_docs=False, materials=False, reviewed_source=
         )
     check_publish_files(workspace, exclude_runtime=reviewed_source)
     if reviewed_source:
-        from review_pair import load_ocr_runtime
+        from architecture_review import load_candidate_runtime
 
-        load_ocr_runtime().stage_candidate(workspace)
+        load_candidate_runtime().stage_candidate(workspace)
         verify_reviewed_tree(workspace, run, git(workspace, "write-tree"))
     else:
         git(workspace, "add", "--all")
@@ -602,7 +602,7 @@ def main():
     parser.add_argument("--trellis-version")
     args = parser.parse_args()
     if args.operation == "review-feedback":
-        from review_pair import review_feedback
+        from architecture_review import review_feedback
 
         run = json.load(sys.stdin)
         if Path(run["workspace_path"]).resolve() != Path.cwd():
@@ -611,13 +611,13 @@ def main():
         print(json.dumps(feedback, ensure_ascii=False))
         raise SystemExit(0 if feedback["reason"] == "review_findings" else 20)
     if args.operation == "check-reviewed":
-        from review_pair import load_ocr_runtime
+        from architecture_review import load_candidate_runtime
 
         run = json.load(sys.stdin)
         if Path(run["workspace_path"]).resolve() != Path.cwd():
             raise ValueError("Run workspace and process directory differ")
         try:
-            verify_reviewed_tree(Path.cwd(), run, load_ocr_runtime().candidate_commit())
+            verify_reviewed_tree(Path.cwd(), run, load_candidate_runtime().candidate_commit())
         except ReviewedSourceChanged as error:
             print(error)
             raise SystemExit(10)

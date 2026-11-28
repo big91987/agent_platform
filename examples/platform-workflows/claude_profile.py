@@ -32,17 +32,13 @@ def review_connector(arch_tool_root, model_prefix, arch_digest):
     refs = {
         key: model_prefix + "_" + suffix
         for key, suffix in {
-            "OCR_LLM_URL": "URL",
-            "OCR_LLM_TOKEN": "TOKEN",
-            "OCR_LLM_MODEL": "MODEL",
-            "OCR_LLM_PROTOCOL": "PROTOCOL",
             "CODE_REVIEW_URL": "URL",
             "CODE_REVIEW_TOKEN": "TOKEN",
             "CODE_REVIEW_MODEL": "MODEL",
         }.items()
     }
     return [
-        str(HERE / "review_pair.py"),
+        str(HERE / "architecture_review.py"),
         "--arch-tool-root",
         str(root),
         "--arch-digest",
@@ -52,7 +48,7 @@ def review_connector(arch_tool_root, model_prefix, arch_digest):
 
 def configure(graph):
     result = copy.deepcopy(graph)
-    result["name"] = "CC 分角色研发 · 双工具审查与独立验收"
+    result["name"] = "CC 分角色研发 · 架构审查与独立验收"
     nodes = {node["id"]: node for node in result["nodes"] if node["id"] != "intake"}
     nodes["tests"]["name"] = "自动化回归"
     nodes["qa"]["name"] = "独立验收"
@@ -60,10 +56,10 @@ def configure(graph):
         "id": "approval",
         "name": "人工确认交付",
         "kind": "approval",
-        "prompt": "核对自动化回归、双工具审查和独立验收的同版证据，确认后允许交付。",
+        "prompt": "核对自动化回归、架构审查和独立验收的同版证据，确认后允许交付。",
     }
     for node_id, label in (
-        ("code_review", "代码审查"),
+        ("code_review", "架构审查"),
         ("review_feedback", "处理审查发现"),
         ("publish_check", "核对待发布源码"),
     ):
@@ -106,7 +102,7 @@ def configure(graph):
             ("design", "next", "development", "设计就绪"),
             ("development", "next", "tests", "实现完成"),
             ("tests", "next", "code_review", "回归通过"),
-            ("code_review", "next", "qa", "双审查通过"),
+            ("code_review", "next", "qa", "架构审查通过"),
             ("code_review", "failed", "review_feedback", "核对审查失败回执"),
             ("review_feedback", "next", "development", "交接同版审查发现"),
             ("qa", "next", "approval", "验收通过"),

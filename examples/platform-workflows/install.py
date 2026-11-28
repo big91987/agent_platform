@@ -761,7 +761,6 @@ def main():
         review_command, review_refs = review_connector(
             args.arch_tool_root, args.review_model_prefix, args.arch_digest
         )
-        review_command += ["--ocr-cache", str(asset_root / "ocr")]
     connectors = {}
     connector_roles = ["prepare", "issue", "tests", "publish", "pr", "comment"]
     if args.template == "claude-delivery":
