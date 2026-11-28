@@ -279,6 +279,41 @@ class ClaudeProfileTest(unittest.TestCase):
             self.assertEqual(clean["regressions"], 0)
             self.assertTrue(clean["baseline_input_identical"])
 
+            # With the same exact review input, invalid references can prevent
+            # cataloguing old model findings without introducing a candidate delta.
+            fake = arch / "inspect_project.py"
+            broken = fake.read_text().replace(
+                "'git_head': head, 'snapshot': 'fixture', 'model_review': {'status': 'findings',",
+                "'git_head': head, 'snapshot': 'fixture', 'model_review': {'status': 'incomplete',",
+            ).replace("raise SystemExit(1)", (
+                "path = folder / 'latest-report.json'\n"
+                "report = json.loads(path.read_text())\n"
+                "report['errors'] = ['evidence quotation must match one exact unique span: policy.md']\n"
+                "report['model_review']['findings'] = []\n"
+                "path.write_text(json.dumps(report))\n"
+                "raise SystemExit(2)"
+            ))
+            fake.write_text(broken)
+
+            def run_review():
+                command = args[:-1] + [tree_digest(arch)]
+                completed = subprocess.run(
+                    command, input=json.dumps(context), cwd=work, capture_output=True, text=True,
+                )
+                return completed.returncode, json.loads(completed.stdout)
+
+            code, checked = run_review()
+            self.assertEqual(code, 0)
+            self.assertTrue(checked["baseline_input_identical"])
+            self.assertTrue(checked["baseline_model_incomplete"])
+            self.assertEqual(checked["regressions"], 0)
+            (arch / "archcheck.py").write_text(
+                "print(" + repr(json.dumps({**review_input, "sources": {"policy.md": "changed"}})) + ")\n"
+            )
+            code, checked = run_review()
+            self.assertEqual(code, 20)
+            self.assertEqual(checked["architecture_model_status"], "incomplete")
+
     def test_publish_entry_pushes_exact_reviewed_files_with_ignored_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

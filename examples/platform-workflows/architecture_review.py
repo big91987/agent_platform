@@ -316,7 +316,7 @@ def inspect_architecture(arch, checkout, output):
     return arch_exit_code, report, errors
 
 
-def compare_review(arch, checkout, output, candidate_git, base, report):
+def compare_review(arch, checkout, output, candidate_git, base, report, *, citations_incomplete=False):
     inputs = list((output / "architecture").glob("*/review-input.json"))
     if len(inputs) != 1:
         raise ValueError("Expected one candidate architecture input")
@@ -334,6 +334,8 @@ def compare_review(arch, checkout, output, candidate_git, base, report):
     if baseline_input.get("kind") != "architecture-review":
         raise ValueError("Architecture baseline input failed")
     same_input = baseline_input == candidate_input
+    if citations_incomplete and not same_input:
+        raise ValueError("Cannot assess changed architecture inputs with invalid citations")
     baseline_report = None
     if not same_input and report["model_review"]["findings"]:
         baseline_output = baseline / "harness-output"
@@ -348,11 +350,15 @@ def compare_review(arch, checkout, output, candidate_git, base, report):
             json.dumps(baseline_report, ensure_ascii=False, indent=2) + "\n"
         )
 
-    findings = compare_findings(baseline_input, candidate_input, report, baseline_report)
+    # A rejected model response is kept in the architecture report. Only
+    # compare static findings when the entire model input is provably unchanged.
+    assessed_report = {"model_review": {"findings": []}} if citations_incomplete else report
+    findings = compare_findings(baseline_input, candidate_input, assessed_report, baseline_report)
     counts = Counter(finding["disposition"] for finding in findings)
     evidence = {
         "base": base, "candidate": report["git_head"], "same_input": same_input,
         "base_snapshot": baseline_input["snapshot"], "candidate_snapshot": candidate_input["snapshot"],
+        "baseline_model_incomplete": citations_incomplete,
         "findings": findings,
     }
     (output / "architecture-disposition.json").write_text(
@@ -363,6 +369,7 @@ def compare_review(arch, checkout, output, candidate_git, base, report):
         regressions=counts["new_or_extended"] + counts["worsened"],
         unresolved=counts["unresolved"],
         baseline_input_identical=same_input,
+        baseline_model_incomplete=citations_incomplete,
     )
 
 
@@ -373,9 +380,20 @@ def run_archcheck(args, candidate_git, arch, output, workspace, base, before, ca
     status = report.get("model_review", {}).get("status")
     code = decision(arch_exit_code, status, report.get("git_head") == candidate)
     comparison = {}
-    if code == 10:
+    problems = report.get("errors", [])
+    citations_incomplete = (
+        arch_exit_code == 2 and status == "incomplete" and report.get("git_head") == candidate
+        and bool(problems) and all(
+            isinstance(e, str) and e.startswith("evidence quotation must match one exact unique span: ")
+            for e in problems
+        )
+    )
+    if code == 10 or citations_incomplete:
         try:
-            comparison = compare_review(arch, checkout, output, candidate_git, base, report)
+            comparison = compare_review(
+                arch, checkout, output, candidate_git, base, report,
+                citations_incomplete=citations_incomplete,
+            )
         except (OSError, KeyError, ValueError, TypeError, subprocess.SubprocessError) as exc:
             errors.append("Architecture comparison incomplete: " + str(exc))
             code = 20
