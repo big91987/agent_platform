@@ -325,9 +325,10 @@ def compare_review(arch, checkout, output, candidate_git, base, report):
         raise ValueError("Architecture report does not belong to the candidate input")
 
     baseline = checkout.parent / "baseline"
-    candidate_git.git(checkout, "worktree", "add", "--detach", str(baseline), base)
+    candidate_git.git(checkout, "worktree", "add", "--quiet", "--detach", str(baseline), base)
     baseline_input = json.loads(subprocess.check_output(
         [sys.executable, "-I", str(arch / "archcheck.py"), "bundle", "--root", str(baseline)],
+        stderr=subprocess.PIPE,
         timeout=120,
     ))
     if baseline_input.get("kind") != "architecture-review":

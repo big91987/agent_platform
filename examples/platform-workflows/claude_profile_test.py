@@ -245,6 +245,40 @@ class ClaudeProfileTest(unittest.TestCase):
             self.assertTrue(receipt["source_unchanged"])
             self.assertEqual(list(old_state.iterdir()), [])
 
+            review_input = {
+                "kind": "architecture-review", "snapshot": "fixture",
+                "sources": {"policy.md": "shared policy"},
+                "review_checks": [{"name": "imports", "requirement": "use stable import"}],
+                "rules": {"findings": []},
+            }
+            (arch / "archcheck.py").write_text(
+                "print(" + repr(json.dumps(review_input)) + ")\n"
+            )
+            (arch / "inspect_project.py").write_text(
+                "import subprocess, json\nfrom pathlib import Path\n"
+                "folder = Path('harness-output/architecture')\n"
+                "attempt = folder / 'fixture'\nattempt.mkdir()\n"
+                "(attempt / 'review-input.json').write_text("
+                + repr(json.dumps(review_input)) + ")\n"
+                "head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()\n"
+                "(folder / 'latest-report.json').write_text(json.dumps({"
+                "'git_head': head, 'snapshot': 'fixture', 'model_review': {'status': 'findings', "
+                "'findings': [{'checks': ['imports'], 'severity': 'medium', "
+                "'evidence': [{'path': 'policy.md', 'quote': 'shared policy'}]}]}}))\n"
+                "raise SystemExit(1)\n"
+            )
+            args = result.args.copy()
+            args[-1] = tree_digest(arch)
+            comparison = subprocess.run(
+                args, input=json.dumps(context), cwd=work, capture_output=True, text=True,
+            )
+            self.assertEqual(comparison.returncode, 0, comparison.stderr)
+            self.assertEqual(comparison.stderr, "", "The platform merges stderr into the JSON receipt")
+            clean = json.loads(comparison.stdout)
+            self.assertEqual(clean["baseline_findings"], 1)
+            self.assertEqual(clean["regressions"], 0)
+            self.assertTrue(clean["baseline_input_identical"])
+
     def test_publish_entry_pushes_exact_reviewed_files_with_ignored_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
