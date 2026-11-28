@@ -532,6 +532,8 @@ def regression_input(workspace, run, command):
     runtime = load_candidate_runtime()
     directory = task_docs(run)
     reports = {
+        directory + "/development.md",
+        directory + "/development-note.md",
         directory + "/implementation.md",
         directory + "/development/implementation.md",
     }

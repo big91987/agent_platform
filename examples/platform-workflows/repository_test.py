@@ -80,11 +80,15 @@ class RepositoryTest(unittest.TestCase):
         note.write_text("Updated report")
         self.assertEqual(json.loads(verify().splitlines()[0])["original_seq"], 3)
         self.assertEqual(record.read_text(), "x")
-        nested_note = docs / "development" / "implementation.md"
-        nested_note.parent.mkdir()
-        note.rename(nested_note)
-        self.assertEqual(json.loads(verify().splitlines()[0])["original_seq"], 3)
-        self.assertEqual(record.read_text(), "x")
+        (docs / "development").mkdir()
+        for path in ("development.md", "development-note.md", "development/implementation.md"):
+            with self.subTest(note=path):
+                updated_note = docs / path
+                note.rename(updated_note)
+                note = updated_note
+                receipt = json.loads(verify().splitlines()[0])
+                self.assertEqual(receipt.get("original_seq"), 3)
+                self.assertEqual(record.read_text(), "x")
         (self.workspace / "README.md").write_text("Different input")
         verify()
         self.assertEqual(record.read_text(), "xx")
